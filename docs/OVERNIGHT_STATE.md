@@ -46,11 +46,11 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: git synthetic miner
 
 ## 5. Git synthetic edit trajectories
-- Status: NOT_STARTED
-- Files changed:
+- Status: PASS
+- Files changed: src/tinycomplete/data/git_edits.py, tests/test_git_edits.py
 - Verification command: `uv run pytest -q tests/test_git_edits.py`
-- Verification result:
-- Blocker:
+- Verification result: PASS — 3 passed (temp-repo extraction: non-py skipped, added-file handled, enclosing nodes incl. function_definition, intermediates converge on child text, future labels exposed, determinism, linear history; provenance git_synthetic + not-human-order disclaimer on every record)
+- Blocker: none
 - Next milestone: cache proof
 
 ## 6. CPU-only Qwen3.5 cache proof
