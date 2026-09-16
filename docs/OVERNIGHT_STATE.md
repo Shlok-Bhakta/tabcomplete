@@ -22,27 +22,27 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: editor event protocol
 
 ## 2. Editor event protocol + deterministic replay
-- Status: NOT_STARTED
-- Files changed:
+- Status: PASS
+- Files changed: src/tinycomplete/protocol/events.py, src/tinycomplete/protocol/replay.py, src/tinycomplete/protocol/__init__.py, tests/test_protocol.py
 - Verification command: `uv run pytest -q tests/test_protocol.py`
-- Verification result:
-- Blocker:
+- Verification result: PASS — 12 passed (open/snapshot/insert, insert+delete, replace, unicode incl. mid-sequence rejection, multi-file, cursor, snapshot rebase, deterministic replay x2, bad seq rejected, OOB rejected, immutability, dict round-trip)
+- Blocker: none
 - Next milestone: serialization
 
 ## 3. Model serialization
-- Status: NOT_STARTED
-- Files changed:
-- Verification command: `uv run pytest -q tests/test_protocol.py` (round-trip covered there) + manual char/token counts
-- Verification result:
-- Blocker:
+- Status: PASS
+- Files changed: src/tinycomplete/protocol/serialize.py, tests/test_serialize.py, docs/serialization.md
+- Verification command: `uv run pytest -q tests/test_serialize.py` (+ round-trip via test_protocol)
+- Verification result: PASS — 15 passed (serialize+protocol); realistic session: 260 chars / 111 Qwen tokens (tokenizer Qwen/Qwen3.5-0.8B-Base from hub, no weights); escaping round-trip OK; PREDICT always last line
+- Blocker: none
 - Next milestone: FIM + next-edit
 
 ## 4. FIM + next-edit data
-- Status: NOT_STARTED
-- Files changed:
+- Status: PASS
+- Files changed: src/tinycomplete/data/schema.py, src/tinycomplete/data/fim.py, src/tinycomplete/data/static_edits.py, src/tinycomplete/data/__init__.py, tests/test_fim.py
 - Verification command: `uv run pytest -q tests/test_fim.py`
-- Verification result:
-- Blocker:
+- Verification result: PASS — 8 passed (all 8 hole types cover source; byte-identical determinism; PSM/SPM with native Qwen `<|fim_prefix|>`/`<|fim_suffix|>`/`<|fim_middle|>` tokens verified present in hub tokenizer; tree-sitter alignment for identifier/import/function_body; NO_EDIT first-class target observed; region bounds verified against current file)
+- Blocker: none
 - Next milestone: git synthetic miner
 
 ## 5. Git synthetic edit trajectories
