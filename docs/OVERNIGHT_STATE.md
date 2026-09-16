@@ -54,11 +54,11 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: cache proof
 
 ## 6. CPU-only Qwen3.5 cache proof
-- Status: NOT_STARTED
-- Files changed:
+- Status: PASS
+- Files changed: src/tinycomplete/model/tiny_qwen.py, src/tinycomplete/model/cache_probe.py, tests/test_cache.py, reports/cache.md
 - Verification command: `uv run pytest -q tests/test_cache.py`
-- Verification result:
-- Blocker:
+- Verification result: PASS — 6 passed. Continuation vs full forward max diff 1.19e-07; 3 recurrent layers (fixed-size [1,2,16,16] state) + 1 KV layer (grows +256B/token toy cfg); deepcopy branches bit-identical; naive reuse diverges (0.133). No upstream CPU bug encountered (reference torch kernels used).
+- Blocker: none
 - Next milestone: teacher layer
 
 ## 7. Teacher interface + prompt + OpenRouter/DeepSeek + budget + validation
