@@ -86,10 +86,10 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: docs + final gate
 
 ## 10. Docs + scripts + final verification + overnight-summary + public gh repo
-- Status: NOT_STARTED
-- Files changed:
-- Verification command: `uv run ruff check . && uv run pytest -q && git diff --check && git status --short`
-- Verification result:
+- Status: IN_PROGRESS (repo publish pending)
+- Files changed: README.md, docs/architecture.md, reports/baselines.md, reports/overnight-summary.md
+- Verification command: `uv run ruff check . && uv run pytest -q && uv run mypy src`
+- Verification result: PASS — ruff clean; pytest 54 passed; mypy 28 files clean; TODO-search empty; git diff --check clean
 - Blocker:
 - Next milestone: done
 
