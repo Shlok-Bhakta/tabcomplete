@@ -70,7 +70,8 @@ async def _predict_one(provider, request: TeacherRequest) -> dict:
             "accepted": [],
             "rejected": [],
         }
-    accepted, rejected = [], []
+    accepted: list[dict] = []
+    rejected: list[dict] = []
     for cand in response.candidates:
         result = validate_candidate(
             cand,

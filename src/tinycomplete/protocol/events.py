@@ -205,11 +205,9 @@ EVENT_CLASSES: dict[str, type[BaseEvent]] = {
 def event_from_dict(data: dict[str, Any]) -> BaseEvent:
     """Parse a plain dict into the typed event for its ``kind``."""
     kind = data.get("kind")
-    try:
-        cls = EVENT_CLASSES[kind]
-    except KeyError:
-        raise ValueError(f"unknown event kind: {kind!r}") from None
-    return cls.model_validate(data)
+    if not isinstance(kind, str) or kind not in EVENT_CLASSES:
+        raise ValueError(f"unknown event kind: {kind!r}")
+    return EVENT_CLASSES[kind].model_validate(data)
 
 
 def event_to_dict(event: BaseEvent) -> dict[str, Any]:

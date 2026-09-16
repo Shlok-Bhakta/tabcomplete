@@ -285,9 +285,10 @@ def throughput_report(
         pass
     if colab_cu_per_hour:
         hours = wall_time / 3600
-        report["compute_units_used"] = hours * colab_cu_per_hour
-        if report["compute_units_used"]:
-            report["tokens_per_compute_unit"] = train_tokens / report["compute_units_used"]
+        cu_used = hours * colab_cu_per_hour
+        report["compute_units_used"] = cu_used
+        if cu_used:
+            report["tokens_per_compute_unit"] = train_tokens / cu_used
     return report
 
 
