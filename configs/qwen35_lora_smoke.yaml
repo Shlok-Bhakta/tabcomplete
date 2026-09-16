@@ -1,0 +1,26 @@
+# LoRA smoke: first GPU experiment. Proves load/tokenizer/format/backward/save.
+model_id: "Qwen/Qwen3.5-0.8B-Base"
+mode: lora
+max_seq_length: 2048
+max_steps: 100
+seed: 42
+lora_r: 16
+lora_alpha: 16
+lora_dropout: 0.0
+lora_bias: none
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+use_gradient_checkpointing: unsloth
+per_device_batch_size: 2
+gradient_accumulation_steps: 4
+learning_rate: 2.0e-4
+weight_decay: 0.01
+warmup_steps: 10
+lr_scheduler: linear
+optimizer: adamw_8bit
+precision: bf16
+packing: false
+save_steps: 25
+eval_steps: 25
+output_dir: outputs/qwen35-lora-smoke
+dataset_path: data/generated/teacher_fake.jsonl
+val_size: 20

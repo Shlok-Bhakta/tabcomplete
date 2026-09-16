@@ -1,0 +1,22 @@
+# Full-weight smoke: 10-20 steps ONLY to find OOM/kernels/gradients/optimizer bugs.
+# NOT a useful trained model. Do not launch a long full fine-tune from this.
+model_id: "Qwen/Qwen3.5-0.8B-Base"
+mode: full
+max_seq_length: 1024
+max_steps: 15
+seed: 42
+per_device_batch_size: 1
+gradient_accumulation_steps: 4
+learning_rate: 1.0e-5
+weight_decay: 0.01
+warmup_steps: 2
+lr_scheduler: linear
+optimizer: adamw_torch
+precision: bf16
+gradient_checkpointing: true
+packing: false
+save_steps: 5
+eval_steps: 5
+output_dir: outputs/qwen35-full-smoke
+dataset_path: data/generated/teacher_fake.jsonl
+val_size: 8

@@ -53,11 +53,18 @@ def build_request(source: str, seed: int, num_candidates: int, state_id: str) ->
 
 
 async def _predict_one(provider, request: TeacherRequest) -> dict:
+    base = {
+        "state_id": request.state_id,
+        "serialized_state": request.serialized_state,
+        "region": request.region.model_dump(),
+        "language": request.language,
+        "num_candidates": request.num_candidates,
+    }
     try:
         response = await provider.predict(request)
     except Exception as exc:  # pipeline continues; failure recorded
         return {
-            "state_id": request.state_id,
+            **base,
             "ok": False,
             "error": str(exc)[:300],
             "accepted": [],
@@ -80,7 +87,7 @@ async def _predict_one(provider, request: TeacherRequest) -> dict:
         }
         (accepted if result.ok else rejected).append(record)
     return {
-        "state_id": request.state_id,
+        **base,
         "ok": True,
         "provider": response.provider,
         "model": response.model,

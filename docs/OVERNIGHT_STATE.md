@@ -70,19 +70,19 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: evaluator
 
 ## 8. Evaluator (metrics + latency)
-- Status: NOT_STARTED
-- Files changed:
-- Verification command: `uv run pytest -q` (full suite)
-- Verification result:
-- Blocker:
+- Status: PASS
+- Files changed: src/tinycomplete/eval/{metrics,latency,__init__}.py, tests/test_eval.py
+- Verification command: `uv run pytest -q tests/test_eval.py`
+- Verification result: PASS — 5 passed (exact/normalized, prefix len, kitten/sitting=3, parse success/fail, noop accuracy 0.5 + None, aggregate rates, JSONL store, CPU benchmark stats incl. VRAM None)
+- Blocker: none
 - Next milestone: colab harness
 
 ## 9. Colab training harness (notebook + train.py + configs)
-- Status: NOT_STARTED
-- Files changed:
-- Verification command: `uv run python scripts/colab_smoke.py --help` / config load check
-- Verification result:
-- Blocker:
+- Status: PASS
+- Files changed: src/tinycomplete/train/{train,__init__}.py, notebooks/qwen35_colab.ipynb, configs/qwen35_{lora,full}_smoke.yaml, scripts/{colab_smoke,smoke}.py, docs/colab.md, reports/colab.md, tests/fixtures/sample.py
+- Verification command: `uv run python scripts/colab_smoke.py --help` + full run
+- Verification result: PASS — both YAML configs load (lora 100 steps @2048, full 15 steps @1024); formatting pipeline OK; real Qwen token stats (n=12 median=94 p95=126 max=126); notebook JSON valid (config→runtime→deps→dataset→lora→save→reload/eval→throughput). Unsloth Qwen3.5 support verified against current official docs (transformers v5+, FastLanguageModel, GDN/fla notes). No GPU runtime launched (by design).
+- Blocker: none
 - Next milestone: docs + final gate
 
 ## 10. Docs + scripts + final verification + overnight-summary + public gh repo
