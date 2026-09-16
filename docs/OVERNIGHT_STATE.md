@@ -86,11 +86,11 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: docs + final gate
 
 ## 10. Docs + scripts + final verification + overnight-summary + public gh repo
-- Status: IN_PROGRESS (repo publish pending)
+- Status: PASS
 - Files changed: README.md, docs/architecture.md, reports/baselines.md, reports/overnight-summary.md
 - Verification command: `uv run ruff check . && uv run pytest -q && uv run mypy src`
-- Verification result: PASS — ruff clean; pytest 54 passed; mypy 28 files clean; TODO-search empty; git diff --check clean
-- Blocker:
+- Verification result: PASS — ruff clean; pytest 54 passed; mypy 28 files clean; TODO-search empty; git diff --check clean; public repo https://github.com/Shlok-Bhakta/tabcomplete created and pushed
+- Blocker: none
 - Next milestone: done
 
 ## Subagent strategy note
