@@ -246,3 +246,30 @@ def test_build_request_from_fixture():
     request = build_request(source, seed=3, num_candidates=1, state_id="s3")
     assert request.region.text and request.region.text in source
     assert request.state_id == "s3"
+    assert request.region.text == request.file_text.encode()[
+        request.region.start : request.region.end
+    ].decode()
+
+
+def test_validation_uses_raw_file_not_wrapper():
+    from tinycomplete.teacher.validate import validate_response
+
+    request = build_request("x = 1\n", seed=3, num_candidates=1, state_id="s3")
+    ok, rej = validate_response(
+        (Candidate(action="replace", replacement=request.region.text + "  # c"),), request
+    )
+    assert len(ok) == 1 and not rej
+
+
+def test_duplicate_candidates_rejected():
+    from tinycomplete.teacher.validate import validate_response
+
+    request = build_request("x = 1\n", seed=3, num_candidates=3, state_id="s3")
+    dupes = (
+        Candidate(action="noop", replacement=""),
+        Candidate(action="noop", replacement=""),
+        Candidate(action="noop", replacement=""),
+    )
+    ok, rej = validate_response(dupes, request)
+    assert len(ok) == 1 and len(rej) == 2
+    assert all("duplicate" in reason for r in rej for reason in r["reasons"])

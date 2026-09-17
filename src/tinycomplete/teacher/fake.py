@@ -6,7 +6,7 @@ import json
 import time
 
 from .base import Candidate, TeacherRequest, TeacherResponse, ValidationSummary, raw_sha256_of
-from .validate import validate_candidate
+from .validate import validate_response
 
 __all__ = ["FakeProvider"]
 
@@ -24,20 +24,9 @@ class FakeProvider:
             cands.append(Candidate(action="replace", replacement=region + "  # fake-edit"))
         cands.append(Candidate(action="noop", replacement=""))
         chosen = cands[: request.num_candidates]
-        raw = json.dumps(
-            {"candidates": [c.model_dump() for c in chosen]}, sort_keys=True
-        )
-        reasons: list[str] = []
-        for cand in chosen:
-            result = validate_candidate(
-                cand,
-                region_text=region,
-                full_text=region,
-                region_start=0,
-                region_end=len(region.encode("utf-8")),
-            )
-            if not result.ok:
-                reasons.extend(result.reasons)
+        raw = json.dumps({"candidates": [c.model_dump() for c in chosen]}, sort_keys=True)
+        _, rejected = validate_response(tuple(chosen), request)
+        reasons: list[str] = [reason for record in rejected for reason in record["reasons"]]
         return TeacherResponse(
             provider=self.provider_name,
             model=self.model,

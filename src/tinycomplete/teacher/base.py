@@ -45,6 +45,9 @@ class TeacherRequest(BaseModel):
     recent_edits: tuple[str, ...] = ()
     num_candidates: int = Field(default=3, ge=1, le=MAX_CANDIDATES_HARD_CAP)
     language: str = "python"
+    # Raw current file text the region offsets index into. Validation MUST use
+    # this (never the serialized wrapper) as the syntax/apply base.
+    file_text: str = ""
 
 
 class Candidate(BaseModel):

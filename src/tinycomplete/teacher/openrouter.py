@@ -17,7 +17,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from .base import Candidate, TeacherRequest, TeacherResponse, ValidationSummary, raw_sha256_of
 from .budget import Budget
 from .prompt import RESPONSE_SCHEMA, build_messages
-from .validate import validate_candidate
+from .validate import validate_response
 
 __all__ = [
     "OpenRouterProvider",
@@ -168,18 +168,8 @@ class OpenRouterProvider:
             raise TeacherError("malformed JSON response") from None
         usage = data.get("usage", {})
         candidates = self.parse_payload(body, request)
-        reasons: list[str] = []
-        for cand in candidates:
-            result = validate_candidate(
-                cand,
-                region_text=request.region.text,
-                full_text=request.serialized_state,
-                region_start=request.region.start,
-                region_end=request.region.end,
-                language=request.language,
-            )
-            if not result.ok:
-                reasons.extend(result.reasons)
+        _, rejected = validate_response(candidates, request)
+        reasons: list[str] = [reason for record in rejected for reason in record["reasons"]]
         return TeacherResponse(
             provider=self.provider_name,
             model=self.model,

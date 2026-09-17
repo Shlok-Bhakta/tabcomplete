@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .base import Candidate
+from .base import Candidate, TeacherRequest
 
-__all__ = ["MAX_REWRITE_BYTES", "ValidationResult", "validate_candidate", "apply_replacement"]
+__all__ = [
+    "MAX_REWRITE_BYTES",
+    "ValidationResult",
+    "validate_candidate",
+    "validate_response",
+    "apply_replacement",
+]
 
 MAX_REWRITE_BYTES = 8192
 
@@ -87,3 +93,40 @@ def validate_candidate(
         if _error_nodes(applied, language) > _error_nodes(full_text, language):
             reasons.append("replacement introduces syntax errors")
     return ValidationResult(ok=not reasons, reasons=reasons)
+
+
+def validate_response(
+    candidates: tuple[Candidate, ...], request: TeacherRequest
+) -> tuple[list[dict], list[dict]]:
+    """Split one response into accepted/rejected records.
+
+    Syntax/apply base is the raw current file (never the serialized wrapper).
+    Exact-duplicate (action, replacement) pairs beyond the first are rejected
+    to enforce the distinct-candidates rule.
+    """
+    base = request.file_text or request.region.text
+    accepted: list[dict] = []
+    rejected: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for cand in candidates:
+        result = validate_candidate(
+            cand,
+            region_text=request.region.text,
+            full_text=base,
+            region_start=request.region.start,
+            region_end=request.region.end,
+            language=request.language,
+        )
+        reasons = list(result.reasons)
+        key = (cand.action, cand.replacement)
+        if result.ok and key in seen:
+            reasons.append("duplicate of another candidate for this state")
+            result = ValidationResult(ok=False, reasons=reasons)
+        seen.add(key)
+        record = {
+            "action": cand.action,
+            "replacement": cand.replacement,
+            "reasons": reasons,
+        }
+        (accepted if result.ok else rejected).append(record)
+    return accepted, rejected

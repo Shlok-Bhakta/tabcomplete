@@ -16,7 +16,7 @@ from .base import Candidate, TeacherRequest, TeacherResponse, ValidationSummary,
 from .budget import Budget
 from .openrouter import TeacherError, _retryable, sanitize_error
 from .prompt import build_messages
-from .validate import validate_candidate
+from .validate import validate_response
 
 __all__ = ["DeepSeekProvider", "DEFAULT_MODEL", "CHAT_URL"]
 
@@ -116,18 +116,8 @@ class DeepSeekProvider:
         except TeacherError:
             raise
         usage = data.get("usage", {})
-        reasons: list[str] = []
-        for cand in candidates:
-            result = validate_candidate(
-                cand,
-                region_text=request.region.text,
-                full_text=request.serialized_state,
-                region_start=request.region.start,
-                region_end=request.region.end,
-                language=request.language,
-            )
-            if not result.ok:
-                reasons.extend(result.reasons)
+        _, rejected = validate_response(candidates, request)
+        reasons: list[str] = [reason for record in rejected for reason in record["reasons"]]
         return TeacherResponse(
             provider=self.provider_name,
             model=self.model,

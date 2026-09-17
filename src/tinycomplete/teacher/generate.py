@@ -15,7 +15,7 @@ import time
 from ..data.static_edits import make_next_edit
 from .base import EditableRegion, TeacherRequest, provider_from_name
 from .budget import Budget, estimate_cost_usd
-from .validate import apply_replacement, validate_candidate
+from .validate import validate_response
 
 __all__ = ["STAGE_SIZES", "build_request", "run_generation"]
 
@@ -38,13 +38,101 @@ FIXTURE_GREET = (
     '"""Synthetic fixture: greetings."""\nfrom pathlib import Path\n\n\n'
     'def greet(name):\n    if name:\n        return "hi " + name\n    return "hi"\n'
 )
+FIXTURE_STATS = (
+    '"""Synthetic fixture: running statistics."""\nfrom dataclasses import dataclass, field\n\n\n'
+    "@dataclass\nclass Running:\n    total: float = 0.0\n    count: int = 0\n\n"
+    "    def push(self, value):\n        self.total += value\n        self.count += 1\n\n"
+    "    def mean(self):\n        if not self.count:\n            return 0.0\n"
+    "        return self.total / self.count\n"
+)
+FIXTURE_RETRY = (
+    '"""Synthetic fixture: retry helper."""\nimport time\n\n\n'
+    "def fetch_with_retry(call, attempts=3, delay=1.0):\n"
+    "    last = None\n    for i in range(attempts):\n"
+    "        try:\n            return call()\n"
+    "        except IOError as exc:\n            last = exc\n"
+    "            time.sleep(delay * (i + 1))\n"
+    "    raise last\n"
+)
+FIXTURE_TABLE = (
+    '"""Synthetic fixture: report table."""\n\n\n'
+    "def render_table(rows):\n"
+    '    lines = ["| name | value |"]\n'
+    "    for name, value in rows:\n"
+    '        lines.append(f"| {name} | {value} |")\n'
+    '    return "\\n".join(lines)\n'
+)
+FIXTURE_CONFIG = (
+    '"""Synthetic fixture: config merge."""\n\n\n'
+    "DEFAULTS = {'timeout': 30, 'retries': 3, 'verbose': False}\n\n\n"
+    "def merge_config(overrides):\n"
+    "    merged = dict(DEFAULTS)\n"
+    "    for key, value in overrides.items():\n"
+    "        if key in merged:\n"
+    "            merged[key] = value\n"
+    "    return merged\n"
+)
+FIXTURE_CHUNK = (
+    '"""Synthetic fixture: batching."""\nfrom collections.abc import Iterator\n\n\n'
+    "def batched(items, size):\n"
+    "    batch = []\n    for item in items:\n"
+    "        batch.append(item)\n"
+    "        if len(batch) >= size:\n"
+    "            yield batch\n"
+    "            batch = []\n"
+    "    if batch:\n"
+    "        yield batch\n"
+)
+FIXTURE_PARSE = (
+    '"""Synthetic fixture: line parsing."""\n\n\n'
+    "def parse_kv(line):\n"
+    '    key, sep, value = line.partition("=")\n'
+    "    if not sep:\n"
+    "        raise ValueError(f'bad line: {line!r}')\n"
+    "    return key.strip(), value.strip()\n"
+)
+FIXTURE_CACHE = (
+    '"""Synthetic fixture: tiny memo cache."""\n\n\n'
+    "def memoize(fn):\n"
+    "    cache = {}\n"
+    "    def wrapper(*args):\n"
+    "        if args not in cache:\n"
+    "            cache[args] = fn(*args)\n"
+    "        return cache[args]\n"
+    "    return wrapper\n"
+)
+FIXTURE_FILES = (
+    '"""Synthetic fixture: file helpers."""\nimport os\n\n\n'
+    "def latest(path):\n"
+    "    entries = sorted(os.listdir(path))\n"
+    "    if not entries:\n"
+    "        return None\n"
+    "    return os.path.join(path, entries[-1])\n"
+)
 
-FIXTURE_SOURCES: tuple[str, ...] = (FIXTURE_ARITH, FIXTURE_GREET)
+FIXTURE_SOURCES: tuple[str, ...] = (
+    FIXTURE_ARITH,
+    FIXTURE_GREET,
+    FIXTURE_STATS,
+    FIXTURE_RETRY,
+    FIXTURE_TABLE,
+    FIXTURE_CONFIG,
+    FIXTURE_CHUNK,
+    FIXTURE_PARSE,
+    FIXTURE_CACHE,
+    FIXTURE_FILES,
+)
 
 
 def build_request(source: str, seed: int, num_candidates: int, state_id: str) -> TeacherRequest:
     example = make_next_edit(source, seed)
     region_text = example.input_text.split("[[EDIT]]", 1)[1].split("[[/EDIT]]", 1)[0]
+    body = example.input_text.split("<file", 1)[1].split(">", 1)[1].rsplit("</file>", 1)[0]
+    assert body.startswith("\n") and body.endswith("\n")
+    marked = body[1:-1]
+    file_text = marked.replace("[[EDIT]]", "").replace("[[/EDIT]]", "")
+    raw = file_text.encode("utf-8")
+    assert raw[example.region_start : example.region_end].decode() == region_text
     return TeacherRequest(
         state_id=state_id,
         serialized_state=example.input_text,
@@ -58,6 +146,7 @@ def build_request(source: str, seed: int, num_candidates: int, state_id: str) ->
         recent_edits=example.recent_edits,
         num_candidates=num_candidates,
         language=example.language,
+        file_text=file_text,
     )
 
 
@@ -79,23 +168,7 @@ async def _predict_one(provider, request: TeacherRequest) -> dict:
             "accepted": [],
             "rejected": [],
         }
-    accepted: list[dict] = []
-    rejected: list[dict] = []
-    for cand in response.candidates:
-        result = validate_candidate(
-            cand,
-            region_text=request.region.text,
-            full_text=request.serialized_state,
-            region_start=request.region.start,
-            region_end=request.region.end,
-            language=request.language,
-        )
-        record = {
-            "action": cand.action,
-            "replacement": cand.replacement,
-            "reasons": list(result.reasons),
-        }
-        (accepted if result.ok else rejected).append(record)
+    accepted, rejected = validate_response(response.candidates, request)
     return {
         **base,
         "ok": True,
@@ -117,6 +190,7 @@ def run_generation(
     seed: int = 0,
     out_path: str = "",
     num_candidates: int = 3,
+    stage_override: str = "",
     **provider_kwargs,
 ) -> dict:
     """Run staged generation synchronously. Returns a summary dict."""
@@ -131,10 +205,18 @@ def run_generation(
         + ["B"] * min(max(0, total - STAGE_SIZES["A"]), STAGE_SIZES["B"])
         + ["C"] * max(0, total - STAGE_SIZES["A"] - STAGE_SIZES["B"])
     )
+    if stage_override:
+        schedule = [stage_override] * total
     results: list[dict] = []
 
     async def _run() -> None:
+        avg_cost = 0.01  # conservative per-state ceiling until measured
         for k, stage in enumerate(schedule):
+            if provider_name != "fake" and not budget.can_spend(avg_cost, 1):
+                results.append(
+                    {"state_id": "budget-stop", "ok": False, "error": "budget exhausted"}
+                )
+                break
             source = FIXTURE_SOURCES[(seed + k) % len(FIXTURE_SOURCES)]
             request = build_request(source, seed * 100003 + k, num_candidates, f"s{seed}-{k}")
             record = await _predict_one(provider, request)
@@ -152,6 +234,12 @@ def run_generation(
                     )
                     record["estimated_cost_usd"] = cost
                 budget.record(cost, 1)
+                done = [r for r in results if r.get("ok")]
+                costs = [
+                    r.get("estimated_cost_usd") or r.get("reported_cost_usd") or 0.0 for r in done
+                ]
+                if costs:
+                    avg_cost = 2.0 * sum(costs) / len(costs)
             if stage == "A" and k == STAGE_SIZES["A"] - 1 and total > STAGE_SIZES["A"]:
                 ok_rate = sum(1 for r in results if r["ok"]) / len(results)
                 if ok_rate < 1.0:
@@ -181,5 +269,4 @@ def run_generation(
                 f.write(json.dumps(record, sort_keys=True) + "\n")
         with open(out_path.replace(".jsonl", ".summary.json"), "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, sort_keys=True)
-    _ = apply_replacement  # re-exported for pipeline consumers
     return summary

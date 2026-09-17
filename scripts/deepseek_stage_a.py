@@ -36,6 +36,8 @@ def main() -> int:
     parser.add_argument("--states", type=int, default=10)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--model", default="")
+    parser.add_argument("--out", default="data/generated/teacher_deepseek.jsonl")
+    parser.add_argument("--stage", default="")
     parser.add_argument("--list-models", action="store_true")
     args = parser.parse_args()
 
@@ -70,7 +72,8 @@ def main() -> int:
         "deepseek",
         max_states=args.states,
         seed=args.seed,
-        out_path="data/generated/teacher_deepseek.jsonl",
+        out_path=args.out,
+        stage_override=args.stage,
         **({"model": args.model} if args.model else {}),
     )
     print(
