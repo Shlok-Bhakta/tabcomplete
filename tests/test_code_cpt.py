@@ -19,8 +19,10 @@ from tinycomplete.code_cpt.eval import causal_nll_from_logits
 from tinycomplete.code_cpt.train import (
     PackedBlocksDataset,
     TrainingCounters,
+    bounded_optimizer_steps,
     distributed_block_indices,
     extract_mtp_from_snapshot,
+    is_broad_deterioration,
     language_mix_for_prefix,
     milestones_crossed,
 )
@@ -210,3 +212,24 @@ def test_extract_mtp_sidecar_keeps_only_native_mtp_tensors(tmp_path) -> None:
     assert manifest["parameter_count"] == 3
     with safe_open(destination / "mtp-original.safetensors", framework="pt") as handle:
         assert list(handle.keys()) == ["mtp.fc.weight"]
+
+
+def test_broad_deterioration_requires_clear_multi_language_regression() -> None:
+    names = ["python", "typescript", "javascript", "java", "cpp", "rust", "go", "c", "csharp"]
+    baseline = {name: {"nll": 1.0} for name in names}
+    baseline.update(overall_code={"nll": 1.0}, general={"nll": 1.0})
+    current = {name: {"nll": 1.02} for name in names}
+    current.update(overall_code={"nll": 1.02}, general={"nll": 1.0})
+
+    assert is_broad_deterioration(current, baseline)
+    current["overall_code"]["nll"] = 0.99
+    assert not is_broad_deterioration(current, baseline)
+
+
+def test_optimizer_steps_drop_incomplete_corpus_tail() -> None:
+    assert bounded_optimizer_steps(
+        remaining_tokens=12_000_000,
+        tokens_per_update=32_768,
+        available_blocks=5_859,
+        blocks_per_update=16,
+    ) == 366

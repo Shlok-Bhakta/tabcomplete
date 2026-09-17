@@ -7,8 +7,10 @@ import json
 import math
 import os
 import random
+import shutil
 import time
 from collections.abc import Iterable
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -30,6 +32,18 @@ def milestones_crossed(previous: int, current: int, milestones: Iterable[int]) -
     return [milestone for milestone in milestones if previous < milestone <= current]
 
 
+def bounded_optimizer_steps(
+    *,
+    remaining_tokens: int,
+    tokens_per_update: int,
+    available_blocks: int,
+    blocks_per_update: int,
+) -> int:
+    requested = math.ceil(max(0, remaining_tokens) / tokens_per_update)
+    available = available_blocks // blocks_per_update
+    return min(requested, available)
+
+
 def language_mix_for_prefix(
     language_path: Path, language_order: list[str], blocks: int, block_size: int
 ) -> dict[str, dict[str, float] | dict[str, int]]:
@@ -45,6 +59,17 @@ def language_mix_for_prefix(
         for language, count in token_counts.items()
     }
     return {"token_counts": token_counts, "percentages": percentages}
+
+
+def is_broad_deterioration(current: dict, baseline: dict) -> bool:
+    languages = list(CORE_LANGUAGES)
+    regressions = sum(
+        current[language]["nll"] > baseline[language]["nll"] * 1.01
+        for language in languages
+    )
+    code_worse = current["overall_code"]["nll"] > baseline["overall_code"]["nll"] * 1.01
+    general_collapse = current["general"]["nll"] > baseline["general"]["nll"] * 1.25
+    return bool((code_worse and regressions >= 5) or general_collapse)
 
 
 @dataclass
@@ -180,7 +205,13 @@ def evaluate_micro(model, micro_dir: Path, device, *, batch_size: int = 1) -> di
                 batch = torch.from_numpy(
                     np.array(blocks[start : start + batch_size], dtype=np.int64, copy=True)
                 ).to(device)
-                output = model(input_ids=batch, labels=batch, use_cache=False)
+                precision_context = (
+                    torch.autocast(device_type="cuda", dtype=torch.float16)
+                    if device.type == "cuda"
+                    else nullcontext()
+                )
+                with precision_context:
+                    output = model(input_ids=batch, labels=batch, use_cache=False)
                 scored = batch.numel() - batch.shape[0]
                 total_nll += float(output.loss.float().item()) * scored
                 token_count += scored
@@ -249,6 +280,11 @@ def save_snapshot(
     import torch
 
     accelerator.wait_for_everyone()
+    disk_probe = destination
+    while not disk_probe.exists():
+        disk_probe = disk_probe.parent
+    if shutil.disk_usage(disk_probe).free < 3 * 2**30:
+        raise OSError("less than 3 GiB free before model snapshot")
     state_dict = accelerator.get_state_dict(model)
     if accelerator.is_main_process:
         destination.mkdir(parents=True, exist_ok=True)
@@ -294,6 +330,8 @@ class RunConfig:
     save_final: bool = False
     save_resume: bool = False
     eval_final: bool = False
+    baseline_path: Path | None = None
+    resume_from: Path | None = None
     milestones: tuple[int, ...] = ()
 
 
@@ -315,6 +353,16 @@ def run_training(config: RunConfig) -> dict:
         model.gradient_checkpointing_enable()
     else:
         model.gradient_checkpointing_disable()
+    resume_metadata = {}
+    if config.resume_from is not None:
+        resume_metadata = json.loads(
+            (config.resume_from / "resume_metadata.json").read_text(encoding="utf-8")
+        )
+    initial_tokens = int(resume_metadata.get("training_tokens", 0))
+    initial_microsteps = int(resume_metadata.get("microsteps", 0))
+    initial_optimizer_steps = int(resume_metadata.get("optimizer_steps", 0))
+    initial_data_wait = float(resume_metadata.get("data_wait_seconds", 0.0))
+    start_block = int(resume_metadata.get("next_block", config.start_block))
     block_path = config.corpus_dir / "train_blocks.npy"
     block_shape = np.load(block_path, mmap_mode="r").shape
     corpus_metadata = json.loads(
@@ -322,14 +370,23 @@ def run_training(config: RunConfig) -> dict:
     )
     tokens_per_microstep = config.microbatch * block_shape[1] * accelerator.num_processes
     tokens_per_update = tokens_per_microstep * config.gradient_accumulation
-    max_optimizer_steps = max(1, math.ceil(config.max_tokens / tokens_per_update))
-    blocks_needed = (
-        max_optimizer_steps
-        * config.gradient_accumulation
-        * config.microbatch
-        * accelerator.num_processes
+    remaining_tokens = max(0, config.max_tokens - initial_tokens)
+    blocks_per_update = (
+        config.gradient_accumulation * config.microbatch * accelerator.num_processes
     )
-    dataset = PackedBlocksDataset(block_path, config.start_block, blocks_needed)
+    available_blocks = block_shape[0] - start_block
+    additional_optimizer_steps = bounded_optimizer_steps(
+        remaining_tokens=remaining_tokens,
+        tokens_per_update=tokens_per_update,
+        available_blocks=available_blocks,
+        blocks_per_update=blocks_per_update,
+    )
+    if additional_optimizer_steps == 0:
+        raise ValueError("no complete optimizer update remains in the token budget/corpus")
+    blocks_needed = (
+        additional_optimizer_steps * blocks_per_update
+    )
+    dataset = PackedBlocksDataset(block_path, start_block, blocks_needed)
     loader_options: dict[str, Any] = {
         "batch_size": config.microbatch,
         "shuffle": False,
@@ -345,7 +402,10 @@ def run_training(config: RunConfig) -> dict:
     loader: Any = DataLoader(dataset, **loader_options)  # type: ignore[arg-type,var-annotated]
     optimizer = _optimizer(model, config.optimizer, config.learning_rate, config.weight_decay)
     scheduler = _constant_with_warmup(optimizer, config.warmup_steps)
-    model, optimizer, loader, scheduler = accelerator.prepare(model, optimizer, loader, scheduler)
+    model, optimizer, loader = accelerator.prepare(model, optimizer, loader)
+    accelerator.register_for_checkpointing(scheduler)
+    if config.resume_from is not None:
+        accelerator.load_state(config.resume_from)
     config.output_dir.mkdir(parents=True, exist_ok=True)
     run_metadata = {
         **asdict(config),
@@ -358,10 +418,19 @@ def run_training(config: RunConfig) -> dict:
         "tokens_per_update": tokens_per_update,
         "credential_source": credential_source,
         "milestones": list(config.milestones),
+        "baseline_path": str(config.baseline_path) if config.baseline_path else None,
+        "resume_from": str(config.resume_from) if config.resume_from else None,
     }
     if accelerator.is_main_process:
         _json_write(config.output_dir / "run_config.json", run_metadata)
-    counters = TrainingCounters(world_size=accelerator.num_processes)
+    counters = TrainingCounters(
+        world_size=accelerator.num_processes,
+        training_tokens=initial_tokens,
+        microsteps=initial_microsteps,
+        optimizer_steps=initial_optimizer_steps,
+        data_wait_seconds=initial_data_wait,
+    )
+    target_optimizer_steps = initial_optimizer_steps + additional_optimizer_steps
     losses = []
     grad_norms = []
     model.train()
@@ -370,13 +439,20 @@ def run_training(config: RunConfig) -> dict:
     torch.cuda.reset_peak_memory_stats()
     torch.cuda.synchronize()
     start = time.perf_counter()
+    non_training_seconds = 0.0
+    steady_start_time = None
+    steady_start_tokens = initial_tokens
+    steady_non_training_seconds = 0.0
     iterator = iter(loader)
     stop_reason = "max_tokens"
-    milestone_checked_tokens = 0
-    while counters.optimizer_steps < max_optimizer_steps:
-        if config.deadline_seconds and time.perf_counter() - start >= config.deadline_seconds:
-            stop_reason = "wall_deadline"
-            break
+    milestone_checked_tokens = counters.training_tokens
+    stop_requested = False
+    baseline_metrics = None
+    if config.baseline_path is not None:
+        baseline_metrics = json.loads(config.baseline_path.read_text(encoding="utf-8"))["metrics"]
+    while counters.optimizer_steps < target_optimizer_steps:
+        batch_released = False
+        end_after_step = False
         wait_start = time.perf_counter()
         try:
             batch = next(iterator)
@@ -403,7 +479,8 @@ def run_training(config: RunConfig) -> dict:
                     raise FloatingPointError("non-finite gradient norm")
                 grad_norm_value = float(grad_norm.item())
             optimizer.step()
-            scheduler.step()
+            if accelerator.sync_gradients:
+                scheduler.step()
             optimizer.zero_grad(set_to_none=True)
         counters.record_microstep(local_tokens, data_wait)
         if accelerator.sync_gradients:
@@ -422,9 +499,15 @@ def run_training(config: RunConfig) -> dict:
             grad_norms.append(grad_norm_value)
             if accelerator.is_main_process:
                 _append_jsonl(config.output_dir / "train_log.jsonl", loss_entry)
+            if steady_start_time is None:
+                steady_start_time = time.perf_counter()
+                steady_start_tokens = counters.training_tokens
+            del output, loss, batch
+            batch_released = True
             for milestone in milestones_crossed(
                 milestone_checked_tokens, counters.training_tokens, config.milestones
             ):
+                pause_start = time.perf_counter()
                 metadata = {**run_metadata, **asdict(counters), "milestone": milestone}
                 destination = config.output_dir / "snapshots" / f"tokens-{milestone:09d}"
                 save_snapshot(accelerator, model, tokenizer, destination, metadata, token)
@@ -435,19 +518,78 @@ def run_training(config: RunConfig) -> dict:
                         accelerator.device,
                     )
                     _json_write(destination / "micro_eval.json", evaluation)
+                    stop_requested = bool(
+                        baseline_metrics
+                        and is_broad_deterioration(evaluation, baseline_metrics)
+                    )
+                stop_tensor = torch.tensor(
+                    int(stop_requested), device=accelerator.device, dtype=torch.int32
+                )
+                stop_tensor = accelerator.reduce(stop_tensor, reduction="max")
+                stop_requested = bool(stop_tensor.item())
                 accelerator.wait_for_everyone()
+                pause_seconds = time.perf_counter() - pause_start
+                non_training_seconds += pause_seconds
+                if steady_start_time is not None:
+                    steady_non_training_seconds += pause_seconds
             milestone_checked_tokens = counters.training_tokens
-        del output, loss, batch
+            if stop_requested:
+                stop_reason = "broad_validation_deterioration"
+                end_after_step = True
+            elif config.deadline_seconds and time.perf_counter() - start >= config.deadline_seconds:
+                stop_reason = "wall_deadline"
+                end_after_step = True
+        if not batch_released:
+            del output, loss, batch
+        if end_after_step:
+            break
     torch.cuda.synchronize()
     wall_seconds = time.perf_counter() - start
+    session_tokens = counters.training_tokens - initial_tokens
+    session_data_wait = counters.data_wait_seconds - initial_data_wait
+    steady_wall_seconds = (
+        time.perf_counter() - steady_start_time - steady_non_training_seconds
+        if steady_start_time is not None
+        else 0.0
+    )
+    steady_tokens = counters.training_tokens - steady_start_tokens
     peak_vram = torch.cuda.max_memory_allocated() / 2**30
+    rank_stats = accelerator.gather(
+        torch.tensor(
+            [
+                wall_seconds,
+                non_training_seconds,
+                session_data_wait,
+                steady_wall_seconds,
+                peak_vram,
+            ],
+            device=accelerator.device,
+            dtype=torch.float64,
+        )
+    ).view(-1, 5)
+    wall_seconds = float(rank_stats[:, 0].max().item())
+    non_training_seconds = float(rank_stats[:, 1].max().item())
+    session_data_wait = float(rank_stats[:, 2].mean().item())
+    steady_wall_seconds = float(rank_stats[:, 3].max().item())
+    peak_vram_by_gpu = [float(value) for value in rank_stats[:, 4].tolist()]
+    peak_vram = max(peak_vram_by_gpu)
+    training_wall_seconds = wall_seconds - non_training_seconds
     summary = {
         **run_metadata,
         **asdict(counters),
         "wall_seconds": wall_seconds,
-        "tokens_per_second": counters.training_tokens / wall_seconds,
-        "data_wait_percent": 100.0 * counters.data_wait_seconds / wall_seconds,
+        "non_training_checkpoint_eval_seconds": non_training_seconds,
+        "training_wall_seconds": training_wall_seconds,
+        "session_training_tokens": session_tokens,
+        "tokens_per_second": session_tokens / training_wall_seconds,
+        "steady_state_tokens_per_second": (
+            steady_tokens / steady_wall_seconds
+            if steady_wall_seconds > 0 and steady_tokens
+            else None
+        ),
+        "data_wait_percent": 100.0 * session_data_wait / training_wall_seconds,
         "peak_vram_gb": peak_vram,
+        "peak_vram_by_gpu_gb": peak_vram_by_gpu,
         "stop_reason": stop_reason,
         "nan_or_inf": False,
         "loss_history": losses,
@@ -460,7 +602,7 @@ def run_training(config: RunConfig) -> dict:
         ),
         "prepared_blocks_initial": len(dataset),
         "prepared_seconds_ahead_at_measured_rate": (
-            len(dataset) * block_shape[1] / (counters.training_tokens / wall_seconds)
+            len(dataset) * block_shape[1] / (session_tokens / training_wall_seconds)
         ),
     }
     if config.save_final:
@@ -486,7 +628,28 @@ def run_training(config: RunConfig) -> dict:
             _json_write(config.output_dir / "micro_eval.json", evaluation)
         accelerator.wait_for_everyone()
     if config.save_resume:
-        accelerator.save_state(config.output_dir / "resume-latest", safe_serialization=True)
+        required_free = 10 * 2**30 if config.optimizer == "adamw_torch" else 5 * 2**30
+        free = shutil.disk_usage(config.output_dir).free
+        if free >= required_free:
+            accelerator.save_state(config.output_dir / "resume-latest", safe_serialization=True)
+            if accelerator.is_main_process:
+                resume = {
+                    **asdict(counters),
+                    "next_block": start_block + session_tokens // block_shape[1],
+                    "tokens_per_update": tokens_per_update,
+                    "model_revision": MODEL_REVISION,
+                }
+                _json_write(
+                    config.output_dir / "resume-latest" / "resume_metadata.json", resume
+                )
+            summary["resume_state_saved"] = True
+        else:
+            summary["resume_state_saved"] = False
+            summary["resume_state_skip_reason"] = (
+                f"only {free / 2**30:.2f} GiB free; "
+                f"required {required_free / 2**30:.0f} GiB"
+            )
+        accelerator.wait_for_everyone()
     if accelerator.is_main_process:
         _json_write(config.output_dir / "summary.json", summary)
     accelerator.wait_for_everyone()
@@ -501,13 +664,13 @@ def run_baseline(corpus_dir: Path, output_path: Path) -> dict:
         raise RuntimeError("baseline evaluation requires CUDA")
     token, credential_source = resolve_optional_hf_token()
     model, _ = _load_model_and_tokenizer(token)
-    model.to(device="cuda", dtype=torch.float16)
+    model.to(device="cuda")
     metrics = evaluate_micro(model, corpus_dir / "micro", torch.device("cuda"))
     result = {
         "model_id": MODEL_ID,
         "model_revision": MODEL_REVISION,
         "tokenizer_revision": MODEL_REVISION,
-        "precision": "fp16",
+        "precision": "fp16 autocast over fp32 master weights",
         "seed": 271828,
         "credential_source": credential_source,
         "packages": {
@@ -547,6 +710,8 @@ def main() -> None:
     train.add_argument("--save-final", action="store_true")
     train.add_argument("--save-resume", action="store_true")
     train.add_argument("--eval-final", action="store_true")
+    train.add_argument("--baseline-path", type=Path)
+    train.add_argument("--resume-from", type=Path)
     train.add_argument("--milestones", type=int, nargs="*", default=[])
     args = parser.parse_args()
     if args.command == "baseline":
@@ -569,6 +734,8 @@ def main() -> None:
         save_final=args.save_final,
         save_resume=args.save_resume,
         eval_final=args.eval_final,
+        baseline_path=args.baseline_path,
+        resume_from=args.resume_from,
         milestones=tuple(args.milestones),
     )
     summary = run_training(config)

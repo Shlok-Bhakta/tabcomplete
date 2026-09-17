@@ -48,6 +48,7 @@ def launch_training(
     learning_rate: float,
     max_tokens: int,
     workers: int = 1,
+    warmup_steps: int = 5,
     eval_final: bool = False,
     main_run: bool = False,
 ) -> dict:
@@ -80,7 +81,7 @@ def launch_training(
         "--prefetch-factor",
         "2",
         "--warmup-steps",
-        "5",
+        str(warmup_steps),
     ]
     command.append("--gradient-checkpointing" if checkpointing else "--no-gradient-checkpointing")
     if eval_final:
@@ -96,7 +97,8 @@ def launch_training(
                 "1000000",
                 "2500000",
                 "5000000",
-                "10000000",
+                "--baseline-path",
+                str(OUTPUT / "baseline.json"),
             ]
         )
     started = time.time()
@@ -121,12 +123,16 @@ def launch_training(
         "learning_rate": learning_rate,
         "requested_tokens": max_tokens,
         "workers": workers,
+        "warmup_steps": warmup_steps,
         "stable": False,
     }
     summary_path = destination / "summary.json"
     if code == 0 and summary_path.exists():
         record.update(json.loads(summary_path.read_text(encoding="utf-8")))
-        record["stable"] = not record.get("nan_or_inf", True)
+        record["stable"] = (
+            not record.get("nan_or_inf", True)
+            and record.get("stop_reason") != "broad_validation_deterioration"
+        )
     return record
 
 
@@ -134,7 +140,11 @@ def pick_configuration(benchmarks: list[dict]) -> dict:
     stable = [row for row in benchmarks if row.get("stable")]
     if not stable:
         raise RuntimeError("no full-weight benchmark configuration was stable")
-    return max(stable, key=lambda row: row["tokens_per_second"])
+    return max(
+        stable,
+        key=lambda row: row.get("steady_state_tokens_per_second")
+        or row["tokens_per_second"],
+    )
 
 
 def pick_learning_rate(baseline: dict, pilots: list[dict]) -> dict:
@@ -163,7 +173,9 @@ def pick_learning_rate(baseline: dict, pilots: list[dict]) -> dict:
         pilot["micro_eval"] = evaluation
         pilot["language_regressions_over_2pct"] = regressions
         pilot["general_nll_ratio"] = general_ratio
-        if regressions <= 2 and general_ratio <= 1.10:
+        code_improved = evaluation["overall_code"]["nll"] < base["overall_code"]["nll"]
+        pilot["overall_code_improved"] = code_improved
+        if code_improved and regressions <= 2 and general_ratio <= 1.10:
             eligible.append(pilot)
     if not eligible:
         raise RuntimeError("all learning-rate pilots failed broad-improvement safety gates")
@@ -283,6 +295,7 @@ def main() -> None:
                 learning_rate=1e-5,
                 max_tokens=65_536,
                 workers=workers,
+                warmup_steps=0,
             )
         )
     selected = pick_configuration(benchmarks)
@@ -299,6 +312,7 @@ def main() -> None:
                 learning_rate=1e-5,
                 max_tokens=65_536,
                 workers=workers,
+                warmup_steps=0,
             )
         )
     selected = pick_configuration(benchmarks)
@@ -355,9 +369,12 @@ def main() -> None:
     (OUTPUT / "orchestrator_summary.json").write_text(
         json.dumps(final, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8"
     )
-    if not main_result.get("stable"):
-        raise RuntimeError("main training run did not complete stably")
-    print("Stage-1 orchestration: PASS")
+    if main_result.get("exit_code") != 0:
+        raise RuntimeError("main training process failed")
+    if main_result.get("stop_reason") == "broad_validation_deterioration":
+        print("Stage-1 orchestration: SAFE STOP after broad validation deterioration")
+    else:
+        print("Stage-1 orchestration: PASS")
 
 
 if __name__ == "__main__":
