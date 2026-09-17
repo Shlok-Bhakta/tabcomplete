@@ -11,4 +11,5 @@ data/generated/
 kaggle/dataset/*.jsonl
 kaggle/dataset/*.csv
 checkpoints/
+outputs/
 *.safetensors
