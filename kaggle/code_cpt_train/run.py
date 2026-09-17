@@ -170,6 +170,41 @@ def pick_learning_rate(baseline: dict, pilots: list[dict]) -> dict:
     return min(eligible, key=lambda row: row["micro_eval"]["overall_code"]["nll"])
 
 
+def write_baseline_markdown(baseline: dict, path: Path) -> None:
+    labels = {
+        "python": "Python",
+        "typescript": "TypeScript",
+        "javascript": "JavaScript",
+        "java": "Java",
+        "cpp": "C++",
+        "rust": "Rust",
+        "go": "Go",
+        "c": "C",
+        "csharp": "C#",
+        "overall_code": "Overall code",
+        "general": "General text",
+    }
+    lines = [
+        "# Untouched Qwen3.5-0.8B-Base MICRO baseline",
+        "",
+        f"Model revision: `{baseline['model_revision']}`",
+        f"Tokenizer revision: `{baseline['tokenizer_revision']}`",
+        f"Precision: {baseline['precision']}",
+        f"Seed: {baseline['seed']}",
+        f"GPU: {baseline['gpu']}",
+        "",
+        "| Corpus | NLL | Evaluated tokens |",
+        "|---|---:|---:|",
+    ]
+    for key, label in labels.items():
+        metric = baseline["metrics"][key]
+        lines.append(f"| {label} | {metric['nll']:.6f} | {metric['tokens']} |")
+    lines.extend(["", "Package versions:", ""])
+    for package, version in sorted(baseline["packages"].items()):
+        lines.append(f"- `{package}=={version}`")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     corpus = find_corpus()
@@ -223,6 +258,7 @@ def main() -> None:
     if baseline_code:
         raise RuntimeError("untouched-base MICRO evaluation failed")
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    write_baseline_markdown(baseline, OUTPUT / "baseline.md")
 
     benchmark_specs = [
         ("1gpu_mb1_ckpt_8bit", 1, 1, 16, True, "adamw_8bit", 1),

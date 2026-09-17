@@ -20,6 +20,8 @@ from tinycomplete.code_cpt.train import (
     PackedBlocksDataset,
     TrainingCounters,
     distributed_block_indices,
+    extract_mtp_from_snapshot,
+    language_mix_for_prefix,
     milestones_crossed,
 )
 
@@ -164,3 +166,47 @@ def test_packed_dataset_reads_exact_memmap_blocks(tmp_path) -> None:
     assert len(dataset) == 2
     assert dataset[0]["input_ids"].tolist() == [6, 7, 8, 9, 10, 11]
     assert torch.equal(dataset[0]["input_ids"], dataset[0]["labels"])
+
+
+def test_language_mix_for_consumed_prefix_counts_tokens(tmp_path) -> None:
+    import numpy as np
+
+    language_path = tmp_path / "train_languages.npy"
+    np.save(language_path, np.array([0, 1, 0, 2, 2], dtype=np.uint8))
+
+    result = language_mix_for_prefix(language_path, ["python", "rust", "go"], 4, 2048)
+
+    assert result["token_counts"] == {"python": 4096, "rust": 2048, "go": 2048}
+    assert result["percentages"] == {"python": 50.0, "rust": 25.0, "go": 25.0}
+
+
+def test_extract_mtp_sidecar_keeps_only_native_mtp_tensors(tmp_path) -> None:
+    import json
+
+    from safetensors import safe_open
+    from safetensors.torch import save_file
+
+    snapshot = tmp_path / "snapshot"
+    destination = tmp_path / "checkpoint"
+    snapshot.mkdir()
+    save_file(
+        {"model.weight": torch.ones(2), "mtp.fc.weight": torch.arange(3)},
+        snapshot / "model-00001-of-00001.safetensors",
+    )
+    (snapshot / "model.safetensors.index.json").write_text(
+        json.dumps(
+            {
+                "weight_map": {
+                    "model.weight": "model-00001-of-00001.safetensors",
+                    "mtp.fc.weight": "model-00001-of-00001.safetensors",
+                }
+            }
+        )
+    )
+
+    manifest = extract_mtp_from_snapshot(snapshot, destination)
+
+    assert manifest["tensor_count"] == 1
+    assert manifest["parameter_count"] == 3
+    with safe_open(destination / "mtp-original.safetensors", framework="pt") as handle:
+        assert list(handle.keys()) == ["mtp.fc.weight"]

@@ -30,6 +30,23 @@ def milestones_crossed(previous: int, current: int, milestones: Iterable[int]) -
     return [milestone for milestone in milestones if previous < milestone <= current]
 
 
+def language_mix_for_prefix(
+    language_path: Path, language_order: list[str], blocks: int, block_size: int
+) -> dict[str, dict[str, float] | dict[str, int]]:
+    ids = np.load(language_path, mmap_mode="r")[:blocks]
+    counts = {
+        language: int(np.count_nonzero(ids == index))
+        for index, language in enumerate(language_order)
+    }
+    token_counts = {language: count * block_size for language, count in counts.items()}
+    total = sum(token_counts.values())
+    percentages = {
+        language: 100.0 * count / total if total else 0.0
+        for language, count in token_counts.items()
+    }
+    return {"token_counts": token_counts, "percentages": percentages}
+
+
 @dataclass
 class TrainingCounters:
     world_size: int = 1
@@ -176,20 +193,11 @@ def evaluate_micro(model, micro_dir: Path, device, *, batch_size: int = 1) -> di
     return result
 
 
-def extract_mtp_sidecar(destination: Path, token: str | None) -> dict:
-    """Copy the ignored native MTP tensors into a sidecar without training them."""
-    from huggingface_hub import snapshot_download
+def extract_mtp_from_snapshot(snapshot: Path, destination: Path) -> dict:
+    """Copy ignored native MTP tensors from a downloaded snapshot into a sidecar."""
     from safetensors import safe_open
     from safetensors.torch import save_file
 
-    snapshot = Path(
-        snapshot_download(
-            MODEL_ID,
-            revision=MODEL_REVISION,
-            token=token,
-            allow_patterns=["*.safetensors", "*.safetensors.index.json"],
-        )
-    )
     index_path = snapshot / "model.safetensors.index.json"
     weight_map = json.loads(index_path.read_text(encoding="utf-8"))["weight_map"]
     mtp_keys = sorted(key for key in weight_map if key.startswith("mtp."))
@@ -218,6 +226,21 @@ def extract_mtp_sidecar(destination: Path, token: str | None) -> dict:
     }
     _json_write(destination / "mtp-manifest.json", manifest)
     return manifest
+
+
+def extract_mtp_sidecar(destination: Path, token: str | None) -> dict:
+    """Download the pinned source if needed, then preserve its untrained MTP tensors."""
+    from huggingface_hub import snapshot_download
+
+    snapshot = Path(
+        snapshot_download(
+            MODEL_ID,
+            revision=MODEL_REVISION,
+            token=token,
+            allow_patterns=["*.safetensors", "*.safetensors.index.json"],
+        )
+    )
+    return extract_mtp_from_snapshot(snapshot, destination)
 
 
 def save_snapshot(
@@ -294,6 +317,9 @@ def run_training(config: RunConfig) -> dict:
         model.gradient_checkpointing_disable()
     block_path = config.corpus_dir / "train_blocks.npy"
     block_shape = np.load(block_path, mmap_mode="r").shape
+    corpus_metadata = json.loads(
+        (config.corpus_dir / "corpus_metadata.json").read_text(encoding="utf-8")
+    )
     tokens_per_microstep = config.microbatch * block_shape[1] * accelerator.num_processes
     tokens_per_update = tokens_per_microstep * config.gradient_accumulation
     max_optimizer_steps = max(1, math.ceil(config.max_tokens / tokens_per_update))
@@ -426,6 +452,16 @@ def run_training(config: RunConfig) -> dict:
         "nan_or_inf": False,
         "loss_history": losses,
         "gradient_norm_history": grad_norms,
+        "actual_language_mix": language_mix_for_prefix(
+            config.corpus_dir / "train_languages.npy",
+            corpus_metadata["language_order"],
+            counters.training_tokens // block_shape[1],
+            block_shape[1],
+        ),
+        "prepared_blocks_initial": len(dataset),
+        "prepared_seconds_ahead_at_measured_rate": (
+            len(dataset) * block_shape[1] / (counters.training_tokens / wall_seconds)
+        ),
     }
     if config.save_final:
         save_snapshot(
@@ -459,6 +495,7 @@ def run_training(config: RunConfig) -> dict:
 
 def run_baseline(corpus_dir: Path, output_path: Path) -> dict:
     import torch
+    import transformers
 
     if not torch.cuda.is_available():
         raise RuntimeError("baseline evaluation requires CUDA")
@@ -473,6 +510,12 @@ def run_baseline(corpus_dir: Path, output_path: Path) -> dict:
         "precision": "fp16",
         "seed": 271828,
         "credential_source": credential_source,
+        "packages": {
+            "numpy": np.__version__,
+            "torch": torch.__version__,
+            "transformers": transformers.__version__,
+        },
+        "gpu": torch.cuda.get_device_name(0),
         "metrics": metrics,
     }
     _json_write(output_path, result)

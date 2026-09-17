@@ -56,6 +56,8 @@ class StreamStats:
     wall_seconds: float = 0.0
     train_blocks: int = 0
     validation_blocks: int = 0
+    training_packing_efficiency: float = 0.0
+    validation_packing_efficiency: float = 0.0
 
     def rates(self) -> dict[str, float]:
         return {
@@ -243,6 +245,12 @@ def _prepare_language(
     stats.wall_seconds = time.perf_counter() - wall_start
     stats.train_blocks = train_written
     stats.validation_blocks = validation_written
+    train_available = train_packer.source_tokens + train_packer.boundary_tokens
+    validation_available = validation_packer.source_tokens + validation_packer.boundary_tokens
+    stats.training_packing_efficiency = train_packer.emitted_tokens / train_available
+    stats.validation_packing_efficiency = (
+        validation_packer.emitted_tokens / validation_available if validation_available else 0.0
+    )
     train_array.flush()
     if validation_array is not None:
         validation_array.flush()
