@@ -58,7 +58,13 @@ def build_messages(request: TeacherRequest) -> list[dict[str, str]]:
         f"Editable region in {request.region.path or 'file'} "
         f"[bytes {request.region.start}:{request.region.end}]:\n"
         f"<<<REGION\n{request.region.text}\nREGION>>>\n\n"
-        f"Produce exactly {request.num_candidates} distinct candidate(s) as JSON."
+        f"Produce exactly {request.num_candidates} distinct candidate(s).\n"
+        "Return ONLY this JSON shape — no other keys, no Markdown, no prose:\n"
+        '{"candidates": [{"action": "replace|noop", '
+        '"replacement": "<new region text, or empty string for noop>"}]}\n'
+        "Example:\n"
+        '{"candidates": [{"action": "replace", "replacement": "x = 2"}, '
+        '{"action": "noop", "replacement": ""}]}'
     )
     return [
         {"role": "system", "content": SYSTEM_PROMPT},

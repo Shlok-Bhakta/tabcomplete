@@ -5,7 +5,7 @@
 [teacher]
 provider = "fake"  # fake | openrouter | deepseek
 openrouter_model = "meta/muse-spark-1.3-contributor"  # VERIFY via /api/v1/models before paid calls
-deepseek_model = "deepseek-chat"
+deepseek_model = "deepseek-flash"  # cheap tier, verified via GET /models 2026-09-17
 
 [budget]
 max_total_spend_usd = 2.00

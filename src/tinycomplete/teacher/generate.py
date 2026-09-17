@@ -14,12 +14,21 @@ import time
 
 from ..data.static_edits import make_next_edit
 from .base import EditableRegion, TeacherRequest, provider_from_name
-from .budget import Budget
+from .budget import Budget, estimate_cost_usd
 from .validate import apply_replacement, validate_candidate
 
 __all__ = ["STAGE_SIZES", "build_request", "run_generation"]
 
 STAGE_SIZES = {"A": 10, "B": 50}
+
+# Conservative per-1k-token estimates (PEAK public pricing + SAFETY_MARGIN
+# applied in estimate_cost_usd) used when a provider reports no exact cost.
+# Source: https://api-docs.deepseek.com/quick_start/pricing (2026-09-17).
+ESTIMATED_PRICING_PER_1K = {
+    "deepseek": (0.0003, 0.0012),  # flash peak: $0.30/1M in, $1.20/1M out
+    "openrouter": (0.010, 0.030),
+    "fake": (0.0, 0.0),
+}
 
 FIXTURE_ARITH = (
     '"""Synthetic fixture: arithmetic helpers."""\nimport os\n\n\n'
@@ -108,12 +117,13 @@ def run_generation(
     seed: int = 0,
     out_path: str = "",
     num_candidates: int = 3,
+    **provider_kwargs,
 ) -> dict:
     """Run staged generation synchronously. Returns a summary dict."""
     budget = Budget.from_env()
     if provider_name != "fake" and not budget.paid_enabled():
         raise RuntimeError("paid generation not enabled (ALLOW_PAID_SYNTHETIC=1 required)")
-    provider = provider_from_name(provider_name)
+    provider = provider_from_name(provider_name, **provider_kwargs)
     total = max(0, max_states)
     # Stage schedule: A=10, then B up to 50, then C remainder.
     schedule = (
@@ -130,8 +140,17 @@ def run_generation(
             record = await _predict_one(provider, request)
             record["stage"] = stage
             results.append(record)
-            if provider_name != "fake":
-                cost = record.get("reported_cost_usd") or 0.0
+            if provider_name != "fake" and record.get("ok"):
+                cost = record.get("reported_cost_usd")
+                if cost is None:
+                    price_in, price_out = ESTIMATED_PRICING_PER_1K.get(provider_name, (0.01, 0.03))
+                    cost = estimate_cost_usd(
+                        record.get("prompt_tokens") or 0,
+                        record.get("output_tokens") or 0,
+                        price_in,
+                        price_out,
+                    )
+                    record["estimated_cost_usd"] = cost
                 budget.record(cost, 1)
             if stage == "A" and k == STAGE_SIZES["A"] - 1 and total > STAGE_SIZES["A"]:
                 ok_rate = sum(1 for r in results if r["ok"]) / len(results)

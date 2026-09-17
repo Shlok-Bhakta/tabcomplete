@@ -62,11 +62,11 @@ Legend: NOT_STARTED | IN_PROGRESS | PASS | BLOCKED
 - Next milestone: teacher layer
 
 ## 7. Teacher interface + prompt + OpenRouter/DeepSeek + budget + validation
-- Status: PASS
-- Files changed: src/tinycomplete/teacher/{base,prompt,budget,validate,fake,openrouter,deepseek,generate,__init__}.py, src/tinycomplete/cli.py, configs/teacher.example.toml, tests/test_teacher.py, tests/test_budget.py, reports/synthetic.md
+- Status: PASS (extended 2026-09-17: DeepSeek stages A+B live)
+- Files changed: src/tinycomplete/teacher/{base,prompt,budget,validate,fake,openrouter,deepseek,generate,__init__}.py, src/tinycomplete/cli.py, configs/teacher.example.toml, scripts/deepseek_stage_a.py, tests/test_teacher.py, tests/test_budget.py, reports/synthetic.md
 - Verification command: `uv run pytest -q tests/test_teacher.py tests/test_budget.py`
-- Verification result: PASS — 15 passed (prompt semantics, fake pipeline, validation rules incl. syntax/reversal, OpenRouter structured payload + MockTransport parse, exactly-4-attempts 429 bound, secret redaction, DeepSeek payload, paid gate, staged fake gen 12 states, budget caps/persistence/margin). Paid disabled (no keys, no ~/Hermes, ALLOW_PAID_SYNTHETIC unset) → fake pipeline only, $0.00.
-- Blocker: none (paid stages gated by design, not by failure)
+- Verification result: PASS — 16 passed. LIVE: DeepSeek flash 60/60 req ok, 180/180 schema, 148 acc/32 rej, ~$0.022 of $2.00, 70/2000 examples. Fixes: thinking disabled, JSON extraction, prompt schema skeleton, quota only on success. ToS §4.2 permits distillation. Stage C awaits user go-ahead.
+- Blocker: none
 - Next milestone: evaluator
 
 ## 8. Evaluator (metrics + latency)

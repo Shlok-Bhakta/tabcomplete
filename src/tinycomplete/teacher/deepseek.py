@@ -20,7 +20,7 @@ from .validate import validate_candidate
 
 __all__ = ["DeepSeekProvider", "DEFAULT_MODEL", "CHAT_URL"]
 
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-flash"  # verified via GET /models 2026-09-17 (cheap tier)
 CHAT_URL = "https://api.deepseek.com/chat/completions"
 
 
@@ -48,10 +48,14 @@ class DeepSeekProvider:
         return key
 
     def build_payload(self, request: TeacherRequest) -> dict:
+        # Thinking disabled: reasoning goes to reasoning_content and starves
+        # the JSON final answer; labeling needs strict JSON in content.
+        # Toggle name verified in DeepSeek Thinking Mode docs (2026-09-17).
         return {
             "model": self.model,
             "messages": build_messages(request),
             "response_format": {"type": "json_object"},
+            "thinking": {"type": "disabled"},
             "max_tokens": 2000,
         }
 

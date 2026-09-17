@@ -53,6 +53,15 @@ def sanitize_error(exc: BaseException) -> str:
     return text[:500]
 
 
+def _extract_json_object(text: str) -> str:
+    """Return the largest {...} span; raises ValueError when absent."""
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        raise ValueError("no JSON object in response content")
+    return text[start : end + 1]
+
+
 def _retryable(exc: BaseException) -> bool:
     if isinstance(exc, (httpx.TimeoutException, httpx.NetworkError)):
         return True
@@ -106,6 +115,8 @@ class OpenRouterProvider:
             raise TeacherError(f"malformed JSON response: {exc}") from None
         try:
             items = data["choices"][0]["message"]["content"]
+            if isinstance(items, str):
+                items = _extract_json_object(items)
             cands = json.loads(items) if isinstance(items, str) else items
             return tuple(Candidate.model_validate(c) for c in cands["candidates"])
         except (KeyError, IndexError, TypeError, ValueError) as exc:

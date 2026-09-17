@@ -56,9 +56,9 @@ Paid path implemented but unexecuted by gate. Full detail: `reports/synthetic.md
 
 OpenRouter requests: 0
 OpenRouter estimated/reported spend: $0.00
-DeepSeek requests: 0
-DeepSeek estimated/reported spend: $0.00
-Total paid examples: 0
+DeepSeek requests: 70 states / 180 candidates (deepseek-flash)
+DeepSeek estimated/reported spend: $0.022 (peak-price + 50% margin estimate)
+Total paid examples: 70
 
 ## Colab Harness
 

@@ -197,8 +197,19 @@ def test_deepseek_payload_shape(tmp_path):
     budget_path = tmp_path / "b.json"
     provider = DeepSeekProvider(api_key="fake-key", budget=Budget(path=str(budget_path)))
     payload = provider.build_payload(_request())
-    assert payload["model"] == "deepseek-chat"
+    assert payload["model"] == "deepseek-flash"
     assert payload["response_format"] == {"type": "json_object"}
+    assert payload["thinking"] == {"type": "disabled"}
+
+
+def test_parse_extracts_json_from_prose():
+    inner = '{"candidates": [{"action": "noop", "replacement": ""}]}'
+    body = json.dumps({"choices": [{"message": {"content": f"Here you go:\n{inner}\n"}}]})
+    cands = OpenRouterProvider.parse_payload(body, _request())
+    assert cands == (Candidate(action="noop", replacement=""),)
+    bad = json.dumps({"choices": [{"message": {"content": "no json here"}}]})
+    with pytest.raises(TeacherError):
+        OpenRouterProvider.parse_payload(bad, _request())
 
 
 def test_paid_gate_blocks_without_flag(tmp_path, monkeypatch):

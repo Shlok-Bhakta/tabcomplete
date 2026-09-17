@@ -1,18 +1,53 @@
 # Synthetic Data Report
 
-Date: 2026-09-16. Paid gate: `ALLOW_PAID_SYNTHETIC` unset → **no paid calls made**.
+Date: 2026-09-16/17. Paid gate: `ALLOW_PAID_SYNTHETIC=1` set in-process for
+the DeepSeek run below (user-authorized); all other runs fake.
 
 ## Paid API usage
 
-- OpenRouter requests: 0, spend: $0.00
-- DeepSeek requests: 0, spend: $0.00
-- Total paid examples: 0
-- `~/Hermes` does not exist on this machine; no DeepSeek key file was
-  located (search scope restricted to `~/Hermes` per policy; no filesystem
-  hunt performed). `OPENROUTER_API_KEY` / `DEEPSEEK_API_KEY` absent from env.
-- OpenRouter model-id verification and live pricing were therefore NOT
-  recorded — they are mandatory prerequisites before any future paid run
-  (see `src/tinycomplete/teacher/openrouter.py::verify_model_id`).
+- OpenRouter requests: 0, spend: $0.00 (no key present)
+- DeepSeek requests: 70 states / 180 candidates, estimated spend: **$0.022**
+- Total paid examples: 70 (cap 2000) — budget in `data/generated/budget.json`
+- Key: `DEEPSEEK_API_KEY` from `~/.hermes/.env` (process env only, never logged)
+
+## DeepSeek pricing (recorded 2026-09-17, source: api-docs.deepseek.com/quick_start/pricing)
+
+Model `deepseek-flash` (verified via `GET /models`; `deepseek-chat` NOT listed):
+peak $0.30/1M in (cache miss), $1.20/1M out; off-peak half. Run happened
+00:16–00:3x UTC Thursday = off-peak, but accounting conservatively uses peak
++ 50% margin. Balance before run: $4.10 topped-up.
+
+## DeepSeek teacher findings (stages A+B)
+
+`uv run python scripts/deepseek_stage_a.py --states 60 --seed 3`
+(10 stage-A + 50 stage-B, 3 candidates/state, fixture-only inputs):
+
+- request ok-rate: 60/60 (100%); schema parse: 180/180 (100%, gate was 90%)
+- accepted 148 / rejected-with-reasons 32 (rejects kept for preference data)
+- actions: 84 replace / 64 noop — NOOP used freely, as instructed
+- replace size median 12 chars / max 66 — small likely edits, no broad rewrites
+- reject reasons: syntax errors 21, identical-to-region 9, empty-replace 2
+- usage: 29,014 prompt + 3,240 output tokens
+- terms check: DeepSeek Open Platform ToS §4.2 explicitly permits training
+  other models (distillation). Inputs were fixture/synthetic code only.
+
+Pipeline fixes Stage A forced (before scaling): thinking mode disabled
+(`thinking: {type: disabled}` — default thinking starves JSON `content`),
+JSON-object extraction fallback in `parse_payload`, explicit schema skeleton
++ example embedded in the teacher prompt (json_object mode has no strict
+schema). One accounting fix: failed requests no longer consume example quota.
+
+## Muse vs DeepSeek comparison
+
+Pending: no OpenRouter key, so no overlapping Muse labels exist yet. The 60
+DeepSeek states (seeds logged in the JSONL) are ready for an overlap run when
+a key is available.
+
+## Fake-provider pipeline (full path, $0)
+
+`uv run tinycomplete synthetic --provider fake --states 12 --seed 1`:
+12/12 ok, 20 accepted / 4 rejected. Artifacts gitignored under
+`data/generated/`.
 
 ## Fake-provider pipeline (full path, $0)
 
@@ -32,9 +67,7 @@ tree-sitter error-count check (python), rewrite size caps (8 KB absolute,
 4× region), anti-reversal of the preceding edit, anti-duplication of the
 region. Rejects are kept for future preference data.
 
-## Staging policy for a future paid run
+## Staging policy status
 
-A (10) → require 100% request success → B (50×3) → require ≥90% schema
-success → C (up to caps/budget). Caps: $2.00 total, 2000 examples,
-3 candidates/state, ≤4 attempts/request with exponential backoff.
-Record live OpenRouter pricing + model listing in this file first.
+A (10) ✅ 100% → B (50×3) ✅ 100% schema → C (up to caps/budget) ⏸️ awaiting
+user go-ahead (would be ~$0.70 more at current usage rates).
