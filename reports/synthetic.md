@@ -6,8 +6,8 @@ the DeepSeek run below (user-authorized); all other runs fake.
 ## Paid API usage
 
 - OpenRouter requests: 0, spend: $0.00 (no key present)
-- DeepSeek requests: 70 states / 180 candidates, estimated spend: **$0.022**
-- Total paid examples: 70 (cap 2000) — budget in `data/generated/budget.json`
+- DeepSeek requests: 2000 states / ~6000 candidates, estimated spend: **$0.78**
+- Total paid examples: 2000 usable (2230 quota counted incl. 230 crash-lost, recovered)
 - Key: `DEEPSEEK_API_KEY` from `~/.hermes/.env` (process env only, never logged)
 
 ## DeepSeek pricing (recorded 2026-09-17, source: api-docs.deepseek.com/quick_start/pricing)
@@ -69,5 +69,11 @@ region. Rejects are kept for future preference data.
 
 ## Staging policy status
 
-A (10) ✅ 100% → B (50×3) ✅ 100% schema → C (up to caps/budget) ⏸️ awaiting
-user go-ahead (would be ~$0.70 more at current usage rates).
+A (10) ✅ 100% → B (50×3) ✅ 100% schema → C ✅ complete 2026-09-17:
+**2000 states, 1999 ok, 4688 accepted / 1311 rejected**,
+spend **$0.78** (cap $2.00), quota 2230/2230 counted (2000 usable + 230
+lost to a summary-crash before file write; crash fixed, states recovered
+with fresh seeds). Reject mix: identical-to-region, syntax errors,
+duplicates, empty-replace. Training export `train_deepseek.jsonl`: 4688
+records (2731 replace / 1957 noop), Qwen token median 144 / p95 203 /
+max 250, zero truncation at 2048.

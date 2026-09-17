@@ -214,7 +214,13 @@ def run_generation(
         for k, stage in enumerate(schedule):
             if provider_name != "fake" and not budget.can_spend(avg_cost, 1):
                 results.append(
-                    {"state_id": "budget-stop", "ok": False, "error": "budget exhausted"}
+                    {
+                        "state_id": "budget-stop",
+                        "ok": False,
+                        "error": "budget exhausted",
+                        "accepted": [],
+                        "rejected": [],
+                    }
                 )
                 break
             source = FIXTURE_SOURCES[(seed + k) % len(FIXTURE_SOURCES)]
@@ -250,8 +256,8 @@ def run_generation(
                     raise RuntimeError(f"stage B unhealthy: schema_ok={schema_ok}")
 
     asyncio.run(_run())
-    accepted = sum(len(r["accepted"]) for r in results)
-    rejected = sum(len(r["rejected"]) for r in results)
+    accepted = sum(len(r.get("accepted", [])) for r in results)
+    rejected = sum(len(r.get("rejected", [])) for r in results)
     summary = {
         "provider": provider_name,
         "states": len(results),
