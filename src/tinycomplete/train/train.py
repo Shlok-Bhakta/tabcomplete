@@ -85,6 +85,14 @@ def load_config(path: str) -> TrainConfig:
     return TrainConfig(**data)
 
 
+def ensure_text_tokenizer(tok):
+    """Unwrap a VL processor to its inner text tokenizer when needed."""
+    inner = getattr(tok, "tokenizer", None)
+    if inner is not None and hasattr(inner, "encode") and hasattr(inner, "decode"):
+        return inner
+    return tok
+
+
 def load_text_tokenizer(model_id: str = MODEL_ID):
     """Text tokenizer for Qwen3.5-Base.
 
@@ -94,11 +102,7 @@ def load_text_tokenizer(model_id: str = MODEL_ID):
     """
     from transformers import AutoTokenizer
 
-    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=False)
-    inner = getattr(tok, "tokenizer", None)
-    if inner is not None and hasattr(inner, "encode") and hasattr(inner, "decode"):
-        return inner
-    return tok
+    return ensure_text_tokenizer(AutoTokenizer.from_pretrained(model_id, trust_remote_code=False))
 
 
 def load_jsonl_records(path: str) -> list[dict]:
@@ -228,6 +232,7 @@ def train(cfg: TrainConfig) -> dict:
 
     device = _require_cuda()
     model, tokenizer = load_model_for_training(cfg)
+    tokenizer = ensure_text_tokenizer(tokenizer)
     records = load_jsonl_records(cfg.dataset_path)
     if not records:
         raise ValueError(f"no records in {cfg.dataset_path}")
