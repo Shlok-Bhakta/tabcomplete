@@ -41,3 +41,13 @@ modern torch can't use). Internet enabled for HF weights + unsloth install.
 
 $0 (free tier). No cloud billing involved. If quota is exhausted, the push
 fails loudly — fall back to the Colab notebook (`notebooks/qwen35_colab.ipynb`).
+
+## 2026-09-17 run log: CPU fallback (GPU not attached)
+
+Pushed `shlokbhakta/tabcomplete-lora-smoke` v1+v2 with `enable_gpu: true`,
+`machine_shape: NvidiaTeslaT4`, internet on. Pulled metadata confirms Kaggle
+stored the GPU request — but both workers booted CPU-only
+(`torch.cuda.is_available()` False) and GPU quota stayed at 0.00h used.
+Signature matches an account **without phone verification**: Kaggle silently
+downgrades to CPU instead of erroring. Fix: verify phone number at
+`kaggle.com/settings`, then re-push (no code changes needed).

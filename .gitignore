@@ -8,5 +8,7 @@ __pycache__/
 .env.*
 secrets/
 data/generated/
+kaggle/dataset/*.jsonl
+kaggle/dataset/*.csv
 checkpoints/
 *.safetensors
