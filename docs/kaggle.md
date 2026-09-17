@@ -51,3 +51,10 @@ stored the GPU request — but both workers booted CPU-only
 Signature matches an account **without phone verification**: Kaggle silently
 downgrades to CPU instead of erroring. Fix: verify phone number at
 `kaggle.com/settings`, then re-push (no code changes needed).
+
+## 2026-09-17 run log: v8 COMPLETE on T4 x2 ✅
+
+After phone verification: T4 x2 attached, 100-step LoRA smoke green in ~12 min
+(0.41h quota). Fixes along the way: dataset race (bundled repo snapshot
+fallback), VL-processor tokenizer unwrap, unsloth-tokenizer unwrap.
+Full numbers: `reports/kaggle.md`.

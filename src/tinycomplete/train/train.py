@@ -154,6 +154,7 @@ def dataset_stats(lengths: list[int]) -> dict:
     return {
         "n": len(ordered),
         "median": int(statistics.median(ordered)),
+        "mean": sum(ordered) / len(ordered),
         "p95": pct(0.95),
         "max": max(ordered),
     }
@@ -273,9 +274,16 @@ def train(cfg: TrainConfig) -> dict:
     result = trainer.train()
     wall_time = time.perf_counter() - wall_start
     trainer.save_model(cfg.output_dir)
+    # Tokens actually seen ≈ steps × batch × accum × mean length (NOT dataset × steps).
+    tokens_seen = int(
+        result.global_step
+        * cfg.per_device_batch_size
+        * cfg.gradient_accumulation_steps
+        * stats["mean"]
+    )
     return throughput_report(
         device=device,
-        train_tokens=sum(len(r["input_ids"]) for r in train_ds) * cfg.max_steps,
+        train_tokens=tokens_seen,
         wall_time=wall_time,
         model=model,
         extra={"global_step": result.global_step, "dataset": stats},

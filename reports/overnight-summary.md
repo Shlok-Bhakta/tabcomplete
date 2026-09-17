@@ -69,6 +69,14 @@ Unsloth Qwen3.5 support verified against current docs (transformers v5+,
 FastLanguageModel, LoRA q/k/v/o+mlp, GDN fp16 caution → prefer L4/bf16).
 Versions table + first-run checklist: `reports/colab.md`.
 
+## Kaggle GPU run (2026-09-17, supersedes Colab-wait)
+
+`shlokbhakta/tabcomplete-lora-smoke` v8 on T4 x2: **COMPLETE in ~12 min
+(0.41h quota)**. 100 LoRA steps, adapter 6.4M params / 25.6 MB, peak VRAM
+1.34 GB, ~165 tok/s honest throughput, no NaN. Eval NLL delta ~0 on 3 trivial
+probes (base already at floor). Full numbers: `reports/kaggle.md`.
+Agent drove the whole loop (push → poll → pull → verify) via the Kaggle API.
+
 ## Dependency Versions
 
 transformers 5.17.0, torch 2.14.0+cpu (local only), pydantic 2.x, httpx,
