@@ -15,7 +15,7 @@ from typing import Any
 
 import numpy as np
 
-from tinycomplete.code_cpt.prepare import CORE_LANGUAGES, MODEL_ID, MODEL_REVISION, resolve_hf_token
+from tinycomplete.code_cpt.prepare import CORE_LANGUAGES, MODEL_ID, MODEL_REVISION
 
 
 def distributed_block_indices(length: int, rank: int, world_size: int) -> list[int]:
@@ -82,7 +82,22 @@ def _append_jsonl(path: Path, value: object) -> None:
         handle.write(json.dumps(value, sort_keys=True) + "\n")
 
 
-def _load_model_and_tokenizer(token: str, checkpoint: str | None = None):
+def resolve_optional_hf_token() -> tuple[str | None, str]:
+    token = os.environ.get("HF_TOKEN")
+    if token:
+        return token, "environment"
+    try:
+        from kaggle_secrets import UserSecretsClient
+
+        token = UserSecretsClient().get_secret("HF_TOKEN")
+        if token:
+            return token, "kaggle_secret"
+    except Exception:
+        pass
+    return None, "anonymous_public_model"
+
+
+def _load_model_and_tokenizer(token: str | None, checkpoint: str | None = None):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -161,7 +176,7 @@ def evaluate_micro(model, micro_dir: Path, device, *, batch_size: int = 1) -> di
     return result
 
 
-def extract_mtp_sidecar(destination: Path, token: str) -> dict:
+def extract_mtp_sidecar(destination: Path, token: str | None) -> dict:
     """Copy the ignored native MTP tensors into a sidecar without training them."""
     from huggingface_hub import snapshot_download
     from safetensors import safe_open
@@ -206,16 +221,26 @@ def extract_mtp_sidecar(destination: Path, token: str) -> dict:
 
 
 def save_snapshot(
-    accelerator, model, tokenizer, destination: Path, metadata: dict, token: str
+    accelerator, model, tokenizer, destination: Path, metadata: dict, token: str | None
 ) -> None:
+    import torch
+
     accelerator.wait_for_everyone()
     state_dict = accelerator.get_state_dict(model)
     if accelerator.is_main_process:
         destination.mkdir(parents=True, exist_ok=True)
         unwrapped = accelerator.unwrap_model(model)
+        snapshot_state = {
+            name: (
+                tensor.detach().to(device="cpu", dtype=torch.float16)
+                if tensor.is_floating_point()
+                else tensor.detach().cpu()
+            )
+            for name, tensor in state_dict.items()
+        }
         unwrapped.save_pretrained(
             destination,
-            state_dict=state_dict,
+            state_dict=snapshot_state,
             safe_serialization=True,
             max_shard_size="4GB",
         )
@@ -245,6 +270,7 @@ class RunConfig:
     deadline_seconds: float = 0.0
     save_final: bool = False
     save_resume: bool = False
+    eval_final: bool = False
     milestones: tuple[int, ...] = ()
 
 
@@ -260,7 +286,7 @@ def run_training(config: RunConfig) -> dict:
     random.seed(config.seed)
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
-    token, credential_source = resolve_hf_token()
+    token, credential_source = resolve_optional_hf_token()
     model, tokenizer = _load_model_and_tokenizer(token)
     if config.gradient_checkpointing:
         model.gradient_checkpointing_enable()
@@ -416,6 +442,13 @@ def run_training(config: RunConfig) -> dict:
             )
             _json_write(config.output_dir / "final" / "micro_eval.json", evaluation)
         accelerator.wait_for_everyone()
+    elif config.eval_final:
+        if accelerator.is_main_process:
+            evaluation = evaluate_micro(
+                accelerator.unwrap_model(model), config.corpus_dir / "micro", accelerator.device
+            )
+            _json_write(config.output_dir / "micro_eval.json", evaluation)
+        accelerator.wait_for_everyone()
     if config.save_resume:
         accelerator.save_state(config.output_dir / "resume-latest", safe_serialization=True)
     if accelerator.is_main_process:
@@ -429,7 +462,7 @@ def run_baseline(corpus_dir: Path, output_path: Path) -> dict:
 
     if not torch.cuda.is_available():
         raise RuntimeError("baseline evaluation requires CUDA")
-    token, credential_source = resolve_hf_token()
+    token, credential_source = resolve_optional_hf_token()
     model, _ = _load_model_and_tokenizer(token)
     model.to(device="cuda", dtype=torch.float16)
     metrics = evaluate_micro(model, corpus_dir / "micro", torch.device("cuda"))
@@ -470,6 +503,7 @@ def main() -> None:
     train.add_argument("--deadline-seconds", type=float, default=0)
     train.add_argument("--save-final", action="store_true")
     train.add_argument("--save-resume", action="store_true")
+    train.add_argument("--eval-final", action="store_true")
     train.add_argument("--milestones", type=int, nargs="*", default=[])
     args = parser.parse_args()
     if args.command == "baseline":
@@ -491,6 +525,7 @@ def main() -> None:
         deadline_seconds=args.deadline_seconds,
         save_final=args.save_final,
         save_resume=args.save_resume,
+        eval_final=args.eval_final,
         milestones=tuple(args.milestones),
     )
     summary = run_training(config)

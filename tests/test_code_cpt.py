@@ -17,6 +17,7 @@ from tinycomplete.code_cpt.data import (
 )
 from tinycomplete.code_cpt.eval import causal_nll_from_logits
 from tinycomplete.code_cpt.train import (
+    PackedBlocksDataset,
     TrainingCounters,
     distributed_block_indices,
     milestones_crossed,
@@ -151,3 +152,15 @@ def test_milestones_crossed_returns_each_new_threshold_once() -> None:
 
     assert milestones_crossed(240_000, 520_000, milestones) == [250_000, 500_000]
     assert milestones_crossed(520_000, 800_000, milestones) == []
+
+
+def test_packed_dataset_reads_exact_memmap_blocks(tmp_path) -> None:
+    import numpy as np
+
+    path = tmp_path / "blocks.npy"
+    np.save(path, np.arange(24, dtype=np.uint32).reshape(4, 6))
+    dataset = PackedBlocksDataset(path, start_block=1, block_count=2)
+
+    assert len(dataset) == 2
+    assert dataset[0]["input_ids"].tolist() == [6, 7, 8, 9, 10, 11]
+    assert torch.equal(dataset[0]["input_ids"], dataset[0]["labels"])
