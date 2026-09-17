@@ -24,6 +24,7 @@ __all__ = [
     "TrainConfig",
     "load_config",
     "load_jsonl_records",
+    "load_text_tokenizer",
     "format_record",
     "tokenize_records",
     "dataset_stats",
@@ -82,6 +83,22 @@ def load_config(path: str) -> TrainConfig:
     if unknown:
         raise ValueError(f"unknown config keys in {path}: {sorted(unknown)}")
     return TrainConfig(**data)
+
+
+def load_text_tokenizer(model_id: str = MODEL_ID):
+    """Text tokenizer for Qwen3.5-Base.
+
+    Newer transformers resolve the unified VLM repo to a Qwen3VLProcessor
+    (no .encode/.decode); older ones return a plain tokenizer. Unwrap the
+    inner text tokenizer when present, verified against installed classes.
+    """
+    from transformers import AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=False)
+    inner = getattr(tok, "tokenizer", None)
+    if inner is not None and hasattr(inner, "encode") and hasattr(inner, "decode"):
+        return inner
+    return tok
 
 
 def load_jsonl_records(path: str) -> list[dict]:
