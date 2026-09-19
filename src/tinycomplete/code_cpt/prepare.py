@@ -78,11 +78,18 @@ def resolve_hf_token() -> tuple[str, str]:
         from kaggle_secrets import UserSecretsClient
 
         token = UserSecretsClient().get_secret("HF_TOKEN")
-    except Exception as exc:
-        raise RuntimeError("HF_TOKEN is unavailable in the environment and Kaggle secrets") from exc
-    if not token:
-        raise RuntimeError("HF_TOKEN resolved to an empty value")
-    return token, "kaggle_secret"
+        if token:
+            return token, "kaggle_secret"
+    except Exception:
+        pass
+    private_files = list(
+        Path("/kaggle/input").glob("**/tabcomplete-hf-read-token*/hf_token.txt")
+    ) + list(Path("/kaggle/input").glob("**/hf_token.txt"))
+    for path in private_files:
+        token = path.read_text(encoding="utf-8").strip()
+        if token:
+            return token, "private_kaggle_dataset"
+    raise RuntimeError("HF_TOKEN is unavailable in all configured credential sources")
 
 
 def verify_access(token: str) -> dict[str, object]:

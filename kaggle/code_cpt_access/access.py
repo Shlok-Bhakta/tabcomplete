@@ -37,9 +37,19 @@ def get_token() -> tuple[str, str]:
     token = os.environ.get("HF_TOKEN")
     if token:
         return token, "environment"
-    from kaggle_secrets import UserSecretsClient
+    try:
+        from kaggle_secrets import UserSecretsClient
 
-    return UserSecretsClient().get_secret("HF_TOKEN"), "kaggle_secret"
+        token = UserSecretsClient().get_secret("HF_TOKEN")
+        if token:
+            return token, "kaggle_secret"
+    except Exception:
+        pass
+    for path in Path("/kaggle/input").glob("**/hf_token.txt"):
+        token = path.read_text(encoding="utf-8").strip()
+        if token:
+            return token, "private_kaggle_dataset"
+    raise RuntimeError("HF_TOKEN is unavailable in all configured credential sources")
 
 
 def main() -> None:
