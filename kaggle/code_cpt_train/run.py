@@ -10,7 +10,6 @@ import sys
 import time
 from pathlib import Path
 
-
 REPOSITORY = "https://github.com/Shlok-Bhakta/tabcomplete.git"
 BRANCH = "stage1/code-cpt"
 CHECKOUT = Path("/kaggle/working/tabcomplete")
@@ -51,6 +50,7 @@ def launch_training(
     warmup_steps: int = 5,
     eval_final: bool = False,
     main_run: bool = False,
+    distributed_mode: str = "ddp",
 ) -> dict:
     destination = OUTPUT / name
     command = [
@@ -82,6 +82,8 @@ def launch_training(
         "2",
         "--warmup-steps",
         str(warmup_steps),
+        "--distributed-mode",
+        distributed_mode,
     ]
     command.append("--gradient-checkpointing" if checkpointing else "--no-gradient-checkpointing")
     if eval_final:
@@ -124,6 +126,7 @@ def launch_training(
         "requested_tokens": max_tokens,
         "workers": workers,
         "warmup_steps": warmup_steps,
+        "distributed_mode": distributed_mode,
         "stable": False,
     }
     summary_path = destination / "summary.json"
@@ -234,6 +237,7 @@ def main() -> None:
     )
     run(["git", "clone", "--depth", "1", "--branch", BRANCH, REPOSITORY, str(CHECKOUT)])
     git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=CHECKOUT, text=True).strip()
+    import accelerate
     import torch
     import transformers
 
@@ -242,6 +246,7 @@ def main() -> None:
         "python": sys.version,
         "torch": torch.__version__,
         "transformers": transformers.__version__,
+        "accelerate": accelerate.__version__,
         "cuda": torch.version.cuda,
         "gpu_count": torch.cuda.device_count(),
         "gpus": [torch.cuda.get_device_name(index) for index in range(torch.cuda.device_count())],
@@ -272,14 +277,14 @@ def main() -> None:
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     write_baseline_markdown(baseline, OUTPUT / "baseline.md")
 
+    # The first kernel established that replicated full-weight DDP exceeds a
+    # T4 at sequence length 2048. Memory now requires FULL_SHARD; keep these
+    # probes bounded to two optimizer updates apiece.
     benchmark_specs = [
-        ("1gpu_mb1_ckpt_8bit", 1, 1, 16, True, "adamw_8bit", 1),
-        ("2gpu_mb1_ckpt_8bit", 2, 1, 8, True, "adamw_8bit", 1),
-        ("2gpu_mb1_no_ckpt_8bit", 2, 1, 8, False, "adamw_8bit", 1),
-        ("2gpu_mb2_no_ckpt_8bit", 2, 2, 4, False, "adamw_8bit", 1),
-        ("2gpu_mb4_no_ckpt_8bit", 2, 4, 2, False, "adamw_8bit", 1),
-        ("2gpu_mb8_no_ckpt_8bit", 2, 8, 1, False, "adamw_8bit", 1),
-        ("2gpu_mb1_ckpt_torch", 2, 1, 8, True, "adamw_torch", 1),
+        ("2gpu_fsdp_mb1_ckpt_torch", 2, 1, 8, True, "adamw_torch", 1),
+        ("2gpu_fsdp_mb2_ckpt_torch", 2, 2, 4, True, "adamw_torch", 1),
+        ("2gpu_fsdp_mb1_no_ckpt_torch", 2, 1, 8, False, "adamw_torch", 1),
+        ("2gpu_fsdp_mb1_ckpt_8bit", 2, 1, 8, True, "adamw_8bit", 1),
     ]
     benchmarks = []
     for name, gpus, microbatch, accumulation, checkpointing, optimizer, workers in benchmark_specs:
@@ -296,6 +301,7 @@ def main() -> None:
                 max_tokens=65_536,
                 workers=workers,
                 warmup_steps=0,
+                distributed_mode="fsdp",
             )
         )
     selected = pick_configuration(benchmarks)
@@ -313,6 +319,7 @@ def main() -> None:
                 max_tokens=65_536,
                 workers=workers,
                 warmup_steps=0,
+                distributed_mode=selected["distributed_mode"],
             )
         )
     selected = pick_configuration(benchmarks)
@@ -339,6 +346,7 @@ def main() -> None:
                 max_tokens=pilot_tokens,
                 workers=selected["workers"],
                 eval_final=True,
+                distributed_mode=selected["distributed_mode"],
             )
         )
     winning_pilot = pick_learning_rate(baseline, pilots)
@@ -358,6 +366,7 @@ def main() -> None:
         max_tokens=int(corpus_metadata["actual_train_tokens"]),
         workers=selected["workers"],
         main_run=True,
+        distributed_mode=selected["distributed_mode"],
     )
     final = {
         "environment": environment,

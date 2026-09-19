@@ -157,6 +157,16 @@ def _load_model_and_tokenizer(token: str | None, checkpoint: str | None = None):
         dtype=torch.float32,
         low_cpu_mem_usage=True,
     )
+    # The source config advertises BF16 and some Transformers versions honor
+    # that metadata despite the requested dtype. T4 GradScaler cannot unscale
+    # BF16 gradients, so keep explicit FP32 master parameters and allow the
+    # distributed mixed-precision policy to cast only computation to FP16.
+    model.float()
+    floating_dtypes = {
+        parameter.dtype for parameter in model.parameters() if parameter.is_floating_point()
+    }
+    if floating_dtypes != {torch.float32}:
+        raise TypeError(f"expected FP32 master parameters, got {floating_dtypes}")
     model.config.use_cache = False
     return model, tokenizer
 
@@ -190,20 +200,26 @@ def _constant_with_warmup(optimizer, warmup_steps: int):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, factor)
 
 
-def evaluate_micro(model, micro_dir: Path, device, *, batch_size: int = 1) -> dict:
+def evaluate_micro(
+    model, micro_dir: Path, device, *, batch_size: int = 1, accelerator=None
+) -> dict:
     import torch
 
     model.eval()
     result = {}
     names = [*CORE_LANGUAGES, "general"]
+    rank = accelerator.process_index if accelerator is not None else 0
+    world_size = accelerator.num_processes if accelerator is not None else 1
     with torch.inference_mode():
         for name in names:
             blocks = np.load(micro_dir / f"{name}.npy", mmap_mode="r")
             total_nll = 0.0
             token_count = 0
-            for start in range(0, len(blocks), batch_size):
+            local_indices = list(range(rank, len(blocks), world_size))
+            for offset in range(0, len(local_indices), batch_size):
+                indices = local_indices[offset : offset + batch_size]
                 batch = torch.from_numpy(
-                    np.array(blocks[start : start + batch_size], dtype=np.int64, copy=True)
+                    np.array(blocks[indices], dtype=np.int64, copy=True)
                 ).to(device)
                 precision_context = (
                     torch.autocast(device_type="cuda", dtype=torch.float16)
@@ -216,6 +232,12 @@ def evaluate_micro(model, micro_dir: Path, device, *, batch_size: int = 1) -> di
                 total_nll += float(output.loss.float().item()) * scored
                 token_count += scored
                 del output, batch
+            if accelerator is not None:
+                totals = torch.tensor(
+                    [total_nll, token_count], device=device, dtype=torch.float64
+                )
+                totals = accelerator.reduce(totals, reduction="sum")
+                total_nll, token_count = float(totals[0].item()), int(totals[1].item())
             result[name] = {"nll": total_nll / token_count, "tokens": token_count}
     code_nll_sum = sum(result[name]["nll"] * result[name]["tokens"] for name in CORE_LANGUAGES)
     code_tokens = sum(result[name]["tokens"] for name in CORE_LANGUAGES)
@@ -333,16 +355,55 @@ class RunConfig:
     baseline_path: Path | None = None
     resume_from: Path | None = None
     milestones: tuple[int, ...] = ()
+    distributed_mode: str = "ddp"
 
 
 def run_training(config: RunConfig) -> dict:
     import torch
-    from accelerate import Accelerator
+    from accelerate import Accelerator, FullyShardedDataParallelPlugin
+    from accelerate.utils import GradientAccumulationPlugin
     from torch.utils.data import DataLoader
 
+    fsdp_plugin = None
+    if config.distributed_mode == "fsdp":
+        from torch.distributed.fsdp import (
+            FullOptimStateDictConfig,
+            FullStateDictConfig,
+            MixedPrecision,
+            ShardingStrategy,
+            StateDictType,
+        )
+
+        fsdp_plugin = FullyShardedDataParallelPlugin(
+            sharding_strategy=ShardingStrategy.FULL_SHARD,
+            auto_wrap_policy="transformer_based_wrap",
+            transformer_cls_names_to_wrap=["Qwen3_5DecoderLayer"],
+            mixed_precision_policy=MixedPrecision(
+                param_dtype=torch.float16,
+                reduce_dtype=torch.float16,
+                buffer_dtype=torch.float16,
+            ),
+            state_dict_type=StateDictType.FULL_STATE_DICT,
+            state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=True),
+            optim_state_dict_config=FullOptimStateDictConfig(
+                offload_to_cpu=True, rank0_only=True
+            ),
+            use_orig_params=True,
+            sync_module_states=True,
+            limit_all_gathers=True,
+        )
+    elif config.distributed_mode != "ddp":
+        raise ValueError(f"unsupported distributed mode: {config.distributed_mode}")
+    accumulation_plugin = GradientAccumulationPlugin(
+        num_steps=config.gradient_accumulation,
+        # FSDP no_sync retains full, unsharded gradients until the optimizer
+        # boundary. Synchronize each microbatch to keep memory truly sharded.
+        sync_each_batch=config.distributed_mode == "fsdp",
+    )
     accelerator = Accelerator(
         mixed_precision="fp16",
-        gradient_accumulation_steps=config.gradient_accumulation,
+        gradient_accumulation_plugin=accumulation_plugin,
+        fsdp_plugin=fsdp_plugin,
     )
     random.seed(config.seed)
     np.random.seed(config.seed)
@@ -414,6 +475,7 @@ def run_training(config: RunConfig) -> dict:
         "model_id": MODEL_ID,
         "model_revision": MODEL_REVISION,
         "precision": "fp16 autocast with dynamic loss scaling",
+        "master_parameter_dtype": "float32",
         "world_size": accelerator.num_processes,
         "tokens_per_update": tokens_per_update,
         "credential_source": credential_source,
@@ -511,12 +573,13 @@ def run_training(config: RunConfig) -> dict:
                 metadata = {**run_metadata, **asdict(counters), "milestone": milestone}
                 destination = config.output_dir / "snapshots" / f"tokens-{milestone:09d}"
                 save_snapshot(accelerator, model, tokenizer, destination, metadata, token)
+                evaluation = evaluate_micro(
+                    model,
+                    config.corpus_dir / "micro",
+                    accelerator.device,
+                    accelerator=accelerator,
+                )
                 if accelerator.is_main_process:
-                    evaluation = evaluate_micro(
-                        accelerator.unwrap_model(model),
-                        config.corpus_dir / "micro",
-                        accelerator.device,
-                    )
                     _json_write(destination / "micro_eval.json", evaluation)
                     stop_requested = bool(
                         baseline_metrics
@@ -614,17 +677,23 @@ def run_training(config: RunConfig) -> dict:
             summary,
             token,
         )
+        evaluation = evaluate_micro(
+            model,
+            config.corpus_dir / "micro",
+            accelerator.device,
+            accelerator=accelerator,
+        )
         if accelerator.is_main_process:
-            evaluation = evaluate_micro(
-                accelerator.unwrap_model(model), config.corpus_dir / "micro", accelerator.device
-            )
             _json_write(config.output_dir / "final" / "micro_eval.json", evaluation)
         accelerator.wait_for_everyone()
     elif config.eval_final:
+        evaluation = evaluate_micro(
+            model,
+            config.corpus_dir / "micro",
+            accelerator.device,
+            accelerator=accelerator,
+        )
         if accelerator.is_main_process:
-            evaluation = evaluate_micro(
-                accelerator.unwrap_model(model), config.corpus_dir / "micro", accelerator.device
-            )
             _json_write(config.output_dir / "micro_eval.json", evaluation)
         accelerator.wait_for_everyone()
     if config.save_resume:
@@ -713,6 +782,7 @@ def main() -> None:
     train.add_argument("--baseline-path", type=Path)
     train.add_argument("--resume-from", type=Path)
     train.add_argument("--milestones", type=int, nargs="*", default=[])
+    train.add_argument("--distributed-mode", choices=("ddp", "fsdp"), default="ddp")
     args = parser.parse_args()
     if args.command == "baseline":
         print(json.dumps(run_baseline(args.corpus_dir, args.output), indent=2, sort_keys=True))
@@ -737,6 +807,7 @@ def main() -> None:
         baseline_path=args.baseline_path,
         resume_from=args.resume_from,
         milestones=tuple(args.milestones),
+        distributed_mode=args.distributed_mode,
     )
     summary = run_training(config)
     if os.environ.get("RANK", "0") == "0":
