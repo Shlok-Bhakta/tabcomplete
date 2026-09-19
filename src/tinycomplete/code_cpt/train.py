@@ -361,7 +361,7 @@ class RunConfig:
 def run_training(config: RunConfig) -> dict:
     import torch
     from accelerate import Accelerator, FullyShardedDataParallelPlugin
-    from accelerate.utils import GradientAccumulationPlugin
+    from accelerate.utils import GradientAccumulationPlugin, GradScalerKwargs
     from torch.utils.data import DataLoader
 
     fsdp_plugin = None
@@ -400,10 +400,17 @@ def run_training(config: RunConfig) -> dict:
         # boundary. Synchronize each microbatch to keep memory truly sharded.
         sync_each_batch=config.distributed_mode == "fsdp",
     )
+    scaler_kwargs = GradScalerKwargs(
+        # The default 65,536 scale overflowed on the first Qwen3.5 backward
+        # pass on T4. Start conservatively and retain dynamic backoff/growth.
+        init_scale=256.0,
+        growth_interval=2_000,
+    )
     accelerator = Accelerator(
         mixed_precision="fp16",
         gradient_accumulation_plugin=accumulation_plugin,
         fsdp_plugin=fsdp_plugin,
+        kwargs_handlers=[scaler_kwargs],
     )
     random.seed(config.seed)
     np.random.seed(config.seed)
@@ -495,6 +502,8 @@ def run_training(config: RunConfig) -> dict:
     target_optimizer_steps = initial_optimizer_steps + additional_optimizer_steps
     losses = []
     grad_norms = []
+    loss_scale_overflows = 0
+    consecutive_loss_scale_overflows = 0
     model.train()
     optimizer.zero_grad(set_to_none=True)
     accelerator.wait_for_everyone()
@@ -523,6 +532,7 @@ def run_training(config: RunConfig) -> dict:
             break
         data_wait = time.perf_counter() - wait_start
         local_tokens = int(batch["labels"].ne(-100).sum().item())
+        optimizer_step_skipped = False
         with accelerator.accumulate(model):
             with accelerator.autocast():
                 output = model(**batch, use_cache=False)
@@ -537,15 +547,39 @@ def run_training(config: RunConfig) -> dict:
                 grad_norm = accelerator.clip_grad_norm_(model.parameters(), config.max_grad_norm)
                 assert grad_norm is not None
                 finite_grad = accelerator.reduce(torch.isfinite(grad_norm).float(), reduction="min")
-                if not bool(finite_grad.item()):
-                    raise FloatingPointError("non-finite gradient norm")
                 grad_norm_value = float(grad_norm.item())
             optimizer.step()
             if accelerator.sync_gradients:
-                scheduler.step()
+                optimizer_step_skipped = accelerator.optimizer_step_was_skipped
+                if optimizer_step_skipped:
+                    loss_scale_overflows += 1
+                    consecutive_loss_scale_overflows += 1
+                else:
+                    if not bool(finite_grad.item()):
+                        raise FloatingPointError(
+                            "non-finite gradient was not caught by dynamic loss scaling"
+                        )
+                    consecutive_loss_scale_overflows = 0
+                    scheduler.step()
             optimizer.zero_grad(set_to_none=True)
         counters.record_microstep(local_tokens, data_wait)
         if accelerator.sync_gradients:
+            if optimizer_step_skipped:
+                if accelerator.is_main_process:
+                    _append_jsonl(
+                        config.output_dir / "train_log.jsonl",
+                        {
+                            "event": "loss_scale_overflow",
+                            "microsteps": counters.microsteps,
+                            "training_tokens": counters.training_tokens,
+                            "consecutive": consecutive_loss_scale_overflows,
+                        },
+                    )
+                del output, loss, batch
+                batch_released = True
+                if consecutive_loss_scale_overflows >= 8:
+                    raise FloatingPointError("persistent FP16 gradient overflow")
+                continue
             assert grad_norm_value is not None
             counters.record_optimizer_step()
             reduced_loss = accelerator.reduce(loss.detach().float(), reduction="mean").item()
@@ -655,6 +689,7 @@ def run_training(config: RunConfig) -> dict:
         "peak_vram_by_gpu_gb": peak_vram_by_gpu,
         "stop_reason": stop_reason,
         "nan_or_inf": False,
+        "loss_scale_overflows": loss_scale_overflows,
         "loss_history": losses,
         "gradient_norm_history": grad_norms,
         "actual_language_mix": language_mix_for_prefix(

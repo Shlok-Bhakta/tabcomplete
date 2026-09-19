@@ -135,6 +135,7 @@ def launch_training(
         record["stable"] = (
             not record.get("nan_or_inf", True)
             and record.get("stop_reason") != "broad_validation_deterioration"
+            and record.get("optimizer_steps", 0) > 0
         )
     return record
 
@@ -282,8 +283,6 @@ def main() -> None:
     # probes bounded to two optimizer updates apiece.
     benchmark_specs = [
         ("2gpu_fsdp_mb1_ckpt_torch", 2, 1, 8, True, "adamw_torch", 1),
-        ("2gpu_fsdp_mb2_ckpt_torch", 2, 2, 4, True, "adamw_torch", 1),
-        ("2gpu_fsdp_mb1_no_ckpt_torch", 2, 1, 8, False, "adamw_torch", 1),
         ("2gpu_fsdp_mb1_ckpt_8bit", 2, 1, 8, True, "adamw_8bit", 1),
     ]
     benchmarks = []
