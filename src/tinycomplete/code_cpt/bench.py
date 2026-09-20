@@ -196,34 +196,57 @@ def resolve_fused_ce(mode: str):
     return None, "chunked"
 
 
-def _chunked_linear_ce_loss(accelerator, model, hidden, labels, *, chunk=1024):
-    """Exact full-vocab causal CE without materializing full logits.
+def _summoned_decoder_hidden(model, batch):
+    """Run the decoder stack with all FSDP params summoned.
 
-    Sequence-chunks decoder hidden states through the FSDP-managed lm_head
-    and backprops per chunk so each chunk's logits are freed immediately.
-    The lm_head lives in the FSDP outer unit, so its full weight is summoned
-    for the call (attribute access stays on the WRAPPED model — unwrapping
-    would expose the raw shards). Forward and backward run inside the summon
-    context. Returns ``(mean_loss_value, backward_seconds)``; gradients are
-    already applied to the graph when this returns.
+    Calling the decoder submodule directly does NOT fire the outer FSDP
+    unit's all-gather hook, so outer-unit params (embed_tokens) stay sharded.
+    Callers must already hold ``summon_full_params`` for this to work.
+    """
+    decoder = getattr(model, "model", None)
+    if decoder is None:
+        raise RuntimeError("causal model exposes no .model decoder stack")
+    return decoder(input_ids=batch["input_ids"], use_cache=False)
+
+
+def _check_full_weight(weight, label: str) -> None:
+    if weight is None or weight.dim() != 2:
+        raise RuntimeError(
+            f"summon failed: {label} weight dim "
+            f"{None if weight is None else weight.dim()}, expected 2-D full params"
+        )
+
+
+def _chunked_fused_step(accelerator, model, batch, *, chunk=1024):
+    """One exact full-vocab causal CE microstep without full logits.
+
+    Holds ``summon_full_params`` across the decoder forward and the
+    sequence-chunked lm_head loop (per-chunk forward/backward, chunk logits
+    freed immediately). The full model is transiently materialized; gradients
+    are applied inside the context. Returns
+    ``(mean_loss_value, backward_seconds, hidden_out)``.
     """
     import torch
     from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
-    denom = labels.numel()
-    spans = list(range(0, hidden.size(1), chunk))
-    running: torch.Tensor | None = None
     backward_seconds = 0.0
-    # recurse=True gathers every FSDP unit (outer embed/lm_head plus wrapped
-    # decoder layers); per-microstep gather traffic is acceptable for a
-    # screening benchmark and removes any doubt about which unit owns lm_head.
+    # recurse=True gathers every FSDP unit; per-microstep gather traffic is
+    # acceptable for a screening benchmark.
     with FSDP.summon_full_params(model, recurse=True, writeback=False):
+        hidden_out = _summoned_decoder_hidden(model, batch)
+        hidden = hidden_out.last_hidden_state
+        shift_h = hidden[:, :-1, :].contiguous()
+        shift_l = batch["input_ids"][:, 1:].contiguous()
         lm_head = model.lm_head
+        _check_full_weight(getattr(lm_head, "weight", None), "lm_head")
+        denom = shift_l.numel()
+        spans = list(range(0, shift_h.size(1), chunk))
+        running: torch.Tensor | None = None
         for index, start in enumerate(spans):
-            logits = lm_head(hidden[:, start : start + chunk, :])
+            logits = lm_head(shift_h[:, start : start + chunk, :])
             part = torch.nn.functional.cross_entropy(
                 logits.reshape(-1, logits.size(-1)),
-                labels[:, start : start + chunk].reshape(-1),
+                shift_l[:, start : start + chunk].reshape(-1),
                 reduction="sum",
             )
             running = part.detach() if running is None else running + part.detach()
@@ -233,31 +256,29 @@ def _chunked_linear_ce_loss(accelerator, model, hidden, labels, *, chunk=1024):
             del logits, part
     if running is None:
         raise RuntimeError("empty hidden states for chunked CE")
-    return running / denom, backward_seconds
+    return running / denom, backward_seconds, hidden_out
 
 
-def _liger_fused_loss(accelerator, model, liger_loss, hidden, labels):
-    """True fused linear CE over hidden states plus the full lm_head weight.
+def _liger_fused_step(accelerator, model, liger_loss, batch):
+    """One true-fused-linear-CE microstep over hidden states + lm_head weight.
 
-    The full weight is summoned from the FSDP outer unit (embedding +
-    lm_head) for the call; forward and backward run inside the summon
-    context so parameter gradients are correctly re-sharded on exit.
-    Returns ``(loss, backward_seconds)``.
+    Same summon discipline as :func:`_chunked_fused_step`. Returns
+    ``(loss, backward_seconds, hidden_out)``.
     """
     from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
     tick = time.perf_counter()
     with FSDP.summon_full_params(model, recurse=True, writeback=False):
-        # NOTE: attribute access must stay on the WRAPPED model inside the
-        # summon context. accelerator.unwrap_model() would strip FSDP and
-        # expose the raw 1-D param shards ("'weight' must be 2-D").
+        hidden_out = _summoned_decoder_hidden(model, batch)
+        hidden = hidden_out.last_hidden_state
+        shift_h = hidden[:, :-1, :].contiguous()
+        shift_l = batch["input_ids"][:, 1:].contiguous()
         embeddings = model.get_output_embeddings()
         weight = getattr(embeddings, "weight", None)
-        if weight is None:
-            raise RuntimeError("no output-embedding weight for fused linear CE")
-        loss = liger_loss(weight, hidden.reshape(-1, hidden.size(-1)), labels.reshape(-1))
+        _check_full_weight(weight, "output-embedding")
+        loss = liger_loss(weight, shift_h.reshape(-1, shift_h.size(-1)), shift_l.reshape(-1))
         accelerator.backward(loss)
-    return loss, time.perf_counter() - tick
+    return loss, time.perf_counter() - tick, hidden_out
 
 
 @dataclass
@@ -486,23 +507,14 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
                     else:
                         # Bypass the lm_head: decoder hidden states feed a
                         # chunked/fused full-vocabulary causal CE, so full
-                        # logits are never materialized.
-                        decoder = getattr(model, "model", None)
-                        if decoder is None:
-                            raise RuntimeError("causal model exposes no .model decoder stack")
-                        hidden_out = decoder(input_ids=batch["input_ids"], use_cache=False)
-                        hidden = hidden_out.last_hidden_state
-                        shift_h = hidden[:, :-1, :].contiguous()
-                        shift_l = batch["input_ids"][:, 1:].contiguous()
-                        output = hidden_out
+                        # logits are never materialized. Everything runs
+                        # inside summon_full_params (see helpers): calling the
+                        # decoder submodule directly would not fire the outer
+                        # FSDP unit's all-gather hook.
                         if fused_ce_mode == "liger":
                             try:
-                                loss, inner_backward_seconds = _liger_fused_loss(
-                                    accelerator,
-                                    model,
-                                    fused_ce_loss,
-                                    shift_h,
-                                    shift_l,
+                                loss, inner_backward_seconds, output = _liger_fused_step(
+                                    accelerator, model, fused_ce_loss, batch
                                 )
                             except Exception as exc:
                                 if config.fused_ce != "auto":
@@ -511,13 +523,13 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
                                     f"liger_failed_then_chunked: {type(exc).__name__}"
                                 )
                                 fused_ce_mode = "chunked"
-                                loss, inner_backward_seconds = _chunked_linear_ce_loss(
-                                    accelerator, model, shift_h, shift_l
+                                loss, inner_backward_seconds, output = _chunked_fused_step(
+                                    accelerator, model, batch
                                 )
                             pre_backwarded = True
                         else:
-                            loss, inner_backward_seconds = _chunked_linear_ce_loss(
-                                accelerator, model, shift_h, shift_l
+                            loss, inner_backward_seconds, output = _chunked_fused_step(
+                                accelerator, model, batch
                             )
                             pre_backwarded = True
                         if ce_parity_abs_diff is None:
