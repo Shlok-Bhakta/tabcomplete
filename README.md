@@ -1,11 +1,10 @@
-# tinycomplete — tiny local next-edit code model (experiment infrastructure)
+# tinycomplete: tiny local next-edit code model
 
 ## Project goal
 
-Build the experimental infrastructure for a tiny, local, privacy-preserving
-code next-edit/autocomplete engine. We are NOT training the final model here;
-we are building enough verified infrastructure to run a real Colab training
-experiment with confidence.
+Build a tiny, local, privacy-preserving code next-edit/autocomplete engine.
+Stage 1 has produced a full-weight code-specialized Qwen3.5-0.8B checkpoint;
+Stage 2 will train next-edit behavior separately.
 
 ## Architecture hypothesis
 
@@ -34,7 +33,7 @@ re-processing the whole context after every keystroke.** Proven on CPU with a
 tiny hybrid model: cached continuation matches full forward to 1.2e-07
 (see `reports/cache.md`).
 
-The recurrent state is NOT permanent lossless repository storage — exact
+The recurrent state is NOT permanent lossless repository storage. Exact
 facts are re-injected from deterministic indexes (files, Tree-sitter, LSP).
 
 ## Why Qwen3.5-0.8B
@@ -42,9 +41,9 @@ facts are re-injected from deterministic indexes (files, Tree-sitter, LSP).
 - Hybrid text architecture: 24 LM layers = 18 Gated DeltaNet linear-attention
   + 6 full softmax attention (3-linear/1-full × 6).
 - Native FIM tokenizer tokens (`<|fim_prefix|>`, `<|fim_suffix|>`, `<|fim_middle|>`),
-  long context, recurrent state + KV cache — exactly the split an append-only
+  long context, recurrent state + KV cache, exactly the split an append-only
   session design needs.
-- Small enough (0.8B) for L4 LoRA smokes; Unsloth supports the family.
+- Small enough (0.8B) for full-weight two-T4 FSDP training.
 
 ## Local CPU setup
 
@@ -54,15 +53,76 @@ bash scripts/bootstrap_cpu.sh   # CPU-only torch, kept OUT of uv.lock
 bash scripts/smoke.sh      # ruff + pytest + harness check
 ```
 
-Local machine is CPU-only by policy. Never install CUDA locally; never
-provision cloud resources from here. GPU training happens only in a
-human-launched Colab runtime (`notebooks/qwen35_colab.ipynb`).
+Local machine is CPU-only by policy. Never install CUDA locally or provision
+persistent cloud resources. GPU jobs use the checked-in Kaggle kernels.
 
 ## Test command
 
 ```bash
 uv run ruff check .
 uv run pytest -q
+```
+
+## Executable code benchmark
+
+The fixed 200-case suite covers nine languages, includes 20 multi-file cases, and
+scores syntax, compilation, and hidden behavioral tests. Generated code runs in
+rootless Podman or Docker containers with no network and fixed resource limits.
+
+```bash
+# Prove every gold completion works before scoring a model.
+uv run python scripts/evaluate_code_benchmark.py \
+  --gold --backend container --workers 1 \
+  --output-dir outputs/code_benchmark/gold
+
+# Generate model completions, then execute them in the same fixtures.
+uv run python scripts/generate_code_predictions.py \
+  --model-path /path/to/checkpoint --max-new-tokens 96 \
+  --output outputs/code_benchmark/model/predictions.jsonl
+uv run python scripts/evaluate_code_benchmark.py \
+  --predictions outputs/code_benchmark/model/predictions.jsonl \
+  --backend container --workers 1 \
+  --output-dir outputs/code_benchmark/model/results
+```
+
+## Local browser playground
+
+Run the base model and promoted checkpoint behind the local editor UI:
+
+```bash
+uv run tinycomplete-playground \
+  --model base=Qwen/Qwen3.5-0.8B-Base \
+  --model stage1=/path/to/tokens-005000000
+```
+
+Open `http://127.0.0.1:8765`. The editor shows ghost completions, accepts them with
+Tab, rejects with Escape, accepts repository context files, switches checkpoints,
+and records explicit feedback locally. Bind `--host 0.0.0.0` only when you intend
+to expose the server to trusted devices on your LAN.
+
+For a GGUF checkpoint, start a local OpenAI-compatible server and point the same
+playground at it:
+
+```bash
+llama-server -m /path/to/tabcomplete-code-q4_k_m.gguf \
+  --host 127.0.0.1 --port 8080 --reasoning off
+uv run tinycomplete-playground \
+  --server-url http://127.0.0.1:8080 \
+  --server-model tabcomplete-q4 --server-label "TabComplete Code Q4"
+```
+
+Qwen3.5 keeps its native MTP block outside the causal checkpoint used for Stage-1
+training. Prepare an indexed export directory before running llama.cpp's converter
+so that the MTP sidecar is preserved:
+
+```bash
+uv run python scripts/prepare_qwen35_gguf_source.py \
+  /path/to/tokens-005000000 outputs/models/stage1-gguf-source
+python /path/to/llama.cpp/convert_hf_to_gguf.py \
+  outputs/models/stage1-gguf-source \
+  --outfile outputs/models/tabcomplete-code-f16.gguf --outtype f16
+/path/to/llama-quantize outputs/models/tabcomplete-code-f16.gguf \
+  outputs/models/tabcomplete-code-q4_k_m.gguf Q4_K_M
 ```
 
 ## Synthetic-data command
@@ -80,22 +140,23 @@ Paid generation needs `ALLOW_PAID_SYNTHETIC=1` AND caps
 `MAX_CANDIDATES_PER_STATE=3`), with persistent atomic accounting in
 `data/generated/budget.json`. Without the flag, the full pipeline runs on
 the fake provider and stops before any paid request. Secrets live only in
-`OPENROUTER_API_KEY` / `DEEPSEEK_API_KEY` env vars — never in logs, reports,
+`OPENROUTER_API_KEY` / `DEEPSEEK_API_KEY` env vars, never in logs, reports,
 or git. Only public/synthetic fixture code is ever sent to teachers.
 
-## Colab workflow
+## GPU workflow
 
-See `docs/colab.md`. L4 24GB preferred (bf16); T4 16GB fallback (fp16,
-watch GDN NaNs). LoRA smoke first (100 steps @ 2048), full-weight config is
-a 15-step OOM probe only.
+See `docs/kaggle.md` and `reports/code_cpt/overnight.md`. The Stage-1 run used two
+T4s, FP16 autocast over FP32 master weights, FSDP full sharding, sequence length
+2,048, and an 8-bit AdamW optimizer.
 
-## Current limitations
+## Current result and limitations
 
-- No GPU run yet: cache proof used a tiny random model on CPU; 0.8B LoRA
-  smoke awaits a human Colab session.
-- No paid teacher labels ($0.00 spent; no keys present) — training data is
-  static FIM + synthetic next-edit + git-mined trajectories.
-- Baselines (Falcon-H1, Granite-4.0-H, RWKV-7) are interface-planned only
-  (`reports/baselines.md`); Qwen first by policy.
-- Tree-sitter grammars: python only; other languages fall back to
-  regex/line heuristics.
+- The promoted 5.014M-token checkpoint reduced held-out code NLL by 1.071% across
+  all nine core languages. General-text NLL increased 2.733%.
+- The executable completion benchmark is synthetic and intentionally unpublished
+  before this model run, but 200 cases remain too small for a final product claim.
+- Stage 1 trains code token prediction only. It does not teach FIM or next-edit
+  behavior.
+- Transformers preserves native MTP weights in a sidecar because its causal Qwen3.5
+  class does not currently load that module.
+- Baselines such as Falcon-H1, Granite, and RWKV remain future comparisons.

@@ -1,0 +1,31 @@
+{
+  "base_model": "Qwen/Qwen3.5-0.8B-Base",
+  "base_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+  "candidate_name": "TabComplete-Code-0.8B",
+  "checkpoint": "tokens-005000000",
+  "checkpoint_training_tokens": 5013504,
+  "executable_benchmark": {
+    "base_hidden_test_passes": 3,
+    "case_count": 200,
+    "f16_hidden_test_passes": 7,
+    "functional_conclusion": "UNCLEAR",
+    "paired_mcnemar_p_value": 0.2890625,
+    "q4_k_m_hidden_test_passes": 3,
+    "suite_sha256": "b65dcf23ee9b2ec1c76632e9b8542baceb46c0ed56bdc8f91d8abc96e05d224e"
+  },
+  "general_nll": 2.4831563532352448,
+  "general_nll_change_percent": 2.7326604507256658,
+  "model_parameter_count": 752393024,
+  "model_safetensors_sha256": "d499c3fe2d720246c710c5c9e20653a4599aa25d77ebef871cb28431ccc888e8",
+  "q4_k_m": {
+    "bytes": 541903264,
+    "gguf_sha256": "3bdb86c93d9756cd0ac3fd7820adb6b23acabb98e0afd85825a8470ec6ab3abb",
+    "quality_equivalent_to_f16": false
+  },
+  "mtp_parameter_count": 20452864,
+  "mtp_preserved_in_sidecar": true,
+  "overall_code_nll": 1.101054936233494,
+  "overall_code_nll_change_percent": -1.071133266219093,
+  "promotion_answer": "YES",
+  "training_git_sha": "5c50a13e8912cffd216a8212d290930cae14197a"
+}

@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TabComplete — Local Playground</title>
+<style>
+  :root {
+    --bg: #0f141b;
+    --panel: #171e27;
+    --panel-2: #1e2632;
+    --border: #2c3746;
+    --text: #e8edf3;
+    --muted: #9aa7b8;
+    --accent: #5eb1ff;
+    --accent-2: #7ee2a8;
+    --warn: #ffb86b;
+    --danger: #ff7a90;
+    --ghost: #7d8aa0;
+    --radius: 12px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height: 1.45;
+  }
+  a { color: var(--accent); }
+  .skip { position: absolute; left: -9999px; top: 0; background: #fff; color: #000; padding: 8px 12px; z-index: 50; }
+  .skip:focus { left: 8px; top: 8px; }
+  header {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #141b24, #0f141b);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .badge {
+    font-size: 12px; border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 10px; color: var(--muted); background: var(--panel);
+  }
+  .badge.ok { color: #0c2417; background: var(--accent-2); border-color: var(--accent-2); font-weight: 600; }
+  .badge.local { color: var(--accent-2); border-color: #2f5b44; background: #14231c; }
+  main {
+    display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+    gap: 14px; padding: 14px 18px 28px; max-width: 1200px; margin: 0 auto;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 2px 0 10px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field label { font-size: 12px; color: var(--muted); }
+  select, input[type="text"], input[type="number"], textarea {
+    background: #0c1117; color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 10px; font-size: 14px;
+  }
+  select:focus-visible, input:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .tokens { display: flex; gap: 8px; align-items: center; }
+  input[type="range"] { width: 130px; accent-color: var(--accent); }
+  input[type="number"] { width: 84px; }
+  button {
+    background: var(--accent); color: #06121f; border: 0; border-radius: 9px;
+    padding: 10px 14px; font-weight: 700; font-size: 14px; cursor: pointer;
+    min-height: 42px;
+  }
+  button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+  button.ghost-btn { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  button:disabled { opacity: .55; cursor: wait; }
+  button:not(:disabled):hover { filter: brightness(1.07); }
+  .editor-wrap {
+    position: relative; display: grid; grid-template-columns: 46px minmax(0, 1fr);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #0c1117;
+  }
+  .gutter {
+    background: #0a0e13; color: #5c6b80; font-family: var(--mono); font-size: 13px;
+    line-height: 21px; padding: 12px 8px 12px 0; text-align: right;
+    overflow: hidden; user-select: none; white-space: pre;
+  }
+  .edit-pane { position: relative; }
+  #code {
+    width: 100%; height: 340px; margin: 0; border: 0; border-radius: 0;
+    font-family: var(--mono); font-size: 13.5px; line-height: 21px;
+    padding: 12px 12px 40px; resize: vertical; white-space: pre; overflow: auto;
+    caret-color: var(--accent);
+  }
+  #ghost {
+    position: absolute; display: none; z-index: 5; max-width: min(420px, 80%);
+    background: #0e1826; border: 1px solid #33506e; color: #c9d8ea;
+    font-family: var(--mono); font-size: 13px; line-height: 19px;
+    border-radius: 8px; padding: 8px 10px; pointer-events: none;
+    white-space: pre-wrap; word-break: break-word;
+    box-shadow: 0 8px 28px rgba(0,0,0,.5);
+  }
+  #ghost .hint { display: block; margin-top: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--muted); }
+  #ghost .ghost-text { color: var(--accent-2); }
+  .suggestion {
+    margin-top: 10px; border: 1px dashed #33506e; border-radius: 10px;
+    padding: 10px; background: #0e1621; display: none;
+  }
+  .suggestion.visible { display: block; }
+  .suggestion pre {
+    margin: 8px 0; padding: 10px; background: #0a0f16; border: 1px solid var(--border);
+    border-radius: 8px; font-family: var(--mono); font-size: 13px; line-height: 19px;
+    white-space: pre-wrap; word-break: break-word; max-height: 180px; overflow: auto;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .statusbar {
+    display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .statusbar strong { color: var(--text); font-weight: 600; }
+  #error {
+    display: none; margin-top: 10px; border: 1px solid #6e2f3c; background: #2a141a;
+    color: #ffd7de; border-radius: 10px; padding: 10px 12px; font-size: 13.5px;
+  }
+  #error.visible { display: block; }
+  .side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .ctx-item {
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+    background: #0c1117; margin-top: 8px;
+  }
+  .ctx-item .meta { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .ctx-item code { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+  .ctx-item pre {
+    font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word;
+    color: var(--muted); max-height: 110px; overflow: auto; margin: 8px 0 0;
+  }
+  .small { font-size: 12.5px; color: var(--muted); }
+  .kbd {
+    font-family: var(--mono); font-size: 12px; background: #0a0f16;
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px;
+  }
+  .privacy { font-size: 13px; color: #c4cfdd; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,.3); border-top-color: #06121f; border-radius: 50%; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinning .spinner { animation: spin .8s linear infinite; }
+  footer { padding: 14px 18px 30px; text-align: center; color: var(--muted); font-size: 12.5px; }
+  @media (max-width: 920px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    #code { height: 300px; font-size: 14px; }
+    button { min-height: 44px; }
+    header { position: static; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#code">Skip to code editor</a>
+<header>
+  <h1>TabComplete <span>·</span> Local Playground</h1>
+  <span class="badge local" id="localBadge">local-only · 127.0.0.1</span>
+  <span class="badge" id="health">server: checking…</span>
+  <span class="badge" id="modelBadge">model: —</span>
+</header>
+
+<main>
+  <section class="card" aria-labelledby="editorHeading">
+    <h2 id="editorHeading">Code editor</h2>
+
+    <div class="toolbar">
+      <div class="field">
+        <label for="language">Language</label>
+        <select id="language" aria-label="Programming language">
+          <option value="python" selected>python</option>
+          <option value="javascript">javascript</option>
+          <option value="typescript">typescript</option>
+          <option value="rust">rust</option>
+          <option value="go">go</option>
+          <option value="java">java</option>
+          <option value="cpp">c++</option>
+          <option value="c">c</option>
+          <option value="csharp">c#</option>
+          <option value="shell">shell</option>
+          <option value="text">text</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="model">Model</label>
+        <select id="model" aria-label="Completion model">
+          <option value="">loading…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="maxTokens">Max new tokens</label>
+        <div class="tokens">
+          <input type="range" id="maxTokens" min="1" max="256" value="64" aria-label="Maximum new tokens slider">
+          <input type="number" id="maxTokensNum" min="1" max="256" value="64" aria-label="Maximum new tokens value">
+        </div>
+      </div>
+      <div class="field">
+        <label aria-hidden="true">&nbsp;</label>
+        <button id="completeBtn" type="button">Complete <span aria-hidden="true">⌘/Ctrl+Space</span></button>
+      </div>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="gutter" id="gutter" aria-hidden="true">1</div>
+      <div class="edit-pane" id="editPane">
+        <label class="small" for="code" style="position:absolute;left:-9999px">Editable code</label>
+        <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"
+          aria-describedby="status shortcutHelp"></textarea>
+        <div id="ghost" aria-hidden="true"><span class="ghost-text" id="ghostText"></span><span class="hint">Tab accepts · Esc rejects</span></div>
+      </div>
+    </div>
+
+    <div class="suggestion" id="suggestion" aria-live="polite">
+      <div class="row">
+        <strong>Suggestion</strong>
+        <span class="small" id="suggestionMeta"></span>
+      </div>
+      <pre id="previewText" tabindex="0" aria-label="Completion preview"></pre>
+      <div class="row">
+        <button id="acceptBtn" type="button">Accept (Tab)</button>
+        <button id="rejectBtn" type="button" class="secondary">Reject (Esc)</button>
+      </div>
+    </div>
+
+    <div class="statusbar" id="status" aria-live="polite">
+      <span>caret <strong id="caretPos">1:1</strong></span>
+      <span>latency <strong id="latency">—</strong></span>
+      <span>tokens <strong id="tokens">—</strong></span>
+      <span>request <strong id="reqTime">—</strong></span>
+      <span id="loading" hidden><span class="spinner" aria-hidden="true"></span>working…</span>
+    </div>
+    <div id="error" role="alert"></div>
+    <p class="small" id="shortcutHelp">Shortcuts: <span class="kbd">Ctrl</span>+<span class="kbd">Space</span> or <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> completes · <span class="kbd">Tab</span> accepts ghost · <span class="kbd">Esc</span> rejects ghost. If no ghost is shown, <span class="kbd">Tab</span> inserts 4 spaces.</p>
+  </section>
+
+  <div class="side">
+    <section class="card" aria-labelledby="ctxHeading">
+      <h2 id="ctxHeading">Repository context (optional)</h2>
+      <p class="small">Extra files are sent as <code>context_files</code> with the completion request. Keep them small — everything stays on this machine.</p>
+      <div class="field">
+        <label for="ctxPath">File path</label>
+        <input type="text" id="ctxPath" placeholder="e.g. utils.py" autocomplete="off">
+      </div>
+      <div class="field" style="margin-top:8px">
+        <label for="ctxContent">File content</label>
+        <textarea id="ctxContent" rows="3" style="width:100%;font-family:var(--mono);font-size:12.5px" placeholder="e.g. Number = int"></textarea>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="ctxAdd" type="button" class="secondary">Add context file</button>
+      </div>
+      <div id="ctxList" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="fbHeading">
+      <h2 id="fbHeading">Feedback</h2>
+      <p class="small">Rates the last suggestion. Stored locally as JSONL by the server.</p>
+      <div class="row">
+        <button id="fbAccept" type="button" class="secondary">Send accept</button>
+        <button id="fbReject" type="button" class="secondary">Send reject</button>
+        <button id="fbEdit" type="button" class="secondary">Send edit</button>
+      </div>
+      <p class="small" id="fbStatus" aria-live="polite">no feedback sent yet</p>
+    </section>
+
+    <section class="card" aria-labelledby="privacyHeading">
+      <h2 id="privacyHeading">Private by design</h2>
+      <p class="privacy">This page talks only to <code>127.0.0.1</code> on your machine (<code>GET /api/models</code>, <code>POST /api/complete</code>, <code>POST /api/feedback</code>). No CDN, no fonts, no analytics. Code and feedback never leave the laptop; the model runs locally via the playground server.</p>
+      <p class="small">Tip: open DevTools → Network to confirm every request goes to localhost.</p>
+    </section>
+  </div>
+</main>
+
+<footer>TabComplete playground · framework-free single file · keyboard-first · works offline on desktop and phone</footer>
+
+<script>
+(function () {
+  "use strict";
+  var code = document.getElementById("code");
+  var gutter = document.getElementById("gutter");
+  var editPane = document.getElementById("editPane");
+  var ghost = document.getElementById("ghost");
+  var ghostText = document.getElementById("ghostText");
+  var language = document.getElementById("language");
+  var modelSel = document.getElementById("model");
+  var modelBadge = document.getElementById("modelBadge");
+  var maxTokens = document.getElementById("maxTokens");
+  var maxTokensNum = document.getElementById("maxTokensNum");
+  var completeBtn = document.getElementById("completeBtn");
+  var suggestion = document.getElementById("suggestion");
+  var suggestionMeta = document.getElementById("suggestionMeta");
+  var previewText = document.getElementById("previewText");
+  var acceptBtn = document.getElementById("acceptBtn");
+  var rejectBtn = document.getElementById("rejectBtn");
+  var caretPos = document.getElementById("caretPos");
+  var latencyEl = document.getElementById("latency");
+  var tokensEl = document.getElementById("tokens");
+  var reqTimeEl = document.getElementById("reqTime");
+  var loadingEl = document.getElementById("loading");
+  var errorBox = document.getElementById("error");
+  var health = document.getElementById("health");
+  var ctxPath = document.getElementById("ctxPath");
+  var ctxContent = document.getElementById("ctxContent");
+  var ctxAdd = document.getElementById("ctxAdd");
+  var ctxList = document.getElementById("ctxList");
+  var fbAccept = document.getElementById("fbAccept");
+  var fbReject = document.getElementById("fbReject");
+  var fbEdit = document.getElementById("fbEdit");
+  var fbStatus = document.getElementById("fbStatus");
+
+  var STARTER = "def fibonacci(n: int) -> list[int]:\n"
+    + '    """Return the first n Fibonacci numbers."""\n'
+    + "    if n <= 0:\n"
+    + "        return []\n"
+    + "    out = [0, 1]\n"
+    + "    while len(out) < n:\n"
+    + "        out.append(out[-1] + out[-2])\n"
+    + "    return out[:n]\n"
+    + "\n"
+    + "\n"
+    + "def add(a, b):\n"
+    + "    ";
+
+  var pending = null; // {id, text, model, caret, latencyMs, generatedTokens}
+  var lastCompletion = null;
+  var contextFiles = [];
+  var busy = false;
+
+  function setText(el, s) { el.textContent = s == null ? "" : String(s); }
+  function showError(msg) {
+    if (!msg) { errorBox.classList.remove("visible"); setText(errorBox, ""); return; }
+    setText(errorBox, msg);
+    errorBox.classList.add("visible");
+  }
+  function clampTokens(v) {
+    v = parseInt(v, 10);
+    if (isNaN(v)) v = 64;
+    if (v < 1) v = 1;
+    if (v > 256) v = 256;
+    return v;
+  }
+  function syncTokens(fromSlider) {
+    var v = clampTokens(fromSlider ? maxTokens.value : maxTokensNum.value);
+    maxTokens.value = String(v);
+    maxTokensNum.value = String(v);
+    return v;
+  }
+  function newId() {
+    if (window.crypto && crypto.randomUUID) { try { return crypto.randomUUID(); } catch (e) {} }
+    return "req-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36);
+  }
+  function contextPayload() {
+    return contextFiles.map(function (f) { return { path: f.path, content: f.content }; });
+  }
+
+  function updateGutter() {
+    var n = code.value.split("\n").length;
+    var s = "";
+    for (var i = 1; i <= n; i++) { s += i + (i === n ? "" : "\n"); }
+    setText(gutter, s);
+    gutter.scrollTop = code.scrollTop;
+  }
+  function updateCaret() {
+    var v = code.value.slice(0, code.selectionStart).split("\n");
+    var line = v.length;
+    var col = v[v.length - 1].length + 1;
+    setText(caretPos, line + ":" + col);
+  }
+
+  function caretCoordinates() {
+    var mirror = document.createElement("div");
+    var cs = window.getComputedStyle(code);
+    mirror.style.position = "absolute";
+    mirror.style.visibility = "hidden";
+    mirror.style.whiteSpace = "pre-wrap";
+    mirror.style.wordWrap = "break-word";
+    mirror.style.overflowWrap = "break-word";
+    mirror.style.font = cs.font;
+    mirror.style.letterSpacing = cs.letterSpacing;
+    mirror.style.padding = cs.padding;
+    mirror.style.border = cs.border;
+    mirror.style.width = code.clientWidth + "px";
+    mirror.style.lineHeight = cs.lineHeight;
+    var upto = code.value.substring(0, code.selectionStart);
+    mirror.textContent = upto;
+    var marker = document.createElement("span");
+    marker.textContent = "\u200b";
+    mirror.appendChild(marker);
+    document.body.appendChild(mirror);
+    var top = marker.offsetTop - mirror.offsetTop - code.scrollTop;
+    var left = marker.offsetLeft - mirror.offsetLeft - code.scrollLeft;
+    var height = parseFloat(cs.lineHeight) || 21;
+    document.body.removeChild(mirror);
+    var paneRect = editPane.getBoundingClientRect();
+    var codeRect = code.getBoundingClientRect();
+    return { top: (codeRect.top - paneRect.top) + top + height + 6, left: (codeRect.left - paneRect.left) + left };
+  }
+
+  function renderGhost() {
+    if (!pending || !pending.text) { hideGhost(); return; }
+    setText(ghostText, pending.text.length > 220 ? pending.text.slice(0, 220) + "…" : pending.text);
+    var p = caretCoordinates();
+    var maxLeft = Math.max(8, editPane.clientWidth - 200);
+    ghost.style.left = Math.min(Math.max(8, p.left), maxLeft) + "px";
+    ghost.style.top = p.top + "px";
+    ghost.style.display = "block";
+  }
+  function hideGhost() { ghost.style.display = "none"; }
+
+  function clearPending() {
+    pending = null;
+    hideGhost();
+    suggestion.classList.remove("visible");
+  }
+
+  function setBusy(b) {
+    busy = b;
+    completeBtn.disabled = b;
+    if (b) {
+      completeBtn.classList.add("spinning");
+      loadingEl.hidden = false;
+    } else {
+      completeBtn.classList.remove("spinning");
+      loadingEl.hidden = true;
+    }
+  }
+
+  function currentModel() {
+    return modelSel.value || "";
+  }
+
+  function doComplete() {
+    if (busy) return;
+    showError("");
+    var model = currentModel();
+    if (!model) { showError("No model available yet — waiting for GET /api/models."); return; }
+    var toks = syncTokens(false);
+    var caret = code.selectionStart;
+    var payload = {
+      model: model,
+      language: language.value,
+      prefix: code.value.slice(0, caret),
+      suffix: code.value.slice(caret),
+      context_files: contextPayload(),
+      max_new_tokens: toks
+    };
+    setBusy(true);
+    var t0 = performance.now();
+    var reqId = newId();
+    fetch("/api/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.json().catch(function () { return {}; }).then(function (j) {
+          throw new Error(j.error || ("complete failed: HTTP " + res.status));
+        });
+      }
+      return res.json();
+    }).then(function (data) {
+      var text = typeof data.text === "string" ? data.text : "";
+      if (!text) { showError("Model returned an empty completion."); return; }
+      var clientMs = performance.now() - t0;
+      pending = {
+        id: reqId, text: text, model: model, caret: caret,
+        latencyMs: typeof data.latency_ms === "number" ? data.latency_ms : clientMs,
+        generatedTokens: typeof data.generated_tokens === "number" ? data.generated_tokens : 0,
+        clientMs: clientMs
+      };
+      lastCompletion = pending;
+      setText(latencyEl, Math.round(pending.latencyMs) + " ms (server) / " + Math.round(clientMs) + " ms (round-trip)");
+      setText(tokensEl, String(pending.generatedTokens));
+      setText(reqTimeEl, new Date().toLocaleTimeString());
+      setText(suggestionMeta, "· " + pending.generatedTokens + " tokens · " + Math.round(pending.latencyMs) + " ms");
+      setText(previewText, text);
+      suggestion.classList.add("visible");
+      renderGhost();
+      code.focus();
+    }).catch(function (err) {
+      showError("Completion failed: " + (err && err.message ? err.message : String(err)));
+    }).finally(function () {
+      setBusy(false);
+    });
+  }
+
+  function acceptPending(source) {
+    if (!pending) return;
+    var insertAt = code.selectionStart;
+    // If caret moved since completion, insert at current caret.
+    var before = code.value.slice(0, insertAt);
+    var after = code.value.slice(code.selectionEnd);
+    code.value = before + pending.text + after;
+    var next = insertAt + pending.text.length;
+    code.selectionStart = code.selectionEnd = next;
+    lastCompletion = pending;
+    var done = pending;
+    clearPending();
+    updateGutter(); updateCaret();
+    sendFeedback("accept", done, null, source === "button" ? "accepted via button" : "accepted via Tab");
+  }
+
+  function rejectPending(source) {
+    if (!pending) return;
+    var done = pending;
+    clearPending();
+    sendFeedback("reject", done, null, source === "button" ? "rejected via button" : "rejected via Esc");
+  }
+
+  function sendFeedback(action, comp, editedText, note) {
+    comp = comp || lastCompletion;
+    if (!comp) { setText(fbStatus, "nothing to rate yet — request a completion first"); return; }
+    var body = { request_id: comp.id, action: action, model: comp.model, latency_ms: comp.latencyMs };
+    if (action === "edit") {
+      body.edited_text = typeof editedText === "string" ? editedText : code.value.slice(0, code.selectionStart);
+    }
+    setText(fbStatus, "sending " + action + "…");
+    fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.json().catch(function () { return {}; }).then(function (j) {
+          throw new Error(j.error || ("feedback failed: HTTP " + res.status));
+        });
+      }
+      return res.json();
+    }).then(function () {
+      setText(fbStatus, action + " saved" + (note ? " (" + note + ")" : "") + " · id " + comp.id.slice(0, 8));
+    }).catch(function (err) {
+      setText(fbStatus, "feedback error: " + (err && err.message ? err.message : String(err)));
+    });
+  }
+
+  function loadModels() {
+    fetch("/api/models").then(function (res) {
+      if (!res.ok) throw new Error("GET /api/models: HTTP " + res.status);
+      return res.json();
+    }).then(function (data) {
+      var models = (data && data.models) || [];
+      while (modelSel.firstChild) modelSel.removeChild(modelSel.firstChild);
+      if (!models.length) {
+        var o = document.createElement("option");
+        o.value = "";
+        o.textContent = "no models";
+        modelSel.appendChild(o);
+        setText(modelBadge, "model: none");
+        return;
+      }
+      models.forEach(function (m) {
+        var opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = (m.label || m.id) + (m.format ? " (" + m.format + ")" : "");
+        modelSel.appendChild(opt);
+      });
+      setText(modelBadge, "model: " + modelSel.value);
+    }).catch(function (err) {
+      while (modelSel.firstChild) modelSel.removeChild(modelSel.firstChild);
+      var o = document.createElement("option");
+      o.value = "";
+      o.textContent = "failed to load";
+      modelSel.appendChild(o);
+      showError("Could not load models: " + (err && err.message ? err.message : String(err)));
+    });
+  }
+
+  function checkHealth() {
+    fetch("/api/health").then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }).then(function () {
+      health.classList.add("ok");
+      setText(health, "server: ok");
+    }).catch(function () {
+      setText(health, "server: unreachable");
+    });
+  }
+
+  function renderContexts() {
+    while (ctxList.firstChild) ctxList.removeChild(ctxList.firstChild);
+    if (!contextFiles.length) {
+      var p = document.createElement("p");
+      p.className = "small";
+      p.textContent = "No context files yet.";
+      ctxList.appendChild(p);
+      return;
+    }
+    contextFiles.forEach(function (f, idx) {
+      var box = document.createElement("div");
+      box.className = "ctx-item";
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      var nm = document.createElement("code");
+      nm.textContent = f.path;
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "ghost-btn";
+      rm.textContent = "Remove";
+      rm.setAttribute("aria-label", "Remove context file " + f.path);
+      rm.addEventListener("click", function () {
+        contextFiles.splice(idx, 1);
+        renderContexts();
+      });
+      meta.appendChild(nm);
+      meta.appendChild(rm);
+      var pre = document.createElement("pre");
+      pre.textContent = f.content;
+      box.appendChild(meta);
+      box.appendChild(pre);
+      ctxList.appendChild(box);
+    });
+  }
+
+  // Events
+  completeBtn.addEventListener("click", doComplete);
+  acceptBtn.addEventListener("click", function () { acceptPending("button"); });
+  rejectBtn.addEventListener("click", function () { rejectPending("button"); });
+  fbAccept.addEventListener("click", function () { sendFeedback("accept"); });
+  fbReject.addEventListener("click", function () { sendFeedback("reject"); });
+  fbEdit.addEventListener("click", function () { sendFeedback("edit", null, code.value); });
+
+  maxTokens.addEventListener("input", function () { syncTokens(true); });
+  maxTokensNum.addEventListener("input", function () { syncTokens(false); });
+  modelSel.addEventListener("change", function () { setText(modelBadge, "model: " + (modelSel.value || "—")); });
+
+  ctxAdd.addEventListener("click", function () {
+    var path = ctxPath.value.trim();
+    var content = ctxContent.value;
+    if (!path) { showError("Context file needs a path (e.g. utils.py)."); ctxPath.focus(); return; }
+    if (!content) { showError("Context file is empty — add some content or skip context."); ctxContent.focus(); return; }
+    contextFiles.push({ path: path, content: content });
+    ctxPath.value = "";
+    ctxContent.value = "";
+    showError("");
+    renderContexts();
+    ctxPath.focus();
+  });
+
+  code.addEventListener("keydown", function (e) {
+    var isMac = navigator.platform && navigator.platform.indexOf("Mac") !== -1;
+    var mod = isMac ? e.metaKey : e.ctrlKey;
+    if (mod && (e.code === "Space" || e.key === "Enter")) {
+      e.preventDefault();
+      doComplete();
+      return;
+    }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (pending && pending.text) { acceptPending("keyboard"); return; }
+      var s = code.selectionStart, en = code.selectionEnd;
+      code.value = code.value.slice(0, s) + "    " + code.value.slice(en);
+      code.selectionStart = code.selectionEnd = s + 4;
+      updateGutter(); updateCaret();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (pending) { e.preventDefault(); rejectPending("keyboard"); }
+      return;
+    }
+  });
+  code.addEventListener("input", updateGutter);
+  code.addEventListener("input", updateCaret);
+  code.addEventListener("click", updateCaret);
+  code.addEventListener("keyup", updateCaret);
+  code.addEventListener("scroll", function () {
+    gutter.scrollTop = code.scrollTop;
+    if (pending) renderGhost();
+  });
+  code.addEventListener("click", function () { if (pending) renderGhost(); });
+  window.addEventListener("resize", function () { if (pending) renderGhost(); });
+
+  // Init
+  code.value = STARTER;
+  code.selectionStart = code.selectionEnd = code.value.length;
+  updateGutter(); updateCaret();
+  renderContexts();
+  loadModels();
+  checkHealth();
+})();
+</script>
+</body>
+</html>
