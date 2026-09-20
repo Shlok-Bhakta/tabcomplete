@@ -198,9 +198,9 @@ def render_all(results_path: Path, plots_dir: Path) -> list[str]:
         plt.close(fig)
         made.append("r2_plot2_compile_modes.png")
 
-    waterfall = [r for n in ("r2_R0_winner_repro", "r2_C1_precompile",
-                             "r2_F_best", "r2_G_best", "r2_L5_liger",
-                             "r2_combined")
+    waterfall = [r for n in ("r2_R0_winner_repro", "r2b_static", "r2b_bwd_pre",
+                             "r2b_fwd_prefetch", "r2b_gate2", "r2c_combined",
+                             "r2c_combined_gate")
                  for r in good if r["name"] == n]
     if len(waterfall) >= 2:
         fig, ax = plt.subplots(figsize=(10, 4))

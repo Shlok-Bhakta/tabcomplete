@@ -1,0 +1,141 @@
+{
+  "failed": [
+    "r2_C2_reduce_overhead",
+    "r2_C3_max_autotune",
+    "r2_L5_liger"
+  ],
+  "plots": [
+    "plot1_throughput_by_config.png",
+    "plot2_speedup_vs_baseline.png",
+    "plot3_throughput_vs_vram.png",
+    "plot4_step_time_breakdown.png",
+    "r2_plot1_leaderboard.png",
+    "r2_plot2_compile_modes.png",
+    "r2_plot3_waterfall.png"
+  ],
+  "ranking": [
+    {
+      "gradient_norm_mean": 2.73104461034139,
+      "loss_end": 1.0158214569091797,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_F2_bwd_pre",
+      "peak_allocated_vram_gib_max": 13.352342128753662,
+      "speedup_vs_baseline": 2.0072808131118234,
+      "steady_state_tokens_per_second": 1625.897458620577
+    },
+    {
+      "gradient_norm_mean": 2.730902592341105,
+      "loss_end": 1.015866994857788,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_F6_fwd_prefetch",
+      "peak_allocated_vram_gib_max": 13.317185878753662,
+      "speedup_vs_baseline": 1.9991878523489681,
+      "steady_state_tokens_per_second": 1619.3421604026641
+    },
+    {
+      "gradient_norm_mean": 2.7301674683888755,
+      "loss_end": 1.0159322023391724,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3076388835906982,
+      "name": "r2_C5_static",
+      "peak_allocated_vram_gib_max": 12.319291591644287,
+      "speedup_vs_baseline": 1.964696928456038,
+      "steady_state_tokens_per_second": 1591.4045120493909
+    },
+    {
+      "gradient_norm_mean": 2.7308408419291177,
+      "loss_end": 1.0158212184906006,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_F3_bwd_post",
+      "peak_allocated_vram_gib_max": 13.317185878753662,
+      "speedup_vs_baseline": 1.9438711182267316,
+      "steady_state_tokens_per_second": 1574.5356057636527
+    },
+    {
+      "gradient_norm_mean": 2.7303780714670816,
+      "loss_end": 1.0158720016479492,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3076518774032593,
+      "name": "r2_G2_gate",
+      "peak_allocated_vram_gib_max": 13.317185878753662,
+      "speedup_vs_baseline": 1.9153381980066964,
+      "steady_state_tokens_per_second": 1551.423940385424
+    },
+    {
+      "gradient_norm_mean": 2.731060743331909,
+      "loss_end": 1.0158408880233765,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_K8_boundary_sync",
+      "peak_allocated_vram_gib_max": 13.317185878753662,
+      "speedup_vs_baseline": 1.9054935812723057,
+      "steady_state_tokens_per_second": 1543.4498008305677
+    },
+    {
+      "gradient_norm_mean": 2.7310001055399575,
+      "loss_end": 1.0158467292785645,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_F5_nolimit",
+      "peak_allocated_vram_gib_max": 13.30610704421997,
+      "speedup_vs_baseline": 1.896320941979582,
+      "steady_state_tokens_per_second": 1536.0199630034613
+    },
+    {
+      "gradient_norm_mean": 2.731116533279419,
+      "loss_end": 1.0158883333206177,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_C1_precompile",
+      "peak_allocated_vram_gib_max": 13.312443733215332,
+      "speedup_vs_baseline": 1.8896216334249132,
+      "steady_state_tokens_per_second": 1530.5935230741798
+    },
+    {
+      "gradient_norm_mean": 2.730952262878418,
+      "loss_end": 1.015862226486206,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_R0_winner_repro",
+      "peak_allocated_vram_gib_max": 13.312443733215332,
+      "speedup_vs_baseline": 1.8734411486375013,
+      "steady_state_tokens_per_second": 1517.4873303963761
+    },
+    {
+      "gradient_norm_mean": 2.7303679784139,
+      "loss_end": 1.0158559083938599,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3077235221862793,
+      "name": "r2_C4_max_autotune_nocg",
+      "peak_allocated_vram_gib_max": 13.317185878753662,
+      "speedup_vs_baseline": 1.8662201972799166,
+      "steady_state_tokens_per_second": 1511.6383597967324
+    },
+    {
+      "gradient_norm_mean": 2.731149911880493,
+      "loss_end": 1.0158510208129883,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_ALLOC_expandable",
+      "peak_allocated_vram_gib_max": 13.2600998878479,
+      "speedup_vs_baseline": 1.822484444028881,
+      "steady_state_tokens_per_second": 1476.2123996633936
+    },
+    {
+      "gradient_norm_mean": 2.729926665623983,
+      "loss_end": 1.0158836841583252,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3076707124710083,
+      "name": "r2_SGO_ckpt",
+      "peak_allocated_vram_gib_max": 10.789719104766846,
+      "speedup_vs_baseline": 1.6480405145081112,
+      "steady_state_tokens_per_second": 1334.91281675157
+    }
+  ],
+  "results": 15,
+  "round2_control": 1517.4873303963761,
+  "stable": 12
+}

@@ -1,0 +1,46 @@
+{
+  "failed": [],
+  "plots": [
+    "plot1_throughput_by_config.png",
+    "plot2_speedup_vs_baseline.png",
+    "plot3_throughput_vs_vram.png",
+    "plot4_step_time_breakdown.png",
+    "r2_plot1_leaderboard.png",
+    "r2_plot2_compile_modes.png"
+  ],
+  "ranking": [
+    {
+      "gradient_norm_mean": 2.603192873299122,
+      "loss_end": 1.4291036128997803,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3076424598693848,
+      "name": "r2c_combined_gate",
+      "peak_allocated_vram_gib_max": 12.347704887390137,
+      "speedup_vs_baseline": 2.0808693880007345,
+      "steady_state_tokens_per_second": 1685.5042042805949
+    },
+    {
+      "gradient_norm_mean": 2.602793402969837,
+      "loss_end": 1.4291480779647827,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307691216468811,
+      "name": "r2c_combined",
+      "peak_allocated_vram_gib_max": 12.347704887390137,
+      "speedup_vs_baseline": 2.077330785896452,
+      "steady_state_tokens_per_second": 1682.6379365761259
+    },
+    {
+      "gradient_norm_mean": 2.603285200893879,
+      "loss_end": 1.4290666580200195,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307711124420166,
+      "name": "r2_R0_winner_repro",
+      "peak_allocated_vram_gib_max": 13.312443733215332,
+      "speedup_vs_baseline": 1.8719595452681559,
+      "steady_state_tokens_per_second": 1516.2872316672062
+    }
+  ],
+  "results": 3,
+  "round2_control": 1516.2872316672062,
+  "stable": 3
+}
