@@ -735,8 +735,21 @@ def run_training(config: RunConfig) -> dict:
         required_free = 10 * 2**30 if config.optimizer == "adamw_torch" else 5 * 2**30
         free = shutil.disk_usage(config.output_dir).free
         if free >= required_free:
-            accelerator.save_state(config.output_dir / "resume-latest", safe_serialization=True)
-            if accelerator.is_main_process:
+            resume_path = config.output_dir / "resume-latest"
+            resume_error: str | None = None
+            try:
+                accelerator.save_state(resume_path, safe_serialization=True)
+            # Accelerate/FSDP optimizer serialization is version-sensitive.
+            except Exception as exc:
+                resume_error = type(exc).__name__
+            saved_by_rank = accelerator.gather(
+                torch.tensor(
+                    [resume_error is None], device=accelerator.device, dtype=torch.bool
+                )
+            )
+            resume_saved = bool(saved_by_rank.all().item())
+            accelerator.wait_for_everyone()
+            if accelerator.is_main_process and resume_saved:
                 resume = {
                     **asdict(counters),
                     "next_block": start_block + session_tokens // block_shape[1],
@@ -744,9 +757,16 @@ def run_training(config: RunConfig) -> dict:
                     "model_revision": MODEL_REVISION,
                 }
                 _json_write(
-                    config.output_dir / "resume-latest" / "resume_metadata.json", resume
+                    resume_path / "resume_metadata.json", resume
                 )
-            summary["resume_state_saved"] = True
+            elif accelerator.is_main_process:
+                shutil.rmtree(resume_path, ignore_errors=True)
+            summary["resume_state_saved"] = resume_saved
+            if not resume_saved:
+                summary["resume_state_skip_reason"] = (
+                    "Accelerate could not serialize the distributed optimizer state"
+                )
+                summary["resume_state_error_type"] = resume_error or "other_rank_failed"
         else:
             summary["resume_state_saved"] = False
             summary["resume_state_skip_reason"] = (
