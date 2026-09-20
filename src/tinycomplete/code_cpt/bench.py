@@ -348,6 +348,17 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
     )
     from torch.utils.data import DataLoader
 
+    if config.fused_ce not in ("none", "stock"):
+        # PROVEN INCOMPATIBLE (Stage-A v6/v7): under FSDP1 full-weight
+        # training, decoder-direct calls bypass the outer unit's all-gather
+        # hook, and summon_full_params + backward-inside leaves full-shaped
+        # .grads that trip "Cannot writeback when the gradient shape changes"
+        # on the next FSDP forward. Fail before model load. Non-stock CE
+        # needs FSDP2/DTensor (untried).
+        raise RuntimeError(
+            "non-stock CE is incompatible with FSDP1 full-weight training "
+            "(summon grad writeback failure); use stock CE"
+        )
     if config.force_torch_fallback:
         _block_torch_fallback_targets()
 
@@ -416,6 +427,7 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
     fused_ce_loss, fused_ce_mode = resolve_fused_ce(config.fused_ce)
     ce_parity_abs_diff: float | None = None
     ce_fallback_note: str | None = None
+    assert fused_ce_mode == "stock"  # non-stock rejected at entry
 
     block_path = config.corpus_dir / "train_blocks.npy"
     block_shape = np.load(block_path, mmap_mode="r").shape
