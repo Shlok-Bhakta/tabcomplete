@@ -110,6 +110,14 @@
       "torch_compile": false, "sync_cleanup": true, "force_torch_fallback": false
     },
     {
+      "name": "exp13_fla_chunked",
+      "desc": "FLA + explicit sequence-chunked CE (exact, isolates chunked vs liger)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "chunked",
+      "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": false
+    },
+    {
       "name": "exp12_mb2_nockpt_retry",
       "desc": "MB2 ckpt-OFF retry on best-memory geometry (previously OOMed; failure is data)",
       "microbatch": 2, "gradient_accumulation": 4, "optimizer": "adamw_8bit",

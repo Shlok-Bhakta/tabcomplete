@@ -87,6 +87,18 @@ def test_orchestrator_rejects_mid_update_budgets() -> None:
     assert error is not None and "mid-update" in error
 
 
+def test_fused_ce_mode_resolution() -> None:
+    from tinycomplete.code_cpt.bench import resolve_fused_ce
+
+    assert resolve_fused_ce("none") == (None, "stock")
+    assert resolve_fused_ce("chunked") == (None, "chunked")
+    # liger-kernel is not installed locally, so auto must degrade to chunked,
+    # never to stock (which would silently drop the memory experiment).
+    assert resolve_fused_ce("auto") == (None, "chunked")
+    with pytest.raises(ImportError):
+        resolve_fused_ce("liger")
+
+
 def test_result_schema_has_reproduction_fields() -> None:
     from tinycomplete.code_cpt.bench import run_bench as _  # noqa: F401 (import check)
 

@@ -166,19 +166,24 @@ def collect_environment() -> dict[str, Any]:
 
 
 def resolve_fused_ce(mode: str):
-    """Resolve a fused/chunked full-vocabulary linear-CE implementation.
+    """Resolve a memory-saving full-vocabulary linear-CE implementation.
 
-    ``mode`` is one of ``none`` / ``liger`` / ``auto``. ``auto`` prefers Liger
-    when importable and otherwise falls back to stock CE so the candidate can
-    still run (recorded in JSON).
+    Modes: ``none``/``stock`` (full-logits stock CE), ``chunked``
+    (sequence-chunked stock ops through the FSDP-managed lm_head — exact,
+    never materializes full logits), ``liger`` (true fused linear CE over
+    decoder hidden states plus the lm_head weight), ``auto`` (liger when
+    importable, else chunked). All modes preserve the exact full-vocabulary
+    causal LM objective; the worker records a loss-parity check.
     """
     if mode in ("none", "stock"):
         return None, "stock"
+    if mode == "chunked":
+        return None, "chunked"
     errors: dict[str, str] = {}
     if mode in ("liger", "auto"):
         for path in (
-            "liger_kernel.chunked_loss:LigerFusedLinearCrossEntropyLoss",
             "liger_kernel.transformers:LigerFusedLinearCrossEntropyLoss",
+            "liger_kernel.chunked_loss:LigerFusedLinearCrossEntropyLoss",
         ):
             module_name, attr = path.split(":")
             try:
@@ -188,7 +193,62 @@ def resolve_fused_ce(mode: str):
                 errors[path] = f"{type(exc).__name__}: {str(exc)[:200]}"
     if mode == "liger":
         raise ImportError(f"liger fused CE unavailable: {errors}")
-    return None, "stock"
+    return None, "chunked"
+
+
+def _chunked_linear_ce_loss(accelerator, model, hidden, labels, *, chunk=1024):
+    """Exact full-vocab causal CE without materializing full logits.
+
+    Sequence-chunks decoder hidden states through the FSDP-managed lm_head
+    (FSDP all-gathers the weight per chunk exactly as in a normal forward)
+    and backprops per chunk so each chunk's logits are freed immediately.
+    Returns ``(mean_loss_value, backward_seconds)``; gradients are already
+    applied to the graph when this returns.
+    """
+    import torch
+
+    lm_head = model.lm_head
+    denom = labels.numel()
+    spans = list(range(0, hidden.size(1), chunk))
+    running: torch.Tensor | None = None
+    backward_seconds = 0.0
+    for index, start in enumerate(spans):
+        logits = lm_head(hidden[:, start : start + chunk, :])
+        part = torch.nn.functional.cross_entropy(
+            logits.reshape(-1, logits.size(-1)),
+            labels[:, start : start + chunk].reshape(-1),
+            reduction="sum",
+        )
+        running = part.detach() if running is None else running + part.detach()
+        tick = time.perf_counter()
+        accelerator.backward(part / denom, retain_graph=index < len(spans) - 1)
+        backward_seconds += time.perf_counter() - tick
+        del logits, part
+    if running is None:
+        raise RuntimeError("empty hidden states for chunked CE")
+    return running / denom, backward_seconds
+
+
+def _liger_fused_loss(accelerator, model, liger_loss, hidden, labels):
+    """True fused linear CE over hidden states plus the full lm_head weight.
+
+    The full weight is summoned from the FSDP outer unit (embedding +
+    lm_head) for the call; forward and backward run inside the summon
+    context so parameter gradients are correctly re-sharded on exit.
+    Returns ``(loss, backward_seconds)``.
+    """
+    from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+
+    tick = time.perf_counter()
+    with FSDP.summon_full_params(model, recurse=False, writeback=False):
+        unwrapped = accelerator.unwrap_model(model)
+        embeddings = unwrapped.get_output_embeddings()
+        weight = getattr(embeddings, "weight", None)
+        if weight is None:
+            raise RuntimeError("no output-embedding weight for fused linear CE")
+        loss = liger_loss(weight, hidden.reshape(-1, hidden.size(-1)), labels.reshape(-1))
+        accelerator.backward(loss)
+    return loss, time.perf_counter() - tick
 
 
 @dataclass
@@ -318,8 +378,9 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
     backend_probe = probe_gdn_backends(model)
     environment = collect_environment()
 
-    fused_ce_loss, fused_ce_resolved = resolve_fused_ce(config.fused_ce)
+    fused_ce_loss, fused_ce_mode = resolve_fused_ce(config.fused_ce)
     ce_parity_abs_diff: float | None = None
+    ce_fallback_note: str | None = None
 
     block_path = config.corpus_dir / "train_blocks.npy"
     block_shape = np.load(block_path, mmap_mode="r").shape
@@ -408,36 +469,65 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
             t0 = time.perf_counter()
             with accelerator.accumulate(model):
                 with accelerator.autocast():
-                    if fused_ce_loss is None:
+                    pre_backwarded = False
+                    inner_backward_seconds = 0.0
+                    if fused_ce_mode == "stock":
                         output = model(**batch, use_cache=False)
                         loss = output.loss
                     else:
-                        out = model(input_ids=batch["input_ids"], use_cache=False)
-                        logits = out.logits.float()
-                        shift_logits = logits[:, :-1, :].contiguous()
-                        shift_labels = batch["input_ids"][:, 1:].contiguous()
-                        # Exact packed blocks: every position is a real target.
-                        ce = fused_ce_loss(
-                            shift_logits.view(-1, shift_logits.size(-1)),
-                            shift_labels.view(-1),
-                        )
-                        loss = ce
+                        # Bypass the lm_head: decoder hidden states feed a
+                        # chunked/fused full-vocabulary causal CE, so full
+                        # logits are never materialized.
+                        decoder = getattr(model, "model", None)
+                        if decoder is None:
+                            raise RuntimeError("causal model exposes no .model decoder stack")
+                        hidden_out = decoder(input_ids=batch["input_ids"], use_cache=False)
+                        hidden = hidden_out.last_hidden_state
+                        shift_h = hidden[:, :-1, :].contiguous()
+                        shift_l = batch["input_ids"][:, 1:].contiguous()
+                        output = hidden_out
+                        if fused_ce_mode == "liger":
+                            try:
+                                loss, inner_backward_seconds = _liger_fused_loss(
+                                    accelerator,
+                                    model,
+                                    fused_ce_loss,
+                                    shift_h,
+                                    shift_l,
+                                )
+                            except Exception as exc:
+                                if config.fused_ce != "auto":
+                                    raise
+                                ce_fallback_note = (
+                                    f"liger_failed_then_chunked: {type(exc).__name__}"
+                                )
+                                fused_ce_mode = "chunked"
+                                loss, inner_backward_seconds = _chunked_linear_ce_loss(
+                                    accelerator, model, shift_h, shift_l
+                                )
+                            pre_backwarded = True
+                        else:
+                            loss, inner_backward_seconds = _chunked_linear_ce_loss(
+                                accelerator, model, shift_h, shift_l
+                            )
+                            pre_backwarded = True
                         if ce_parity_abs_diff is None:
                             with torch.no_grad():
-                                ref = torch.nn.functional.cross_entropy(
-                                    shift_logits.view(-1, shift_logits.size(-1)),
-                                    shift_labels.view(-1),
-                                )
-                            ce_parity_abs_diff = float(abs(float(ce) - float(ref)))
-                        output = out
-                forward_seconds += time.perf_counter() - t0
+                                ref_out = model(**batch, use_cache=False)
+                                ref_loss = ref_out.loss.detach().float()
+                            ce_parity_abs_diff = float(
+                                abs(loss.detach().float().item() - ref_loss.item())
+                            )
+                            del ref_out
+                forward_seconds += time.perf_counter() - t0 - inner_backward_seconds
                 if not config.sync_cleanup:
                     finite = accelerator.reduce(torch.isfinite(loss).float(), reduction="min")
                     if not bool(finite.item()):
                         raise FloatingPointError("non-finite training loss")
                 t1 = time.perf_counter()
-                accelerator.backward(loss)
-                backward_seconds += time.perf_counter() - t1
+                if not pre_backwarded:
+                    accelerator.backward(loss)
+                backward_seconds += time.perf_counter() - t1 + inner_backward_seconds
                 grad_norm_value = None
                 if accelerator.sync_gradients:
                     t2 = time.perf_counter()
@@ -607,7 +697,8 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
             "causal_conv1d" if environment.get("causal_conv1d_available") else "torch_fallback"
         ),
         "attention_backend": backend_probe.get("attn_implementation"),
-        "fused_cross_entropy": fused_ce_resolved,
+        "fused_cross_entropy": fused_ce_mode,
+        "ce_fallback_note": ce_fallback_note,
         "ce_parity_abs_diff": ce_parity_abs_diff,
         "gradient_checkpointing": config.gradient_checkpointing,
         "fsdp_strategy": config.fsdp_strategy,
@@ -663,7 +754,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--fsdp-strategy", default="FULL_SHARD", choices=("FULL_SHARD", "SHARD_GRAD_OP")
     )
     bench.add_argument("--attn-implementation", default="sdpa")
-    bench.add_argument("--fused-ce", default="none", choices=("none", "liger", "auto"))
+    bench.add_argument("--fused-ce", default="none", choices=("none", "liger", "auto", "chunked"))
     bench.add_argument("--torch-compile", action=argparse.BooleanOptionalAction, default=False)
     bench.add_argument("--sync-cleanup", action=argparse.BooleanOptionalAction, default=False)
     bench.add_argument("--workers", type=int, default=1)
