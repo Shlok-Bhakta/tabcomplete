@@ -1,0 +1,26 @@
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                       FullyShardedDataParallel.forward         0.81%     510.298ms        53.16%       33.628s      84.070ms       0.000us         0.00%       39.451s      98.628ms           400  
+                       FullyShardedDataParallel.forward         0.00%       0.000us         0.00%       0.000us       0.000us       35.413s        57.25%       35.413s      88.313ms           401  
+                            ChunkGatedDeltaRuleFunction         4.83%        3.056s         5.32%        3.365s       5.843ms       18.046s        29.17%       18.670s      32.414ms           576  
+       autograd::engine::evaluate_function: MmBackward0         0.07%      46.677ms         5.39%        3.410s       1.140ms       0.000us         0.00%       15.301s       5.114ms          2992  
+                                            MmBackward0         0.96%     604.497ms         5.32%        3.363s       1.124ms       0.000us         0.00%       15.301s       5.114ms          2992  
+         chunk_gated_delta_rule_fwd_kernel_h_blockdim64         0.00%       0.000us         0.00%       0.000us       0.000us       12.716s        20.56%       12.716s      14.718ms           864  
+                                     record_param_comms         0.15%      94.141ms         0.22%     139.413ms     115.218us       12.626s        20.41%       12.650s      10.455ms          1210  
+autograd::engine::evaluate_function: ChunkGatedDelta...         0.01%       8.649ms         1.35%     855.745ms       2.971ms       0.000us         0.00%       12.408s      43.085ms           288  
+                    ChunkGatedDeltaRuleFunctionBackward         1.07%     674.687ms         1.34%     847.096ms       2.941ms       12.374s        20.00%       12.408s      43.085ms           288  
+                                     chunk_fwd_kernel_o         0.00%       0.000us         0.00%       0.000us       0.000us        8.573s        13.86%        8.573s      14.883ms           576  
+                                 c10d::_allgather_base_         0.04%      24.171ms         0.18%     113.504ms     144.776us       0.000us         0.00%        8.069s      10.293ms           784  
+ncclDevKernel_AllGather_RING_LL(ncclDevKernelArgsSto...         0.00%       0.000us         0.00%       0.000us       0.000us        8.069s        13.04%        8.069s      10.292ms           784  
+                                  nccl:_all_gather_base         0.00%       0.000us         0.00%       0.000us       0.000us        8.069s        13.04%        8.069s      10.292ms           784  
+                  FullyShardedDataParallel._pre_forward         0.59%     370.120ms        15.35%        9.709s      24.273ms       0.000us         0.00%        5.919s      14.797ms           400  
+                                               aten::mm         1.17%     740.377ms         1.73%        1.096s      91.689us        5.612s         9.07%        5.686s     475.771us         11952  
+           FullyShardedDataParallel._post_backward_hook         0.00%       0.000us         0.00%       0.000us       0.000us        5.089s         8.23%        5.089s      12.722ms           400  
+autograd::engine::evaluate_function: torch::autograd...         0.05%      34.456ms         4.31%        2.728s       6.821ms       0.000us         0.00%        4.988s      12.471ms           400  
+           FullyShardedDataParallel._post_backward_hook         0.59%     372.595ms         4.25%        2.688s       6.719ms       0.000us         0.00%        4.988s      12.471ms           400  
+                                           aten::matmul         0.15%      92.421ms         1.71%        1.081s     169.820us       0.000us         0.00%        4.315s     677.661us          6368  
+                            c10d::_reduce_scatter_base_         0.02%      12.247ms         0.08%      53.758ms     134.394us       0.000us         0.00%        4.281s      10.703ms           400  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 63.260s
+Self CUDA time total: 61.862s
