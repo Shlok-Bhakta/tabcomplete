@@ -1,0 +1,21 @@
+services:
+  collector:
+    build: ./server
+    image: tabcomplete-trajectory-collector:latest
+    container_name: tabcomplete-collector
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TABCOMPLETE_COLLECTOR_DB: /data/collector.sqlite
+      TABCOMPLETE_COLLECTOR_PORT: "8787"
+    ports:
+      - "${TABCOMPLETE_TAILSCALE_BIND_ADDR}:${TABCOMPLETE_COLLECTOR_PORT:-8787}:8787"
+    volumes:
+      - /mnt/ssd/collector-data:/data
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8787/healthz'); if (!r.ok) process.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
