@@ -199,3 +199,89 @@ def test_plots_render_from_synthetic_results(tmp_path) -> None:
     summary = json.loads((tmp_path / "plots" / "summary.json").read_text())
     assert summary["stable"] == 3
     assert summary["failed"] == ["exp12_mb2_nockpt_retry"]
+
+
+def test_round2a_matrix_uses_shared_defaults_and_stays_aligned() -> None:
+    raw = json.loads(
+        (REPO / "kaggle" / "code_cpt_bench" / "candidates_round2A.json").read_text(encoding="utf-8")
+    )
+    shared = raw["shared"]
+    names = [c["name"] for c in raw["candidates"]]
+    assert len(names) == len(set(names)) and len(names) >= 10
+    assert "r2_R0_winner_repro" in names
+    for candidate in raw["candidates"]:
+        full = {**shared, **candidate}
+        max_tokens = int(full.get("max_tokens", 98304))
+        update = WORLD * int(full["microbatch"]) * SEQ_LEN * int(full["gradient_accumulation"])
+        assert max_tokens % update == 0, candidate["name"]
+
+
+def test_orchestrator_merged_shared_defaults() -> None:
+    sys.path.insert(0, str(REPO / "kaggle" / "code_cpt_bench"))
+    from run_bench import merged, validate_alignment
+
+    shared = {"microbatch": 1, "gradient_accumulation": 8, "max_tokens": 98304}
+    candidate = {"name": "r2_x"}
+    assert merged(candidate, shared)["microbatch"] == 1
+    _, _, error = validate_alignment(candidate, shared)
+    assert error is None
+
+
+def test_bench_parser_round2_flags() -> None:
+    from tinycomplete.code_cpt.bench import _parse_inductor_options, build_parser
+
+    args = build_parser().parse_args(
+        [
+            "bench",
+            "--corpus-dir",
+            "corpus",
+            "--output",
+            "out.json",
+            "--compile-placement",
+            "pre_fsdp",
+            "--compile-mode",
+            "max-autotune",
+            "--no-compile-dynamic",
+            "--fsdp-backward-prefetch",
+            "BACKWARD_PRE",
+            "--no-limit-all-gathers",
+            "--fsdp-group-layers",
+            "2",
+            "--grad-sync-every",
+            "8",
+            "--fla-gate-fusion",
+            "2",
+            "--inductor-option",
+            "max_autotune=true",
+        ]
+    )
+    assert args.compile_placement == "pre_fsdp"
+    assert args.compile_dynamic is False
+    assert args.fsdp_backward_prefetch == "BACKWARD_PRE"
+    assert args.grad_sync_every == 8
+    assert _parse_inductor_options(args.inductor_option) == {"max_autotune": True}
+    with pytest.raises(ValueError):
+        _parse_inductor_options(["no_equals_sign"])
+
+
+def test_round2_result_schema_fields_present() -> None:
+    import inspect
+
+    source = inspect.getsource(__import__("tinycomplete.code_cpt.bench", fromlist=["run_bench"]))
+    for field in (
+        "compile_placement",
+        "compile_mode",
+        "graph_break_count",
+        "fsdp_backward_prefetch",
+        "limit_all_gathers",
+        "fsdp_group_layers",
+        "grad_sync_every",
+        "nccl_version",
+        "gpu_p2p",
+        "liger_rmsnorm",
+        "liger_swiglu",
+        "fla_gate_fused",
+        "fla_parity_abs_diff",
+        "allocator",
+    ):
+        assert f'"{field}"' in source, field

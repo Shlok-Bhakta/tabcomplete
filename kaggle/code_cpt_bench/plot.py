@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 
 BASELINE_TOKS = 810.0
+ROUND2_CONTROL_TOKS = 1630.0
 
 
 def load_results(path: Path) -> list[dict]:
@@ -23,6 +24,15 @@ def load_results(path: Path) -> list[dict]:
 def stable(results: list[dict]) -> list[dict]:
     return [r for r in results if r.get("status") == "pass"
             and (r.get("steady_state_tokens_per_second") or 0) > 0]
+
+
+def _control(results: list[dict]) -> float:
+    """Round-2 control: prefer an explicit round-2 winner repro candidate."""
+    for marker in ("r2_R0_winner_repro", "stageC_winner", "stageB_winner"):
+        for row in results:
+            if row.get("name") == marker and row.get("steady_state_tokens_per_second"):
+                return float(row["steady_state_tokens_per_second"])
+    return ROUND2_CONTROL_TOKS
 
 
 def render_all(results_path: Path, plots_dir: Path) -> list[str]:
@@ -148,6 +158,67 @@ def render_all(results_path: Path, plots_dir: Path) -> list[str]:
     }
     (plots_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n",
+        encoding="utf-8")
+
+    # Round-2 plots: leaderboard vs control, tok/s vs VRAM with Round-2
+    # fields, compile-mode comparison, and verification waterfall.
+    control = _control(results)
+    names2 = [r["name"] for r in good]
+    steady2 = [float(r["steady_state_tokens_per_second"]) for r in good]
+
+    fig, ax = plt.subplots(figsize=(13, 5))
+    colors = ["tab:red" if v >= control else "tab:blue" for v in steady2]
+    ax.bar(names2, steady2, color=colors)
+    ax.axhline(control, color="red", linestyle="--",
+               label=f"round-2 control {control:.0f} tok/s")
+    ax.set_ylabel("steady-state tok/s")
+    ax.set_title("Round-2 leaderboard vs control")
+    ax.tick_params(axis="x", rotation=30)
+    for n, v in zip(names2, steady2):
+        ax.text(n, v, f"{v:.0f}", ha="center", va="bottom", fontsize=8)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(plots_dir / "r2_plot1_leaderboard.png", dpi=150)
+    plt.close(fig)
+    made.append("r2_plot1_leaderboard.png")
+
+    compile_rows = [r for r in good if r.get("torch_compile")]
+    if len(compile_rows) >= 2:
+        fig, ax = plt.subplots(figsize=(11, 4))
+        labels = [f"{r['name']} ({r.get('compile_placement')}/{r.get('compile_mode')})"
+                  for r in compile_rows]
+        vals = [float(r["steady_state_tokens_per_second"]) for r in compile_rows]
+        ax.bar(labels, vals, color="tab:green")
+        ax.axhline(control, color="red", linestyle="--")
+        ax.set_ylabel("steady-state tok/s")
+        ax.set_title("Compile placement/mode comparison")
+        ax.tick_params(axis="x", rotation=25)
+        fig.tight_layout()
+        fig.savefig(plots_dir / "r2_plot2_compile_modes.png", dpi=150)
+        plt.close(fig)
+        made.append("r2_plot2_compile_modes.png")
+
+    waterfall = [r for n in ("r2_R0_winner_repro", "r2_C1_precompile",
+                             "r2_F_best", "r2_G_best", "r2_L5_liger",
+                             "r2_combined")
+                 for r in good if r["name"] == n]
+    if len(waterfall) >= 2:
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot([r["name"] for r in waterfall],
+                [float(r["steady_state_tokens_per_second"]) for r in waterfall],
+                marker="o")
+        ax.axhline(control, color="red", linestyle="--")
+        ax.set_ylabel("steady-state tok/s")
+        ax.set_title("Round-2 verification waterfall (independently verified wins only)")
+        ax.tick_params(axis="x", rotation=20)
+        fig.tight_layout()
+        fig.savefig(plots_dir / "r2_plot3_waterfall.png", dpi=150)
+        plt.close(fig)
+        made.append("r2_plot3_waterfall.png")
+
+    (plots_dir / "summary.json").write_text(
+        json.dumps({**summary, "plots": made, "round2_control": control},
+                   indent=2, sort_keys=True, default=str) + "\n",
         encoding="utf-8")
     return made
 

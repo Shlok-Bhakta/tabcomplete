@@ -90,11 +90,17 @@ def load_matrix(path: Path) -> tuple[dict, list[dict]]:
     return shared, list(raw.get("candidates", []))
 
 
+def merged(candidate: dict, shared: dict) -> dict:
+    """Shared defaults with per-candidate overrides."""
+    return {**shared, **candidate}
+
+
 def validate_alignment(candidate: dict, shared: dict) -> tuple[int, int, str | None]:
     """Return (max_tokens, tokens_per_update, error)."""
-    max_tokens = int(candidate.get("max_tokens", shared.get("max_tokens", 98304)))
-    microbatch = int(candidate["microbatch"])
-    accum = int(candidate["gradient_accumulation"])
+    full = merged(candidate, shared)
+    max_tokens = int(full.get("max_tokens", 98304))
+    microbatch = int(full["microbatch"])
+    accum = int(full["gradient_accumulation"])
     tokens_per_update = 2 * microbatch * SEQ_LEN * accum
     if max_tokens % tokens_per_update != 0:
         return max_tokens, tokens_per_update, (
@@ -111,14 +117,15 @@ def launch_candidate(*, candidate: dict, shared: dict, corpus: Path,
     dest.mkdir(parents=True, exist_ok=True)
     max_tokens, tokens_per_update, align_error = validate_alignment(candidate, shared)
     result_path = dest / "result.json"
-    record: dict = {"name": name, "candidate": candidate,
+    record: dict = {"name": name, "candidate": merged(candidate, shared),
                     "tokens_per_update": tokens_per_update}
     if align_error:
         record.update({"status": "error", "error_type": "MisalignedBudget",
                        "error_message": align_error})
         result_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         return record
-    get = lambda key: candidate.get(key, shared.get(key))
+    get = lambda key: candidate.get(key, shared.get(key))  # noqa: E731
+    full = merged(candidate, shared)
     cmd = [
         sys.executable, "-m", "torch.distributed.run", "--standalone",
         "--nproc_per_node=2", "-m", "tinycomplete.code_cpt.bench", "bench",
@@ -128,32 +135,55 @@ def launch_candidate(*, candidate: dict, shared: dict, corpus: Path,
         "--max-tokens", str(max_tokens),
         "--start-block", str(int(get("start_block"))),
         "--seed", str(int(get("seed"))),
-        "--microbatch", str(int(candidate["microbatch"])),
-        "--gradient-accumulation", str(int(candidate["gradient_accumulation"])),
-        "--optimizer", str(candidate.get("optimizer", "adamw_8bit")),
-        "--fsdp-strategy", str(candidate.get("fsdp_strategy", "FULL_SHARD")),
+        "--microbatch", str(int(full["microbatch"])),
+        "--gradient-accumulation", str(int(full["gradient_accumulation"])),
+        "--optimizer", str(full.get("optimizer", "adamw_8bit")),
+        "--fsdp-strategy", str(full.get("fsdp_strategy", "FULL_SHARD")),
         "--attn-implementation",
-        str(candidate.get("attn_implementation", "sdpa")),
-        "--fused-ce", str(candidate.get("fused_ce", "none")),
+        str(full.get("attn_implementation", "sdpa")),
+        "--fused-ce", str(full.get("fused_ce", "none")),
         "--workers", str(int(get("workers"))),
         "--prefetch-factor", str(int(get("prefetch_factor"))),
         "--warmup-steps", str(int(get("warmup_steps"))),
-        "--profile-steps", str(int(candidate.get("profile_steps", 0))),
+        "--profile-steps", str(int(full.get("profile_steps", 0))),
+        "--compile-placement", str(full.get("compile_placement", "post_fsdp")),
+        "--compile-mode", str(full.get("compile_mode", "default")),
+        "--fsdp-backward-prefetch",
+        str(full.get("fsdp_backward_prefetch", "default")),
+        "--fsdp-group-layers", str(int(full.get("fsdp_group_layers", 1))),
+        "--grad-sync-every", str(int(full.get("grad_sync_every", 1))),
+        "--fla-gate-fusion", str(int(full.get("fla_gate_fusion", 0))),
     ]
-    cmd.append("--gradient-checkpointing" if candidate.get(
-        "gradient_checkpointing", True) else "--no-gradient-checkpointing")
-    cmd.append("--torch-compile" if candidate.get("torch_compile", False)
+    for option in full.get("inductor_options", []) or []:
+        cmd.extend(["--inductor-option", str(option)])
+    ckpt = bool(full.get("gradient_checkpointing", True))
+    cmd.append("--gradient-checkpointing" if ckpt else "--no-gradient-checkpointing")
+    cmd.append("--torch-compile" if full.get("torch_compile", False)
                else "--no-torch-compile")
-    cmd.append("--sync-cleanup" if candidate.get("sync_cleanup", False)
+    cmd.append("--compile-dynamic" if full.get("compile_dynamic", True)
+               else "--no-compile-dynamic")
+    cmd.append("--compile-fullgraph" if full.get("compile_fullgraph", False)
+               else "--no-compile-fullgraph")
+    cmd.append("--sync-cleanup" if full.get("sync_cleanup", False)
                else "--no-sync-cleanup")
-    cmd.append("--force-torch-fallback" if candidate.get(
+    cmd.append("--fsdp-forward-prefetch" if full.get(
+        "fsdp_forward_prefetch", False) else "--no-fsdp-forward-prefetch")
+    cmd.append("--limit-all-gathers" if full.get(
+        "limit_all_gathers", True) else "--no-limit-all-gathers")
+    cmd.append("--liger-rmsnorm" if full.get(
+        "liger_rmsnorm", False) else "--no-liger-rmsnorm")
+    cmd.append("--liger-swiglu" if full.get(
+        "liger_swiglu", False) else "--no-liger-swiglu")
+    cmd.append("--force-torch-fallback" if full.get(
         "force_torch_fallback", False) else "--no-force-torch-fallback")
     started = time.time()
+    extra_env = dict(full.get("env", {}) or {})
     code, _ = run(
         cmd,
         env={"CUDA_VISIBLE_DEVICES": "0,1",
              "PYTHONPATH": str(checkout / "src"),
-             "TOKENIZERS_PARALLELISM": "false"},
+             "TOKENIZERS_PARALLELISM": "false",
+             **extra_env},
         log=dest / "process.log", timeout=2400,
     )
     record.update({"exit_code": code,
@@ -232,6 +262,26 @@ def main() -> None:
          "--output", str(probe_path)],
         env={"PYTHONPATH": str(checkout / "src")},
         log=out_root / "backend_probe.log")
+
+    # Round-2 Step 0-B: topology + compiler probes (single-process, cheap).
+    run([sys.executable, "-m", "tinycomplete.code_cpt.bench", "topo",
+         "--output", str(out_root / "topology.json")],
+        env={"PYTHONPATH": str(checkout / "src")},
+        log=out_root / "topology.log")
+    run([sys.executable, "-m", "tinycomplete.code_cpt.bench", "compiler_probe",
+         "--output", str(out_root / "compiler_probe.json")],
+        env={"PYTHONPATH": str(checkout / "src")},
+        log=out_root / "compiler_probe.log")
+
+    # Round-2 NCCL microbenchmark on the same 2 T4s (fresh distributed pair).
+    run(
+        [sys.executable, "-m", "torch.distributed.run", "--standalone",
+         "--nproc_per_node=2", "-m", "tinycomplete.code_cpt.bench", "nccl_bench",
+         "--output", str(out_root / "nccl_microbench.json")],
+        env={"CUDA_VISIBLE_DEVICES": "0,1",
+             "PYTHONPATH": str(checkout / "src")},
+        log=out_root / "nccl_microbench.log", timeout=1200,
+    )
 
     shared, matrix = load_matrix(
         args.matrix or (bench_dir / "candidates.json")

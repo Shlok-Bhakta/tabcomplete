@@ -28,7 +28,7 @@ import random
 import sys
 import time
 import traceback
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +47,9 @@ BASELINE_TOKENS_PER_SECOND = 810.0
 BASELINE_UPDATE_TOKENS = 32_768
 STAGE_A_TOKENS = 98_304  # 3 x 32,768 complete optimizer updates
 STAGE_B_TOKENS = 524_288  # 16 x 32,768 complete optimizer updates
+# Deterministic first-update loss of every FLA+stock candidate at seed 271828
+# (identical token ordering). Parity anchor for gate-fusion experiments.
+FLA_STOCK_LOSS_START = 1.3077329397201538
 
 
 def _package_version(distribution: str) -> str | None:
@@ -162,6 +165,19 @@ def collect_environment() -> dict[str, Any]:
         env["accelerate"] = None
     env["numpy"] = np.__version__
     env.update(probe_kernel_packages())
+    try:
+        env["nccl_version"] = ".".join(str(v) for v in torch.cuda.nccl.version())
+    except Exception:
+        env["nccl_version"] = None
+    try:
+        if torch.cuda.device_count() >= 2:
+            env["gpu_p2p"] = bool(
+                torch.cuda.can_device_access_peer(0, 1) and torch.cuda.can_device_access_peer(1, 0)
+            )
+        else:
+            env["gpu_p2p"] = None
+    except Exception:
+        env["gpu_p2p"] = None
     return env
 
 
@@ -310,6 +326,20 @@ class BenchConfig:
     max_grad_norm: float = 1.0
     force_torch_fallback: bool = False
     profile_steps: int = 0
+    # --- Round-2 knobs ---
+    compile_placement: str = "post_fsdp"  # post_fsdp | pre_fsdp
+    compile_mode: str = "default"  # default | reduce-overhead | max-autotune | ...
+    compile_dynamic: bool = True
+    compile_fullgraph: bool = False
+    inductor_options: dict[str, Any] = field(default_factory=dict)
+    fsdp_backward_prefetch: str = "default"  # default | BACKWARD_PRE | BACKWARD_POST
+    fsdp_forward_prefetch: bool = False
+    limit_all_gathers: bool = True
+    fsdp_group_layers: int = 1  # adjacent decoder layers per FSDP unit
+    grad_sync_every: int = 1  # 1 = every microstep; 8 = accumulation boundary only
+    liger_rmsnorm: bool = False
+    liger_swiglu: bool = False
+    fla_gate_fusion: int = 0  # 0 off | 2 gate in-kernel | 3 gate+beta-sigmoid in-kernel
 
 
 def _block_torch_fallback_targets() -> None:
@@ -336,11 +366,283 @@ def _block_torch_fallback_targets() -> None:
         sys.modules[blocked] = None  # type: ignore[assignment]
 
 
+def _validated_inductor_options(options: dict[str, Any]) -> dict[str, Any]:
+    """Validate Inductor option names against the installed PyTorch.
+
+    Never invent option names: unknown keys raise with the valid name list.
+    """
+    import torch._inductor
+
+    valid = set(torch._inductor.list_options())
+    unknown = [key for key in options if key not in valid]
+    if unknown:
+        sample = sorted(valid)[:40]
+        raise ValueError(f"unknown inductor options {unknown}; e.g. {sample}")
+    return dict(options)
+
+
+def _dynamo_counters_snapshot() -> dict[str, Any]:
+    """Best-effort TorchDynamo diagnostics (graph breaks, recompiles)."""
+    try:
+        from torch._dynamo.utils import counters
+
+        graph_breaks: dict[Any, Any] = dict(counters.get("graph_break", {}) or {})
+        stats: dict[Any, Any] = dict(counters.get("stats", {}) or {})
+        return {
+            "graph_break_count": int(sum(graph_breaks.values())) if graph_breaks else 0,
+            "graph_break_reasons": dict(list(graph_breaks.items())[:10]),
+            "unique_graphs": stats.get("unique_graphs"),
+            "graph_calls": stats.get("graph_calls"),
+            "stats_keys": sorted(str(k) for k in stats)[:20],
+        }
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"[:200]}
+
+
+def _allocator_snapshot() -> dict[str, Any]:
+    """Allocator headroom/fragmentation counters (no profiler needed)."""
+    import torch
+
+    if not torch.cuda.is_available():
+        return {}
+    try:
+        stats = torch.cuda.memory_stats()
+        get = lambda k: int(stats.get(k, 0))  # noqa: E731
+        gib = 2**30
+        return {
+            "allocated_gib": get("allocated_bytes.all.current") / gib,
+            "reserved_gib": get("reserved_bytes.all.current") / gib,
+            "inactive_split_gib": get("inactive_split_bytes.all.current") / gib,
+            "num_alloc_retries": get("num_alloc_retries"),
+            "num_ooms": get("num_ooms"),
+        }
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"[:200]}
+
+
+def _compile_model(model, config: BenchConfig):
+    """Apply torch.compile with the candidate's mode/options.
+
+    Returns ``(model, compile_seconds, dynamo_info)``.
+    """
+    import torch
+
+    options = _validated_inductor_options(dict(config.inductor_options or {}))
+    kwargs: dict[str, Any] = {
+        "mode": config.compile_mode,
+        "dynamic": config.compile_dynamic,
+        "fullgraph": config.compile_fullgraph,
+    }
+    if options:
+        kwargs["options"] = options
+    start = time.perf_counter()
+    compiled = torch.compile(model, **kwargs)
+    seconds = time.perf_counter() - start
+    return compiled, seconds, _dynamo_counters_snapshot()
+
+
+def _apply_liger_non_ce(model, config: BenchConfig) -> dict[str, Any]:
+    """Apply the official Liger Qwen3.5 patch WITHOUT fused linear CE.
+
+    Only RMSNorm and/or SwiGLU triton kernels per candidate flags. Stock CE
+    and the FSDP model forward are untouched.
+    """
+    from liger_kernel.transformers import apply_liger_kernel_to_qwen3_5
+
+    apply_liger_kernel_to_qwen3_5(
+        rms_norm=bool(config.liger_rmsnorm),
+        swiglu=bool(config.liger_swiglu),
+        cross_entropy=False,
+        fused_linear_cross_entropy=False,
+        model=model,
+    )
+    return {"rmsnorm": bool(config.liger_rmsnorm), "swiglu": bool(config.liger_swiglu)}
+
+
+def _fla_gate_fusion_forward(self, hidden_states, cache_params=None, attention_mask=None):
+    """Transformers 5.5.0 Qwen3_5GatedDeltaNet.forward with in-kernel gating.
+
+    Byte-faithful copy of the 5.5.0 body except the ``beta``/``g`` pointwise
+    math, which moves into the FLA kernel when ``_bench_gate_fusion_level`` is
+    2 (gate) or 3 (gate + beta sigmoid). Mathematical operation preserved.
+    """
+    import torch
+    import torch.nn.functional as F
+    from transformers.models.qwen3_5.modeling_qwen3_5 import (
+        apply_mask_to_padding_states,
+    )
+
+    hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
+    batch_size, seq_len, _ = hidden_states.shape
+    use_precomputed_states = (
+        cache_params is not None
+        and cache_params.has_previous_state(self.layer_idx)
+        and seq_len == 1
+    )
+    if use_precomputed_states:
+        conv_state = cache_params.layers[self.layer_idx].conv_states
+        recurrent_state = cache_params.layers[self.layer_idx].recurrent_states
+    mixed_qkv = self.in_proj_qkv(hidden_states)
+    mixed_qkv = mixed_qkv.transpose(1, 2)
+    z = self.in_proj_z(hidden_states)
+    z = z.reshape(batch_size, seq_len, -1, self.head_v_dim)
+    b = self.in_proj_b(hidden_states)
+    a = self.in_proj_a(hidden_states)
+    if use_precomputed_states:
+        mixed_qkv = self.causal_conv1d_update(
+            mixed_qkv,
+            conv_state,
+            self.conv1d.weight.squeeze(1),
+            self.conv1d.bias,
+            self.activation,
+        )
+    else:
+        if cache_params is not None:
+            conv_state = F.pad(mixed_qkv, (self.conv_kernel_size - mixed_qkv.shape[-1], 0))
+            conv_state = cache_params.update_conv_state(conv_state, self.layer_idx)
+        if self.causal_conv1d_fn is not None:
+            mixed_qkv = self.causal_conv1d_fn(
+                x=mixed_qkv,
+                weight=self.conv1d.weight.squeeze(1),
+                bias=self.conv1d.bias,
+                activation=self.activation,
+                seq_idx=None,
+            )
+        else:
+            mixed_qkv = F.silu(self.conv1d(mixed_qkv)[:, :, :seq_len])
+    mixed_qkv = mixed_qkv.transpose(1, 2)
+    query, key, value = torch.split(mixed_qkv, [self.key_dim, self.key_dim, self.value_dim], dim=-1)
+    query = query.reshape(batch_size, seq_len, -1, self.head_k_dim)
+    key = key.reshape(batch_size, seq_len, -1, self.head_k_dim)
+    value = value.reshape(batch_size, seq_len, -1, self.head_v_dim)
+    level = int(getattr(self, "_bench_gate_fusion_level", 0))
+    extra: dict[str, Any] = {}
+    if level >= 2:
+        g = a
+        extra.update(use_gate_in_kernel=True, A_log=self.A_log, dt_bias=self.dt_bias)
+    else:
+        g = -self.A_log.float().exp() * F.softplus(a.float() + self.dt_bias)
+    if level >= 3:
+        beta = b
+        extra.update(use_beta_sigmoid_in_kernel=True)
+    else:
+        beta = b.sigmoid()
+    if self.num_v_heads // self.num_k_heads > 1:
+        query = query.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)
+        key = key.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)
+    if not use_precomputed_states:
+        core_attn_out, last_recurrent_state = self.chunk_gated_delta_rule(
+            query,
+            key,
+            value,
+            g=g,
+            beta=beta,
+            initial_state=None,
+            output_final_state=cache_params is not None,
+            use_qk_l2norm_in_kernel=True,
+            **extra,
+        )
+    else:
+        core_attn_out, last_recurrent_state = self.recurrent_gated_delta_rule(
+            query,
+            key,
+            value,
+            g=g,
+            beta=beta,
+            initial_state=recurrent_state,
+            output_final_state=cache_params is not None,
+            use_qk_l2norm_in_kernel=True,
+            **extra,
+        )
+    if cache_params is not None:
+        cache_params.update_recurrent_state(last_recurrent_state, self.layer_idx)
+    core_attn_out = core_attn_out.reshape(-1, self.head_v_dim)
+    z = z.reshape(-1, self.head_v_dim)
+    core_attn_out = self.norm(core_attn_out, z)
+    core_attn_out = core_attn_out.reshape(batch_size, seq_len, -1)
+    return self.out_proj(core_attn_out)
+
+
+def _set_gate_fusion(model, level: int | None) -> int:
+    """Patch/unpatch every GatedDeltaNet instance forward. Returns count."""
+    import types
+
+    count = 0
+    for module in model.modules():
+        if module.__class__.__name__ != "Qwen3_5GatedDeltaNet":
+            continue
+        if level is None:
+            original = getattr(module, "_bench_orig_forward", None)
+            if original is not None:
+                module.forward = original
+                del module._bench_orig_forward
+                if hasattr(module, "_bench_gate_fusion_level"):
+                    del module._bench_gate_fusion_level
+        else:
+            if "_bench_orig_forward" not in module.__dict__:
+                module._bench_orig_forward = module.forward
+            module._bench_gate_fusion_level = int(level)
+            module.forward = types.MethodType(_fla_gate_fusion_forward, module)
+        count += 1
+    return count
+
+
+def _apply_wrap_groups(model, group_size: int) -> dict[str, Any]:
+    """Regroup adjacent decoder layers into coarser FSDP units.
+
+    Replaces ``model.model.layers`` (24 singles) with ``24/group_size``
+    transparent containers forwarding all args, so forward math is exactly
+    identical. Verifies the state-dict key remap is a bijection with the
+    original keys (recoverable for production save conversion).
+    """
+    import torch.nn as nn
+
+    class LayerGroup(nn.Module):
+        def forward(self, hidden_states, *args, **kwargs):
+            for layer in self.layers:
+                hidden_states = layer(hidden_states, *args, **kwargs)
+            return hidden_states
+
+    stack = model.model.layers
+    total = len(stack)
+    if group_size <= 1:
+        return {"group_layers": 1, "fsdp_units": total, "key_remap_verified": True}
+    if total % group_size:
+        raise ValueError(f"{total} layers not divisible by group size {group_size}")
+    original_keys = {k for k in model.state_dict()}
+    groups = []
+    for start in range(0, total, group_size):
+        group = LayerGroup()
+        group.layers = nn.ModuleList(list(stack[start : start + group_size]))
+        groups.append(group)
+    model.model.layers = nn.ModuleList(groups)
+
+    def remap(key: str) -> str:
+        # model.layers.{g}.layers.{j}.{rest} -> model.layers.{g*n+j}.{rest}
+        parts = key.split(".")
+        li = parts.index("layers")
+        group_index = int(parts[li + 1])
+        inner_index = int(parts[li + 3])
+        flat = group_index * group_size + inner_index
+        return ".".join([*parts[:li], "layers", str(flat), *parts[li + 4 :]])
+
+    remapped = {remap(k) for k in model.state_dict()}
+    if remapped != original_keys:
+        raise RuntimeError("FSDP group key remap is not a bijection with original keys")
+    return {
+        "group_layers": group_size,
+        "fsdp_units": len(groups),
+        "key_remap_verified": True,
+        "original_key_count": len(original_keys),
+    }
+
+
 def run_bench(config: BenchConfig) -> dict[str, Any]:
     import torch
     from accelerate import Accelerator, FullyShardedDataParallelPlugin
     from accelerate.utils import GradientAccumulationPlugin, GradScalerKwargs
     from torch.distributed.fsdp import (
+        BackwardPrefetch,
         FullOptimStateDictConfig,
         FullStateDictConfig,
         MixedPrecision,
@@ -372,11 +674,28 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         "FULL_SHARD": ShardingStrategy.FULL_SHARD,
         "SHARD_GRAD_OP": ShardingStrategy.SHARD_GRAD_OP,
     }[config.fsdp_strategy]
+    if config.fsdp_backward_prefetch not in ("default", "BACKWARD_PRE", "BACKWARD_POST"):
+        raise ValueError(f"bad fsdp_backward_prefetch: {config.fsdp_backward_prefetch}")
+    if config.grad_sync_every not in (1, 8):
+        raise ValueError("grad_sync_every must be 1 or 8 to preserve update geometry")
+    if config.fsdp_group_layers not in (1, 2, 3, 4):
+        raise ValueError(f"bad fsdp_group_layers: {config.fsdp_group_layers}")
+    if config.fla_gate_fusion not in (0, 2, 3):
+        raise ValueError(f"bad fla_gate_fusion: {config.fla_gate_fusion}")
+    if config.compile_placement not in ("post_fsdp", "pre_fsdp"):
+        raise ValueError(f"bad compile_placement: {config.compile_placement}")
 
+    prefetch_map = {
+        "BACKWARD_PRE": BackwardPrefetch.BACKWARD_PRE,
+        "BACKWARD_POST": BackwardPrefetch.BACKWARD_POST,
+    }
+    wrap_targets = ["LayerGroup"] if config.fsdp_group_layers > 1 else ["Qwen3_5DecoderLayer"]
     fsdp_plugin = FullyShardedDataParallelPlugin(
         sharding_strategy=fsdp_strategy,
         auto_wrap_policy="transformer_based_wrap",
-        transformer_cls_names_to_wrap=["Qwen3_5DecoderLayer"],
+        transformer_cls_names_to_wrap=wrap_targets,
+        backward_prefetch=prefetch_map.get(config.fsdp_backward_prefetch),
+        forward_prefetch=config.fsdp_forward_prefetch,
         mixed_precision_policy=MixedPrecision(
             param_dtype=torch.float16,
             reduce_dtype=torch.float16,
@@ -387,11 +706,11 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         optim_state_dict_config=FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=True),
         use_orig_params=True,
         sync_module_states=True,
-        limit_all_gathers=True,
+        limit_all_gathers=config.limit_all_gathers,
     )
     accumulation_plugin = GradientAccumulationPlugin(
         num_steps=config.gradient_accumulation,
-        sync_each_batch=True,
+        sync_each_batch=config.grad_sync_every == 1,
     )
     scaler_kwargs = GradScalerKwargs(init_scale=256.0, growth_interval=2_000)
     accelerator = Accelerator(
@@ -411,10 +730,21 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
     model, _tokenizer = _load_model_and_tokenizer(token)
     if config.attn_implementation:
         model.config._attn_implementation = config.attn_implementation
+    wrap_info = _apply_wrap_groups(model, config.fsdp_group_layers)
     if config.gradient_checkpointing:
         model.gradient_checkpointing_enable()
     else:
         model.gradient_checkpointing_disable()
+    liger_info: dict[str, Any] = {"rmsnorm": False, "swiglu": False}
+    if config.liger_rmsnorm or config.liger_swiglu:
+        liger_info = _apply_liger_non_ce(model, config)
+    gate_fusion_layers = 0
+    if config.fla_gate_fusion:
+        if config.force_torch_fallback:
+            raise RuntimeError("fla gate fusion needs the FLA fast path, not torch fallback")
+        gate_fusion_layers = _set_gate_fusion(model, config.fla_gate_fusion)
+        if gate_fusion_layers == 0:
+            raise RuntimeError("no Qwen3_5GatedDeltaNet layers found for gate fusion")
 
     # Correctness gate: every parameter must stay trainable.
     frozen = [n for n, p in model.named_parameters() if not p.requires_grad]
@@ -458,12 +788,15 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
     loader: Any = DataLoader(dataset, **loader_options)  # type: ignore[arg-type]
     optimizer = _optimizer(model, config.optimizer, config.learning_rate, weight_decay=0.01)
     scheduler = _constant_with_warmup(optimizer, config.warmup_steps)
+    dynamo_info: dict[str, Any] = {}
+    if config.torch_compile and config.compile_placement == "pre_fsdp":
+        model, compile_seconds, dynamo_info = _compile_model(model, config)
+    else:
+        compile_seconds = 0.0
     model, optimizer, loader = accelerator.prepare(model, optimizer, loader)
 
-    if config.torch_compile:
-        compile_start = time.perf_counter()
-        model = torch.compile(model)  # type: ignore[assignment]
-        compile_seconds = time.perf_counter() - compile_start
+    if config.torch_compile and config.compile_placement == "post_fsdp":
+        model, compile_seconds, dynamo_info = _compile_model(model, config)
 
     # Weight-update probe: sample one full-precision scalar before training.
     with torch.no_grad():
@@ -742,6 +1075,25 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         weights_updated = optimizer_steps > 0 and not nan_or_inf
 
     tokens_verified = total_tokens_all_ranks == optimizer_steps * tokens_per_update
+    dynamo_final = _dynamo_counters_snapshot()
+    allocator_final = _allocator_snapshot()
+    nccl_env = {
+        key: os.environ.get(key)
+        for key in (
+            "NCCL_PROTO",
+            "NCCL_ALGO",
+            "NCCL_MIN_NCHANNELS",
+            "NCCL_MAX_NCHANNELS",
+            "TORCH_NCCL_HIGH_PRIORITY",
+            "NCCL_DEBUG",
+        )
+    }
+    # Deterministic parity anchor: every FLA+stock candidate with seed 271828
+    # sees identical first batches, so loss_start must equal the control value
+    # below. Used to validate gate-fusion math without disturbing compile.
+    fla_parity_abs_diff = None
+    if config.fla_gate_fusion and loss_start is not None:
+        fla_parity_abs_diff = abs(loss_start - FLA_STOCK_LOSS_START)
     result: dict[str, Any] = {
         "name": config.name,
         "status": status,
@@ -796,6 +1148,42 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         "sequence_length": sequence_length,
         "tokens_per_update": tokens_per_update,
         "torch_compile": config.torch_compile,
+        "compile_placement": config.compile_placement if config.torch_compile else None,
+        "compile_mode": config.compile_mode if config.torch_compile else None,
+        "compile_dynamic": config.compile_dynamic if config.torch_compile else None,
+        "compile_fullgraph": config.compile_fullgraph,
+        "inductor_options": dict(config.inductor_options or {}),
+        "graph_break_count": dynamo_final.get("graph_break_count"),
+        "graph_break_reasons": dynamo_final.get("graph_break_reasons"),
+        "unique_graphs": dynamo_final.get("unique_graphs"),
+        "recompile_graph_calls": dynamo_final.get("graph_calls"),
+        "fsdp_version": 1,
+        "fsdp_backward_prefetch": config.fsdp_backward_prefetch,
+        "fsdp_forward_prefetch": config.fsdp_forward_prefetch,
+        "limit_all_gathers": config.limit_all_gathers,
+        "fsdp_group_layers": config.fsdp_group_layers,
+        "fsdp_units": wrap_info.get("fsdp_units"),
+        "key_remap_verified": wrap_info.get("key_remap_verified"),
+        "reshard_after_forward": config.fsdp_strategy == "FULL_SHARD",
+        "grad_sync_every": config.grad_sync_every,
+        "nccl_version": environment.get("nccl_version"),
+        "nccl_algo": nccl_env.get("NCCL_ALGO") or "default",
+        "nccl_proto": nccl_env.get("NCCL_PROTO") or "default",
+        "nccl_min_channels": nccl_env.get("NCCL_MIN_NCHANNELS"),
+        "nccl_high_priority": nccl_env.get("TORCH_NCCL_HIGH_PRIORITY"),
+        "gpu_p2p": environment.get("gpu_p2p"),
+        "allgather_calls": None,
+        "allgather_cuda_seconds": None,
+        "reduce_scatter_calls": None,
+        "reduce_scatter_cuda_seconds": None,
+        "liger_rmsnorm": liger_info.get("rmsnorm", False),
+        "liger_swiglu": liger_info.get("swiglu", False),
+        "liger_fused_ce": False,
+        "fla_gate_fused": config.fla_gate_fusion >= 2,
+        "fla_beta_sigmoid_fused": config.fla_gate_fusion >= 3,
+        "fla_fusion_layers": gate_fusion_layers,
+        "fla_parity_abs_diff": fla_parity_abs_diff,
+        "allocator": allocator_final,
         "sync_cleanup": config.sync_cleanup,
         "force_torch_fallback": config.force_torch_fallback,
         "weights_updated": weights_updated,
@@ -852,8 +1240,41 @@ def build_parser() -> argparse.ArgumentParser:
         "--force-torch-fallback", action=argparse.BooleanOptionalAction, default=False
     )
     bench.add_argument("--profile-steps", type=int, default=0)
+    bench.add_argument(
+        "--compile-placement", default="post_fsdp", choices=("post_fsdp", "pre_fsdp")
+    )
+    bench.add_argument("--compile-mode", default="default")
+    bench.add_argument("--compile-dynamic", action=argparse.BooleanOptionalAction, default=True)
+    bench.add_argument("--compile-fullgraph", action=argparse.BooleanOptionalAction, default=False)
+    bench.add_argument(
+        "--inductor-option",
+        action="append",
+        default=[],
+        help="key=value pair passed to torch.compile options (repeatable)",
+    )
+    bench.add_argument(
+        "--fsdp-backward-prefetch",
+        default="default",
+        choices=("default", "BACKWARD_PRE", "BACKWARD_POST"),
+    )
+    bench.add_argument(
+        "--fsdp-forward-prefetch", action=argparse.BooleanOptionalAction, default=False
+    )
+    bench.add_argument("--limit-all-gathers", action=argparse.BooleanOptionalAction, default=True)
+    bench.add_argument("--fsdp-group-layers", type=int, default=1)
+    bench.add_argument("--grad-sync-every", type=int, default=1)
+    bench.add_argument("--liger-rmsnorm", action=argparse.BooleanOptionalAction, default=False)
+    bench.add_argument("--liger-swiglu", action=argparse.BooleanOptionalAction, default=False)
+    bench.add_argument("--fla-gate-fusion", type=int, default=0, choices=(0, 2, 3))
     probe = sub.add_parser("probe")
     probe.add_argument("--output", type=Path, required=True)
+    topo = sub.add_parser("topo")
+    topo.add_argument("--output", type=Path, required=True)
+    compiler_probe = sub.add_parser("compiler_probe")
+    compiler_probe.add_argument("--output", type=Path, required=True)
+    nccl_bench = sub.add_parser("nccl_bench")
+    nccl_bench.add_argument("--output", type=Path, required=True)
+    nccl_bench.add_argument("--iters", type=int, default=20)
     return parser
 
 
@@ -875,10 +1296,187 @@ def run_probe(output: Path) -> dict[str, Any]:
     return result
 
 
+def run_topo(output: Path) -> dict[str, Any]:
+    """Single-process GPU/PCIe/NCCL topology probe (Step 0-B)."""
+    import torch
+
+    result: dict[str, Any] = {"environment": collect_environment()}
+    for command in (["nvidia-smi", "topo", "-m"], ["nvidia-smi", "-q"]):
+        try:
+            proc = __import__("subprocess").run(command, text=True, capture_output=True, timeout=60)
+            result[" ".join(command[1:])] = (proc.stdout + proc.stderr)[-6000:]
+        except Exception as exc:
+            result[" ".join(command[1:])] = f"{type(exc).__name__}: {exc}"[:200]
+    try:
+        import torch.distributed as dist
+
+        result["dist_available"] = dist.is_available()
+        result["nccl_built"] = dist.is_nccl_available()
+    except Exception as exc:
+        result["dist_probe_error"] = f"{type(exc).__name__}: {exc}"[:200]
+    # Discover whether torch supports a high-priority NCCL stream knob.
+    try:
+        import pathlib
+
+        torch_src = pathlib.Path(torch.__file__).parent
+        hits = []
+        for path in list(torch_src.rglob("*.py"))[:4000]:
+            try:
+                text = path.read_text(errors="ignore")
+            except Exception:
+                continue
+            if "HIGH_PRIORITY" in text and "nccl" in text.lower():
+                hits.append(str(path.relative_to(torch_src)))
+                if len(hits) >= 5:
+                    break
+        result["high_priority_knob_files"] = hits
+    except Exception as exc:
+        result["high_priority_probe_error"] = f"{type(exc).__name__}: {exc}"[:200]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(result, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(result, indent=2, sort_keys=True, default=str))
+    return result
+
+
+def run_compiler_probe(output: Path) -> dict[str, Any]:
+    """List installed compiler modes/options without compiling a model."""
+    import torch
+
+    result: dict[str, Any] = {"environment": collect_environment()}
+    try:
+        modes = torch._inductor.list_mode_options()
+        result["inductor_modes"] = sorted(str(m) for m in modes)[:20]
+    except Exception as exc:
+        result["inductor_modes_error"] = f"{type(exc).__name__}: {exc}"[:200]
+    try:
+        options = torch._inductor.list_options()
+        result["inductor_option_names"] = sorted(str(o) for o in options)
+    except Exception as exc:
+        result["inductor_options_error"] = f"{type(exc).__name__}: {exc}"[:200]
+    result["dynamo_counters"] = _dynamo_counters_snapshot()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(result, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(result, indent=2, sort_keys=True, default=str))
+    return result
+
+
+def run_nccl_bench(output: Path, iters: int = 20) -> dict[str, Any]:
+    """Two-process NCCL all_gather/reduce_scatter latency microbenchmark.
+
+    Must run under ``torch.distributed.run --nproc_per_node=2``. Tensor sizes
+    cover representative FSDP unit payloads (decoder layer ~60 MB fp16,
+    lm_head ~500 MB fp16).
+    """
+    import torch
+    import torch.distributed as dist
+
+    rank = int(os.environ.get("RANK", "0"))
+    world = int(os.environ.get("WORLD_SIZE", "1"))
+    if world != 2 or not torch.cuda.is_available():
+        raise RuntimeError("nccl_bench requires exactly 2 CUDA devices")
+    dist.init_process_group("nccl")
+    torch.cuda.set_device(rank)
+    device = torch.device(f"cuda:{rank}")
+    sizes = {
+        "8MB": 4_194_304,
+        "62MB_layer": 32_505_856,
+        "256MB": 134_217_728,
+        "508MB_lmhead": 266_338_304,
+    }
+    measurements: dict[str, Any] = {}
+    for label, numel in sizes.items():
+        for collective in ("all_gather", "reduce_scatter"):
+            try:
+                if collective == "all_gather":
+                    src = torch.randn(numel // 2, dtype=torch.float16, device=device)
+                    dst = torch.empty(numel, dtype=torch.float16, device=device)
+
+                    def fn(s=src, d=dst):
+                        dist.all_gather_into_tensor(d, s)
+
+                    out_numel = numel
+                else:
+                    src = torch.randn(numel, dtype=torch.float16, device=device)
+                    dst = torch.empty(numel // 2, dtype=torch.float16, device=device)
+
+                    def fn(s=src, d=dst):
+                        dist.reduce_scatter_tensor(d, s)
+
+                    out_numel = numel // 2
+                for _ in range(5):
+                    fn()
+                torch.cuda.synchronize()
+                start = time.perf_counter()
+                for _ in range(iters):
+                    fn()
+                torch.cuda.synchronize()
+                seconds = (time.perf_counter() - start) / iters
+                gib = out_numel * 2 / 2**30
+                measurements[f"{collective}/{label}"] = {
+                    "ms_per_op": seconds * 1000.0,
+                    "effective_gbps": gib / seconds,
+                }
+            except Exception as exc:
+                measurements[f"{collective}/{label}"] = {
+                    "error": f"{type(exc).__name__}: {exc}"[:200]
+                }
+    result = {
+        "rank": rank,
+        "world_size": world,
+        "iters": iters,
+        "environment": collect_environment(),
+        "measurements": measurements,
+    }
+    dist.barrier()
+    if rank == 0:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(result, indent=2, sort_keys=True, default=str) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+    dist.destroy_process_group()
+    return result
+
+
+def _parse_inductor_options(pairs: list[str]) -> dict[str, Any]:
+    options: dict[str, Any] = {}
+    for pair in pairs:
+        if "=" not in pair:
+            raise ValueError(f"inductor option must be key=value, got {pair!r}")
+        key, raw = pair.split("=", 1)
+        value: Any = raw
+        if raw.lower() in ("true", "false"):
+            value = raw.lower() == "true"
+        else:
+            try:
+                value = int(raw)
+            except ValueError:
+                try:
+                    value = float(raw)
+                except ValueError:
+                    value = raw
+        options[key.strip()] = value
+    return options
+
+
 def main() -> None:
     args = build_parser().parse_args()
     if args.command == "probe":
         run_probe(args.output)
+        return
+    if args.command == "topo":
+        run_topo(args.output)
+        return
+    if args.command == "compiler_probe":
+        run_compiler_probe(args.output)
+        return
+    if args.command == "nccl_bench":
+        run_nccl_bench(args.output, args.iters)
         return
     config = BenchConfig(
         corpus_dir=args.corpus_dir,
@@ -902,6 +1500,19 @@ def main() -> None:
         warmup_steps=args.warmup_steps,
         force_torch_fallback=args.force_torch_fallback,
         profile_steps=args.profile_steps,
+        compile_placement=args.compile_placement,
+        compile_mode=args.compile_mode,
+        compile_dynamic=args.compile_dynamic,
+        compile_fullgraph=args.compile_fullgraph,
+        inductor_options=_parse_inductor_options(args.inductor_option),
+        fsdp_backward_prefetch=args.fsdp_backward_prefetch,
+        fsdp_forward_prefetch=args.fsdp_forward_prefetch,
+        limit_all_gathers=args.limit_all_gathers,
+        fsdp_group_layers=args.fsdp_group_layers,
+        grad_sync_every=args.grad_sync_every,
+        liger_rmsnorm=args.liger_rmsnorm,
+        liger_swiglu=args.liger_swiglu,
+        fla_gate_fusion=args.fla_gate_fusion,
     )
     try:
         result = run_bench(config)
