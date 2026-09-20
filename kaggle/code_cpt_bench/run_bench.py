@@ -124,6 +124,41 @@ def launch_candidate(*, candidate: dict, shared: dict, corpus: Path,
                        "error_message": align_error})
         result_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         return record
+    worker_command = str(candidate.get("worker_command", "bench"))
+    if worker_command != "bench":
+        # Diagnostic subcommands (topo-level probes) take their own flags.
+        cmd = [
+            sys.executable, "-m", "torch.distributed.run", "--standalone",
+            "--nproc_per_node=2", "-m", "tinycomplete.code_cpt.bench",
+            worker_command, "--output", str(result_path),
+        ]
+        if worker_command == "fsdp2_probe":
+            cmd.extend(["--steps", str(int(candidate.get("steps", 3)))])
+        if worker_command == "nccl_bench":
+            cmd.extend(["--iters", str(int(candidate.get("iters", 20)))])
+        started = time.time()
+        extra_env = dict(candidate.get("env", {}) or {})
+        code, _ = run(
+            cmd,
+            env={"CUDA_VISIBLE_DEVICES": "0,1",
+                 "PYTHONPATH": str(checkout / "src"),
+                 "TOKENIZERS_PARALLELISM": "false",
+                 **extra_env},
+            log=dest / "process.log", timeout=2400,
+        )
+        record.update({"exit_code": code,
+                       "elapsed_seconds_including_load": time.time() - started})
+        if result_path.exists():
+            try:
+                record.update(json.loads(result_path.read_text(encoding="utf-8")))
+            except Exception as exc:
+                record.update({"status": "error", "error_type": "UnreadableResult",
+                               "error_message": f"{type(exc).__name__}: {exc}"[:300]})
+        else:
+            record.update({"status": "error", "error_type": "MissingResult",
+                           "error_message": f"worker exit={code} wrote no result JSON"})
+            result_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        return record
     get = lambda key: candidate.get(key, shared.get(key))  # noqa: E731
     full = merged(candidate, shared)
     cmd = [

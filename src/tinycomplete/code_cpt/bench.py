@@ -1275,6 +1275,9 @@ def build_parser() -> argparse.ArgumentParser:
     nccl_bench = sub.add_parser("nccl_bench")
     nccl_bench.add_argument("--output", type=Path, required=True)
     nccl_bench.add_argument("--iters", type=int, default=20)
+    fsdp2_probe = sub.add_parser("fsdp2_probe")
+    fsdp2_probe.add_argument("--output", type=Path, required=True)
+    fsdp2_probe.add_argument("--steps", type=int, default=3)
     return parser
 
 
@@ -1443,6 +1446,141 @@ def run_nccl_bench(output: Path, iters: int = 20) -> dict[str, Any]:
     return result
 
 
+def run_fsdp2_probe(output: Path, steps: int = 3) -> dict[str, Any]:
+    """Bounded FSDP2 viability probe (Round-2 family 6, step 1).
+
+    Must run under ``torch.distributed.run --nproc_per_node=2``. Loads the
+    real Qwen3.5-0.8B, wraps with Accelerate FSDP2 (FULL_SHARD equivalent),
+    and runs a few synthetic forward/backward microsteps plus one optimizer
+    step. Records fit, speed, optimizer compatibility (bnb 8-bit, then torch
+    AdamW fallback), DTensor weight access for prospective fused CE, and any
+    failure with full traceback. No corpus needed; systems probe only.
+    """
+    import torch
+    import torch.distributed as dist
+
+    result: dict[str, Any] = {"environment": collect_environment()}
+    try:
+        from accelerate import Accelerator, FullyShardedDataParallelPlugin
+
+        rank = int(os.environ.get("RANK", "0"))
+        torch.cuda.set_device(rank)
+        plugin = FullyShardedDataParallelPlugin(
+            fsdp_version=2,
+            reshard_after_forward=True,
+        )
+        accelerator = Accelerator(mixed_precision="fp16", fsdp_plugin=plugin)
+        result["fsdp_version_requested"] = 2
+
+        from tinycomplete.code_cpt.train import (
+            _load_model_and_tokenizer,
+            resolve_optional_hf_token,
+        )
+
+        token, _ = resolve_optional_hf_token()
+        model, _ = _load_model_and_tokenizer(token)
+        model.config._attn_implementation = "sdpa"
+        model.config.use_cache = False
+        model.train()
+
+        probe_param = next(model.parameters())
+        result["param_type_before"] = type(probe_param).__name__
+
+        # Optimizer compatibility ladder: bnb 8-bit first (production), then
+        # plain torch AdamW (fused=False to dodge the known FSDP1 broadcast
+        # bug, which may not apply under FSDP2).
+        optimizer = None
+        optimizer_used = None
+        optimizer_error = None
+        params = [p for p in model.parameters() if p.requires_grad]
+        try:
+            from bitsandbytes.optim import AdamW8bit
+
+            optimizer = AdamW8bit(params, lr=3e-6, weight_decay=0.01)
+            optimizer_used = "adamw_8bit"
+        except Exception as exc:
+            optimizer_error = f"bnb: {type(exc).__name__}: {exc}"[:300]
+            optimizer = torch.optim.AdamW(params, lr=3e-6, weight_decay=0.01)
+            optimizer_used = "adamw_torch"
+        result["optimizer_used"] = optimizer_used
+        result["optimizer_error"] = optimizer_error
+
+        model, optimizer = accelerator.prepare(model, optimizer)
+        prepared = next(accelerator.unwrap_model(model).parameters())
+        _ = prepared
+        # DTensor access pattern for prospective fused CE.
+        dtensor_info: dict[str, Any] = {}
+        try:
+            sample = None
+            for _name, p in accelerator.unwrap_model(model).named_parameters():
+                sample = p
+                break
+            dtensor_info["param_type_after"] = type(sample).__name__
+            dtensor_info["is_dtensor"] = type(sample).__name__ == "DTensor"
+            if dtensor_info["is_dtensor"] and sample is not None:
+                full = sample.full_tensor()  # type: ignore[union-attr]
+                dtensor_info["full_tensor_shape"] = list(full.shape)
+                del full
+        except Exception as exc:
+            dtensor_info["error"] = f"{type(exc).__name__}: {exc}"[:300]
+        result["dtensor"] = dtensor_info
+
+        vocab = int(model.config.vocab_size)
+        batch = {
+            "input_ids": torch.randint(0, vocab, (1, 2048), device="cuda"),
+            "labels": torch.randint(0, vocab, (1, 2048), device="cuda"),
+        }
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize()
+        start = time.perf_counter()
+        losses = []
+        optimizer.zero_grad(set_to_none=True)
+        for _ in range(steps):
+            with accelerator.autocast():
+                out = model(**batch, use_cache=False)
+                loss = out.loss
+            accelerator.backward(loss)
+            losses.append(float(loss.detach().float().item()))
+            del out, loss
+        optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
+        torch.cuda.synchronize()
+        seconds = time.perf_counter() - start
+        result.update(
+            {
+                "status": "pass",
+                "microsteps": steps,
+                "tokens": steps * 2048 * 2,
+                "seconds": seconds,
+                "tokens_per_second": steps * 2048 * 2 / seconds,
+                "losses": losses,
+                "peak_allocated_gib": torch.cuda.max_memory_allocated() / 2**30,
+                "peak_reserved_gib": torch.cuda.max_memory_reserved() / 2**30,
+            }
+        )
+    except Exception as exc:  # noqa: BLE001 - probe failures are data
+        result.update(
+            {
+                "status": "error",
+                "error_type": type(exc).__name__,
+                "error_message": f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"[:6000],
+            }
+        )
+    try:
+        if dist.is_initialized():
+            dist.destroy_process_group()
+    except Exception:
+        pass
+    if int(os.environ.get("RANK", "0")) == 0:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(result, indent=2, sort_keys=True, default=str) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+    return result
+
+
 def _parse_inductor_options(pairs: list[str]) -> dict[str, Any]:
     options: dict[str, Any] = {}
     for pair in pairs:
@@ -1477,6 +1615,9 @@ def main() -> None:
         return
     if args.command == "nccl_bench":
         run_nccl_bench(args.output, args.iters)
+        return
+    if args.command == "fsdp2_probe":
+        run_fsdp2_probe(args.output, args.steps)
         return
     config = BenchConfig(
         corpus_dir=args.corpus_dir,
