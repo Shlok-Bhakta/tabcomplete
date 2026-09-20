@@ -1,0 +1,61 @@
+{
+  "environment": {
+    "accelerate": "1.13.0",
+    "bitsandbytes_version": "0.50.2",
+    "causal_conv1d_available": false,
+    "causal_conv1d_version": null,
+    "cuda": "12.8",
+    "fla_available": true,
+    "fla_version": "0.5.2",
+    "gpu_count": 2,
+    "gpu_p2p": true,
+    "liger_available": true,
+    "liger_version": "0.8.3",
+    "model_id": "Qwen/Qwen3.5-0.8B-Base",
+    "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+    "nccl_version": "2.27.5",
+    "numpy": "2.0.2",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "transformers": "5.5.0",
+    "triton_available": true,
+    "triton_version": "3.6.0"
+  },
+  "iters": 20,
+  "measurements": {
+    "all_gather/256MB": {
+      "effective_gbps": 6.393382339853516,
+      "ms_per_op": 39.10293280000019
+    },
+    "all_gather/508MB_lmhead": {
+      "effective_gbps": 6.186352494664397,
+      "ms_per_op": 80.19163964999905
+    },
+    "all_gather/62MB_layer": {
+      "effective_gbps": 6.616673361726895,
+      "ms_per_op": 9.15065195000011
+    },
+    "all_gather/8MB": {
+      "effective_gbps": 5.729625972593825,
+      "ms_per_op": 1.363527049997515
+    },
+    "reduce_scatter/256MB": {
+      "effective_gbps": 3.0112921951673264,
+      "ms_per_op": 41.51041874999919
+    },
+    "reduce_scatter/508MB_lmhead": {
+      "effective_gbps": 3.0475885141891825,
+      "ms_per_op": 81.39119630000096
+    },
+    "reduce_scatter/62MB_layer": {
+      "effective_gbps": 3.045158368000627,
+      "ms_per_op": 9.94149855000046
+    },
+    "reduce_scatter/8MB": {
+      "effective_gbps": 2.9438758038272774,
+      "ms_per_op": 1.3269071999985727
+    }
+  },
+  "rank": 0,
+  "world_size": 2
+}

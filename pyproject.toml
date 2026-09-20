@@ -32,6 +32,7 @@ dev = [
 
 [project.scripts]
 tinycomplete = "tinycomplete.cli:main"
+tinycomplete-playground = "tinycomplete.playground.server:main"
 
 [build-system]
 requires = ["hatchling"]

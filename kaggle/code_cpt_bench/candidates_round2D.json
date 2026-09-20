@@ -1,0 +1,14 @@
+{
+  "_comment": "Round-2 family 6, step 1: bounded FSDP2 viability probe (synthetic microsteps, no corpus training).",
+  "shared": {
+    "seed": 271828,
+    "microbatch": 1,
+    "gradient_accumulation": 8,
+    "max_tokens": 98304,
+    "stage": "round2D"
+  },
+  "candidates": [
+    {"name": "r2d_fsdp2_probe", "desc": "FSDP2 stock-CE viability: fit, speed, optimizer compat, DTensor access",
+     "worker_command": "fsdp2_probe", "steps": 3}
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "_comment": "Stage-C winner confirmation at 1048576 tokens = 32 x 32768 complete updates.",
+  "shared": {
+    "seed": 271828,
+    "start_block": 0,
+    "workers": 1,
+    "prefetch_factor": 2,
+    "warmup_steps": 5,
+    "learning_rate": 3e-06,
+    "stage": "C",
+    "max_tokens": 1048576
+  },
+  "candidates": [
+    {
+      "name": "stageC_fla",
+      "desc": "FLA control at 1M tokens (exp01/stageB_fla geometry)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": false
+    },
+    {
+      "name": "stageC_winner",
+      "desc": "Winner confirmation: FLA + nockpt + torch.compile + sync + stock CE at 1M tokens",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": false, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": true, "sync_cleanup": true, "force_torch_fallback": false
+    }
+  ]
+}

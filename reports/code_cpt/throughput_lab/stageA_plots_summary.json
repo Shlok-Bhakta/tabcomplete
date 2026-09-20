@@ -1,0 +1,74 @@
+{
+  "failed": [
+    "exp02_fla_fusedce",
+    "exp03_fla_fusedce_nockpt",
+    "exp04_fla_fusedce_nockpt_sgo",
+    "exp07_fla_sync_cleanup",
+    "exp09_accum4",
+    "exp10_accum16",
+    "exp11_fused_adamw_retry_sgo",
+    "exp13_sgo_sync",
+    "exp12_mb2_nockpt_retry"
+  ],
+  "plots": [
+    "plot1_throughput_by_config.png",
+    "plot2_speedup_vs_baseline.png",
+    "plot3_throughput_vs_vram.png",
+    "plot4_step_time_breakdown.png",
+    "plot5_optimization_stacking.png"
+  ],
+  "ranking": [
+    {
+      "gradient_norm_mean": 2.7305580774943032,
+      "loss_end": 1.015802264213562,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3077032566070557,
+      "name": "exp08_compile_winner",
+      "peak_allocated_vram_gib_max": 12.312582969665527,
+      "speedup_vs_baseline": 1.9262213447727472,
+      "steady_state_tokens_per_second": 1560.2392892659252
+    },
+    {
+      "gradient_norm_mean": 2.7318570613861084,
+      "loss_end": 1.0158452987670898,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3077329397201538,
+      "name": "exp01_fla_conv",
+      "peak_allocated_vram_gib_max": 11.753067970275879,
+      "speedup_vs_baseline": 1.387225946644321,
+      "steady_state_tokens_per_second": 1123.6530167819
+    },
+    {
+      "gradient_norm_mean": 2.7297610441843667,
+      "loss_end": 1.0158787965774536,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3076539039611816,
+      "name": "exp05_attn_eager",
+      "peak_allocated_vram_gib_max": 11.75013542175293,
+      "speedup_vs_baseline": 1.0108297721408814,
+      "steady_state_tokens_per_second": 818.772115434114
+    },
+    {
+      "gradient_norm_mean": 2.731022755304972,
+      "loss_end": 1.0158684253692627,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307612657546997,
+      "name": "exp06_sync_cleanup",
+      "peak_allocated_vram_gib_max": 11.74207878112793,
+      "speedup_vs_baseline": 0.9682207646271842,
+      "steady_state_tokens_per_second": 784.2588193480192
+    },
+    {
+      "gradient_norm_mean": 2.731022755304972,
+      "loss_end": 1.0158684253692627,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307612657546997,
+      "name": "exp00_baseline_repro",
+      "peak_allocated_vram_gib_max": 11.742079734802246,
+      "speedup_vs_baseline": 0.9647738649563924,
+      "steady_state_tokens_per_second": 781.4668306146779
+    }
+  ],
+  "results": 14,
+  "stable": 5
+}

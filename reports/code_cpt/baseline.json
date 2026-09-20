@@ -1,0 +1,27 @@
+{
+  "credential_source": "anonymous_public_model",
+  "gpu": "Tesla T4",
+  "metrics": {
+    "c": {"nll": 1.3417539149522781, "tokens": 16376},
+    "cpp": {"nll": 1.3240234702825546, "tokens": 16376},
+    "csharp": {"nll": 0.8803289569914341, "tokens": 16376},
+    "general": {"nll": 2.4171050786972046, "tokens": 16376},
+    "go": {"nll": 0.85287956148386, "tokens": 16376},
+    "java": {"nll": 0.9203837886452675, "tokens": 16376},
+    "javascript": {"nll": 1.2317879721522331, "tokens": 16376},
+    "overall_code": {"nll": 1.1129763966633215, "tokens": 147384},
+    "python": {"nll": 1.2634457796812057, "tokens": 16376},
+    "rust": {"nll": 1.0119450315833092, "tokens": 16376},
+    "typescript": {"nll": 1.19023909419775, "tokens": 16376}
+  },
+  "model_id": "Qwen/Qwen3.5-0.8B-Base",
+  "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+  "packages": {
+    "numpy": "2.0.2",
+    "torch": "2.10.0+cu128",
+    "transformers": "5.5.0"
+  },
+  "precision": "fp16 autocast over fp32 master weights",
+  "seed": 271828,
+  "tokenizer_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68"
+}

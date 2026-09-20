@@ -1,0 +1,58 @@
+{
+  "_comment": "Stage-B finalists at 524288 tokens = 16 x 32768 complete updates, plus two short profiler captures. Rerun of the full matrix is in candidates_stageA.json.",
+  "shared": {
+    "seed": 271828,
+    "start_block": 0,
+    "workers": 1,
+    "prefetch_factor": 2,
+    "warmup_steps": 5,
+    "learning_rate": 3e-06,
+    "stage": "B",
+    "max_tokens": 524288
+  },
+  "candidates": [
+    {
+      "name": "stageB_baseline",
+      "desc": "Control: stock FULL_SHARD ckpt-ON torch fallback (exp00 geometry, long)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": true
+    },
+    {
+      "name": "stageB_fla",
+      "desc": "FLA fast path + ckpt ON + stock CE (exp01 geometry, long)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": false
+    },
+    {
+      "name": "stageB_winner",
+      "desc": "Winner: FLA + nockpt + torch.compile + sync + stock CE (exp08 geometry, long)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": false, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": true, "sync_cleanup": true, "force_torch_fallback": false
+    },
+    {
+      "name": "stageB_profile_baseline",
+      "desc": "Profiler capture on baseline geometry (2 steps, short budget)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": true,
+      "max_tokens": 98304, "profile_steps": 2
+    },
+    {
+      "name": "stageB_profile_fla",
+      "desc": "Profiler capture on FLA geometry (2 steps, short budget)",
+      "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
+      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "attn_implementation": "sdpa", "fused_ce": "none",
+      "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": false,
+      "max_tokens": 98304, "profile_steps": 2
+    }
+  ],
+  "stage_c_tokens": 1048576
+}

@@ -1,0 +1,55 @@
+{
+  "failed": [
+    "stageB_profile_baseline"
+  ],
+  "plots": [
+    "plot1_throughput_by_config.png",
+    "plot2_speedup_vs_baseline.png",
+    "plot3_throughput_vs_vram.png",
+    "plot4_step_time_breakdown.png"
+  ],
+  "ranking": [
+    {
+      "gradient_norm_mean": 2.547734171152115,
+      "loss_end": 0.9292177557945251,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3077032566070557,
+      "name": "stageB_winner",
+      "peak_allocated_vram_gib_max": 12.312582969665527,
+      "speedup_vs_baseline": 1.8953576931686444,
+      "steady_state_tokens_per_second": 1535.239731466602
+    },
+    {
+      "gradient_norm_mean": 2.5491237193346024,
+      "loss_end": 0.9290604591369629,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3077329397201538,
+      "name": "stageB_fla",
+      "peak_allocated_vram_gib_max": 11.753067970275879,
+      "speedup_vs_baseline": 1.353372079479289,
+      "steady_state_tokens_per_second": 1096.231384378224
+    },
+    {
+      "gradient_norm_mean": 2.548937067389488,
+      "loss_end": 0.9290550351142883,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.307612657546997,
+      "name": "stageB_baseline",
+      "peak_allocated_vram_gib_max": 11.742079734802246,
+      "speedup_vs_baseline": 0.993388549220419,
+      "steady_state_tokens_per_second": 804.6447248685394
+    },
+    {
+      "gradient_norm_mean": 2.731926361719767,
+      "loss_end": 1.0158644914627075,
+      "loss_scale_overflows": 0,
+      "loss_start": 1.3077329397201538,
+      "name": "stageB_profile_fla",
+      "peak_allocated_vram_gib_max": 11.742079734802246,
+      "speedup_vs_baseline": 0.48943024749433955,
+      "steady_state_tokens_per_second": 396.438500470415
+    }
+  ],
+  "results": 5,
+  "stable": 4
+}
