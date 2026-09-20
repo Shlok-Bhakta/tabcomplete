@@ -1,0 +1,66 @@
+services:
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command:
+      - -m
+      - /models/TabComplete-Code-0.8B-5M-Q4_K_M.gguf
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - -c
+      - "4096"
+      - -t
+      - "4"
+      - --reasoning
+      - "off"
+      - -lv
+      - "1"
+    volumes:
+      - ./models:/models:ro
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 8g
+    init: true
+
+  playground:
+    build:
+      context: ../..
+      dockerfile: deploy/playground/Dockerfile
+    command:
+      - --server-url
+      - http://llama:8080
+      - --server-model
+      - tabcomplete-stage1-q4_k_m
+      - --server-label
+      - TabComplete Code 0.8B Q4_K_M
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8765"
+      - --feedback
+      - /data/feedback.jsonl
+    ports:
+      - 100.88.30.127:38765:8765
+    volumes:
+      - ./feedback:/data
+    depends_on:
+      - llama
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    init: true
