@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-BENCH_MATRIX = REPO / "kaggle" / "code_cpt_bench" / "candidates.json"
+BENCH_MATRIX = REPO / "kaggle" / "code_cpt_bench" / "candidates_stageA.json"
 sys.path.insert(0, str(REPO / "kaggle" / "code_cpt_bench"))
 sys.path.insert(0, str(REPO / "src"))
 
@@ -42,6 +42,22 @@ def test_candidate_matrix_is_update_aligned() -> None:
         )
         assert max_tokens % update == 0, candidate["name"]
         assert candidate["fsdp_strategy"] in ("FULL_SHARD", "SHARD_GRAD_OP")
+
+
+def test_stage_b_matrix_is_update_aligned() -> None:
+    raw = json.loads(
+        (REPO / "kaggle" / "code_cpt_bench" / "candidates_stageB.json").read_text(encoding="utf-8")
+    )
+    names = [c["name"] for c in raw["candidates"]]
+    assert len(names) == len(set(names))
+    assert any("winner" in name for name in names)
+    for candidate in raw["candidates"]:
+        max_tokens = int(candidate.get("max_tokens", raw["shared"]["max_tokens"]))
+        update = (
+            WORLD * int(candidate["microbatch"]) * SEQ_LEN * int(candidate["gradient_accumulation"])
+        )
+        assert max_tokens % update == 0, candidate["name"]
+        assert candidate["fused_ce"] == "none", candidate["name"]
 
 
 def test_bench_parser_round_trips_candidate_flags() -> None:

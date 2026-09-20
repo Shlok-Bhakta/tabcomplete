@@ -138,6 +138,7 @@ def launch_candidate(*, candidate: dict, shared: dict, corpus: Path,
         "--workers", str(int(get("workers"))),
         "--prefetch-factor", str(int(get("prefetch_factor"))),
         "--warmup-steps", str(int(get("warmup_steps"))),
+        "--profile-steps", str(int(candidate.get("profile_steps", 0))),
     ]
     cmd.append("--gradient-checkpointing" if candidate.get(
         "gradient_checkpointing", True) else "--no-gradient-checkpointing")

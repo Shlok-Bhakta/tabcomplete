@@ -481,6 +481,23 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         torch.cuda.synchronize()
     train_start = time.perf_counter()
 
+    profiler = None
+    profile_top_cuda_ops: str | None = None
+    profile_error: str | None = None
+    if config.profile_steps > 0:
+        try:
+            from torch.profiler import ProfilerActivity, profile
+
+            profiler = profile(
+                activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                record_shapes=True,
+                with_stack=False,
+            )
+            profiler.__enter__()
+        except Exception as exc:
+            profile_error = f"{type(exc).__name__}: {exc}"[:300]
+            profiler = None
+
     data_wait_seconds = 0.0
     forward_seconds = 0.0
     backward_seconds = 0.0
@@ -629,6 +646,16 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
                 loss_end = loss_value
                 if first_update_seconds is None:
                     first_update_seconds = time.perf_counter() - train_start
+                if profiler is not None and optimizer_steps >= config.profile_steps:
+                    try:
+                        profiler.__exit__(None, None, None)
+                        table = profiler.key_averages().table(
+                            sort_by="cuda_time_total", row_limit=20
+                        )
+                        profile_top_cuda_ops = table[:6000]
+                    except Exception as exc:
+                        profile_error = f"{type(exc).__name__}: {exc}"[:300]
+                    profiler = None
             del output, loss, batch
     except torch.OutOfMemoryError as exc:
         status = "oom"
@@ -645,6 +672,15 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         error_type = type(exc).__name__
         # Full traceback: truncated tails hid the raising bench.py frame twice.
         error_message = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"[:8000]
+
+    if profiler is not None:
+        try:
+            profiler.__exit__(None, None, None)
+            table = profiler.key_averages().table(sort_by="cuda_time_total", row_limit=20)
+            profile_top_cuda_ops = table[:6000]
+        except Exception as exc:
+            profile_error = f"{type(exc).__name__}: {exc}"[:300]
+        profiler = None
 
     if torch.cuda.is_available():
         torch.cuda.synchronize()
@@ -749,6 +785,8 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
         "attention_backend": backend_probe.get("attn_implementation"),
         "fused_cross_entropy": fused_ce_mode,
         "ce_fallback_note": ce_fallback_note,
+        "profile_top_cuda_ops": profile_top_cuda_ops,
+        "profile_error": profile_error,
         "ce_parity_abs_diff": ce_parity_abs_diff,
         "gradient_checkpointing": config.gradient_checkpointing,
         "fsdp_strategy": config.fsdp_strategy,
