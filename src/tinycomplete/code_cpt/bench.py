@@ -217,21 +217,26 @@ def _check_full_weight(weight, label: str) -> None:
         )
 
 
-def _chunked_fused_step(accelerator, model, batch, *, chunk=1024):
+def _chunked_fused_step(accelerator, model, batch, *, chunk=1024, checkpointing=False):
     """One exact full-vocab causal CE microstep without full logits.
 
     Holds ``summon_full_params`` across the decoder forward and the
     sequence-chunked lm_head loop (per-chunk forward/backward, chunk logits
     freed immediately). The full model is transiently materialized; gradients
-    are applied inside the context. Returns
-    ``(mean_loss_value, backward_seconds, hidden_out)``.
+    are applied inside the context. Requires gradient checkpointing OFF:
+    per-chunk backward with retain_graph is incompatible with checkpoint
+    recompute. Returns ``(mean_loss_value, backward_seconds, hidden_out)``.
     """
     import torch
     from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
     backward_seconds = 0.0
-    # recurse=True gathers every FSDP unit; per-microstep gather traffic is
-    # acceptable for a screening benchmark.
+    if checkpointing:
+        raise RuntimeError(
+            "chunked CE requires gradient checkpointing OFF: per-chunk "
+            "backward with retain_graph is incompatible with checkpoint "
+            "recompute (shape mismatch in recompute_fn)"
+        )
     with FSDP.summon_full_params(model, recurse=True, writeback=False):
         hidden_out = _summoned_decoder_hidden(model, batch)
         hidden = hidden_out.last_hidden_state
@@ -511,6 +516,12 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
                         # inside summon_full_params (see helpers): calling the
                         # decoder submodule directly would not fire the outer
                         # FSDP unit's all-gather hook.
+                        if config.torch_compile:
+                            raise RuntimeError(
+                                "non-stock CE crossed with torch.compile is "
+                                "untested: summon/decoder-direct bypasses the "
+                                "compiled graph"
+                            )
                         if fused_ce_mode == "liger":
                             try:
                                 loss, inner_backward_seconds, output = _liger_fused_step(
@@ -524,12 +535,18 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
                                 )
                                 fused_ce_mode = "chunked"
                                 loss, inner_backward_seconds, output = _chunked_fused_step(
-                                    accelerator, model, batch
+                                    accelerator,
+                                    model,
+                                    batch,
+                                    checkpointing=config.gradient_checkpointing,
                                 )
                             pre_backwarded = True
                         else:
                             loss, inner_backward_seconds, output = _chunked_fused_step(
-                                accelerator, model, batch
+                                accelerator,
+                                model,
+                                batch,
+                                checkpointing=config.gradient_checkpointing,
                             )
                             pre_backwarded = True
                         if ce_parity_abs_diff is None:

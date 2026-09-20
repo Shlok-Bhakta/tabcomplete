@@ -77,10 +77,10 @@
     },
     {
       "name": "exp08_compile_winner",
-      "desc": "torch.compile on current winner geometry (late; compile time recorded separately)",
+      "desc": "torch.compile isolated: FLA + nockpt + stock CE + sync (compile x CE untested, see worker guard)",
       "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
       "gradient_checkpointing": false, "fsdp_strategy": "FULL_SHARD",
-      "attn_implementation": "sdpa", "fused_ce": "auto",
+      "attn_implementation": "sdpa", "fused_ce": "none",
       "torch_compile": true, "sync_cleanup": true, "force_torch_fallback": false
     },
     {
@@ -111,9 +111,9 @@
     },
     {
       "name": "exp13_fla_chunked",
-      "desc": "FLA + explicit sequence-chunked CE (exact, isolates chunked vs liger)",
+      "desc": "FLA + explicit sequence-chunked CE + ckpt OFF (chunked requires no-ckpt)",
       "microbatch": 1, "gradient_accumulation": 8, "optimizer": "adamw_8bit",
-      "gradient_checkpointing": true, "fsdp_strategy": "FULL_SHARD",
+      "gradient_checkpointing": false, "fsdp_strategy": "FULL_SHARD",
       "attn_implementation": "sdpa", "fused_ce": "chunked",
       "torch_compile": false, "sync_cleanup": false, "force_torch_fallback": false
     },
