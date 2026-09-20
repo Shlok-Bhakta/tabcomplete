@@ -11,4 +11,22 @@ data/generated/
 kaggle/dataset/*.jsonl
 kaggle/dataset/*.csv
 checkpoints/
+outputs/
 *.safetensors
+
+# trajectory collector (local-only artifacts; appends only — do not rewrite above)
+*.sqlite*
+collector-data/
+docker-volumes/
+.collector-spool/
+**/collector-spool/
+.machine-id
+**/.machine-id
+tools/trajectory_collector/.env
+tools/trajectory_collector/.smoke*
+*-trajectory-smoke/
+# smoke-test repos under /tmp/*trajectory* live outside the repo (no rule needed)
+# keep the .env template committable despite .env.* above
+!.env.example
+node_modules/
+**/node_modules/
