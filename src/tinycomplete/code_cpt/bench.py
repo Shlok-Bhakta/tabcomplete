@@ -200,30 +200,34 @@ def _chunked_linear_ce_loss(accelerator, model, hidden, labels, *, chunk=1024):
     """Exact full-vocab causal CE without materializing full logits.
 
     Sequence-chunks decoder hidden states through the FSDP-managed lm_head
-    (FSDP all-gathers the weight per chunk exactly as in a normal forward)
     and backprops per chunk so each chunk's logits are freed immediately.
-    Returns ``(mean_loss_value, backward_seconds)``; gradients are already
-    applied to the graph when this returns.
+    The lm_head lives in the FSDP outer unit, so its full weight is summoned
+    for the call (attribute access stays on the WRAPPED model — unwrapping
+    would expose the raw shards). Forward and backward run inside the summon
+    context. Returns ``(mean_loss_value, backward_seconds)``; gradients are
+    already applied to the graph when this returns.
     """
     import torch
+    from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
-    lm_head = model.lm_head
     denom = labels.numel()
     spans = list(range(0, hidden.size(1), chunk))
     running: torch.Tensor | None = None
     backward_seconds = 0.0
-    for index, start in enumerate(spans):
-        logits = lm_head(hidden[:, start : start + chunk, :])
-        part = torch.nn.functional.cross_entropy(
-            logits.reshape(-1, logits.size(-1)),
-            labels[:, start : start + chunk].reshape(-1),
-            reduction="sum",
-        )
-        running = part.detach() if running is None else running + part.detach()
-        tick = time.perf_counter()
-        accelerator.backward(part / denom, retain_graph=index < len(spans) - 1)
-        backward_seconds += time.perf_counter() - tick
-        del logits, part
+    with FSDP.summon_full_params(model, recurse=False, writeback=False):
+        lm_head = model.lm_head
+        for index, start in enumerate(spans):
+            logits = lm_head(hidden[:, start : start + chunk, :])
+            part = torch.nn.functional.cross_entropy(
+                logits.reshape(-1, logits.size(-1)),
+                labels[:, start : start + chunk].reshape(-1),
+                reduction="sum",
+            )
+            running = part.detach() if running is None else running + part.detach()
+            tick = time.perf_counter()
+            accelerator.backward(part / denom, retain_graph=index < len(spans) - 1)
+            backward_seconds += time.perf_counter() - tick
+            del logits, part
     if running is None:
         raise RuntimeError("empty hidden states for chunked CE")
     return running / denom, backward_seconds
@@ -241,8 +245,10 @@ def _liger_fused_loss(accelerator, model, liger_loss, hidden, labels):
 
     tick = time.perf_counter()
     with FSDP.summon_full_params(model, recurse=False, writeback=False):
-        unwrapped = accelerator.unwrap_model(model)
-        embeddings = unwrapped.get_output_embeddings()
+        # NOTE: attribute access must stay on the WRAPPED model inside the
+        # summon context. accelerator.unwrap_model() would strip FSDP and
+        # expose the raw 1-D param shards ("'weight' must be 2-D").
+        embeddings = model.get_output_embeddings()
         weight = getattr(embeddings, "weight", None)
         if weight is None:
             raise RuntimeError("no output-embedding weight for fused linear CE")
