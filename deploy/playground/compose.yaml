@@ -47,6 +47,7 @@ services:
       - "8765"
       - --feedback
       - /data/feedback.jsonl
+    user: "${PLAYGROUND_UID:-1000}:${PLAYGROUND_GID:-1000}"
     ports:
       - 100.88.30.127:38765:8765
     volumes:
