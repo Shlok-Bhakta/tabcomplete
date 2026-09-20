@@ -177,7 +177,8 @@ def main() -> None:
     parser.add_argument("--stage", type=str, default="A")
     parser.add_argument("--max-tokens", type=int, default=0,
                         help="override per-candidate token budget (must stay update-aligned)")
-    parser.add_argument("--matrix", type=Path, default=HERE / "candidates.json")
+    parser.add_argument("--matrix", type=Path, default=None,
+                        help="candidate matrix JSON (default: <checkout>/kaggle/code_cpt_bench/candidates.json)")
     parser.add_argument("--checkout", type=Path, default=CHECKOUT)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--skip-optional-deps", action="store_true")
@@ -217,6 +218,13 @@ def main() -> None:
         encoding="utf-8")
     corpus = find_corpus()
 
+    # NOTE: Kaggle script kernels execute only the code_file as /kaggle/src/script.py,
+    # so sibling files (candidates.json, plot.py) are NOT present next to __file__.
+    # Resolve them from the cloned checkout instead.
+    bench_dir = checkout / "kaggle" / "code_cpt_bench"
+    if str(bench_dir) not in sys.path:
+        sys.path.insert(0, str(bench_dir))
+
     # Experiment 0 backend probe before any training.
     probe_path = out_root / "backend_probe.json"
     run([sys.executable, "-m", "tinycomplete.code_cpt.bench", "probe",
@@ -224,7 +232,9 @@ def main() -> None:
         env={"PYTHONPATH": str(checkout / "src")},
         log=out_root / "backend_probe.log")
 
-    shared, matrix = load_matrix(args.matrix)
+    shared, matrix = load_matrix(
+        args.matrix or (bench_dir / "candidates.json")
+    )
     wanted = {n.strip() for n in args.candidates.split(",") if n.strip()}
     records: list[dict] = []
     for candidate in matrix:
