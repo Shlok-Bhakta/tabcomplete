@@ -214,7 +214,10 @@ def _chunked_linear_ce_loss(accelerator, model, hidden, labels, *, chunk=1024):
     spans = list(range(0, hidden.size(1), chunk))
     running: torch.Tensor | None = None
     backward_seconds = 0.0
-    with FSDP.summon_full_params(model, recurse=False, writeback=False):
+    # recurse=True gathers every FSDP unit (outer embed/lm_head plus wrapped
+    # decoder layers); per-microstep gather traffic is acceptable for a
+    # screening benchmark and removes any doubt about which unit owns lm_head.
+    with FSDP.summon_full_params(model, recurse=True, writeback=False):
         lm_head = model.lm_head
         for index, start in enumerate(spans):
             logits = lm_head(hidden[:, start : start + chunk, :])
@@ -244,7 +247,7 @@ def _liger_fused_loss(accelerator, model, liger_loss, hidden, labels):
     from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
     tick = time.perf_counter()
-    with FSDP.summon_full_params(model, recurse=False, writeback=False):
+    with FSDP.summon_full_params(model, recurse=True, writeback=False):
         # NOTE: attribute access must stay on the WRAPPED model inside the
         # summon context. accelerator.unwrap_model() would strip FSDP and
         # expose the raw 1-D param shards ("'weight' must be 2-D").
@@ -599,8 +602,8 @@ def run_bench(config: BenchConfig) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - failures are data
         status = "error"
         error_type = type(exc).__name__
-        error_message = f"{type(exc).__name__}: {exc}"[:500]
-        error_message += f" | {traceback.format_exc(limit=3)[-400:]}"
+        # Full traceback: truncated tails hid the raising bench.py frame twice.
+        error_message = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"[:8000]
 
     if torch.cuda.is_available():
         torch.cuda.synchronize()
