@@ -370,6 +370,107 @@ def save_snapshot(
     accelerator.wait_for_everyone()
 
 
+def save_training_checkpoint(
+    *,
+    accelerator,
+    model,
+    optimizer,
+    scheduler,
+    destination: Path,
+    metadata: dict,
+) -> None:
+    """Atomically save same-world-size model, optimizer, scaler, RNG, and counters."""
+    import torch
+    import torch.distributed.checkpoint as dcp
+    from torch.distributed.checkpoint.state_dict import StateDictOptions, get_state_dict
+
+    temporary = destination.with_name(f".{destination.name}.incomplete")
+    if accelerator.is_main_process:
+        shutil.rmtree(temporary, ignore_errors=True)
+        temporary.mkdir(parents=True)
+    accelerator.wait_for_everyone()
+    raw_optimizer = getattr(optimizer, "optimizer", optimizer)
+    options = StateDictOptions(full_state_dict=False, cpu_offload=False, strict=True)
+    model_state, optimizer_state = get_state_dict(model, raw_optimizer, options=options)
+    dcp.save(
+        {"model": model_state, "optimizer": optimizer_state},
+        checkpoint_id=temporary / "distributed",
+    )
+    runtime_state = {
+        "scheduler": scheduler.state_dict(),
+        "scaler": accelerator.scaler.state_dict() if accelerator.scaler is not None else None,
+        "python_random": random.getstate(),
+        "numpy_random": np.random.get_state(),
+        "torch_random": torch.get_rng_state(),
+        "cuda_random": torch.cuda.get_rng_state_all(),
+    }
+    torch.save(runtime_state, temporary / f"runtime-rank-{accelerator.process_index:02d}.pt")
+    accelerator.wait_for_everyone()
+    if accelerator.is_main_process:
+        _json_write(temporary / "resume_metadata.json", metadata)
+        files = []
+        for path in sorted(item for item in temporary.rglob("*") if item.is_file()):
+            files.append(
+                {
+                    "path": str(path.relative_to(temporary)),
+                    "bytes": path.stat().st_size,
+                    "sha256": _sha256_file(path),
+                }
+            )
+        _json_write(
+            temporary / "checkpoint_manifest.json",
+            {"schema_version": 1, "files": files, "world_size": accelerator.num_processes},
+        )
+        _json_write(temporary / "COMPLETE.json", {"complete": True})
+        if destination.exists():
+            shutil.rmtree(destination)
+        temporary.rename(destination)
+    accelerator.wait_for_everyone()
+
+
+def load_training_checkpoint(*, accelerator, model, optimizer, scheduler, source: Path) -> dict:
+    """Restore a checkpoint created by save_training_checkpoint."""
+    import torch
+    import torch.distributed.checkpoint as dcp
+    from torch.distributed.checkpoint.state_dict import (
+        StateDictOptions,
+        get_state_dict,
+        set_state_dict,
+    )
+
+    if not (source / "COMPLETE.json").exists():
+        raise RuntimeError("training checkpoint has no completion marker")
+    metadata = json.loads((source / "resume_metadata.json").read_text(encoding="utf-8"))
+    if int(metadata["world_size"]) != accelerator.num_processes:
+        raise ValueError("resume requires the same world size")
+    raw_optimizer = getattr(optimizer, "optimizer", optimizer)
+    options = StateDictOptions(full_state_dict=False, cpu_offload=False, strict=True)
+    model_state, optimizer_state = get_state_dict(model, raw_optimizer, options=options)
+    state = {"model": model_state, "optimizer": optimizer_state}
+    dcp.load(state, checkpoint_id=source / "distributed")
+    set_state_dict(
+        model,
+        raw_optimizer,
+        model_state_dict=state["model"],
+        optim_state_dict=state["optimizer"],
+        options=options,
+    )
+    runtime_state = torch.load(
+        source / f"runtime-rank-{accelerator.process_index:02d}.pt",
+        map_location="cpu",
+        weights_only=False,
+    )
+    scheduler.load_state_dict(runtime_state["scheduler"])
+    if accelerator.scaler is not None and runtime_state["scaler"] is not None:
+        accelerator.scaler.load_state_dict(runtime_state["scaler"])
+    random.setstate(runtime_state["python_random"])
+    np.random.set_state(runtime_state["numpy_random"])
+    torch.set_rng_state(runtime_state["torch_random"])
+    torch.cuda.set_rng_state_all(runtime_state["cuda_random"])
+    accelerator.wait_for_everyone()
+    return metadata
+
+
 @dataclass
 class RunConfig:
     corpus_dir: Path
@@ -435,6 +536,45 @@ def checkpoint_identity(path: Path) -> dict[str, Any]:
     }
 
 
+def loaded_model_diagnostic(model) -> dict[str, Any]:
+    """Record a fixed tensor inventory/value diagnostic and weight tying."""
+    parameters = dict(model.named_parameters())
+    inventory = [
+        f"{name}:{tuple(parameter.shape)}:{parameter.dtype}"
+        for name, parameter in sorted(parameters.items())
+    ]
+    selected = {}
+    preferred = [
+        "model.embed_tokens.weight",
+        "model.layers.0.input_layernorm.weight",
+        "model.norm.weight",
+    ]
+    for name in preferred:
+        parameter = parameters.get(name)
+        if parameter is None:
+            continue
+        values = parameter.detach().float().reshape(-1)
+        sample = values[: min(64, values.numel())].cpu().numpy().tobytes()
+        selected[name] = {
+            "shape": list(parameter.shape),
+            "sample_sha256": hashlib.sha256(sample).hexdigest(),
+            "first_values": values[:4].cpu().tolist(),
+        }
+    input_weight = model.get_input_embeddings().weight
+    output_weight = model.get_output_embeddings().weight
+    return {
+        "parameter_tensor_count": len(parameters),
+        "parameter_count": sum(parameter.numel() for parameter in parameters.values()),
+        "inventory_sha256": hashlib.sha256("\n".join(inventory).encode()).hexdigest(),
+        "selected_tensors": selected,
+        "weight_tying": {
+            "same_storage": input_weight.data_ptr() == output_weight.data_ptr(),
+            "config_tie_word_embeddings": bool(getattr(model.config, "tie_word_embeddings", False)),
+            "shapes_equal": tuple(input_weight.shape) == tuple(output_weight.shape),
+        },
+    }
+
+
 def run_training(config: RunConfig) -> dict:
     import torch
     from accelerate import Accelerator
@@ -485,6 +625,7 @@ def run_training(config: RunConfig) -> dict:
         token, str(config.init_from) if config.init_from else None
     )
     model.config._attn_implementation = "sdpa"
+    initial_model_diagnostic = loaded_model_diagnostic(model)
     if config.gradient_checkpointing:
         model.gradient_checkpointing_enable()
     else:
@@ -546,11 +687,19 @@ def run_training(config: RunConfig) -> dict:
     )
     model, optimizer, loader = accelerator.prepare(model, optimizer, loader)
     checkpoint_model = model
-    if config.distributed_mode == "fsdp":
-        model = compile_production_model(model, runtime)
     accelerator.register_for_checkpointing(scheduler)
     if config.resume_from is not None:
-        accelerator.load_state(config.resume_from)
+        loaded_metadata = load_training_checkpoint(
+            accelerator=accelerator,
+            model=checkpoint_model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            source=config.resume_from,
+        )
+        if loaded_metadata != resume_metadata:
+            raise RuntimeError("loaded resume metadata changed during restore")
+    if config.distributed_mode == "fsdp":
+        model = compile_production_model(model, runtime)
     config.output_dir.mkdir(parents=True, exist_ok=True)
     run_metadata = {
         **asdict(config),
@@ -565,6 +714,7 @@ def run_training(config: RunConfig) -> dict:
         "credential_source": credential_source,
         "initialization_mode": "resume" if config.resume_from else "weights",
         "initial_checkpoint": initial_identity,
+        "initial_model_diagnostic": initial_model_diagnostic,
         "parent_training_tokens": config.parent_training_tokens,
         "runtime": {
             "fsdp": "FULL_SHARD" if config.distributed_mode == "fsdp" else None,
@@ -862,37 +1012,32 @@ def run_training(config: RunConfig) -> dict:
             _json_write(config.output_dir / "micro_eval.json", evaluation)
         accelerator.wait_for_everyone()
     if config.save_resume:
-        required_free = 10 * 2**30 if config.optimizer == "adamw_torch" else 5 * 2**30
+        required_free = 8 * 2**30
         free = shutil.disk_usage(config.output_dir).free
         if free >= required_free:
             resume_path = config.output_dir / "resume-latest"
-            resume_error: str | None = None
-            try:
-                accelerator.save_state(resume_path, safe_serialization=True)
-            # Accelerate/FSDP optimizer serialization is version-sensitive.
-            except Exception as exc:
-                resume_error = type(exc).__name__
-            saved_by_rank = accelerator.gather(
-                torch.tensor([resume_error is None], device=accelerator.device, dtype=torch.bool)
+            resume = {
+                **asdict(counters),
+                "next_block": start_block
+                + (counters.microsteps - initial_microsteps)
+                * config.microbatch
+                * accelerator.num_processes,
+                "tokens_per_update": tokens_per_update,
+                "model_revision": MODEL_REVISION,
+                "world_size": accelerator.num_processes,
+                "lr_schedule": config.lr_schedule,
+                "decay_end_update": config.decay_end_update,
+                "parent_training_tokens": config.parent_training_tokens,
+            }
+            save_training_checkpoint(
+                accelerator=accelerator,
+                model=checkpoint_model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                destination=resume_path,
+                metadata=resume,
             )
-            resume_saved = bool(saved_by_rank.all().item())
-            accelerator.wait_for_everyone()
-            if accelerator.is_main_process and resume_saved:
-                resume = {
-                    **asdict(counters),
-                    "next_block": start_block + session_tokens // block_shape[1],
-                    "tokens_per_update": tokens_per_update,
-                    "model_revision": MODEL_REVISION,
-                }
-                _json_write(resume_path / "resume_metadata.json", resume)
-            elif accelerator.is_main_process:
-                shutil.rmtree(resume_path, ignore_errors=True)
-            summary["resume_state_saved"] = resume_saved
-            if not resume_saved:
-                summary["resume_state_skip_reason"] = (
-                    "Accelerate could not serialize the distributed optimizer state"
-                )
-                summary["resume_state_error_type"] = resume_error or "other_rank_failed"
+            summary["resume_state_saved"] = True
         else:
             summary["resume_state_saved"] = False
             summary["resume_state_skip_reason"] = (

@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 import time
-import zipfile
 from pathlib import Path
 
 REPOSITORY = "https://github.com/Shlok-Bhakta/tabcomplete.git"
@@ -34,14 +33,14 @@ def locate_inputs() -> tuple[Path, Path]:
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         if metadata.get("actual_train_tokens") == 11_999_232:
             corpora.append(metadata_path.parent)
-    archives = list(Path("/kaggle/input").glob("**/P12.zip"))
-    if len(corpora) != 1 or len(archives) != 1:
-        raise RuntimeError(f"expected one corpus and P12 archive, got {len(corpora)} and {len(archives)}")
-    parent = Path("/kaggle/working/parents/P12")
-    parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archives[0]) as archive:
-        archive.extractall(parent)
-    return corpora[0], parent
+    parents = []
+    for metadata_path in Path("/kaggle/input").glob("**/P12/training_metadata.json"):
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if metadata.get("training_tokens") == 11_993_088:
+            parents.append(metadata_path.parent)
+    if len(corpora) != 1 or len(parents) != 1:
+        raise RuntimeError(f"expected one corpus and P12 parent, got {len(corpora)} and {len(parents)}")
+    return corpora[0], parents[0]
 
 
 def main() -> None:
