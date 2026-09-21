@@ -21,6 +21,7 @@ PARENTS = {
     "P5": "d499c3fe2d720246c710c5c9e20653a4599aa25d77ebef871cb28431ccc888e8",
     "P12": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43",
 }
+CAUSAL_SUITE_SHA256 = "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4"
 
 
 def run(command: list[str], *, name: str, environment: dict[str, str]) -> float:
@@ -248,7 +249,9 @@ def main() -> None:
                 repository_only=False,
             )
 
-    suite = CHECKOUT / "data" / "benchmarks" / "code_completion_v1.jsonl"
+    suite = CHECKOUT / "data" / "benchmarks" / "code_completion_v2.jsonl"
+    if sha256_file(suite) != CAUSAL_SUITE_SHA256:
+        raise RuntimeError("corrected causal suite hash differs from the frozen protocol")
     for arm in campaign["completed_arms"]:
         if time.time() - started + FINALIZATION_RESERVE_SECONDS >= SESSION_LIMIT_SECONDS:
             record["causal_predictions"].append(
@@ -268,7 +271,7 @@ def main() -> None:
                 "--device",
                 "cuda",
                 "--max-new-tokens",
-                "128",
+                "96",
                 "--output",
                 str(destination),
             ],
