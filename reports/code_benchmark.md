@@ -13,8 +13,8 @@ larger public benchmarks, but it avoids their immediate contamination problem.
 
 ## Frozen suite
 
-- File: `data/benchmarks/code_completion_v1.jsonl`
-- SHA-256: `b65dcf23ee9b2ec1c76632e9b8542baceb46c0ed56bdc8f91d8abc96e05d224e`
+- File: `data/benchmarks/code_completion_v2.jsonl`
+- SHA-256: `ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4`
 - Cases: 200
 - Core languages: Python 23, TypeScript 23, and 22 each for JavaScript, Java,
   C++, Rust, Go, C, and C#
@@ -44,14 +44,16 @@ for model output.
 ## Gold verification
 
 The final merged suite passed all 200 parse checks, all 200 compile or type checks,
-and all 200 hidden behavioral tests with zero timeouts. Go uses writable offline
+and all 200 hidden behavioral tests with zero timeouts. Version 2 corrects the C
+and C++ fixtures so a successful compilation is followed by execution and a stdout
+oracle; version 1 only linked those binaries. Go uses writable offline
 workspace caches because the container's `/tmp` mount is intentionally `noexec`.
 Its 90-second watchdog accommodates cold standard-library compilation; normal cases
 finish much sooner.
 
 ```bash
 uv run python scripts/evaluate_code_benchmark.py \
-  --suite data/benchmarks/code_completion_v1.jsonl \
+  --suite data/benchmarks/code_completion_v2.jsonl \
   --gold --backend container --workers 1 \
   --output-dir outputs/code_benchmark/gold-final
 ```
@@ -90,20 +92,29 @@ measures completion selection and stopping behavior as well as code knowledge.
 
 | Model | Precision | Exact | Parse | Compile | Hidden tests | Median latency |
 |---|---|---:|---:|---:|---:|---:|
-| Qwen3.5-0.8B-Base | F16 GGUF CPU | 0/200 | 20/200 | 8/200 | 3/200 | 16.58 s |
+| Qwen3.5-0.8B-Base | F16 GGUF CPU | 0/200 | 20/200 | 8/200 | 2/200 | 16.58 s |
 | TabComplete-Code 5.014M | F16 GGUF CPU | 0/200 | 31/200 | 17/200 | 7/200 | 16.28 s |
-| TabComplete-Code 5.014M | Q4_K_M CPU | 0/200 | 32/200 | 15/200 | 3/200 | 12.43 s |
+| TabComplete-Code 11.993M | F16 GGUF CPU | 0/200 | 27/200 | 19/200 | 9/200 | 21.10 s |
+| TabComplete-Code 5.014M | Q4_K_M CPU | 0/200 | 32/200 | 15/200 | 2/200 | 12.43 s |
 
 F16 Stage-1 improved every aggregate functional gate over base: parse rate rose
 from 10.0% to 15.5%, compile rate from 4.0% to 8.5%, and hidden-test pass rate from
-1.5% to 3.5%. It had six base-to-Stage wins, two regressions, and one shared pass.
-The exact paired two-sided McNemar p-value is 0.289, so 200 cases and only eight
-discordant functional outcomes are not enough to call this statistically decisive.
+1.0% to 3.5%. It had six base-to-Stage wins, one regression, and one shared pass.
+The exact paired two-sided McNemar p-value is 0.125, so 200 cases and only seven
+discordant functional outcomes are still not enough to call this statistically decisive.
 The result is directionally positive and agrees with held-out NLL, but the
 functional claim remains **UNCLEAR**.
 
+The 11.993M checkpoint reached 9/200 hidden-test passes. Against Base it had eight
+unique wins, one unique loss, and one shared pass (exact paired two-sided McNemar
+`p=0.039`). Against 5.014M it had five unique wins and three losses (`p=0.727`).
+This makes 11.993M clearly better than Base on this suite, but not decisively better
+than 5.014M. The longer checkpoint also has slightly worse frozen code NLL
+(1.102123 versus 1.101055), so the 5.014M NLL winner remains promoted while
+11.993M is retained as a functional-eval candidate.
+
 Q4_K_M cut median per-request latency by 23.7% and reduced the deployable model to
-541,903,264 bytes, but hidden-test pass rate fell back to 1.5%. With only three Q4
+541,903,264 bytes, but hidden-test pass rate fell back to 1.0%. With only two Q4
 passes this is also noisy, but Q4 is not promoted as quality-equivalent to F16.
 No model passed a TypeScript, JavaScript, Java, Rust, or C# hidden test under this
 strict protocol. Stage-1 F16 passed one of 20 repository-context cases; base and Q4

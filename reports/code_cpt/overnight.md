@@ -264,16 +264,39 @@ It wins on the primary held-out metric even though the final checkpoint is newer
   combination.
 - The Python 3.12 Kaggle runtime differs from the repository's Python 3.11 local
   environment.
-- MICRO is a strong leakage-resistant thermometer, not a full functional coding
-  benchmark. The new 200-case containerized completion suite is being frozen and
-  will compare base, 5.014M, and later Q4 builds.
+- MICRO is a strong leakage-resistant thermometer, not a complete product
+  benchmark. The post-run executable suites below reduce this uncertainty but are
+  still small and synthetic.
+
+## Post-run Functional Evaluation
+
+The frozen 200-case causal completion suite executes hidden behavioral tests in a
+network-disabled container. Version 2 corrects C/C++ fixtures so compiled binaries
+are actually run. Base passed 2/200, 5.014M F16 passed 7/200, 11.993M F16 passed
+9/200, and 5.014M Q4_K_M passed 2/200. The 11.993M checkpoint is significantly
+better than Base on the paired outcomes (`p=0.039`), but its 9 versus 7 comparison
+with 5.014M is not decisive (`p=0.727`).
+
+A 31-case causal code-output suite found 2/27 parsable code continuations for Base,
+9/27 for both 5.014M and 11.993M F16, and 7/27 for 5.014M Q4_K_M. A 25-case
+repository-coherent long-context suite scored Base 2/25, 5.014M F16 1/25, and
+11.993M F16 3/25. The 12M passes included 16k and 32k prompts, so no catastrophic
+context loss was detected, but all three passes used the same enum dependency type
+and broad long-context quality remains unclear.
+
+The separate 200-case marked-region next-edit suite scored 0 functional patches
+for Base, 5.014M F16, 11.993M F16, and 5.014M Q4_K_M. Every model always emitted a
+nonempty response and hit the 96-token cap; none recognized `NO_EDIT`. This is the
+expected Stage boundary: causal CPT improved code competence but did not teach the
+next-edit protocol.
 
 ## Next Recommended Experiment
 
-Run the fixed 200-case executable completion suite against base and the 5.014M
-checkpoint. If functional pass rate confirms the NLL gain, extend causal CPT from
-the 5.014M snapshot with a fresh held-out corpus and a decaying LR below 3e-6. Keep
-the 11.993M model for analysis, but do not promote it over the better 5.014M model.
+Increase the executable causal and long-context suites enough to resolve the
+5.014M-versus-11.993M disagreement, then run a small fresh-data CPT recipe
+tournament with LR decay below 3e-6 and checkpoint gates. In parallel, begin Stage
+2 from the promoted 5.014M foundation using explicit next-edit, `NO_EDIT`, stopping,
+and repository-context supervision. Do not use FIM as a substitute for next-edit.
 
 ## Final Research Answer
 

@@ -44,9 +44,10 @@ file validity.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Qwen3.5-0.8B-Base F16 | 160/200 | 0/200 | 2/200 | 1/200 | 0/200 | 0/200 | 268.060 |
 | TabComplete-Code 5.014M F16 | 160/200 | 0/200 | 0/200 | 0/200 | 0/200 | 0/200 | 263.955 |
+| TabComplete-Code 11.993M F16 | 160/200 | 0/200 | 0/200 | 0/200 | 0/200 | 0/200 | 271.560 |
 | TabComplete-Code 5.014M Q4_K_M | 160/200 | 0/200 | 1/200 | 3/200 | 0/200 | 0/200 | 253.690 |
 
-All three models always emitted a nonempty replacement, so their 80% action
+All four models always emitted a nonempty replacement, so their 80% action
 accuracy is merely the 160/200 replacement-class prior. None recognized a
 `NO_EDIT` case. Every response hit the 96-token cap, and none passed a hidden
 behavioral test after insertion.
