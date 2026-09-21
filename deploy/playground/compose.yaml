@@ -47,6 +47,8 @@ services:
       - "8765"
       - --feedback
       - /data/feedback.jsonl
+      - --collector-url
+      - ${TABCOMPLETE_COLLECTOR_URL:-http://crabcake:8787}
     user: "${PLAYGROUND_UID:-1000}:${PLAYGROUND_GID:-1000}"
     ports:
       - 100.88.30.127:38765:8765

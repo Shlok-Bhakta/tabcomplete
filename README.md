@@ -95,10 +95,13 @@ uv run tinycomplete-playground \
   --model stage1=/path/to/tokens-005000000
 ```
 
-Open `http://127.0.0.1:8765`. The editor shows ghost completions, accepts them with
-Tab, rejects with Escape, accepts repository context files, switches checkpoints,
-and records explicit feedback locally. Bind `--host 0.0.0.0` only when you intend
-to expose the server to trusted devices on your LAN.
+Open `http://127.0.0.1:8765`. Next-edit mode is the default: select a region (or
+leave an insertion caret), then request a replacement. Empty model output is shown
+as `NO_EDIT`. The optional autocomplete mode remains available, but the next-edit
+path is not FIM and uses the same marked-region protocol as the executable suite.
+Tab accepts, Escape rejects, and explicit feedback stays local. Bind
+`--host 0.0.0.0` only when you intend to expose the server to trusted devices on
+your LAN.
 
 For a GGUF checkpoint, start a local OpenAI-compatible server and point the same
 playground at it:
@@ -123,6 +126,33 @@ python /path/to/llama.cpp/convert_hf_to_gguf.py \
   --outfile outputs/models/tabcomplete-code-f16.gguf --outtype f16
 /path/to/llama-quantize outputs/models/tabcomplete-code-f16.gguf \
   outputs/models/tabcomplete-code-q4_k_m.gguf Q4_K_M
+```
+
+## Executable next-edit benchmark
+
+The next-edit suite uses the Stage-2 marked-region contract: current code, a byte-precise editable
+region, recent edits, visible repository context, and a prediction point. Model output is the replacement
+only. Empty output means NO_EDIT. Candidates are applied in a fresh sandbox and scored independently for
+action choice, exact edit, syntax, compilation, and hidden behavioral tests.
+
+```bash
+# Prove every gold edit passes and inspect the unchanged-state negative control.
+uv run python scripts/evaluate_next_edit_benchmark.py --gold \
+  --suite data/benchmarks/next_edit_v1.jsonl --backend container \
+  --output-dir outputs/next_edit_benchmark/gold
+uv run python scripts/evaluate_next_edit_benchmark.py --current \
+  --suite data/benchmarks/next_edit_v1.jsonl --backend container \
+  --output-dir outputs/next_edit_benchmark/current
+
+# Generate and execute model predictions.
+uv run python scripts/generate_next_edit_predictions.py \
+  --suite data/benchmarks/next_edit_v1.jsonl --server-url http://127.0.0.1:8080 \
+  --server-model local-model --model-revision IMMUTABLE_WEIGHT_SHA \
+  --workers 4 --output outputs/next_edit_benchmark/model/predictions.jsonl
+uv run python scripts/evaluate_next_edit_benchmark.py \
+  --suite data/benchmarks/next_edit_v1.jsonl \
+  --predictions outputs/next_edit_benchmark/model/predictions.jsonl \
+  --backend container --output-dir outputs/next_edit_benchmark/model/results
 ```
 
 ## Synthetic-data command
