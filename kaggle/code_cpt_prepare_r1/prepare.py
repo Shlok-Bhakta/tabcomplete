@@ -14,8 +14,11 @@ CHECKOUT = Path("/kaggle/working/tabcomplete")
 OUTPUT = Path("/kaggle/working/code_cpt_research_r1")
 
 
-def run(command: list[str], *, log: Path) -> None:
-    process = subprocess.run(command, text=True, capture_output=True, env=os.environ.copy())
+def run(command: list[str], *, log: Path, env: dict[str, str] | None = None) -> None:
+    merged = os.environ.copy()
+    if env:
+        merged.update(env)
+    process = subprocess.run(command, text=True, capture_output=True, env=merged)
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text(process.stdout + process.stderr, encoding="utf-8")
     if process.returncode:
@@ -73,6 +76,7 @@ def main() -> None:
             "424242",
         ],
         log=OUTPUT / "prepare.log",
+        env={"PYTHONPATH": str(CHECKOUT / "src")},
     )
     print("research-r1 corpus: PASS")
 

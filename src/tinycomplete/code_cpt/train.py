@@ -64,8 +64,7 @@ def language_mix_for_prefix(
 def is_broad_deterioration(current: dict, baseline: dict) -> bool:
     languages = list(CORE_LANGUAGES)
     regressions = sum(
-        current[language]["nll"] > baseline[language]["nll"] * 1.01
-        for language in languages
+        current[language]["nll"] > baseline[language]["nll"] * 1.01 for language in languages
     )
     code_worse = current["overall_code"]["nll"] > baseline["overall_code"]["nll"] * 1.01
     general_collapse = current["general"]["nll"] > baseline["general"]["nll"] * 1.25
@@ -189,15 +188,51 @@ def _optimizer(model, name: str, learning_rate: float, weight_decay: float):
     raise ValueError(f"unsupported optimizer: {name}")
 
 
-def _constant_with_warmup(optimizer, warmup_steps: int):
+def learning_rate_factor(
+    step: int,
+    schedule: str,
+    warmup_steps: int,
+    decay_end_update: int,
+    floor_ratio: float,
+) -> float:
+    """Return the LR multiplier for the zero-based optimizer step."""
+    if warmup_steps and step < warmup_steps:
+        return float(step + 1) / float(warmup_steps)
+    if schedule == "constant":
+        return 1.0
+    if schedule != "cosine":
+        raise ValueError(f"unsupported learning-rate schedule: {schedule}")
+    last_decay_step = decay_end_update - 1
+    if step >= last_decay_step:
+        return floor_ratio
+    progress = (step - warmup_steps) / (decay_end_update - warmup_steps - 1)
+    return floor_ratio + 0.5 * (1.0 - floor_ratio) * (1.0 + math.cos(math.pi * progress))
+
+
+def _learning_rate_scheduler(
+    optimizer,
+    *,
+    schedule: str,
+    warmup_steps: int,
+    decay_end_update: int,
+    floor_ratio: float,
+):
     import torch
 
     def factor(step: int) -> float:
-        if warmup_steps and step < warmup_steps:
-            return float(step + 1) / float(warmup_steps)
-        return 1.0
+        return learning_rate_factor(step, schedule, warmup_steps, decay_end_update, floor_ratio)
 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, factor)
+
+
+def _constant_with_warmup(optimizer, warmup_steps: int):
+    return _learning_rate_scheduler(
+        optimizer,
+        schedule="constant",
+        warmup_steps=warmup_steps,
+        decay_end_update=max(warmup_steps + 1, 2),
+        floor_ratio=1.0,
+    )
 
 
 def evaluate_micro(
@@ -218,9 +253,9 @@ def evaluate_micro(
             local_indices = list(range(rank, len(blocks), world_size))
             for offset in range(0, len(local_indices), batch_size):
                 indices = local_indices[offset : offset + batch_size]
-                batch = torch.from_numpy(
-                    np.array(blocks[indices], dtype=np.int64, copy=True)
-                ).to(device)
+                batch = torch.from_numpy(np.array(blocks[indices], dtype=np.int64, copy=True)).to(
+                    device
+                )
                 precision_context = (
                     torch.autocast(device_type="cuda", dtype=torch.float16)
                     if device.type == "cuda"
@@ -233,9 +268,7 @@ def evaluate_micro(
                 token_count += scored
                 del output, batch
             if accelerator is not None:
-                totals = torch.tensor(
-                    [total_nll, token_count], device=device, dtype=torch.float64
-                )
+                totals = torch.tensor([total_nll, token_count], device=device, dtype=torch.float64)
                 totals = accelerator.reduce(totals, reduction="sum")
                 total_nll, token_count = float(totals[0].item()), int(totals[1].item())
             result[name] = {"nll": total_nll / token_count, "tokens": token_count}
@@ -273,8 +306,7 @@ def extract_mtp_from_snapshot(snapshot: Path, destination: Path) -> dict:
         "parameter_count": sum(tensor.numel() for tensor in tensors.values()),
         "bytes": sidecar.stat().st_size,
         "note": (
-            "Transformers Qwen3_5ForCausalLM ignores these tensors; "
-            "preserved for later MTP work."
+            "Transformers Qwen3_5ForCausalLM ignores these tensors; preserved for later MTP work."
         ),
     }
     _json_write(destination / "mtp-manifest.json", manifest)
@@ -385,9 +417,7 @@ def run_training(config: RunConfig) -> dict:
             ),
             state_dict_type=StateDictType.FULL_STATE_DICT,
             state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=True),
-            optim_state_dict_config=FullOptimStateDictConfig(
-                offload_to_cpu=True, rank0_only=True
-            ),
+            optim_state_dict_config=FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=True),
             use_orig_params=True,
             sync_module_states=True,
             limit_all_gathers=True,
@@ -439,9 +469,7 @@ def run_training(config: RunConfig) -> dict:
     tokens_per_microstep = config.microbatch * block_shape[1] * accelerator.num_processes
     tokens_per_update = tokens_per_microstep * config.gradient_accumulation
     remaining_tokens = max(0, config.max_tokens - initial_tokens)
-    blocks_per_update = (
-        config.gradient_accumulation * config.microbatch * accelerator.num_processes
-    )
+    blocks_per_update = config.gradient_accumulation * config.microbatch * accelerator.num_processes
     available_blocks = block_shape[0] - start_block
     additional_optimizer_steps = bounded_optimizer_steps(
         remaining_tokens=remaining_tokens,
@@ -451,9 +479,7 @@ def run_training(config: RunConfig) -> dict:
     )
     if additional_optimizer_steps == 0:
         raise ValueError("no complete optimizer update remains in the token budget/corpus")
-    blocks_needed = (
-        additional_optimizer_steps * blocks_per_update
-    )
+    blocks_needed = additional_optimizer_steps * blocks_per_update
     dataset = PackedBlocksDataset(block_path, start_block, blocks_needed)
     loader_options: dict[str, Any] = {
         "batch_size": config.microbatch,
@@ -616,8 +642,7 @@ def run_training(config: RunConfig) -> dict:
                 if accelerator.is_main_process:
                     _json_write(destination / "micro_eval.json", evaluation)
                     stop_requested = bool(
-                        baseline_metrics
-                        and is_broad_deterioration(evaluation, baseline_metrics)
+                        baseline_metrics and is_broad_deterioration(evaluation, baseline_metrics)
                     )
                 stop_tensor = torch.tensor(
                     int(stop_requested), device=accelerator.device, dtype=torch.int32
@@ -743,9 +768,7 @@ def run_training(config: RunConfig) -> dict:
             except Exception as exc:
                 resume_error = type(exc).__name__
             saved_by_rank = accelerator.gather(
-                torch.tensor(
-                    [resume_error is None], device=accelerator.device, dtype=torch.bool
-                )
+                torch.tensor([resume_error is None], device=accelerator.device, dtype=torch.bool)
             )
             resume_saved = bool(saved_by_rank.all().item())
             accelerator.wait_for_everyone()
@@ -756,9 +779,7 @@ def run_training(config: RunConfig) -> dict:
                     "tokens_per_update": tokens_per_update,
                     "model_revision": MODEL_REVISION,
                 }
-                _json_write(
-                    resume_path / "resume_metadata.json", resume
-                )
+                _json_write(resume_path / "resume_metadata.json", resume)
             elif accelerator.is_main_process:
                 shutil.rmtree(resume_path, ignore_errors=True)
             summary["resume_state_saved"] = resume_saved
@@ -770,8 +791,7 @@ def run_training(config: RunConfig) -> dict:
         else:
             summary["resume_state_saved"] = False
             summary["resume_state_skip_reason"] = (
-                f"only {free / 2**30:.2f} GiB free; "
-                f"required {required_free / 2**30:.0f} GiB"
+                f"only {free / 2**30:.2f} GiB free; required {required_free / 2**30:.0f} GiB"
             )
         accelerator.wait_for_everyone()
     if accelerator.is_main_process:

@@ -21,6 +21,7 @@ from tinycomplete.code_cpt.prepare import (
     hash_packed_blocks,
     research_split_for_bucket,
 )
+from tinycomplete.code_cpt.runtime import ProductionRuntime
 from tinycomplete.code_cpt.train import (
     PackedBlocksDataset,
     TrainingCounters,
@@ -29,6 +30,7 @@ from tinycomplete.code_cpt.train import (
     extract_mtp_from_snapshot,
     is_broad_deterioration,
     language_mix_for_prefix,
+    learning_rate_factor,
     milestones_crossed,
 )
 
@@ -269,3 +271,23 @@ def test_packed_block_hashes_and_corpus_fingerprint_are_content_bound(tmp_path) 
     values[0, 0] = 99
     np.save(second, values)
     assert corpus_fingerprint([first, second]) != before
+
+
+def test_production_runtime_matches_round2_winner() -> None:
+    runtime = ProductionRuntime()
+    assert runtime.gradient_accumulation == 8
+    assert runtime.backward_prefetch == "BACKWARD_PRE"
+    assert runtime.forward_prefetch is True
+    assert runtime.compile_mode == "default"
+    assert runtime.compile_dynamic is False
+    assert runtime.initial_loss_scale == 256.0
+
+
+def test_declared_constant_and_cosine_learning_rate_schedules() -> None:
+    assert learning_rate_factor(0, "constant", 5, 153, 0.1) == pytest.approx(0.2)
+    assert learning_rate_factor(4, "constant", 5, 153, 0.1) == pytest.approx(1.0)
+    assert learning_rate_factor(152, "constant", 5, 153, 0.1) == pytest.approx(1.0)
+    assert learning_rate_factor(4, "cosine", 5, 153, 0.1) == pytest.approx(1.0)
+    assert learning_rate_factor(5, "cosine", 5, 153, 0.1) == pytest.approx(1.0)
+    assert learning_rate_factor(152, "cosine", 5, 153, 0.1) == pytest.approx(0.1)
+    assert learning_rate_factor(153, "cosine", 5, 153, 0.1) == pytest.approx(0.1)
