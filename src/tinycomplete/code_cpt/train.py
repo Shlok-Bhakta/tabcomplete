@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -77,6 +78,8 @@ class TrainingCounters:
     training_tokens: int = 0
     microsteps: int = 0
     optimizer_steps: int = 0
+    attempted_optimizer_updates: int = 0
+    skipped_optimizer_updates: int = 0
     data_wait_seconds: float = 0.0
 
     def record_microstep(self, local_nonpadding_tokens: int, data_wait_seconds: float) -> None:
@@ -84,8 +87,12 @@ class TrainingCounters:
         self.microsteps += 1
         self.data_wait_seconds += data_wait_seconds
 
-    def record_optimizer_step(self) -> None:
-        self.optimizer_steps += 1
+    def record_optimizer_step(self, *, skipped: bool = False) -> None:
+        self.attempted_optimizer_updates += 1
+        if skipped:
+            self.skipped_optimizer_updates += 1
+        else:
+            self.optimizer_steps += 1
 
 
 class PackedBlocksDataset:
@@ -385,68 +392,99 @@ class RunConfig:
     save_resume: bool = False
     eval_final: bool = False
     baseline_path: Path | None = None
+    init_from: Path | None = None
     resume_from: Path | None = None
+    expected_initial_sha256: str | None = None
+    parent_training_tokens: int = 0
+    lr_schedule: str = "constant"
+    lr_floor: float = 3e-7
+    decay_end_update: int = 153
     milestones: tuple[int, ...] = ()
     distributed_mode: str = "ddp"
+
+    def __post_init__(self) -> None:
+        if self.init_from is not None and self.resume_from is not None:
+            raise ValueError("--init-from and --resume-from are mutually exclusive")
+        if self.lr_schedule not in {"constant", "cosine"}:
+            raise ValueError("lr_schedule must be constant or cosine")
+        if not 0 < self.lr_floor <= self.learning_rate:
+            raise ValueError("lr_floor must be positive and no greater than learning_rate")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def checkpoint_identity(path: Path) -> dict[str, Any]:
+    """Hash the intended parent artifact before model construction."""
+    weight_files = sorted(path.glob("*.safetensors"))
+    if not weight_files:
+        raise FileNotFoundError(f"checkpoint has no safetensors files: {path}")
+    return {
+        "path": str(path),
+        "weight_files": [
+            {"name": item.name, "bytes": item.stat().st_size, "sha256": _sha256_file(item)}
+            for item in weight_files
+        ],
+        "config_sha256": _sha256_file(path / "config.json"),
+        "tokenizer_sha256": _sha256_file(path / "tokenizer.json"),
+    }
 
 
 def run_training(config: RunConfig) -> dict:
     import torch
-    from accelerate import Accelerator, FullyShardedDataParallelPlugin
+    from accelerate import Accelerator
     from accelerate.utils import GradientAccumulationPlugin, GradScalerKwargs
     from torch.utils.data import DataLoader
 
-    fsdp_plugin = None
-    if config.distributed_mode == "fsdp":
-        from torch.distributed.fsdp import (
-            FullOptimStateDictConfig,
-            FullStateDictConfig,
-            MixedPrecision,
-            ShardingStrategy,
-            StateDictType,
-        )
+    from tinycomplete.code_cpt.runtime import (
+        ProductionRuntime,
+        build_production_accelerator,
+        compile_production_model,
+    )
 
-        fsdp_plugin = FullyShardedDataParallelPlugin(
-            sharding_strategy=ShardingStrategy.FULL_SHARD,
-            auto_wrap_policy="transformer_based_wrap",
-            transformer_cls_names_to_wrap=["Qwen3_5DecoderLayer"],
-            mixed_precision_policy=MixedPrecision(
-                param_dtype=torch.float16,
-                reduce_dtype=torch.float16,
-                buffer_dtype=torch.float16,
-            ),
-            state_dict_type=StateDictType.FULL_STATE_DICT,
-            state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=True),
-            optim_state_dict_config=FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=True),
-            use_orig_params=True,
-            sync_module_states=True,
-            limit_all_gathers=True,
+    if config.distributed_mode == "fsdp":
+        runtime = ProductionRuntime(gradient_accumulation=config.gradient_accumulation)
+        accelerator = build_production_accelerator(runtime)
+    elif config.distributed_mode == "ddp":
+        accumulation_plugin = GradientAccumulationPlugin(
+            num_steps=config.gradient_accumulation,
+            sync_each_batch=False,
         )
-    elif config.distributed_mode != "ddp":
+        scaler_kwargs = GradScalerKwargs(init_scale=256.0, growth_interval=2_000)
+        accelerator = Accelerator(
+            mixed_precision="fp16",
+            gradient_accumulation_plugin=accumulation_plugin,
+            kwargs_handlers=[scaler_kwargs],
+        )
+    else:
         raise ValueError(f"unsupported distributed mode: {config.distributed_mode}")
-    accumulation_plugin = GradientAccumulationPlugin(
-        num_steps=config.gradient_accumulation,
-        # FSDP no_sync retains full, unsharded gradients until the optimizer
-        # boundary. Synchronize each microbatch to keep memory truly sharded.
-        sync_each_batch=config.distributed_mode == "fsdp",
-    )
-    scaler_kwargs = GradScalerKwargs(
-        # The default 65,536 scale overflowed on the first Qwen3.5 backward
-        # pass on T4. Start conservatively and retain dynamic backoff/growth.
-        init_scale=256.0,
-        growth_interval=2_000,
-    )
-    accelerator = Accelerator(
-        mixed_precision="fp16",
-        gradient_accumulation_plugin=accumulation_plugin,
-        fsdp_plugin=fsdp_plugin,
-        kwargs_handlers=[scaler_kwargs],
-    )
     random.seed(config.seed)
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
     token, credential_source = resolve_optional_hf_token()
-    model, tokenizer = _load_model_and_tokenizer(token)
+    initial_identity = checkpoint_identity(config.init_from) if config.init_from else None
+    if config.expected_initial_sha256:
+        if initial_identity is None:
+            raise ValueError("expected_initial_sha256 requires --init-from")
+        model_weight = next(
+            (
+                item
+                for item in initial_identity["weight_files"]
+                if item["name"] == "model.safetensors"
+            ),
+            None,
+        )
+        if model_weight is None or model_weight["sha256"] != config.expected_initial_sha256:
+            raise ValueError("initial checkpoint model SHA-256 does not match the declared parent")
+    model, tokenizer = _load_model_and_tokenizer(
+        token, str(config.init_from) if config.init_from else None
+    )
+    model.config._attn_implementation = "sdpa"
     if config.gradient_checkpointing:
         model.gradient_checkpointing_enable()
     else:
@@ -459,6 +497,10 @@ def run_training(config: RunConfig) -> dict:
     initial_tokens = int(resume_metadata.get("training_tokens", 0))
     initial_microsteps = int(resume_metadata.get("microsteps", 0))
     initial_optimizer_steps = int(resume_metadata.get("optimizer_steps", 0))
+    initial_attempted_updates = int(
+        resume_metadata.get("attempted_optimizer_updates", initial_optimizer_steps)
+    )
+    initial_skipped_updates = int(resume_metadata.get("skipped_optimizer_updates", 0))
     initial_data_wait = float(resume_metadata.get("data_wait_seconds", 0.0))
     start_block = int(resume_metadata.get("next_block", config.start_block))
     block_path = config.corpus_dir / "train_blocks.npy"
@@ -495,8 +537,17 @@ def run_training(config: RunConfig) -> dict:
         )
     loader: Any = DataLoader(dataset, **loader_options)  # type: ignore[arg-type,var-annotated]
     optimizer = _optimizer(model, config.optimizer, config.learning_rate, config.weight_decay)
-    scheduler = _constant_with_warmup(optimizer, config.warmup_steps)
+    scheduler = _learning_rate_scheduler(
+        optimizer,
+        schedule=config.lr_schedule,
+        warmup_steps=config.warmup_steps,
+        decay_end_update=config.decay_end_update,
+        floor_ratio=config.lr_floor / config.learning_rate,
+    )
     model, optimizer, loader = accelerator.prepare(model, optimizer, loader)
+    checkpoint_model = model
+    if config.distributed_mode == "fsdp":
+        model = compile_production_model(model, runtime)
     accelerator.register_for_checkpointing(scheduler)
     if config.resume_from is not None:
         accelerator.load_state(config.resume_from)
@@ -512,6 +563,22 @@ def run_training(config: RunConfig) -> dict:
         "world_size": accelerator.num_processes,
         "tokens_per_update": tokens_per_update,
         "credential_source": credential_source,
+        "initialization_mode": "resume" if config.resume_from else "weights",
+        "initial_checkpoint": initial_identity,
+        "parent_training_tokens": config.parent_training_tokens,
+        "runtime": {
+            "fsdp": "FULL_SHARD" if config.distributed_mode == "fsdp" else None,
+            "fp32_master_parameters": True,
+            "fp16_compute": True,
+            "initial_loss_scale": 256.0,
+            "gradient_checkpointing": config.gradient_checkpointing,
+            "torch_compile": config.distributed_mode == "fsdp",
+            "compile_mode": "default" if config.distributed_mode == "fsdp" else None,
+            "compile_dynamic": False if config.distributed_mode == "fsdp" else None,
+            "backward_prefetch": "BACKWARD_PRE" if config.distributed_mode == "fsdp" else None,
+            "forward_prefetch": config.distributed_mode == "fsdp",
+            "attention": "sdpa",
+        },
         "milestones": list(config.milestones),
         "baseline_path": str(config.baseline_path) if config.baseline_path else None,
         "resume_from": str(config.resume_from) if config.resume_from else None,
@@ -523,6 +590,8 @@ def run_training(config: RunConfig) -> dict:
         training_tokens=initial_tokens,
         microsteps=initial_microsteps,
         optimizer_steps=initial_optimizer_steps,
+        attempted_optimizer_updates=initial_attempted_updates,
+        skipped_optimizer_updates=initial_skipped_updates,
         data_wait_seconds=initial_data_wait,
     )
     target_optimizer_steps = initial_optimizer_steps + additional_optimizer_steps
@@ -545,6 +614,8 @@ def run_training(config: RunConfig) -> dict:
     milestone_checked_tokens = counters.training_tokens
     stop_requested = False
     baseline_metrics = None
+    update_loss_sum = torch.zeros((), device=accelerator.device, dtype=torch.float32)
+    update_loss_microbatches = 0
     if config.baseline_path is not None:
         baseline_metrics = json.loads(config.baseline_path.read_text(encoding="utf-8"))["metrics"]
     while counters.optimizer_steps < target_optimizer_steps:
@@ -566,6 +637,8 @@ def run_training(config: RunConfig) -> dict:
             finite = accelerator.reduce(torch.isfinite(loss).float(), reduction="min")
             if not bool(finite.item()):
                 raise FloatingPointError("non-finite training loss")
+            update_loss_sum += loss.detach().float()
+            update_loss_microbatches += 1
             accelerator.backward(loss)
             grad_norm = None
             grad_norm_value = None
@@ -591,6 +664,7 @@ def run_training(config: RunConfig) -> dict:
         counters.record_microstep(local_tokens, data_wait)
         if accelerator.sync_gradients:
             if optimizer_step_skipped:
+                counters.record_optimizer_step(skipped=True)
                 if accelerator.is_main_process:
                     _append_jsonl(
                         config.output_dir / "train_log.jsonl",
@@ -605,10 +679,17 @@ def run_training(config: RunConfig) -> dict:
                 batch_released = True
                 if consecutive_loss_scale_overflows >= 8:
                     raise FloatingPointError("persistent FP16 gradient overflow")
+                update_loss_sum.zero_()
+                update_loss_microbatches = 0
                 continue
             assert grad_norm_value is not None
             counters.record_optimizer_step()
-            reduced_loss = accelerator.reduce(loss.detach().float(), reduction="mean").item()
+            reduced_loss_sum = accelerator.reduce(update_loss_sum, reduction="sum")
+            reduced_loss = float(
+                reduced_loss_sum.item() / (accelerator.num_processes * update_loss_microbatches)
+            )
+            update_loss_sum.zero_()
+            update_loss_microbatches = 0
             loss_entry = {
                 "optimizer_step": counters.optimizer_steps,
                 "microsteps": counters.microsteps,
@@ -632,7 +713,9 @@ def run_training(config: RunConfig) -> dict:
                 pause_start = time.perf_counter()
                 metadata = {**run_metadata, **asdict(counters), "milestone": milestone}
                 destination = config.output_dir / "snapshots" / f"tokens-{milestone:09d}"
-                save_snapshot(accelerator, model, tokenizer, destination, metadata, token)
+                save_snapshot(
+                    accelerator, checkpoint_model, tokenizer, destination, metadata, token
+                )
                 evaluation = evaluate_micro(
                     model,
                     config.corpus_dir / "micro",
@@ -703,6 +786,28 @@ def run_training(config: RunConfig) -> dict:
         "non_training_checkpoint_eval_seconds": non_training_seconds,
         "training_wall_seconds": training_wall_seconds,
         "session_training_tokens": session_tokens,
+        "additional_input_tokens": session_tokens,
+        "additional_scored_target_tokens": (
+            (counters.microsteps - initial_microsteps)
+            * config.microbatch
+            * accelerator.num_processes
+            * (block_shape[1] - 1)
+        ),
+        "successful_optimizer_updates": counters.optimizer_steps - initial_optimizer_steps,
+        "attempted_optimizer_updates_this_run": (
+            counters.attempted_optimizer_updates - initial_attempted_updates
+        ),
+        "skipped_optimizer_updates_this_run": (
+            counters.skipped_optimizer_updates - initial_skipped_updates
+        ),
+        "lineage_tokens_after_run": config.parent_training_tokens + counters.training_tokens,
+        "corpus_position": {
+            "start_block": start_block,
+            "next_block": start_block
+            + (counters.microsteps - initial_microsteps)
+            * config.microbatch
+            * accelerator.num_processes,
+        },
         "tokens_per_second": session_tokens / training_wall_seconds,
         "steady_state_tokens_per_second": (
             steady_tokens / steady_wall_seconds
@@ -731,7 +836,7 @@ def run_training(config: RunConfig) -> dict:
     if config.save_final:
         save_snapshot(
             accelerator,
-            model,
+            checkpoint_model,
             tokenizer,
             config.output_dir / "final",
             summary,
@@ -855,7 +960,13 @@ def main() -> None:
     train.add_argument("--save-resume", action="store_true")
     train.add_argument("--eval-final", action="store_true")
     train.add_argument("--baseline-path", type=Path)
+    train.add_argument("--init-from", type=Path)
     train.add_argument("--resume-from", type=Path)
+    train.add_argument("--expected-initial-sha256")
+    train.add_argument("--parent-training-tokens", type=int, default=0)
+    train.add_argument("--lr-schedule", choices=("constant", "cosine"), default="constant")
+    train.add_argument("--lr-floor", type=float, default=3e-7)
+    train.add_argument("--decay-end-update", type=int, default=153)
     train.add_argument("--milestones", type=int, nargs="*", default=[])
     train.add_argument("--distributed-mode", choices=("ddp", "fsdp"), default="ddp")
     args = parser.parse_args()
@@ -880,7 +991,13 @@ def main() -> None:
         save_resume=args.save_resume,
         eval_final=args.eval_final,
         baseline_path=args.baseline_path,
+        init_from=args.init_from,
         resume_from=args.resume_from,
+        expected_initial_sha256=args.expected_initial_sha256,
+        parent_training_tokens=args.parent_training_tokens,
+        lr_schedule=args.lr_schedule,
+        lr_floor=args.lr_floor,
+        decay_end_update=args.decay_end_update,
         milestones=tuple(args.milestones),
         distributed_mode=args.distributed_mode,
     )

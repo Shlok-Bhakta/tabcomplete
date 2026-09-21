@@ -24,6 +24,7 @@ from tinycomplete.code_cpt.prepare import (
 from tinycomplete.code_cpt.runtime import ProductionRuntime
 from tinycomplete.code_cpt.train import (
     PackedBlocksDataset,
+    RunConfig,
     TrainingCounters,
     bounded_optimizer_steps,
     distributed_block_indices,
@@ -291,3 +292,14 @@ def test_declared_constant_and_cosine_learning_rate_schedules() -> None:
     assert learning_rate_factor(5, "cosine", 5, 153, 0.1) == pytest.approx(1.0)
     assert learning_rate_factor(152, "cosine", 5, 153, 0.1) == pytest.approx(0.1)
     assert learning_rate_factor(153, "cosine", 5, 153, 0.1) == pytest.approx(0.1)
+
+
+def test_weight_initialization_and_exact_resume_are_mutually_exclusive(tmp_path) -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        RunConfig(
+            corpus_dir=tmp_path,
+            output_dir=tmp_path,
+            learning_rate=3e-6,
+            init_from=tmp_path / "weights",
+            resume_from=tmp_path / "state",
+        )
