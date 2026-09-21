@@ -252,13 +252,19 @@ def main() -> None:
     suite = CHECKOUT / "data" / "benchmarks" / "code_completion_v2.jsonl"
     if sha256_file(suite) != CAUSAL_SUITE_SHA256:
         raise RuntimeError("corrected causal suite hash differs from the frozen protocol")
-    for arm in campaign["completed_arms"]:
-        if time.time() - started + FINALIZATION_RESERVE_SECONDS >= SESSION_LIMIT_SECONDS:
+    causal_labels = ["P5", "P12", *[arm["name"] for arm in campaign["completed_arms"]]]
+    prediction_estimate_seconds = 20 * 60
+    for label in causal_labels:
+        if (
+            time.time() - started
+            + prediction_estimate_seconds
+            + FINALIZATION_RESERVE_SECONDS
+            >= SESSION_LIMIT_SECONDS
+        ):
             record["causal_predictions"].append(
-                {"model": arm["name"], "status": "skipped-session-reserve"}
+                {"model": label, "status": "skipped-session-reserve"}
             )
             continue
-        label = arm["name"]
         destination = OUTPUT / "causal_predictions" / f"{label}.jsonl"
         elapsed = run(
             [
@@ -281,6 +287,7 @@ def main() -> None:
         record["causal_predictions"].append(
             {"model": label, "status": "complete", "elapsed_seconds": elapsed}
         )
+        prediction_estimate_seconds = max(prediction_estimate_seconds, elapsed * 1.10)
         progress_output.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
 
     record["status"] = "complete"
