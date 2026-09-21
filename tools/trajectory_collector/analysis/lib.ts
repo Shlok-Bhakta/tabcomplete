@@ -18,7 +18,10 @@ export function openReadOnly(dbPath: string = DEFAULT_DB): Database {
   return new Database(dbPath, { readonly: true });
 }
 
-/** Minimal --key value / --key=value parser. Unknown flags throw. */
+/** Minimal --key value / --key=value parser. Unknown flags throw.
+ * A flag with no `=` takes the next token as its value, unless the next
+ * token starts with `--` or there is none — then it is a boolean flag
+ * present with value "". Callers test `"name" in out` for booleans. */
 export function parseArgs(
   raw: string[],
   allowed: Set<string>,
@@ -35,7 +38,13 @@ export function parseArgs(
       value = tok.slice(eq + 1);
     } else {
       key = tok.slice(2);
-      value = raw[++i] ?? "";
+      const next = raw[i + 1];
+      if (next === undefined || next.startsWith("--")) {
+        value = "";
+      } else {
+        value = next;
+        i++;
+      }
     }
     if (!allowed.has(key)) throw new Error(`unknown flag --${key}`);
     out[key] = value;

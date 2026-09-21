@@ -190,6 +190,9 @@ function M.attach(bufnr)
 end
 
 function M.detach(bufnr)
+  -- Detach the callback first: reattaching over a live on_lines handler
+  -- would double-emit every later edit (duplicate deltas on reattach).
+  pcall(vim.api.nvim_buf_detach, bufnr)
   M.attached[bufnr] = nil
   M.shadows[bufnr] = nil
 end

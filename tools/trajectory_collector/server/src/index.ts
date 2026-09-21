@@ -334,6 +334,18 @@ function handleSnapshot(db: Database, body: unknown): Response {
     if ((f["relative_path"] as string).startsWith("/")) {
       return errorResponse("bad_request", `files[${i}].relative_path must be relative`, 400);
     }
+    const relPath = f["relative_path"] as string;
+    if (
+      relPath.includes("\\") ||
+      relPath.includes("\0") ||
+      relPath.split("/").some((seg) => seg === "..")
+    ) {
+      return errorResponse(
+        "bad_request",
+        `files[${i}].relative_path must not contain '..', backslashes, or NUL bytes`,
+        400,
+      );
+    }
     if (!isValidSha256(f["sha256"])) {
       return errorResponse("bad_request", `files[${i}].sha256 must be a 64-char hex string`, 400);
     }
