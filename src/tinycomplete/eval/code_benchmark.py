@@ -29,6 +29,8 @@ def _safe_relative_path(value: str) -> str:
 class CheckSpec(BaseModel):
     compile: list[str] | None = None
     test: list[str] | None = None
+    run: list[str] | None = None
+    expected_stdout: str | None = None
     files: dict[str, str] = Field(default_factory=dict)
     timeout_seconds: float = Field(default=10.0, gt=0, le=120)
     container_image: str | None = None
@@ -343,6 +345,26 @@ def evaluate_prediction(
                 )
             else:
                 test_result = _run_trusted(case.check.test, work_root, case.check.timeout_seconds)
+            if test_result.status == "pass" and case.check.run:
+                if execution_backend == "container":
+                    test_result = _run_container(
+                        case.check.run,
+                        work_root,
+                        case.check.timeout_seconds,
+                        case.check.container_image,
+                    )
+                else:
+                    test_result = _run_trusted(
+                        case.check.run, work_root, case.check.timeout_seconds
+                    )
+            if (
+                test_result.status == "pass"
+                and case.check.expected_stdout is not None
+                and test_result.stdout != case.check.expected_stdout
+            ):
+                test_result = test_result.model_copy(
+                    update={"status": "fail", "stderr": "stdout did not match expected output"}
+                )
     return BenchmarkResult(
         case_id=case.id,
         language=case.language,
@@ -352,7 +374,7 @@ def evaluate_prediction(
         normalized_exact_match=(prediction.completion.strip() == case.expected.strip()),
         nonempty=bool(prediction.completion.strip()),
         compile_configured=case.check.compile is not None,
-        test_configured=case.check.test is not None,
+        test_configured=case.check.test is not None or case.check.run is not None,
         parse=parse,
         compile=compile_result,
         test=test_result,

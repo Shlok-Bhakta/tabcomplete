@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Protocol
@@ -30,10 +30,11 @@ def build_prediction_run_metadata(
     model_revision: str,
     max_new_tokens: int,
     workers: int,
+    protocol: str = PREDICTION_PROTOCOL,
 ) -> dict[str, Any]:
     return {
         "schema_version": 1,
-        "protocol": PREDICTION_PROTOCOL,
+        "protocol": protocol,
         "suite_sha256": hashlib.sha256(suite_path.read_bytes()).hexdigest(),
         "case_count": case_count,
         "provider": provider,
@@ -130,13 +131,14 @@ class OpenAICompatibleGenerationProvider:
 
 
 def generate_predictions(
-    cases: Iterable[BenchmarkCase],
+    cases: Iterable[Any],
     provider: GenerationProvider,
     output_path: Path,
     *,
     max_new_tokens: int = 128,
     run_metadata: dict[str, Any],
     workers: int = 1,
+    prompt_builder: Callable[[Any], str] = build_causal_prompt,
 ) -> list[Prediction]:
     if workers < 1:
         raise ValueError("workers must be positive")
@@ -166,7 +168,7 @@ def generate_predictions(
 
     def predict(case: BenchmarkCase) -> Prediction:
         started = time.perf_counter()
-        text, tokens = provider.generate(build_causal_prompt(case), max_new_tokens)
+        text, tokens = provider.generate(prompt_builder(case), max_new_tokens)
         return Prediction(
             case_id=case.id,
             completion=text,

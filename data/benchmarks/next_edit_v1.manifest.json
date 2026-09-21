@@ -1,0 +1,23 @@
+{
+  "actions": {
+    "noop": 40,
+    "replace": 160
+  },
+  "cases": 200,
+  "languages": {
+    "c": 22,
+    "cpp": 22,
+    "csharp": 22,
+    "go": 22,
+    "java": 22,
+    "javascript": 22,
+    "python": 23,
+    "rust": 22,
+    "typescript": 23
+  },
+  "repository_context_cases": 20,
+  "sha256": "81efc7fff7706fefa50f376617e677888a055e08ddcb2cc27a4bebad00405607",
+  "source_suite": "data/benchmarks/code_completion_v1.jsonl",
+  "source_suite_sha256": "b65dcf23ee9b2ec1c76632e9b8542baceb46c0ed56bdc8f91d8abc96e05d224e",
+  "version": 1
+}
