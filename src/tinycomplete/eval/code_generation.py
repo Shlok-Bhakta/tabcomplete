@@ -7,6 +7,7 @@ import json
 import time
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -75,24 +76,41 @@ class GenerationProvider(Protocol):
     def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int]: ...
 
 
+@dataclass(frozen=True)
+class DetailedGeneration:
+    text: str
+    tokens: int
+    finish_reason: str | None
+
+
 class TransformersGenerationProvider:
-    def __init__(self, model_path: str) -> None:
+    def __init__(self, model_path: str, *, device: str = "cpu") -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
+        if device.startswith("cuda") and not torch.cuda.is_available():
+            raise RuntimeError(f"requested generation device is unavailable: {device}")
         self.torch = torch
+        self.device = torch.device(device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=False)
         self.tokenizer = getattr(self.tokenizer, "tokenizer", self.tokenizer)
         self.model: Any = AutoModelForCausalLM.from_pretrained(
             model_path,
             trust_remote_code=False,
-            dtype=torch.float32,
+            dtype=torch.float16 if self.device.type == "cuda" else torch.float32,
             low_cpu_mem_usage=True,
-        )
+        ).to(self.device)
         self.model.eval()
 
     def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int]:
-        inputs = self.tokenizer(prompt, return_tensors="pt")
+        result = self.generate_detailed(prompt, max_new_tokens)
+        return result.text, result.tokens
+
+    def generate_detailed(self, prompt: str, max_new_tokens: int) -> DetailedGeneration:
+        inputs = {
+            name: tensor.to(self.device)
+            for name, tensor in self.tokenizer(prompt, return_tensors="pt").items()
+        }
         with self.torch.inference_mode():
             output = self.model.generate(
                 **inputs,
@@ -103,7 +121,9 @@ class TransformersGenerationProvider:
             )
         tokens = output[0, inputs["input_ids"].shape[1] :]
         text = self.tokenizer.decode(tokens, skip_special_tokens=True)
-        return str(text), int(tokens.numel())
+        token_count = int(tokens.numel())
+        finish_reason = "length" if token_count >= max_new_tokens else "eos_or_stop"
+        return DetailedGeneration(str(text), token_count, finish_reason)
 
 
 class OpenAICompatibleGenerationProvider:
@@ -115,6 +135,10 @@ class OpenAICompatibleGenerationProvider:
         self.timeout_seconds = timeout_seconds
 
     def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int]:
+        result = self.generate_detailed(prompt, max_new_tokens)
+        return result.text, result.tokens
+
+    def generate_detailed(self, prompt: str, max_new_tokens: int) -> DetailedGeneration:
         response = httpx.post(
             self.url,
             json={
@@ -128,9 +152,10 @@ class OpenAICompatibleGenerationProvider:
         )
         response.raise_for_status()
         body = response.json()
-        text = str(body["choices"][0]["text"])
+        choice = body["choices"][0]
+        text = str(choice["text"])
         tokens = int(body.get("usage", {}).get("completion_tokens", 0))
-        return text, tokens
+        return DetailedGeneration(text, tokens, choice.get("finish_reason"))
 
 
 def generate_predictions(
@@ -171,12 +196,25 @@ def generate_predictions(
 
     def predict(case: BenchmarkCase) -> Prediction:
         started = time.perf_counter()
-        text, tokens = provider.generate(prompt_builder(case), max_new_tokens)
+        prompt = prompt_builder(case)
+        detailed = getattr(provider, "generate_detailed", None)
+        if callable(detailed):
+            generation = detailed(prompt, max_new_tokens)
+            text = generation.text
+            tokens = generation.tokens
+            finish_reason = generation.finish_reason
+        else:
+            text, tokens = provider.generate(prompt, max_new_tokens)
+            finish_reason = None
         return Prediction(
             case_id=case.id,
             completion=text,
             generated_tokens=tokens,
             latency_seconds=time.perf_counter() - started,
+            finish_reason=finish_reason,
+            hit_token_cap=(
+                finish_reason in {"length", "max_tokens"} or tokens >= max_new_tokens
+            ),
         )
 
     with output_path.open("a", encoding="utf-8") as handle:

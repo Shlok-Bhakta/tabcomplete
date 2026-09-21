@@ -9,6 +9,8 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel
 
+from tinycomplete.eval.code_benchmark import BenchmarkCase, CheckSpec
+
 DiagnosticFamily = Literal["constant", "enum", "signature", "field", "config"]
 DiagnosticCondition = Literal[
     "short_control", "long_near", "long_far", "absent", "counterfactual"
@@ -37,6 +39,7 @@ class LongContextDiagnosticCase(BaseModel):
     prompt: str
     target: str
     distractor: str
+    test_code: str
     dependency_token_position: int | None
     dependency_distance_tokens: int | None
     prompt_sha256: str
@@ -53,7 +56,7 @@ def _identifier(rng: random.Random, prefix: str) -> str:
 
 def _fixture(
     family: DiagnosticFamily, seed: int, *, counterfactual: bool
-) -> tuple[str, str, str, str]:
+) -> tuple[str, str, str, str, str]:
     rng = random.Random(seed)
     first_value = rng.randrange(10_000, 90_000)
     second_value = first_value + rng.randrange(101, 997)
@@ -66,7 +69,11 @@ def _fixture(
             f"from repository.contract import {name}\n\n"
             "def retry_delay_ms() -> int:\n    return "
         )
-        return dependency, prefix, str(chosen_value), str(other_value)
+        test = (
+            "from solution import retry_delay_ms\n"
+            f"assert retry_delay_ms() == {chosen_value}\n"
+        )
+        return dependency, prefix, str(chosen_value), str(other_value), test
     if family == "enum":
         first = _identifier(rng, "WIRE")
         second = _identifier(rng, "WIRE")
@@ -83,7 +90,11 @@ def _fixture(
             "from repository.contract import WireFormat\n\n"
             "def wire_format() -> WireFormat:\n    return "
         )
-        return dependency, prefix, f"WireFormat.{chosen}", f"WireFormat.{other}"
+        test = (
+            "from solution import wire_format\n"
+            f'assert wire_format().name == "{chosen}"\n'
+        )
+        return dependency, prefix, f"WireFormat.{chosen}", f"WireFormat.{other}", test
     if family == "signature":
         first = _identifier(rng, "payload")
         second = _identifier(rng, "payload")
@@ -98,11 +109,16 @@ def _fixture(
             "from repository.contract import encode_payload\n\n"
             "def encode_event(payload: bytes) -> bytes:\n    return "
         )
+        test = (
+            "from solution import encode_event\n"
+            "assert encode_event(b\"x\") == bytes([1, 1]) + b\"x\"\n"
+        )
         return (
             dependency,
             prefix,
             f"encode_payload(payload, {chosen}=True, checksum=True)",
             f"encode_payload(payload, {other}=True, checksum=True)",
+            test,
         )
     if family == "field":
         first = _identifier(rng, "connect_timeout")
@@ -122,7 +138,18 @@ def _fixture(
             "from repository.contract import UPLOAD_POLICY\n\n"
             "def primary_timeout() -> int:\n    return "
         )
-        return dependency, prefix, f"UPLOAD_POLICY.{chosen}", f"UPLOAD_POLICY.{other}"
+        expected_value = second_value if chosen == second else first_value
+        test = (
+            "from solution import primary_timeout\n"
+            f"assert primary_timeout() == {expected_value}\n"
+        )
+        return (
+            dependency,
+            prefix,
+            f"UPLOAD_POLICY.{chosen}",
+            f"UPLOAD_POLICY.{other}",
+            test,
+        )
     first = _identifier(rng, "service").lower()
     second = _identifier(rng, "service").lower()
     chosen = second if counterfactual else first
@@ -138,11 +165,17 @@ def _fixture(
         "from repository.contract import SERVICE_LIMITS\n\n"
         "def active_burst_limit() -> int:\n    return "
     )
+    expected_value = second_value if chosen == second else first_value
+    test = (
+        "from solution import active_burst_limit\n"
+        f"assert active_burst_limit() == {expected_value}\n"
+    )
     return (
         dependency,
         prefix,
         f'SERVICE_LIMITS["{chosen}"]["burst"]',
         f'SERVICE_LIMITS["{other}"]["burst"]',
+        test,
     )
 
 
@@ -163,28 +196,28 @@ def _prompt_parts(
     condition: DiagnosticCondition,
     filler_count: int,
     seed: int,
-) -> tuple[str, str, str, str | None]:
+) -> tuple[str, str, str, str, str | None]:
     counterfactual = condition == "counterfactual"
-    dependency, prefix, target, distractor = _fixture(
+    dependency, prefix, target, distractor, test_code = _fixture(
         family, seed, counterfactual=counterfactual
     )
+    filler_directory = (
+        "z_components" if condition in {"long_far", "counterfactual"} else "a_components"
+    )
     files = {
-        f"repository/components/component_{index:05d}.py": _filler(index, seed)
+        f"repository/{filler_directory}/component_{index:05d}.py": _filler(index, seed)
         for index in range(filler_count)
     }
     dependency_path = None
     if condition != "absent":
-        if condition in {"long_far", "counterfactual"}:
-            dependency_path = "repository/00000_contract.py"
-        else:
-            dependency_path = "repository/zzzzz_contract.py"
+        dependency_path = "repository/contract.py"
         files[dependency_path] = dependency
     pieces = [
         f'<file path="{path}">\n{content}\n</file>\n'
         for path, content in sorted(files.items())
     ]
     pieces.append(f'<target path="solution.py" language="python">\n{prefix}')
-    return "".join(pieces), target, distractor, dependency_path
+    return "".join(pieces), target, distractor, test_code, dependency_path
 
 
 def _calibrated_prompt(
@@ -194,7 +227,7 @@ def _calibrated_prompt(
     target_tokens: int,
     seed: int,
     tolerance_fraction: float,
-) -> tuple[str, str, str, str | None]:
+) -> tuple[str, str, str, str, str | None]:
     if condition == "short_control":
         return _prompt_parts(family, condition, 0, seed)
     base = _prompt_parts(family, condition, 0, seed)
@@ -228,7 +261,7 @@ def build_diagnostic_family(
     """Build five matched dependency conditions for one family and context size."""
     cases = []
     for condition in CONDITIONS:
-        prompt, target, distractor, dependency_path = _calibrated_prompt(
+        prompt, target, distractor, test_code, dependency_path = _calibrated_prompt(
             tokenizer,
             family,
             condition,
@@ -254,12 +287,41 @@ def build_diagnostic_family(
                 prompt=prompt,
                 target=target,
                 distractor=distractor,
+                test_code=test_code,
                 dependency_token_position=position,
                 dependency_distance_tokens=distance,
                 prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
             )
         )
     return cases
+
+
+def diagnostic_case_to_benchmark(case: LongContextDiagnosticCase) -> BenchmarkCase:
+    """Recover an executable Python fixture from the serialized diagnostic prompt."""
+    import re
+
+    file_pattern = re.compile(r'<file path="([^"]+)">\n(.*?)\n</file>\n', re.DOTALL)
+    context_files = {path: content for path, content in file_pattern.findall(case.prompt)}
+    target_marker = '<target path="solution.py" language="python">\n'
+    if target_marker not in case.prompt:
+        raise ValueError("diagnostic prompt has no target marker")
+    prefix = case.prompt.split(target_marker, 1)[1]
+    return BenchmarkCase(
+        id=case.id,
+        language="python",
+        path="solution.py",
+        prefix=prefix,
+        expected=case.target,
+        context_files=context_files,
+        check=CheckSpec(
+            compile=["python3", "-m", "py_compile", "solution.py"],
+            test=["python3", "tests.py"],
+            files={"tests.py": case.test_code},
+            container_image="docker.io/library/python:3.12-slim",
+        ),
+        category=f"long_context_v2_{case.family}_{case.condition}",
+        repository_context=True,
+    )
 
 
 def target_logit_positions(prompt_length: int, target_length: int, device: Any):

@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "protocol": "marked-region-next-edit-action-v2",
+  "sha256": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff",
+  "source_suite": "data/benchmarks/next_edit_v1.jsonl",
+  "source_suite_sha256": "81efc7fff7706fefa50f376617e677888a055e08ddcb2cc27a4bebad00405607",
+  "case_count": 200,
+  "actions": {
+    "noop": 40,
+    "replace": 160
+  },
+  "model_output": {
+    "no_edit": {"action": "no_edit"},
+    "deletion": {"action": "replace", "text": ""},
+    "replacement": {"action": "replace", "text": "replacement code"}
+  },
+  "max_new_tokens": 96,
+  "fixture_semantics": "v1 fixtures preserved; v2 requires canonical JSON action parsing and current executable run semantics"
+}

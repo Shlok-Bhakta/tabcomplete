@@ -1,0 +1,21 @@
+{
+  "deletion_success_count": 0,
+  "deletion_success_rate": null,
+  "edit_no_edit_choice_rate": 1.0,
+  "false_positive_edits": 0,
+  "finish_reasons": {
+    "stop": 200
+  },
+  "functional_success_edit_required_rate": 1.0,
+  "malformed_count": 0,
+  "no_edit_recall": 1.0,
+  "overgeneration_count": 0,
+  "protocol": "marked-region-next-edit-action-v2",
+  "replacement_success_rate": 1.0,
+  "token_cap_count": 0,
+  "total": 200,
+  "truncation_count": 0,
+  "truncation_rate": 0.0,
+  "wrong_action_count": 0,
+  "wrong_code_count": 0
+}

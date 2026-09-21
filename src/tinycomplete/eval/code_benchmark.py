@@ -71,6 +71,8 @@ class Prediction(BaseModel):
     completion: str
     latency_seconds: float | None = None
     generated_tokens: int | None = None
+    finish_reason: str | None = None
+    hit_token_cap: bool | None = None
 
 
 class CheckResult(BaseModel):

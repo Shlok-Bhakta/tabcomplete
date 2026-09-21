@@ -4,9 +4,11 @@ import re
 
 import torch
 
+from tinycomplete.eval.code_benchmark import Prediction, evaluate_prediction
 from tinycomplete.eval.long_context_diagnostic import (
     CONDITIONS,
     build_diagnostic_family,
+    diagnostic_case_to_benchmark,
     selected_target_nll,
     target_logit_positions,
 )
@@ -71,3 +73,25 @@ def test_target_only_selected_logits_match_full_logit_scoring() -> None:
     assert positions.tolist() == [4, 5, 6]
     assert selected_count == 3
     assert torch.allclose(selected_sum, expected)
+
+
+def test_diagnostic_gold_is_executable(tmp_path) -> None:
+    for index, family in enumerate(("constant", "enum", "signature", "field", "config")):
+        case = build_diagnostic_family(
+            tokenizer=RegexTokenizer(),
+            family=family,
+            target_tokens=768,
+            seed=100 + index,
+            tolerance_fraction=0.1,
+        )[1]
+        benchmark = diagnostic_case_to_benchmark(case)
+        result = evaluate_prediction(
+            benchmark,
+            Prediction(case_id=case.id, completion=case.target),
+            work_root=tmp_path / family,
+            execution_backend="trusted-host",
+        )
+
+        assert result.parse.status == "pass", family
+        assert result.compile.status == "pass", family
+        assert result.test.status == "pass", family

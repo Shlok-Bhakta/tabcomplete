@@ -59,7 +59,10 @@ def prepare_probe_corpus(sequence_length: int, accumulation: int, tokenizer) -> 
     corpus = OUTPUT / "corpora" / f"seq-{sequence_length:05d}"
     corpus.mkdir(parents=True, exist_ok=True)
     blocks = np.lib.format.open_memmap(
-        corpus / "train_blocks.npy", mode="w+", dtype=np.uint32, shape=(block_count, sequence_length)
+        corpus / "train_blocks.npy",
+        mode="w+",
+        dtype=np.uint32,
+        shape=(block_count, sequence_length),
     )
     records = []
     families = ["constant", "enum", "signature", "field", "config"]
@@ -190,6 +193,7 @@ def main() -> None:
     )
     if code:
         raise RuntimeError("repository clone failed")
+    sys.path.insert(0, str(CHECKOUT / "src"))
     from transformers import AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(

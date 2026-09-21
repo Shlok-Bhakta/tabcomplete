@@ -267,7 +267,9 @@ def evaluate_micro(
 
     model.eval()
     result = {}
-    names = [*CORE_LANGUAGES, "general"]
+    names = [*CORE_LANGUAGES]
+    if (micro_dir / "general.npy").exists():
+        names.append("general")
     rank = accelerator.process_index if accelerator is not None else 0
     world_size = accelerator.num_processes if accelerator is not None else 1
     with torch.inference_mode():
@@ -1237,6 +1239,8 @@ def run_checkpoint_evaluation(
     corpus_dir: Path,
     output_path: Path,
     expected_sha256: str | None = None,
+    split: str = "micro",
+    repository_only: bool = False,
 ) -> dict:
     import torch
     import transformers
@@ -1256,12 +1260,19 @@ def run_checkpoint_evaluation(
     model.config._attn_implementation = "sdpa"
     diagnostic = loaded_model_diagnostic(model)
     model.to(device="cuda")
-    metrics = evaluate_micro(model, corpus_dir / "micro", torch.device("cuda"))
+    split_dir = corpus_dir / split
+    metrics = (
+        None
+        if repository_only
+        else evaluate_micro(model, split_dir, torch.device("cuda"))
+    )
     result = {
         "checkpoint": str(checkpoint),
         "checkpoint_identity": identity,
         "model_diagnostic": diagnostic,
         "corpus_dir": str(corpus_dir),
+        "split": split,
+        "repository_only": repository_only,
         "corpus_fingerprint": json.loads(
             (corpus_dir / "corpus_metadata.json").read_text(encoding="utf-8")
         ).get("corpus_fingerprint"),
@@ -1271,6 +1282,15 @@ def run_checkpoint_evaluation(
         "metrics": metrics,
     }
     _json_write(output_path, result)
+    if all(
+        (split_dir / f"{language}_provenance.jsonl").exists()
+        for language in CORE_LANGUAGES
+    ):
+        repository_metrics = evaluate_repository_micro(model, split_dir, torch.device("cuda"))
+        repository_path = output_path.with_name(f"{output_path.stem}_repositories.json")
+        _json_write(repository_path, repository_metrics)
+        result["repository_metrics_path"] = str(repository_path)
+        _json_write(output_path, result)
     return result
 
 
@@ -1285,6 +1305,8 @@ def main() -> None:
     checkpoint_eval.add_argument("--corpus-dir", type=Path, required=True)
     checkpoint_eval.add_argument("--output", type=Path, required=True)
     checkpoint_eval.add_argument("--expected-sha256")
+    checkpoint_eval.add_argument("--split", choices=("micro", "test"), default="micro")
+    checkpoint_eval.add_argument("--repository-only", action="store_true")
     train = subparsers.add_parser("train")
     train.add_argument("--corpus-dir", type=Path, required=True)
     train.add_argument("--output-dir", type=Path, required=True)
@@ -1328,6 +1350,8 @@ def main() -> None:
             args.corpus_dir,
             args.output,
             args.expected_sha256,
+            args.split,
+            args.repository_only,
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return
