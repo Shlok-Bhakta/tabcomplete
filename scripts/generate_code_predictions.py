@@ -30,6 +30,12 @@ def main() -> None:
     )
     parser.add_argument("--max-new-tokens", type=int, default=128)
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument(
+        "--request-timeout-seconds",
+        type=float,
+        default=300,
+        help="Per-request timeout for server generation; long-context CPU runs may need more",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     cases = load_suite(args.suite)
@@ -44,7 +50,11 @@ def main() -> None:
     else:
         if not args.model_revision:
             parser.error("--model-revision is required with --server-url")
-        provider = OpenAICompatibleGenerationProvider(args.server_url, args.server_model)
+        provider = OpenAICompatibleGenerationProvider(
+            args.server_url,
+            args.server_model,
+            timeout_seconds=args.request_timeout_seconds,
+        )
         provider_name = "openai-compatible"
         model_source = args.server_model
         model_revision = args.model_revision
