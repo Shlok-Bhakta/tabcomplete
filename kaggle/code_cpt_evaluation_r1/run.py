@@ -175,13 +175,12 @@ def main() -> None:
         progress_output.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
         gc.collect()
 
-    from tinycomplete.code_cpt.eval import paired_repository_bootstrap
+    from tinycomplete.code_cpt.eval import select_development_candidate
 
     repository_rows = {
         label: load_json(OUTPUT / "development" / f"{label}_repositories.json")
         for label in models
     }
-    comparisons = {}
     aggregate_nll = {
         "P5": load_json(campaign_root / "parents" / "P5" / "fresh_development.json")[
             "metrics"
@@ -192,46 +191,15 @@ def main() -> None:
     }
     for arm in campaign["completed_arms"]:
         label = arm["name"]
-        parent = arm["parent"]
         aggregate_nll[label] = load_json(
             campaign_root / "arms" / label / "final" / "micro_eval.json"
         )["overall_code"]["nll"]
-        comparisons[f"{label}-minus-{parent}"] = paired_repository_bootstrap(
-            repository_rows[parent], repository_rows[label]
-        )
-
-    eligible = []
-    for arm in campaign["completed_arms"]:
-        label = arm["name"]
-        parent = arm["parent"]
-        paired = comparisons[f"{label}-minus-{parent}"]
-        if (
-            aggregate_nll[label] < aggregate_nll[parent]
-            and paired["balanced_language_95ci"][1] < 0
-        ):
-            eligible.append(label)
-    candidate = min(eligible, key=aggregate_nll.get) if eligible else None
-    unique = candidate
-    if candidate is not None:
-        for challenger in eligible:
-            if challenger == candidate:
-                continue
-            comparison = paired_repository_bootstrap(
-                repository_rows[challenger], repository_rows[candidate]
-            )
-            comparisons[f"{candidate}-minus-{challenger}"] = comparison
-            if comparison["balanced_language_95ci"][1] >= 0:
-                unique = None
-
-    selection = {
-        "development_metric": "balanced-language NLL with paired repository bootstrap",
-        "aggregate_nll": aggregate_nll,
-        "comparisons": comparisons,
-        "eligible_improvements": eligible,
-        "selected_candidate": unique,
-        "result": "unique" if unique else ("tie" if eligible else "no-improvement"),
-        "untouched_test_opened": unique is not None,
-    }
+    selection = select_development_candidate(
+        aggregate_nll=aggregate_nll,
+        parent_by_candidate={arm["name"]: arm["parent"] for arm in campaign["completed_arms"]},
+        repository_rows=repository_rows,
+    )
+    unique = selection["selected_candidate"]
     (OUTPUT / "selection.json").write_text(
         json.dumps(selection, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

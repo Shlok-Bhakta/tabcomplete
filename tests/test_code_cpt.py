@@ -21,6 +21,7 @@ from tinycomplete.code_cpt.eval import (
     attribute_token_losses,
     causal_nll_from_logits,
     paired_repository_bootstrap,
+    select_development_candidate,
 )
 from tinycomplete.code_cpt.prepare import (
     corpus_fingerprint,
@@ -193,6 +194,50 @@ def test_paired_repository_bootstrap_keeps_model_pairs_matched() -> None:
     assert result["repository_count"] == 2
     assert result["token_weighted_difference"] == pytest.approx(-0.15)
     assert result["balanced_language_difference"] == pytest.approx(-0.15)
+
+
+def test_development_selection_calls_unresolved_candidates_a_tie() -> None:
+    parent = [
+        {"repository": "a", "language": "python", "nll_sum": 10.0, "tokens": 10},
+        {"repository": "b", "language": "rust", "nll_sum": 20.0, "tokens": 10},
+    ]
+    improved = [
+        {"repository": "a", "language": "python", "nll_sum": 9.0, "tokens": 10},
+        {"repository": "b", "language": "rust", "nll_sum": 19.0, "tokens": 10},
+    ]
+    selection = select_development_candidate(
+        aggregate_nll={"P": 1.5, "C": 1.4, "D": 1.4},
+        parent_by_candidate={"C": "P", "D": "P"},
+        repository_rows={"P": parent, "C": improved, "D": improved},
+        samples=100,
+        seed=7,
+    )
+
+    assert selection["eligible_improvements"] == ["C", "D"]
+    assert selection["selected_candidate"] is None
+    assert selection["result"] == "tie"
+    assert selection["untouched_test_opened"] is False
+
+
+def test_development_selection_requires_repository_resolved_improvement() -> None:
+    parent = [
+        {"repository": "a", "language": "python", "nll_sum": 10.0, "tokens": 10},
+        {"repository": "b", "language": "rust", "nll_sum": 20.0, "tokens": 10},
+    ]
+    mixed = [
+        {"repository": "a", "language": "python", "nll_sum": 8.0, "tokens": 10},
+        {"repository": "b", "language": "rust", "nll_sum": 21.0, "tokens": 10},
+    ]
+    selection = select_development_candidate(
+        aggregate_nll={"P": 1.5, "C": 1.49},
+        parent_by_candidate={"C": "P"},
+        repository_rows={"P": parent, "C": mixed},
+        samples=200,
+        seed=11,
+    )
+
+    assert selection["eligible_improvements"] == []
+    assert selection["result"] == "no-improvement"
 
 
 def test_distributed_block_indices_are_disjoint_and_equal_length() -> None:

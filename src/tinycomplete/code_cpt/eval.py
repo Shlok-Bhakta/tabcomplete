@@ -143,3 +143,54 @@ def paired_repository_bootstrap(
             float(np.quantile(balanced_samples, 0.975)),
         ],
     }
+
+
+def select_development_candidate(
+    *,
+    aggregate_nll: dict[str, float],
+    parent_by_candidate: dict[str, str],
+    repository_rows: dict[str, list[dict]],
+    samples: int = 2_000,
+    seed: int = 271828,
+) -> dict:
+    """Select only a candidate whose balanced repository improvement is resolved."""
+    comparisons = {}
+    eligible = []
+    for candidate, parent in parent_by_candidate.items():
+        comparison = paired_repository_bootstrap(
+            repository_rows[parent],
+            repository_rows[candidate],
+            samples=samples,
+            seed=seed,
+        )
+        comparisons[f"{candidate}-minus-{parent}"] = comparison
+        if (
+            aggregate_nll[candidate] < aggregate_nll[parent]
+            and comparison["balanced_language_95ci"][1] < 0
+        ):
+            eligible.append(candidate)
+
+    best = min(eligible, key=lambda name: aggregate_nll[name]) if eligible else None
+    selected = best
+    if best is not None:
+        for challenger in eligible:
+            if challenger == best:
+                continue
+            comparison = paired_repository_bootstrap(
+                repository_rows[challenger],
+                repository_rows[best],
+                samples=samples,
+                seed=seed,
+            )
+            comparisons[f"{best}-minus-{challenger}"] = comparison
+            if comparison["balanced_language_95ci"][1] >= 0:
+                selected = None
+    return {
+        "development_metric": "balanced-language NLL with paired repository bootstrap",
+        "aggregate_nll": aggregate_nll,
+        "comparisons": comparisons,
+        "eligible_improvements": eligible,
+        "selected_candidate": selected,
+        "result": "unique" if selected else ("tie" if eligible else "no-improvement"),
+        "untouched_test_opened": selected is not None,
+    }
