@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-09-21T18:46:21Z",
+  "account": "shlokbhakta",
+  "gpu_quota": {
+    "used": 12.619809444444444,
+    "remaining": 32.38019055555556,
+    "total": 45.0,
+    "reserved_by_active_sessions": 0.0,
+    "minimum_guaranteed": 30.0,
+    "units": "GPU-hours in the current weekly quota window",
+    "next_refresh_utc": "2026-09-26T00:00:00Z",
+    "pay_to_scale_enabled_on_account": true,
+    "paid_compute_authorized_for_campaign": false,
+    "source": "Authenticated Kaggle CLI 2.2.4 `quota` command and its installed typed quota API"
+  },
+  "t4x2_accounting": {
+    "gpu_hours_per_wall_hour": 2.0,
+    "verified": true,
+    "basis": "The account quota is measured in per-accelerator GPU-hours. The recorded Stage-1 T4x2 run used 4.864 wall-hours and reports 9.728 T4 GPU-hours in reports/code_cpt/overnight.md.",
+    "source": "Authenticated Kaggle quota API field documentation plus reports/code_cpt/overnight.md"
+  },
+  "session_runtime_limit": {
+    "value": null,
+    "units": null,
+    "source": "Not exposed by the authenticated Kaggle CLI/account quota response",
+    "status": "unknown"
+  },
+  "active_kernels": [],
+  "active_kernel_check": {
+    "reserved_gpu_hours": 0.0,
+    "checked_refs": [
+      "shlokbhakta/tabcomplete-code-cpt-bench",
+      "shlokbhakta/tabcomplete-code-cpt-stage1",
+      "shlokbhakta/tabcomplete-code-cpt-prepare",
+      "shlokbhakta/tabcomplete-code-cpt-access",
+      "shlokbhakta/tabcomplete-lora-smoke"
+    ],
+    "source": "Authenticated `kaggle kernels list --mine`, per-kernel status calls, and quota API reserved-hours field"
+  },
+  "campaign_limits": {
+    "maximum_t4x2_wall_hours": 12.0,
+    "maximum_gpu_hours_at_t4x2": 24.0,
+    "maximum_new_training_input_tokens": 50000000,
+    "maximum_concurrent_t4x2_training_jobs": 1,
+    "minimum_initial_finalization_reserve_minutes_per_session": 15,
+    "verified_quota_headroom_after_campaign_gpu_hours": 8.380190555555559,
+    "may_consume_newly_refreshed_allocation_automatically": false
+  },
+  "storage_observation": {
+    "filesystem": "/dev/nvme0n1p2",
+    "available": "33 GiB",
+    "used_percent": 86,
+    "source": "Local df -h at campaign start"
+  }
+}

@@ -16,6 +16,11 @@ from tinycomplete.code_cpt.data import (
     repository_path,
 )
 from tinycomplete.code_cpt.eval import causal_nll_from_logits
+from tinycomplete.code_cpt.prepare import (
+    corpus_fingerprint,
+    hash_packed_blocks,
+    research_split_for_bucket,
+)
 from tinycomplete.code_cpt.train import (
     PackedBlocksDataset,
     TrainingCounters,
@@ -227,9 +232,40 @@ def test_broad_deterioration_requires_clear_multi_language_regression() -> None:
 
 
 def test_optimizer_steps_drop_incomplete_corpus_tail() -> None:
-    assert bounded_optimizer_steps(
-        remaining_tokens=12_000_000,
-        tokens_per_update=32_768,
-        available_blocks=5_859,
-        blocks_per_update=16,
-    ) == 366
+    assert (
+        bounded_optimizer_steps(
+            remaining_tokens=12_000_000,
+            tokens_per_update=32_768,
+            available_blocks=5_859,
+            blocks_per_update=16,
+        )
+        == 366
+    )
+
+
+def test_research_split_reserves_old_validation_and_fresh_dev_test() -> None:
+    assert research_split_for_bucket(0) == "excluded_stage1_validation"
+    assert research_split_for_bucket(9) == "excluded_stage1_validation"
+    assert research_split_for_bucket(10) == "development"
+    assert research_split_for_bucket(19) == "development"
+    assert research_split_for_bucket(20) == "test"
+    assert research_split_for_bucket(29) == "test"
+    assert research_split_for_bucket(30) == "train"
+
+
+def test_packed_block_hashes_and_corpus_fingerprint_are_content_bound(tmp_path) -> None:
+    import numpy as np
+
+    first = tmp_path / "first.npy"
+    second = tmp_path / "second.npy"
+    np.save(first, np.arange(12, dtype=np.uint32).reshape(3, 4))
+    np.save(second, np.arange(8, dtype=np.uint32).reshape(2, 4))
+
+    hashes = hash_packed_blocks(first)
+    assert len(hashes) == 3
+    assert len(set(hashes)) == 3
+    before = corpus_fingerprint([first, second])
+    values = np.load(second)
+    values[0, 0] = 99
+    np.save(second, values)
+    assert corpus_fingerprint([first, second]) != before

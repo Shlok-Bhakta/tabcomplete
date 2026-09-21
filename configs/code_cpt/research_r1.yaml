@@ -1,0 +1,54 @@
+schema_version: 1
+campaign: code_cpt_research_r1
+model:
+  id: Qwen/Qwen3.5-0.8B-Base
+  revision: dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68
+parents:
+  P5:
+    inherited_input_tokens: 5013504
+    model_sha256: d499c3fe2d720246c710c5c9e20653a4599aa25d77ebef871cb28431ccc888e8
+  P12:
+    inherited_input_tokens: 11993088
+    model_sha256: d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43
+runtime:
+  sequence_length: 2048
+  gpus: 2
+  microbatch_per_gpu: 1
+  gradient_accumulation: 8
+  input_tokens_per_update: 32768
+  optimizer: adamw_8bit
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  precision: fp32_master_fp16_compute
+  initial_loss_scale: 256
+  fsdp: FULL_SHARD
+  gradient_checkpointing: false
+  attention: sdpa
+  torch_compile:
+    placement: post_fsdp
+    mode: default
+    dynamic: false
+  backward_prefetch: BACKWARD_PRE
+  forward_prefetch: true
+schedule:
+  warmup_updates: 5
+  peak_lr: 3.0e-6
+  floor_lr: 3.0e-7
+  decay_end_update: 153
+pilot:
+  updates: 153
+  additional_input_tokens: 5013504
+  evaluation_updates: [31, 77, 153]
+  order: [C12, C5, D12, D5]
+  arms:
+    C12: {parent: P12, lr_schedule: constant}
+    C5: {parent: P5, lr_schedule: constant}
+    D12: {parent: P12, lr_schedule: cosine}
+    D5: {parent: P5, lr_schedule: cosine}
+limits:
+  max_t4x2_wall_hours: 12
+  max_gpu_hours: 24
+  max_new_training_input_tokens: 50000000
+  max_concurrent_training_jobs: 1
+  finalization_reserve_minutes: 15
+  paid_compute: false

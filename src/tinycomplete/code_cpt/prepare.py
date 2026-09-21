@@ -45,6 +45,45 @@ LANGUAGE_SPECS = {
 CORE_LANGUAGES = tuple(language for language in LANGUAGE_SPECS if language != "shell")
 
 
+def research_split_for_bucket(bucket: int) -> str:
+    """Map stable repository buckets to the research-r1 data partitions."""
+    if not 0 <= bucket < 1000:
+        raise ValueError("repository bucket must be in [0, 1000)")
+    if bucket < 10:
+        return "excluded_stage1_validation"
+    if bucket < 20:
+        return "development"
+    if bucket < 30:
+        return "test"
+    return "train"
+
+
+def hash_packed_blocks(path: Path) -> set[str]:
+    """Return exact hashes for packed token blocks without loading the array."""
+    blocks = np.load(path, mmap_mode="r")
+    if blocks.ndim != 2:
+        raise ValueError("packed block array must have shape [blocks, sequence]")
+    return {sha256(np.asarray(block).tobytes()).hexdigest() for block in blocks}
+
+
+def _file_sha256(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def corpus_fingerprint(paths: list[Path]) -> str:
+    """Bind a corpus fingerprint to file names, sizes, and exact bytes."""
+    digest = sha256()
+    for path in sorted(paths, key=lambda item: item.name):
+        digest.update(path.name.encode("utf-8"))
+        digest.update(str(path.stat().st_size).encode("ascii"))
+        digest.update(_file_sha256(path).encode("ascii"))
+    return digest.hexdigest()
+
+
 @dataclass
 class StreamStats:
     raw_files: int = 0
@@ -276,6 +315,189 @@ def _prepare_language(
     )
 
 
+def _write_fresh_blocks(
+    array,
+    start: int,
+    blocks: list[list[int]],
+    limit: int,
+    *,
+    forbidden_hashes: set[str],
+    emitted_hashes: set[str],
+) -> tuple[int, int]:
+    """Write nonduplicate blocks and return (written, rejected)."""
+    written = 0
+    rejected = 0
+    for block in blocks:
+        if start + written >= limit:
+            break
+        packed = np.asarray(block, dtype=np.uint32)
+        digest = sha256(packed.tobytes()).hexdigest()
+        if digest in forbidden_hashes or digest in emitted_hashes:
+            rejected += 1
+            continue
+        array[start + written] = packed
+        emitted_hashes.add(digest)
+        written += 1
+    return written, rejected
+
+
+def _prepare_research_language(
+    *,
+    language: str,
+    data_dir: str,
+    train_blocks: int,
+    development_blocks: int,
+    test_blocks: int,
+    block_size: int,
+    tokenizer,
+    token: str,
+    output_dir: Path,
+    seed: int,
+    shuffle_buffer: int,
+    excluded_repositories: set[str],
+    excluded_content_hashes: set[str],
+    old_block_hashes: set[str],
+    seen_content_hashes: set[str],
+    emitted_block_hashes: set[str],
+) -> tuple[dict[str, Path], StreamStats, Counter[str], dict[str, list[dict]]]:
+    """Build one language of the frozen fresh train/dev/test corpus."""
+    from datasets import load_dataset
+
+    stream = load_dataset(
+        DATASET_ID,
+        data_dir=data_dir,
+        split="train",
+        streaming=True,
+        token=token,
+        revision=DATASET_REVISION,
+    ).shuffle(seed=seed, buffer_size=shuffle_buffer)
+    limits = {
+        "train": train_blocks,
+        "development": development_blocks,
+        "test": test_blocks,
+    }
+    paths = {
+        "train": output_dir / "language_blocks" / f"{language}.npy",
+        "development": output_dir / "micro" / f"{language}.npy",
+        "test": output_dir / "test" / f"{language}.npy",
+    }
+    arrays = {
+        split_name: _open_array(path, (limit, block_size))
+        for split_name, (path, limit) in {
+            name: (paths[name], limits[name]) for name in limits
+        }.items()
+        if limit
+    }
+    packers = {
+        name: BlockPacker(block_size, tokenizer.eos_token_id)
+        for name, limit in limits.items()
+        if limit
+    }
+    written = Counter()
+    rejected: Counter[str] = Counter()
+    manifests: dict[str, list[dict]] = {name: [] for name in limits}
+    stats = StreamStats()
+    splitter = RepoSplit(validation_buckets=range(10), bucket_count=1000)
+    source_filter = SourceFilter()
+    wall_start = time.perf_counter()
+    for row in stream:
+        if all(written[name] >= limit for name, limit in limits.items()):
+            break
+        stats.raw_files += 1
+        content = row.get("content")
+        if not isinstance(content, str):
+            rejected["missing_content"] += 1
+            continue
+        stats.raw_bytes += len(content.encode("utf-8", errors="ignore"))
+        metadata_reason = _metadata_reject(row)
+        if metadata_reason:
+            rejected[metadata_reason] += 1
+            continue
+        try:
+            repo_name = repository_identity(row)
+            path = repository_path(row)
+        except ValueError:
+            rejected["missing_repository"] += 1
+            continue
+        if repo_name in excluded_repositories:
+            rejected["excluded_repository"] += 1
+            continue
+        split_name = research_split_for_bucket(splitter.bucket(repo_name))
+        if split_name.startswith("excluded_"):
+            rejected[split_name] += 1
+            continue
+        if split_name not in limits or written[split_name] >= limits[split_name]:
+            continue
+        checked = source_filter.check(content, path)
+        if not checked.accepted:
+            rejected[str(checked.reason)] += 1
+            continue
+        content_bytes = content.encode("utf-8")
+        content_hash = sha256(content_bytes).hexdigest()
+        if content_hash in excluded_content_hashes:
+            rejected["excluded_content"] += 1
+            continue
+        if content_hash in seen_content_hashes:
+            rejected["duplicate_content"] += 1
+            continue
+        seen_content_hashes.add(content_hash)
+        stats.accepted_files += 1
+        stats.accepted_bytes += len(content_bytes)
+        tokenize_start = time.perf_counter()
+        ids = tokenizer.encode(content, add_special_tokens=False)
+        stats.tokenizer_seconds += time.perf_counter() - tokenize_start
+        stats.tokenized_tokens += len(ids)
+        if not ids:
+            rejected["empty_tokens"] += 1
+            continue
+        blocks = packers[split_name].add_document(ids)
+        forbidden = old_block_hashes
+        count, duplicate_blocks = _write_fresh_blocks(
+            arrays[split_name],
+            written[split_name],
+            blocks,
+            limits[split_name],
+            forbidden_hashes=forbidden,
+            emitted_hashes=emitted_block_hashes,
+        )
+        written[split_name] += count
+        rejected["duplicate_packed_block"] += duplicate_blocks
+        manifests[split_name].append(
+            {
+                "dataset_id": DATASET_ID,
+                "dataset_revision": DATASET_REVISION,
+                "language": language,
+                "repository": repo_name,
+                "repository_identity_sha256": sha256(repo_name.encode("utf-8")).hexdigest(),
+                "repo_bucket": splitter.bucket(repo_name),
+                "path": path,
+                "hexsha": row.get("hexsha"),
+                "content_sha256": content_hash,
+                "source_tokens": len(ids),
+                "split": split_name,
+            }
+        )
+    stats.wall_seconds = time.perf_counter() - wall_start
+    stats.train_blocks = written["train"]
+    stats.validation_blocks = written["development"]
+    train_packer = packers.get("train")
+    if train_packer is not None:
+        available = train_packer.source_tokens + train_packer.boundary_tokens
+        stats.training_packing_efficiency = train_packer.emitted_tokens / available
+    dev_packer = packers.get("development")
+    if dev_packer is not None:
+        available = dev_packer.source_tokens + dev_packer.boundary_tokens
+        stats.validation_packing_efficiency = dev_packer.emitted_tokens / available
+    for array in arrays.values():
+        array.flush()
+    for name, limit in limits.items():
+        if written[name] != limit:
+            raise RuntimeError(
+                f"{language} stream exhausted early for {name}: {written[name]}/{limit} blocks"
+            )
+    return paths, stats, rejected, manifests
+
+
 def _combine_training_blocks(
     *,
     paths: dict[str, Path],
@@ -335,6 +557,217 @@ def _prepare_general_micro(
     if written != blocks:
         raise RuntimeError(f"WikiText stream yielded only {written}/{blocks} general blocks")
     return path
+
+
+def _load_known_exclusions(
+    old_corpus_dir: Path, exclusion_root: Path | None
+) -> tuple[set[str], set[str]]:
+    repositories: set[str] = set()
+    content_hashes: set[str] = set()
+    repository_path = old_corpus_dir / "validation_repositories.json"
+    if repository_path.exists():
+        repositories.update(json.loads(repository_path.read_text(encoding="utf-8")))
+    records_path = old_corpus_dir / "validation_records.jsonl"
+    if records_path.exists():
+        for line in records_path.read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            if record.get("repository"):
+                repositories.add(record["repository"])
+            if record.get("content_sha256"):
+                content_hashes.add(record["content_sha256"])
+    if exclusion_root is not None and exclusion_root.exists():
+        for path in sorted(exclusion_root.rglob("*.jsonl")):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                stack = [record]
+                while stack:
+                    value = stack.pop()
+                    if isinstance(value, dict):
+                        stack.extend(value.values())
+                    elif isinstance(value, list):
+                        stack.extend(value)
+                    elif isinstance(value, str) and value:
+                        content_hashes.add(sha256(value.encode("utf-8")).hexdigest())
+                if isinstance(record, dict):
+                    prefix = record.get("prefix")
+                    expected = record.get("expected")
+                    suffix = record.get("suffix")
+                    if all(isinstance(value, str) for value in (prefix, expected, suffix)):
+                        content_hashes.add(
+                            sha256(f"{prefix}{expected}{suffix}".encode()).hexdigest()
+                        )
+                    current = record.get("current")
+                    if isinstance(current, str):
+                        content_hashes.add(sha256(current.encode("utf-8")).hexdigest())
+    return repositories, content_hashes
+
+
+def prepare_research_corpus(
+    output_dir: Path,
+    *,
+    old_corpus_dir: Path,
+    exclusion_root: Path | None = None,
+    train_tokens: int = 5_013_504,
+    development_tokens_per_language: int = 114_688,
+    test_tokens_per_language: int = 114_688,
+    general_tokens: int = 16_384,
+    block_size: int = 2048,
+    shuffle_buffer: int = 10_000,
+    seed: int = 424_242,
+) -> dict:
+    """Freeze the fresh, matched research-r1 train/dev/test corpus."""
+    from transformers import AutoTokenizer
+
+    if train_tokens % block_size:
+        raise ValueError("train_tokens must be an exact multiple of block_size")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    token, credential_source = resolve_hf_token()
+    access = verify_access(token)
+    tokenizer = AutoTokenizer.from_pretrained(
+        MODEL_ID, revision=MODEL_REVISION, trust_remote_code=False, token=token
+    )
+    tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
+    if tokenizer.eos_token_id is None:
+        raise RuntimeError("tokenizer has no EOS token for source boundaries")
+    old_train_path = old_corpus_dir / "train_blocks.npy"
+    if not old_train_path.exists():
+        raise FileNotFoundError(f"old Stage-1 train blocks missing: {old_train_path}")
+    old_block_hashes = hash_packed_blocks(old_train_path)
+    excluded_repositories, excluded_content_hashes = _load_known_exclusions(
+        old_corpus_dir, exclusion_root
+    )
+    total_blocks = train_tokens // block_size
+    weights = {language: weight for language, (_, weight) in LANGUAGE_SPECS.items()}
+    allocations = allocate_blocks(weights, total_blocks)
+    development_blocks = development_tokens_per_language // block_size
+    test_blocks = test_tokens_per_language // block_size
+    if development_blocks < 1 or test_blocks < 1:
+        raise ValueError("development and test slices need at least one block per language")
+    train_paths: dict[str, Path] = {}
+    feeder = {}
+    manifests: dict[str, list[dict]] = {"train": [], "development": [], "test": []}
+    seen_content_hashes: set[str] = set()
+    emitted_block_hashes: set[str] = set()
+    for index, (language, (data_dir, _)) in enumerate(LANGUAGE_SPECS.items()):
+        core = language in CORE_LANGUAGES
+        paths, stats, rejected, language_manifests = _prepare_research_language(
+            language=language,
+            data_dir=data_dir,
+            train_blocks=allocations[language],
+            development_blocks=development_blocks if core else 0,
+            test_blocks=test_blocks if core else 0,
+            block_size=block_size,
+            tokenizer=tokenizer,
+            token=token,
+            output_dir=output_dir,
+            seed=seed + index,
+            shuffle_buffer=shuffle_buffer,
+            excluded_repositories=excluded_repositories,
+            excluded_content_hashes=excluded_content_hashes,
+            old_block_hashes=old_block_hashes,
+            seen_content_hashes=seen_content_hashes,
+            emitted_block_hashes=emitted_block_hashes,
+        )
+        train_paths[language] = paths["train"]
+        feeder[language] = {**asdict(stats), **stats.rates(), "rejected": dict(rejected)}
+        for split_name in manifests:
+            manifests[split_name].extend(language_manifests[split_name])
+    train_path, language_path, language_order = _combine_training_blocks(
+        paths=train_paths,
+        allocations=allocations,
+        block_size=block_size,
+        output_dir=output_dir,
+        seed=seed,
+    )
+    for path in train_paths.values():
+        path.unlink()
+    shutil.rmtree(output_dir / "language_blocks")
+    general_path = _prepare_general_micro(
+        tokenizer=tokenizer,
+        token=token,
+        block_size=block_size,
+        blocks=max(1, general_tokens // block_size),
+        output_dir=output_dir,
+    )
+    manifest_paths = {}
+    for split_name, records in manifests.items():
+        path = output_dir / f"{split_name}_manifest.jsonl"
+        with path.open("w", encoding="utf-8") as handle:
+            for record in records:
+                handle.write(json.dumps(record, sort_keys=True) + "\n")
+        manifest_paths[split_name] = path
+    corpus_files = [train_path, language_path, general_path, *manifest_paths.values()]
+    corpus_files.extend(sorted((output_dir / "micro").glob("*.npy")))
+    corpus_files.extend(sorted((output_dir / "test").glob("*.npy")))
+    package_versions = {}
+    for name in ("datasets", "huggingface_hub", "numpy", "tokenizers", "transformers"):
+        module = __import__(name)
+        package_versions[name] = getattr(module, "__version__", "unknown")
+    metadata = {
+        "schema_version": 2,
+        "campaign": "code_cpt_research_r1",
+        "dataset_id": DATASET_ID,
+        "dataset_revision": DATASET_REVISION,
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+        "tokenizer_revision": MODEL_REVISION,
+        "authenticated_username": access["username"],
+        "credential_source": credential_source,
+        "seed": seed,
+        "packing_seed": seed,
+        "split": {
+            "hash": "sha256(repository_name)[:8] big-endian modulo 1000",
+            "stage1_validation_excluded_buckets": list(range(10)),
+            "development_buckets": list(range(10, 20)),
+            "test_buckets": list(range(20, 30)),
+            "training_buckets": list(range(30, 1000)),
+        },
+        "freshness": {
+            "known_stage1_validation_repositories_excluded": len(excluded_repositories),
+            "known_content_hashes_excluded": len(excluded_content_hashes),
+            "old_packed_block_hashes_excluded": len(old_block_hashes),
+            "new_content_hash_deduplication": True,
+            "new_packed_block_deduplication": True,
+            "fully_disjoint_claim": False,
+            "overlap_uncertainty": (
+                "Stage-1 did not preserve training repository/file manifests. Exact old packed "
+                "blocks are excluded, but differently packed partial-document overlap cannot "
+                "be ruled out."
+            ),
+            "old_train_blocks_sha256": _file_sha256(old_train_path),
+        },
+        "block_size": block_size,
+        "eos_token_id": tokenizer.eos_token_id,
+        "shuffle_buffer_records": shuffle_buffer,
+        "requested_train_tokens": train_tokens,
+        "actual_train_tokens": total_blocks * block_size,
+        "training_blocks": total_blocks,
+        "language_block_allocations": allocations,
+        "language_order": language_order,
+        "development_blocks_per_core_language": development_blocks,
+        "development_input_tokens": development_blocks * block_size * len(CORE_LANGUAGES),
+        "development_scored_target_tokens": development_blocks
+        * (block_size - 1)
+        * len(CORE_LANGUAGES),
+        "test_blocks_per_core_language": test_blocks,
+        "test_input_tokens": test_blocks * block_size * len(CORE_LANGUAGES),
+        "test_scored_target_tokens": test_blocks * (block_size - 1) * len(CORE_LANGUAGES),
+        "general_tokens": max(1, general_tokens // block_size) * block_size,
+        "train_path": str(train_path),
+        "train_language_path": str(language_path),
+        "manifest_paths": {name: str(path) for name, path in manifest_paths.items()},
+        "feeder": feeder,
+        "corpus_fingerprint": corpus_fingerprint(corpus_files),
+        "python": platform.python_version(),
+        "packages": package_versions,
+    }
+    (output_dir / "corpus_metadata.json").write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return metadata
 
 
 def prepare_corpus(
@@ -464,16 +897,35 @@ def main() -> None:
     parser.add_argument("--block-size", type=int, default=2048)
     parser.add_argument("--shuffle-buffer", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=314159)
+    parser.add_argument("--research-r1", action="store_true")
+    parser.add_argument("--old-corpus-dir", type=Path)
+    parser.add_argument("--exclusion-root", type=Path)
     args = parser.parse_args()
-    metadata = prepare_corpus(
-        args.output_dir,
-        train_tokens=args.train_tokens,
-        validation_tokens_per_language=args.validation_tokens,
-        general_tokens=args.general_tokens,
-        block_size=args.block_size,
-        shuffle_buffer=args.shuffle_buffer,
-        seed=args.seed,
-    )
+    if args.research_r1:
+        if args.old_corpus_dir is None:
+            parser.error("--research-r1 requires --old-corpus-dir")
+        metadata = prepare_research_corpus(
+            args.output_dir,
+            old_corpus_dir=args.old_corpus_dir,
+            exclusion_root=args.exclusion_root,
+            train_tokens=args.train_tokens,
+            development_tokens_per_language=args.validation_tokens,
+            test_tokens_per_language=args.validation_tokens,
+            general_tokens=args.general_tokens,
+            block_size=args.block_size,
+            shuffle_buffer=args.shuffle_buffer,
+            seed=args.seed,
+        )
+    else:
+        metadata = prepare_corpus(
+            args.output_dir,
+            train_tokens=args.train_tokens,
+            validation_tokens_per_language=args.validation_tokens,
+            general_tokens=args.general_tokens,
+            block_size=args.block_size,
+            shuffle_buffer=args.shuffle_buffer,
+            seed=args.seed,
+        )
     print(json.dumps({"status": "PASS", "corpus": metadata}, indent=2, sort_keys=True))
 
 
