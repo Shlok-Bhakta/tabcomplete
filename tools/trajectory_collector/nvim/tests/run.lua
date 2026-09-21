@@ -634,6 +634,64 @@ ok("stale-anchor-dropped", function()
   vim.api.nvim_buf_delete(b, { force = true })
 end)
 
+-- 22: empty-line deletion still emits (guard must not swallow real deletes) --
+-- The phantom guard skips deltas whose line-count effect disagrees with the
+-- live buffer; a genuine dd on an empty line agrees and must be recorded.
+ok("empty-line-delete-emits", function()
+  test_reset()
+  local b = mkbuf({ "a", "", "c" }, scratch .. "/emptydel.lua")
+  buffers.attach(b)
+  vim.api.nvim_buf_set_lines(b, 1, 2, false, {})
+  local e = last(collector.queue)
+  assert_eq(e.event_type, "edit_delta")
+  assert_eq(e.payload.start_row, 1)
+  assert_eq(e.payload.old_end_row, 2)
+  assert_eq(e.payload.new_end_row, 1)
+  assert_eq(e.payload.deleted_text, "")
+  assert_eq(e.payload.inserted_text, "")
+  local live = vim.api.nvim_buf_get_lines(b, 0, -1, false)
+  assert_eq(table.concat(buffers.get_shadow(b).lines, ","), table.concat(live, ","))
+  vim.api.nvim_buf_delete(b, { force = true })
+end)
+
+-- 23: expected_total helper ---------------------------------------------------
+ok("expected-total-helper", function()
+  assert_eq(buffers.expected_total(10, 2, 5, 1), 8)
+  assert_eq(buffers.expected_total(3, 1, 2, 0), 2)
+  assert_eq(buffers.expected_total(3, 1, 1, 2), 5)
+  assert_eq(buffers.expected_total(0, 0, 0, 0), 0)
+end)
+
+-- 24: random ops keep shadow == live buffer -----------------------------------
+ok("random-ops-shadow-matches-live", function()
+  test_reset()
+  local b = mkbuf({ "l0", "l1", "l2", "l3" }, scratch .. "/fuzz.lua")
+  buffers.attach(b)
+  for step = 1, 60 do
+    local live = vim.api.nvim_buf_get_lines(b, 0, -1, false)
+    local n = #live
+    local op = math.random(3)
+    if op == 1 then
+      local at = math.random(0, n)
+      vim.api.nvim_buf_set_lines(b, at, at, false, { "ins" .. step })
+    elseif op == 2 and n > 0 then
+      local at = math.random(0, n - 1)
+      vim.api.nvim_buf_set_lines(b, at, at + 1, false, {})
+    else
+      local at = n > 0 and math.random(0, n - 1) or 0
+      local e = n > 0 and at + 1 or at
+      vim.api.nvim_buf_set_lines(b, at, e, false, { "rep" .. step })
+    end
+    local after = vim.api.nvim_buf_get_lines(b, 0, -1, false)
+    assert_eq(
+      table.concat(buffers.get_shadow(b).lines, "\n"),
+      table.concat(after, "\n"),
+      "shadow==live at step " .. step
+    )
+  end
+  vim.api.nvim_buf_delete(b, { force = true })
+end)
+
 print(("--\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
   print("FAILURES:")
