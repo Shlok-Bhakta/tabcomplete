@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "generator_version": "repository-dependency-v1",
+  "model_id": "Qwen/Qwen3.5-0.8B-Base",
+  "tokenizer_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+  "target_tokens": [2048, 4096, 8192, 16384, 32000],
+  "needle_depths": [0.12, 0.31, 0.5, 0.69, 0.88],
+  "dependency_kinds": ["constant", "enum", "signature", "field", "config"],
+  "seed": 24052025,
+  "tolerance_fraction": 0.04,
+  "expected_suite_sha256": "23bb7fc9709787b879d7ee4deaf9360f877d6d0b4840823ac0c4c0a28a8bd523"
+}
