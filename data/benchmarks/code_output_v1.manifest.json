@@ -1,0 +1,20 @@
+{
+  "case_count": 31,
+  "code_cases": 27,
+  "languages": {
+    "c": 3,
+    "cpp": 3,
+    "csharp": 3,
+    "go": 3,
+    "java": 3,
+    "javascript": 3,
+    "markdown": 4,
+    "python": 3,
+    "rust": 3,
+    "typescript": 3
+  },
+  "markdown_cases": 4,
+  "protocol": "causal-code-output-v1",
+  "sha256": "c28a845874478155a998a587845bfa9d3e9a081b4fcd504645adbe149b0930fa",
+  "version": 1
+}

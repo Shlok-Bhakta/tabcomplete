@@ -75,6 +75,15 @@ function M.splice_lines(shadow_lines, firstline, lastline, new_lines)
   return out
 end
 
+--- Expected live line count after applying a delta. Pure helper (unit-testable).
+---@param old_total integer shadow line count before the change
+---@param firstline integer zero-based start (inclusive)
+---@param lastline integer zero-based old end (exclusive)
+---@param new_count integer number of replacement lines
+function M.expected_total(old_total, firstline, lastline, new_count)
+  return old_total - (lastline - firstline) + new_count
+end
+
 -- nvim_buf_attach on_lines signature:
 --   on_lines(event, bufnr, changedtick, firstline, lastline, new_lastline, bytecount)
 -- where event == "lines" and the row range is ZERO-based, end-exclusive.
@@ -94,6 +103,24 @@ local function on_lines_handler(event, bufnr, changedtick, firstline, lastline, 
   end
   local ok, fresh = pcall(vim.api.nvim_buf_get_lines, bufnr, firstline, new_lastline, false)
   if not ok then
+    return
+  end
+  -- Phantom-notification guard: on rare occasions on_lines reports a triple
+  -- whose line-count effect never happened in the buffer (observed once in
+  -- production: a zero-text (10,11,10) deletion of an empty line that left
+  -- the buffer untouched, silently corrupting every later shadow row number
+  -- and breaking replay). The line count is cheap to check and must always
+  -- agree; on mismatch, resync the shadow from the live buffer and skip this
+  -- delta instead of poisoning the shadow. Anchors bound the loss.
+  local live_total_ok, live_total = pcall(vim.api.nvim_buf_line_count, bufnr)
+  if live_total_ok and live_total ~= M.expected_total(#shadow.lines, firstline, lastline, #fresh) then
+    shadow.lines = snapshot_lines(bufnr)
+    shadow.resync_count = (shadow.resync_count or 0) + 1
+    require("tabcomplete_trajectory.config").warn_once(
+      "phantom-delta-resync",
+      "tabcomplete-trajectory: skipped a phantom buffer delta and resynced shadow (count="
+        .. tostring(shadow.resync_count) .. ")"
+    )
     return
   end
   local delta = M.compute_delta(shadow.lines, firstline, lastline, fresh)
