@@ -105,20 +105,27 @@ local function on_lines_handler(event, bufnr, changedtick, firstline, lastline, 
   if not ok then
     return
   end
-  -- Phantom-notification guard: on rare occasions on_lines reports a triple
-  -- whose line-count effect never happened in the buffer (observed once in
-  -- production: a zero-text (10,11,10) deletion of an empty line that left
-  -- the buffer untouched, silently corrupting every later shadow row number
-  -- and breaking replay). The line count is cheap to check and must always
-  -- agree; on mismatch, resync the shadow from the live buffer and skip this
-  -- delta instead of poisoning the shadow. Anchors bound the loss.
+  -- Divergence guard: the shadow supplies deleted_text, so any disagreement
+  -- with the live buffer poisons every later row number (two production
+  -- cases: a zero-text deletion that never happened, and a whitespace retype
+  -- whose row content the buffer no longer had — both single-segment with
+  -- consecutive changedticks, prime suspects being formatter/autopairs edits
+  -- interleaving with the callback). The live line count must always agree
+  -- with the delta's line-count effect; on mismatch, resync the shadow from
+  -- the buffer and skip this delta instead of poisoning the shadow. (There
+  -- is deliberately no deleted-text cross-check: post-change, the live
+  -- buffer no longer contains the deleted lines by definition — the count is
+  -- the only live oracle. Count-neutral divergence remains possible but is
+  -- bounded by anchors and detectable offline via replay.) Skipping one
+  -- delta loses one keystroke of evidence; emitting against a diverged
+  -- shadow corrupts the whole file history.
   local live_total_ok, live_total = pcall(vim.api.nvim_buf_line_count, bufnr)
   if live_total_ok and live_total ~= M.expected_total(#shadow.lines, firstline, lastline, #fresh) then
     shadow.lines = snapshot_lines(bufnr)
     shadow.resync_count = (shadow.resync_count or 0) + 1
     require("tabcomplete_trajectory.config").warn_once(
       "phantom-delta-resync",
-      "tabcomplete-trajectory: skipped a phantom buffer delta and resynced shadow (count="
+      "tabcomplete-trajectory: skipped a divergent buffer delta and resynced shadow (count="
         .. tostring(shadow.resync_count) .. ")"
     )
     return
