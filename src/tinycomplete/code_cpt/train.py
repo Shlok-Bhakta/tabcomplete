@@ -72,6 +72,24 @@ def is_broad_deterioration(current: dict, baseline: dict) -> bool:
     return bool((code_worse and regressions >= 5) or general_collapse)
 
 
+def consecutive_regression_guard(
+    current: dict,
+    baseline: dict,
+    code_consecutive: int,
+    general_consecutive: int,
+) -> dict[str, int | bool]:
+    """Apply the campaign's conservative two-checkpoint validation guards."""
+    code_worse = current["overall_code"]["nll"] > baseline["overall_code"]["nll"] * 1.01
+    general_worse = current["general"]["nll"] > baseline["general"]["nll"] * 1.05
+    code_consecutive = code_consecutive + 1 if code_worse else 0
+    general_consecutive = general_consecutive + 1 if general_worse else 0
+    return {
+        "code_consecutive": code_consecutive,
+        "general_consecutive": general_consecutive,
+        "stop": code_consecutive >= 2 or general_consecutive >= 2,
+    }
+
+
 @dataclass
 class TrainingCounters:
     world_size: int = 1
@@ -501,6 +519,7 @@ class RunConfig:
     lr_floor: float = 3e-7
     decay_end_update: int = 153
     milestones: tuple[int, ...] = ()
+    evaluation_milestones: tuple[int, ...] = ()
     distributed_mode: str = "ddp"
 
     def __post_init__(self) -> None:
@@ -730,6 +749,7 @@ def run_training(config: RunConfig) -> dict:
             "attention": "sdpa",
         },
         "milestones": list(config.milestones),
+        "evaluation_milestones": list(config.evaluation_milestones),
         "baseline_path": str(config.baseline_path) if config.baseline_path else None,
         "init_from": str(config.init_from) if config.init_from else None,
         "resume_from": str(config.resume_from) if config.resume_from else None,
@@ -765,6 +785,9 @@ def run_training(config: RunConfig) -> dict:
     milestone_checked_tokens = counters.training_tokens
     stop_requested = False
     baseline_metrics = None
+    validation_history = []
+    code_regression_checks = 0
+    general_regression_checks = 0
     update_loss_sum = torch.zeros((), device=accelerator.device, dtype=torch.float32)
     update_loss_microbatches = 0
     if config.baseline_path is not None:
@@ -888,6 +911,52 @@ def run_training(config: RunConfig) -> dict:
                 non_training_seconds += pause_seconds
                 if steady_start_time is not None:
                     steady_non_training_seconds += pause_seconds
+            for milestone in milestones_crossed(
+                milestone_checked_tokens,
+                counters.training_tokens,
+                config.evaluation_milestones,
+            ):
+                pause_start = time.perf_counter()
+                evaluation = evaluate_micro(
+                    model,
+                    config.corpus_dir / "micro",
+                    accelerator.device,
+                    accelerator=accelerator,
+                )
+                guard = None
+                if baseline_metrics is not None:
+                    guard = consecutive_regression_guard(
+                        evaluation,
+                        baseline_metrics,
+                        code_regression_checks,
+                        general_regression_checks,
+                    )
+                    code_regression_checks = int(guard["code_consecutive"])
+                    general_regression_checks = int(guard["general_consecutive"])
+                    stop_requested = bool(guard["stop"])
+                record = {
+                    "milestone": milestone,
+                    "actual_training_tokens": counters.training_tokens,
+                    "optimizer_steps": counters.optimizer_steps,
+                    "metrics": evaluation,
+                    "guard": guard,
+                }
+                validation_history.append(record)
+                if accelerator.is_main_process:
+                    _json_write(
+                        config.output_dir / "evaluations" / f"tokens-{milestone:09d}.json",
+                        record,
+                    )
+                stop_tensor = torch.tensor(
+                    int(stop_requested), device=accelerator.device, dtype=torch.int32
+                )
+                stop_tensor = accelerator.reduce(stop_tensor, reduction="max")
+                stop_requested = bool(stop_tensor.item())
+                accelerator.wait_for_everyone()
+                pause_seconds = time.perf_counter() - pause_start
+                non_training_seconds += pause_seconds
+                if steady_start_time is not None:
+                    steady_non_training_seconds += pause_seconds
             milestone_checked_tokens = counters.training_tokens
             if stop_requested:
                 stop_reason = "broad_validation_deterioration"
@@ -973,6 +1042,11 @@ def run_training(config: RunConfig) -> dict:
         "loss_scale_overflows": loss_scale_overflows,
         "loss_history": losses,
         "gradient_norm_history": grad_norms,
+        "validation_history": validation_history,
+        "validation_guard": {
+            "code_consecutive": code_regression_checks,
+            "general_consecutive": general_regression_checks,
+        },
         "actual_language_mix": language_mix_for_prefix(
             config.corpus_dir / "train_languages.npy",
             corpus_metadata["language_order"],
@@ -1080,12 +1154,59 @@ def run_baseline(corpus_dir: Path, output_path: Path) -> dict:
     return result
 
 
+def run_checkpoint_evaluation(
+    checkpoint: Path,
+    corpus_dir: Path,
+    output_path: Path,
+    expected_sha256: str | None = None,
+) -> dict:
+    import torch
+    import transformers
+
+    if not torch.cuda.is_available():
+        raise RuntimeError("checkpoint evaluation requires CUDA")
+    identity = checkpoint_identity(checkpoint)
+    if expected_sha256 is not None:
+        model_weight = next(
+            (item for item in identity["weight_files"] if item["name"] == "model.safetensors"),
+            None,
+        )
+        if model_weight is None or model_weight["sha256"] != expected_sha256:
+            raise ValueError("checkpoint model SHA-256 does not match the declared artifact")
+    token, credential_source = resolve_optional_hf_token()
+    model, _ = _load_model_and_tokenizer(token, str(checkpoint))
+    model.config._attn_implementation = "sdpa"
+    diagnostic = loaded_model_diagnostic(model)
+    model.to(device="cuda")
+    metrics = evaluate_micro(model, corpus_dir / "micro", torch.device("cuda"))
+    result = {
+        "checkpoint": str(checkpoint),
+        "checkpoint_identity": identity,
+        "model_diagnostic": diagnostic,
+        "corpus_dir": str(corpus_dir),
+        "corpus_fingerprint": json.loads(
+            (corpus_dir / "corpus_metadata.json").read_text(encoding="utf-8")
+        ).get("corpus_fingerprint"),
+        "precision": "fp16 autocast over fp32 parameters",
+        "credential_source": credential_source,
+        "packages": {"torch": torch.__version__, "transformers": transformers.__version__},
+        "metrics": metrics,
+    }
+    _json_write(output_path, result)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
     baseline = subparsers.add_parser("baseline")
     baseline.add_argument("--corpus-dir", type=Path, required=True)
     baseline.add_argument("--output", type=Path, required=True)
+    checkpoint_eval = subparsers.add_parser("checkpoint-eval")
+    checkpoint_eval.add_argument("--checkpoint", type=Path, required=True)
+    checkpoint_eval.add_argument("--corpus-dir", type=Path, required=True)
+    checkpoint_eval.add_argument("--output", type=Path, required=True)
+    checkpoint_eval.add_argument("--expected-sha256")
     train = subparsers.add_parser("train")
     train.add_argument("--corpus-dir", type=Path, required=True)
     train.add_argument("--output-dir", type=Path, required=True)
@@ -1114,10 +1235,20 @@ def main() -> None:
     train.add_argument("--lr-floor", type=float, default=3e-7)
     train.add_argument("--decay-end-update", type=int, default=153)
     train.add_argument("--milestones", type=int, nargs="*", default=[])
+    train.add_argument("--evaluation-milestones", type=int, nargs="*", default=[])
     train.add_argument("--distributed-mode", choices=("ddp", "fsdp"), default="ddp")
     args = parser.parse_args()
     if args.command == "baseline":
         print(json.dumps(run_baseline(args.corpus_dir, args.output), indent=2, sort_keys=True))
+        return
+    if args.command == "checkpoint-eval":
+        result = run_checkpoint_evaluation(
+            args.checkpoint,
+            args.corpus_dir,
+            args.output,
+            args.expected_sha256,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
         return
     config = RunConfig(
         corpus_dir=args.corpus_dir,
@@ -1145,6 +1276,7 @@ def main() -> None:
         lr_floor=args.lr_floor,
         decay_end_update=args.decay_end_update,
         milestones=tuple(args.milestones),
+        evaluation_milestones=tuple(args.evaluation_milestones),
         distributed_mode=args.distributed_mode,
     )
     summary = run_training(config)

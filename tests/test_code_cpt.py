@@ -28,6 +28,7 @@ from tinycomplete.code_cpt.train import (
     RunConfig,
     TrainingCounters,
     bounded_optimizer_steps,
+    consecutive_regression_guard,
     distributed_block_indices,
     extract_mtp_from_snapshot,
     is_broad_deterioration,
@@ -265,6 +266,20 @@ def test_broad_deterioration_requires_clear_multi_language_regression() -> None:
     assert is_broad_deterioration(current, baseline)
     current["overall_code"]["nll"] = 0.99
     assert not is_broad_deterioration(current, baseline)
+
+
+def test_validation_guard_requires_two_consecutive_regressions() -> None:
+    baseline = {"overall_code": {"nll": 1.0}, "general": {"nll": 2.0}}
+    code_worse = {"overall_code": {"nll": 1.011}, "general": {"nll": 2.0}}
+    recovered = {"overall_code": {"nll": 0.99}, "general": {"nll": 2.0}}
+    general_worse = {"overall_code": {"nll": 1.0}, "general": {"nll": 2.101}}
+
+    first = consecutive_regression_guard(code_worse, baseline, 0, 0)
+    assert first == {"code_consecutive": 1, "general_consecutive": 0, "stop": False}
+    second = consecutive_regression_guard(code_worse, baseline, 1, 0)
+    assert second["stop"] is True
+    assert consecutive_regression_guard(recovered, baseline, 1, 0)["code_consecutive"] == 0
+    assert consecutive_regression_guard(general_worse, baseline, 0, 1)["stop"] is True
 
 
 def test_optimizer_steps_drop_incomplete_corpus_tail() -> None:
