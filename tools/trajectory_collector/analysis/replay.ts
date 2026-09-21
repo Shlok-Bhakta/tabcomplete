@@ -62,7 +62,22 @@ for (const d of deltas) {
     }
     continue;
   }
-  const ins = p.inserted_text === "" ? [] : p.inserted_text.split("\n");
+  const ins =
+    p.inserted_text === ""
+      ? new Array<string>(p.new_end_row - p.start_row).fill("")
+      : p.inserted_text.split("\n");
+  if (ins.length !== p.new_end_row - p.start_row) {
+    console.error(
+      `delta shape mismatch ts=${d.timestamp_ms} seq=${d.sequence_number}: ` +
+        `inserted text splits to ${ins.length} lines but rows say ${p.new_end_row - p.start_row}`,
+    );
+    failures++;
+    if (failures > 5) {
+      console.error("... stopping after 5 mismatches");
+      break;
+    }
+    continue;
+  }
   lines.splice(p.start_row, p.old_end_row - p.start_row, ...ins);
 }
 
