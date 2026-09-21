@@ -132,6 +132,7 @@ duplicate from the export without changing values.
 |---|---:|---:|---|
 | F16 GGUF | 335 | 1,557,662,112 | `649b11696a1d3a9b8a89a5795b9ae96f7f68862d4002e397deab635b01571c2b` |
 | Q4_K_M GGUF | 335 | 541,903,264 | `3bdb86c93d9756cd0ac3fd7820adb6b23acabb98e0afd85825a8470ec6ab3abb` |
+| 11.993M F16 GGUF | 335 | 1,557,662,208 | `385e952145a696fd0f6a71ebc1f439ef66d901323edd6a6e0e06dcbe1c8943ac` |
 
 Both artifacts load in llama.cpp and produce deterministic raw completions. The MTP
 block is present but reported unused during ordinary causal verification. Stage 1
