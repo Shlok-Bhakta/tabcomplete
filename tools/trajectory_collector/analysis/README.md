@@ -24,6 +24,7 @@ once — see "lessons" below).
 | `netdiff.ts --file <relpath\|abspath> [--repo ID] [--db PATH]` | READ-ONLY | first anchor → last anchor unified diff + gross-vs-net stats |
 | `replay.ts --file <relpath\|abspath> [--repo ID] [--db PATH]` | READ-ONLY | replays anchor + ordered deltas, asserts byte-equality with final anchor (exit 0/1) |
 | `trajectory.ts --session <uuid-prefix> \| --live [--db PATH]` | READ-ONLY | session summary: event counts, files touched, time span |
+| `examples.ts --file <relpath\|abspath> [--repo ID] [--db PATH] [--history N]` | READ-ONLY | emits JSONL next-edit candidate pairs (state → action), one per anchor window |
 | `backup.ts [--db PATH] [--dest DIR]` | **WRITE** | timestamped copy of sqlite + wal + shm; run before any write op |
 
 Defaults: `--db` is `$TABCOMPLETE_COLLECTOR_DB` or

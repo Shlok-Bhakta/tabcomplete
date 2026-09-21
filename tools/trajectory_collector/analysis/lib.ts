@@ -176,6 +176,9 @@ export interface DeltaEvent {
     deleted_text: string;
     inserted_text: string;
     path?: string;
+    cursor_after?: { row: number; col: number } | null;
+    changedtick?: number;
+    bytecount?: number;
   };
 }
 
@@ -204,4 +207,81 @@ export function fileDeltas(
     session_id: r.session_id,
     payload: JSON.parse(r.payload_json),
   }));
+}
+
+export function splitLines(s: string): string[] {
+  if (s === "") return [];
+  const parts = s.split("\n");
+  if (parts.length > 0 && parts[parts.length - 1] === "") parts.pop();
+  return parts;
+}
+
+export interface LineOp {
+  t: " " | "-" | "+";
+  line: string;
+  aNum: number; // 1-based, -1 for insertions
+  bNum: number; // 1-based, -1 for deletions
+}
+
+/** Exact LCS op list with 1-based line numbers on both sides. */
+export function lineOps(a: string[], b: string[]): LineOp[] {
+  const n = a.length;
+  const m = b.length;
+  const dp: Uint32Array[] = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i]![j] = a[i] === b[j] ? dp[i + 1]![j + 1]! + 1 : Math.max(dp[i + 1]![j]!, dp[i]![j + 1]!);
+    }
+  }
+  const out: LineOp[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) {
+      out.push({ t: " ", line: a[i]!, aNum: i + 1, bNum: j + 1 });
+      i++;
+      j++;
+    } else if (dp[i + 1]![j]! >= dp[i]![j + 1]!) {
+      out.push({ t: "-", line: a[i]!, aNum: i + 1, bNum: -1 });
+      i++;
+    } else {
+      out.push({ t: "+", line: b[j]!, aNum: -1, bNum: j + 1 });
+      j++;
+    }
+  }
+  while (i < n) out.push({ t: "-", line: a[i]!, aNum: i++ + 1, bNum: -1 });
+  while (j < m) out.push({ t: "+", line: b[j]!, aNum: -1, bNum: j++ + 1 });
+  return out;
+}
+
+export interface Hunk {
+  aStart: number;
+  aCount: number;
+  bStart: number;
+  bCount: number;
+  body: LineOp[];
+}
+
+/** Group an op list into hunks; change runs merge across <= 2*CTX context lines. */
+export function opsToHunks(all: LineOp[], context = 3): Hunk[] {
+  const changeIdx: number[] = [];
+  for (let k = 0; k < all.length; k++) if (all[k]!.t !== " ") changeIdx.push(k);
+  const hunks: Hunk[] = [];
+  let g = 0;
+  while (g < changeIdx.length) {
+    let h = g;
+    while (h + 1 < changeIdx.length && changeIdx[h + 1]! - changeIdx[h]! <= 2 * context + 1) h++;
+    const lo = Math.max(0, changeIdx[g]! - context);
+    const hi = Math.min(all.length, changeIdx[h]! + context + 1);
+    const body = all.slice(lo, hi);
+    hunks.push({
+      aStart: body.find((o) => o.t !== "+")!.aNum,
+      aCount: body.filter((o) => o.t !== "+").length,
+      bStart: body.find((o) => o.t !== "-")!.bNum,
+      bCount: body.filter((o) => o.t !== "-").length,
+      body,
+    });
+    g = h + 1;
+  }
+  return hunks;
 }
