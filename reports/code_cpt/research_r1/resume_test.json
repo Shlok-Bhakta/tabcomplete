@@ -1,0 +1,142 @@
+{
+  "continuous_next_block": 128,
+  "continuous_updates": 8,
+  "elapsed_seconds_including_setup": 1084.2963836193085,
+  "loss_absolute_differences": [
+    0.0,
+    4.0531158447265625e-06,
+    2.8967857360839844e-05,
+    3.2186508178710938e-06,
+    5.4836273193359375e-06,
+    7.748603820800781e-06,
+    1.6927719116210938e-05,
+    1.537799835205078e-05
+  ],
+  "max_loss_absolute_difference": 2.8967857360839844e-05,
+  "parent": "P12",
+  "parent_sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43",
+  "resumed_final_updates": 8,
+  "resumed_next_block": 128,
+  "same_examples_consumed_once": true,
+  "schema_version": 1,
+  "split_first_updates": 4,
+  "state_comparison": {
+    "exact_match": false,
+    "ranks": [
+      {
+        "checkpoint_a": "/kaggle/working/code_cpt_resume_r1/continuous/resume-latest",
+        "checkpoint_b": "/kaggle/working/code_cpt_resume_r1/split-second/resume-latest",
+        "metadata_a": {
+          "attempted_optimizer_updates": 8,
+          "data_wait_seconds": 5.452527455000222,
+          "decay_end_update": 153,
+          "lr_schedule": "constant",
+          "microsteps": 64,
+          "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+          "next_block": 128,
+          "optimizer_steps": 8,
+          "parent_training_tokens": 11993088,
+          "skipped_optimizer_updates": 0,
+          "tokens_per_update": 32768,
+          "training_tokens": 262144,
+          "world_size": 2
+        },
+        "metadata_b": {
+          "attempted_optimizer_updates": 8,
+          "data_wait_seconds": 8.195876400000998,
+          "decay_end_update": 153,
+          "lr_schedule": "constant",
+          "microsteps": 64,
+          "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+          "next_block": 128,
+          "optimizer_steps": 8,
+          "parent_training_tokens": 11993088,
+          "skipped_optimizer_updates": 0,
+          "tokens_per_update": 32768,
+          "training_tokens": 262144,
+          "world_size": 2
+        },
+        "metadata_equal": false,
+        "model": {
+          "different_element_count": 453765230,
+          "different_tensor_count": 320,
+          "element_count": 503336352,
+          "exact_match": false,
+          "max_abs_difference": 0.00010552487219683826,
+          "mean_abs_difference": 5.52675750834513e-08,
+          "tensor_count": 321
+        },
+        "optimizer": {
+          "different_element_count": 183102441,
+          "different_tensor_count": 760,
+          "element_count": 755412408,
+          "exact_match": false,
+          "max_abs_difference": 4.3508538510650396e-05,
+          "mean_abs_difference": 2.2914246258310278e-10,
+          "tensor_count": 1074
+        },
+        "optimizer_structure_equal": true,
+        "scaler_equal": true,
+        "scheduler_equal": true
+      },
+      {
+        "checkpoint_a": "/kaggle/working/code_cpt_resume_r1/continuous/resume-latest",
+        "checkpoint_b": "/kaggle/working/code_cpt_resume_r1/split-second/resume-latest",
+        "metadata_a": {
+          "attempted_optimizer_updates": 8,
+          "data_wait_seconds": 5.452527455000222,
+          "decay_end_update": 153,
+          "lr_schedule": "constant",
+          "microsteps": 64,
+          "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+          "next_block": 128,
+          "optimizer_steps": 8,
+          "parent_training_tokens": 11993088,
+          "skipped_optimizer_updates": 0,
+          "tokens_per_update": 32768,
+          "training_tokens": 262144,
+          "world_size": 2
+        },
+        "metadata_b": {
+          "attempted_optimizer_updates": 8,
+          "data_wait_seconds": 8.195876400000998,
+          "decay_end_update": 153,
+          "lr_schedule": "constant",
+          "microsteps": 64,
+          "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+          "next_block": 128,
+          "optimizer_steps": 8,
+          "parent_training_tokens": 11993088,
+          "skipped_optimizer_updates": 0,
+          "tokens_per_update": 32768,
+          "training_tokens": 262144,
+          "world_size": 2
+        },
+        "metadata_equal": false,
+        "model": {
+          "different_element_count": 343365418,
+          "different_tensor_count": 317,
+          "element_count": 503336352,
+          "exact_match": false,
+          "max_abs_difference": 5.575409159064293e-05,
+          "mean_abs_difference": 4.2589398049750605e-08,
+          "tensor_count": 321
+        },
+        "optimizer": {
+          "different_element_count": 181882635,
+          "different_tensor_count": 390,
+          "element_count": 755369068,
+          "exact_match": false,
+          "max_abs_difference": 1.2486387277022004e-05,
+          "mean_abs_difference": 2.0739912600300463e-10,
+          "tensor_count": 536
+        },
+        "optimizer_structure_equal": true,
+        "scaler_equal": true,
+        "scheduler_equal": true
+      }
+    ],
+    "world_size": 2
+  },
+  "state_exact_match": false
+}

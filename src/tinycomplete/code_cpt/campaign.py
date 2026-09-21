@@ -162,8 +162,11 @@ class CampaignOrchestrator:
         return record
 
     def submit(self) -> None:
-        status = _run(["kaggle", "kernels", "status", KERNEL_REF])
-        if "RUNNING" in status or "QUEUED" in status:
+        process = subprocess.run(
+            ["kaggle", "kernels", "status", KERNEL_REF], text=True, capture_output=True
+        )
+        status = process.stdout + process.stderr
+        if process.returncode == 0 and ("RUNNING" in status or "QUEUED" in status):
             raise RuntimeError(f"campaign kernel is already active: {status.strip()}")
         _run(
             ["kaggle", "kernels", "push", "-p", "kaggle/code_cpt_campaign_r1"],

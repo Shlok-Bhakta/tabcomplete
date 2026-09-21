@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pytest
 import torch
 
 from tinycomplete.code_cpt.data import (
     BlockPacker,
+    BlockProvenanceTracker,
     FilterReason,
     LanguageMix,
     RepoSplit,
@@ -15,7 +17,11 @@ from tinycomplete.code_cpt.data import (
     repository_identity,
     repository_path,
 )
-from tinycomplete.code_cpt.eval import causal_nll_from_logits
+from tinycomplete.code_cpt.eval import (
+    attribute_token_losses,
+    causal_nll_from_logits,
+    paired_repository_bootstrap,
+)
 from tinycomplete.code_cpt.prepare import (
     corpus_fingerprint,
     hash_packed_blocks,
@@ -86,6 +92,22 @@ def test_block_packer_inserts_eos_and_emits_exact_blocks() -> None:
     assert math.isclose(packer.packing_efficiency, 1.0)
 
 
+def test_block_provenance_tracks_cross_repository_packing() -> None:
+    tracker = BlockProvenanceTracker(block_size=5)
+
+    assert tracker.add_document("repo-a", 3) == []
+    blocks = tracker.add_document("repo-b", 4)
+
+    assert blocks == [
+        [
+            {"repository": "repo-a", "start": 0, "end": 3},
+            {"repository": "__boundary__", "start": 3, "end": 4},
+            {"repository": "repo-b", "start": 4, "end": 5},
+        ]
+    ]
+    assert tracker.pending_tokens == 3
+
+
 def test_language_mix_uses_token_targets_and_reports_actual_percentages() -> None:
     mix = LanguageMix({"python": 0.6, "rust": 0.4}, total_tokens=1_000)
 
@@ -138,6 +160,39 @@ def test_causal_nll_shifts_targets_and_ignores_padding() -> None:
 
     assert token_count == 2
     assert total_nll.item() < 1e-6
+
+
+def test_repository_attribution_excludes_unscored_first_token_and_boundaries() -> None:
+    losses = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    spans = [
+        {"repository": "repo-a", "start": 0, "end": 2},
+        {"repository": "__boundary__", "start": 2, "end": 3},
+        {"repository": "repo-b", "start": 3, "end": 5},
+    ]
+
+    attributed = attribute_token_losses(losses, spans)
+
+    assert attributed == {
+        "repo-a": {"nll_sum": 1.0, "tokens": 1},
+        "repo-b": {"nll_sum": 7.0, "tokens": 2},
+    }
+
+
+def test_paired_repository_bootstrap_keeps_model_pairs_matched() -> None:
+    first = [
+        {"repository": "a", "language": "python", "nll_sum": 10.0, "tokens": 10},
+        {"repository": "b", "language": "rust", "nll_sum": 20.0, "tokens": 10},
+    ]
+    second = [
+        {"repository": "a", "language": "python", "nll_sum": 9.0, "tokens": 10},
+        {"repository": "b", "language": "rust", "nll_sum": 18.0, "tokens": 10},
+    ]
+
+    result = paired_repository_bootstrap(first, second, samples=100, seed=4)
+
+    assert result["repository_count"] == 2
+    assert result["token_weighted_difference"] == pytest.approx(-0.15)
+    assert result["balanced_language_difference"] == pytest.approx(-0.15)
 
 
 def test_distributed_block_indices_are_disjoint_and_equal_length() -> None:
@@ -280,6 +335,14 @@ def test_validation_guard_requires_two_consecutive_regressions() -> None:
     assert second["stop"] is True
     assert consecutive_regression_guard(recovered, baseline, 1, 0)["code_consecutive"] == 0
     assert consecutive_regression_guard(general_worse, baseline, 0, 1)["stop"] is True
+
+
+def test_production_run_config_defaults_to_forward_prefetch() -> None:
+    config = RunConfig(
+        corpus_dir=Path("corpus"), output_dir=Path("output"), learning_rate=3e-6
+    )
+
+    assert config.fsdp_forward_prefetch is True
 
 
 def test_optimizer_steps_drop_incomplete_corpus_tail() -> None:

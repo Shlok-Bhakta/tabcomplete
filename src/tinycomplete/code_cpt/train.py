@@ -304,6 +304,61 @@ def evaluate_micro(
     return result
 
 
+def evaluate_repository_micro(model, micro_dir: Path, device) -> list[dict]:
+    """Preserve repository loss sums/counts for paired uncertainty estimates."""
+    import torch
+    import torch.nn.functional as F
+
+    from tinycomplete.code_cpt.eval import attribute_token_losses
+
+    model.eval()
+    totals: dict[tuple[str, str], dict[str, float | int]] = {}
+    with torch.inference_mode():
+        for language in CORE_LANGUAGES:
+            provenance_path = micro_dir / f"{language}_provenance.jsonl"
+            if not provenance_path.exists():
+                raise FileNotFoundError(f"repository provenance missing: {provenance_path}")
+            provenance = [
+                json.loads(line)
+                for line in provenance_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            blocks = np.load(micro_dir / f"{language}.npy", mmap_mode="r")
+            if len(provenance) != len(blocks):
+                raise ValueError(f"repository provenance count differs for {language}")
+            for block_index, record in enumerate(provenance):
+                if int(record["block_index"]) != block_index:
+                    raise ValueError(f"repository provenance order differs for {language}")
+                batch = torch.from_numpy(
+                    np.array(blocks[block_index : block_index + 1], dtype=np.int64, copy=True)
+                ).to(device)
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    logits = model(input_ids=batch, use_cache=False).logits
+                losses = F.cross_entropy(
+                    logits[:, :-1, :].float().reshape(-1, logits.shape[-1]),
+                    batch[:, 1:].reshape(-1),
+                    reduction="none",
+                )
+                attributed = attribute_token_losses(losses, record["spans"])
+                for repository, values in attributed.items():
+                    row = totals.setdefault(
+                        (repository, language), {"nll_sum": 0.0, "tokens": 0}
+                    )
+                    row["nll_sum"] = float(row["nll_sum"]) + float(values["nll_sum"])
+                    row["tokens"] = int(row["tokens"]) + int(values["tokens"])
+                del batch, logits, losses
+    model.train()
+    return [
+        {
+            "repository": repository,
+            "language": language,
+            "nll_sum": values["nll_sum"],
+            "tokens": values["tokens"],
+        }
+        for (repository, language), values in sorted(totals.items())
+    ]
+
+
 def extract_mtp_from_snapshot(snapshot: Path, destination: Path) -> dict:
     """Copy ignored native MTP tensors from a downloaded snapshot into a sidecar."""
     from safetensors import safe_open
@@ -526,6 +581,7 @@ class RunConfig:
     decay_end_update: int = 153
     milestones: tuple[int, ...] = ()
     evaluation_milestones: tuple[int, ...] = ()
+    fsdp_forward_prefetch: bool = True
     distributed_mode: str = "ddp"
 
     def __post_init__(self) -> None:
@@ -613,7 +669,10 @@ def run_training(config: RunConfig) -> dict:
     )
 
     if config.distributed_mode == "fsdp":
-        runtime = ProductionRuntime(gradient_accumulation=config.gradient_accumulation)
+        runtime = ProductionRuntime(
+            gradient_accumulation=config.gradient_accumulation,
+            forward_prefetch=config.fsdp_forward_prefetch,
+        )
         accelerator = build_production_accelerator(runtime)
     elif config.distributed_mode == "ddp":
         accumulation_plugin = GradientAccumulationPlugin(
@@ -751,7 +810,9 @@ def run_training(config: RunConfig) -> dict:
             "compile_mode": "default" if config.distributed_mode == "fsdp" else None,
             "compile_dynamic": False if config.distributed_mode == "fsdp" else None,
             "backward_prefetch": "BACKWARD_PRE" if config.distributed_mode == "fsdp" else None,
-            "forward_prefetch": config.distributed_mode == "fsdp",
+            "forward_prefetch": (
+                config.fsdp_forward_prefetch if config.distributed_mode == "fsdp" else None
+            ),
             "attention": "sdpa",
         },
         "milestones": list(config.milestones),
@@ -1157,6 +1218,17 @@ def run_baseline(corpus_dir: Path, output_path: Path) -> dict:
         "metrics": metrics,
     }
     _json_write(output_path, result)
+    if all(
+        (corpus_dir / "micro" / f"{language}_provenance.jsonl").exists()
+        for language in CORE_LANGUAGES
+    ):
+        repository_metrics = evaluate_repository_micro(
+            model, corpus_dir / "micro", torch.device("cuda")
+        )
+        repository_path = output_path.with_name(f"{output_path.stem}_repositories.json")
+        _json_write(repository_path, repository_metrics)
+        result["repository_metrics_path"] = str(repository_path)
+        _json_write(output_path, result)
     return result
 
 
@@ -1242,6 +1314,9 @@ def main() -> None:
     train.add_argument("--decay-end-update", type=int, default=153)
     train.add_argument("--milestones", type=int, nargs="*", default=[])
     train.add_argument("--evaluation-milestones", type=int, nargs="*", default=[])
+    train.add_argument(
+        "--fsdp-forward-prefetch", action=argparse.BooleanOptionalAction, default=True
+    )
     train.add_argument("--distributed-mode", choices=("ddp", "fsdp"), default="ddp")
     args = parser.parse_args()
     if args.command == "baseline":
@@ -1283,6 +1358,7 @@ def main() -> None:
         decay_end_update=args.decay_end_update,
         milestones=tuple(args.milestones),
         evaluation_milestones=tuple(args.evaluation_milestones),
+        fsdp_forward_prefetch=args.fsdp_forward_prefetch,
         distributed_mode=args.distributed_mode,
     )
     summary = run_training(config)

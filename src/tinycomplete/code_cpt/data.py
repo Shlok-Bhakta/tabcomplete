@@ -209,6 +209,61 @@ class BlockPacker:
 
 
 @dataclass
+class BlockProvenanceTracker:
+    """Mirror BlockPacker while retaining repository spans for emitted blocks."""
+
+    block_size: int
+    pending: list[list[str | int]] = field(default_factory=list)
+    documents: int = 0
+
+    def _append(self, repository: str, tokens: int) -> None:
+        if tokens <= 0:
+            return
+        if self.pending and self.pending[-1][0] == repository:
+            self.pending[-1][1] = int(self.pending[-1][1]) + tokens
+        else:
+            self.pending.append([repository, tokens])
+
+    @property
+    def pending_tokens(self) -> int:
+        return sum(int(segment[1]) for segment in self.pending)
+
+    def add_document(self, repository: str, token_count: int) -> list[list[dict[str, str | int]]]:
+        if not repository:
+            raise ValueError("repository is required for block provenance")
+        if token_count <= 0:
+            return []
+        if self.documents:
+            self._append("__boundary__", 1)
+        self.documents += 1
+        self._append(repository, token_count)
+        blocks = []
+        while self.pending_tokens >= self.block_size:
+            remaining = self.block_size
+            position = 0
+            spans = []
+            while remaining:
+                repository_name = str(self.pending[0][0])
+                available = int(self.pending[0][1])
+                consumed = min(remaining, available)
+                spans.append(
+                    {
+                        "repository": repository_name,
+                        "start": position,
+                        "end": position + consumed,
+                    }
+                )
+                position += consumed
+                remaining -= consumed
+                if consumed == available:
+                    self.pending.pop(0)
+                else:
+                    self.pending[0][1] = available - consumed
+            blocks.append(spans)
+        return blocks
+
+
+@dataclass
 class LanguageMix:
     weights: dict[str, float]
     total_tokens: int

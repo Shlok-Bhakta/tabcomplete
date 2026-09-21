@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "generator_version": "matched-dependency-diagnostic-v2",
+  "model_id": "Qwen/Qwen3.5-0.8B-Base",
+  "tokenizer_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+  "target_tokens": [2048, 4096, 8192, 16384, 32000],
+  "dependency_families": ["constant", "enum", "signature", "field", "config"],
+  "conditions": ["short_control", "long_near", "long_far", "absent", "counterfactual"],
+  "seed": 731942,
+  "tolerance_fraction": 0.04
+}

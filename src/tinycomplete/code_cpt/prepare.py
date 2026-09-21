@@ -18,6 +18,7 @@ import numpy as np
 
 from tinycomplete.code_cpt.data import (
     BlockPacker,
+    BlockProvenanceTracker,
     RepoAssignment,
     RepoSplit,
     SourceFilter,
@@ -323,11 +324,12 @@ def _write_fresh_blocks(
     *,
     forbidden_hashes: set[str],
     emitted_hashes: set[str],
-) -> tuple[int, int]:
-    """Write nonduplicate blocks and return (written, rejected)."""
+) -> tuple[int, int, list[int]]:
+    """Write nonduplicate blocks and return counts plus accepted input indices."""
     written = 0
     rejected = 0
-    for block in blocks:
+    accepted_indices = []
+    for input_index, block in enumerate(blocks):
         if start + written >= limit:
             break
         packed = np.asarray(block, dtype=np.uint32)
@@ -337,8 +339,9 @@ def _write_fresh_blocks(
             continue
         array[start + written] = packed
         emitted_hashes.add(digest)
+        accepted_indices.append(input_index)
         written += 1
-    return written, rejected
+    return written, rejected, accepted_indices
 
 
 def _prepare_research_language(
@@ -393,6 +396,10 @@ def _prepare_research_language(
         for name, limit in limits.items()
         if limit
     }
+    provenance_trackers = {
+        name: BlockProvenanceTracker(block_size) for name, limit in limits.items() if limit
+    }
+    block_provenance: dict[str, list[dict]] = {name: [] for name in limits}
     written = Counter()
     rejected: Counter[str] = Counter()
     manifests: dict[str, list[dict]] = {name: [] for name in limits}
@@ -451,10 +458,17 @@ def _prepare_research_language(
             rejected["empty_tokens"] += 1
             continue
         blocks = packers[split_name].add_document(ids)
+        repository_hash = sha256(repo_name.encode("utf-8")).hexdigest()
+        provenance_blocks = provenance_trackers[split_name].add_document(
+            repository_hash, len(ids)
+        )
+        if len(provenance_blocks) != len(blocks):
+            raise RuntimeError("token blocks and provenance blocks diverged")
         forbidden = old_block_hashes
-        count, duplicate_blocks = _write_fresh_blocks(
+        output_start = written[split_name]
+        count, duplicate_blocks, accepted_indices = _write_fresh_blocks(
             arrays[split_name],
-            written[split_name],
+            output_start,
             blocks,
             limits[split_name],
             forbidden_hashes=forbidden,
@@ -462,6 +476,14 @@ def _prepare_research_language(
         )
         written[split_name] += count
         rejected["duplicate_packed_block"] += duplicate_blocks
+        for output_offset, input_index in enumerate(accepted_indices):
+            block_provenance[split_name].append(
+                {
+                    "block_index": output_start + output_offset,
+                    "language": language,
+                    "spans": provenance_blocks[input_index],
+                }
+            )
         manifests[split_name].append(
             {
                 "dataset_id": DATASET_ID,
@@ -490,6 +512,15 @@ def _prepare_research_language(
         stats.validation_packing_efficiency = dev_packer.emitted_tokens / available
     for array in arrays.values():
         array.flush()
+    for split_name in ("development", "test"):
+        if not block_provenance[split_name]:
+            continue
+        directory = output_dir / ("micro" if split_name == "development" else "test")
+        provenance_path = directory / f"{language}_provenance.jsonl"
+        with provenance_path.open("w", encoding="utf-8") as handle:
+            for record in block_provenance[split_name]:
+                handle.write(json.dumps(record, sort_keys=True) + "\n")
+        paths[f"{split_name}_provenance"] = provenance_path
     for name, limit in limits.items():
         if written[name] != limit:
             raise RuntimeError(
@@ -649,6 +680,7 @@ def prepare_research_corpus(
     train_paths: dict[str, Path] = {}
     feeder = {}
     manifests: dict[str, list[dict]] = {"train": [], "development": [], "test": []}
+    provenance_paths: list[Path] = []
     seen_content_hashes: set[str] = set()
     emitted_block_hashes: set[str] = set()
     for index, (language, (data_dir, _)) in enumerate(LANGUAGE_SPECS.items()):
@@ -672,6 +704,9 @@ def prepare_research_corpus(
             emitted_block_hashes=emitted_block_hashes,
         )
         train_paths[language] = paths["train"]
+        provenance_paths.extend(
+            path for name, path in paths.items() if name.endswith("_provenance")
+        )
         feeder[language] = {**asdict(stats), **stats.rates(), "rejected": dict(rejected)}
         for split_name in manifests:
             manifests[split_name].extend(language_manifests[split_name])
@@ -759,6 +794,14 @@ def prepare_research_corpus(
         "train_path": str(train_path),
         "train_language_path": str(language_path),
         "manifest_paths": {name: str(path) for name, path in manifest_paths.items()},
+        "repository_block_provenance": [
+            {
+                "path": str(path),
+                "bytes": path.stat().st_size,
+                "sha256": _file_sha256(path),
+            }
+            for path in sorted(provenance_paths)
+        ],
         "feeder": feeder,
         "corpus_fingerprint": corpus_fingerprint(corpus_files),
         "python": platform.python_version(),
