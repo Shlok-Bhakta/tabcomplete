@@ -24,6 +24,7 @@ once — see "lessons" below).
 | `netdiff.ts --file <relpath\|abspath> [--repo ID] [--db PATH]` | READ-ONLY | first anchor → last anchor unified diff + gross-vs-net stats |
 | `replay.ts --file <relpath\|abspath> [--repo ID] [--db PATH]` | READ-ONLY | replays anchor + ordered deltas, asserts byte-equality with final anchor (exit 0/1) |
 | `trajectory.ts --session <uuid-prefix> \| --live [--db PATH]` | READ-ONLY | session summary: event counts, files touched, time span |
+| `examples.ts --file <relpath\|abspath> [--repo ID] [--db PATH] [--history N]` | READ-ONLY | emits JSONL next-edit candidate pairs (state → action), one per anchor window |
 | `backup.ts [--db PATH] [--dest DIR]` | **WRITE** | timestamped copy of sqlite + wal + shm; run before any write op |
 
 Defaults: `--db` is `$TABCOMPLETE_COLLECTOR_DB` or
@@ -54,11 +55,18 @@ Defaults: `--db` is `$TABCOMPLETE_COLLECTOR_DB` or
    empty line with empty inserted text) never happened in the buffer —
    changedtick is consecutive and bytecounts are consistent, yet replaying it
    shifts every later row and breaks byte-equality (187/188 deltas verify
-   clean around it). `replay.ts` names this signature when it sees it. The
-   Neovim plugin now guards the whole class live (`buffers.lua`:
-   expected-vs-live line-count check, shadow resync + skip on mismatch,
-   covered by `empty-line-delete-emits` and `random-ops-shadow-matches-live`
-   headless tests). Historical rows predate the guard and stay as-is.
+   clean around it). A second file (`structs3.rs`) breaks the same way at a
+   whitespace retype with no zero-text deletion anywhere nearby — the common
+   thread is whitespace fiddling with single-segment consecutive ticks, prime
+   suspects being formatter/autopairs edits interleaving with the callback.
+   `replay.ts` names phantom suspects on failure. The Neovim plugin guards
+   the whole class live (`buffers.lua`: expected-vs-live line-count check on
+   every delta, shadow resync + skip on mismatch, covered by
+   `empty-line-delete-emits`, `random-ops-shadow-matches-live`, and
+   `divergent-shadow-resyncs` headless tests). Note the guard's limit, stated
+   in code: post-change, the live buffer cannot corroborate deleted text, so
+   count-neutral divergence is still possible — bounded by anchors,
+   detectable here. Historical rows predate the guard and stay as-is.
 
 ## Typecheck
 

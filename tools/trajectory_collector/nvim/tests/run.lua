@@ -692,6 +692,30 @@ ok("random-ops-shadow-matches-live", function()
   vim.api.nvim_buf_delete(b, { force = true })
 end)
 
+-- 25: diverged shadow resyncs instead of poisoning history --------------------
+ok("divergent-shadow-resyncs", function()
+  test_reset()
+  local b = mkbuf({ "a", "b", "c" }, scratch .. "/resync.lua")
+  buffers.attach(b)
+  -- Simulate a line-count phantom: shadow lost a line the buffer still has.
+  local sh = buffers.get_shadow(b)
+  table.remove(sh.lines, 2)
+  vim.api.nvim_buf_set_lines(b, 0, 1, false, { "A" })
+  for _, e in ipairs(collector.queue) do
+    assert_true(e.event_type ~= "edit_delta", "divergent delta must be skipped")
+  end
+  assert_eq(buffers.get_shadow(b).resync_count, 1)
+  local live = vim.api.nvim_buf_get_lines(b, 0, -1, false)
+  assert_eq(table.concat(buffers.get_shadow(b).lines, "\n"), table.concat(live, "\n"))
+  -- Capture resumes correctly on the healed shadow.
+  vim.api.nvim_buf_set_lines(b, 0, 1, false, { "A2" })
+  local e = last(collector.queue)
+  assert_eq(e.event_type, "edit_delta")
+  assert_eq(e.payload.deleted_text, "A")
+  assert_eq(e.payload.inserted_text, "A2")
+  vim.api.nvim_buf_delete(b, { force = true })
+end)
+
 print(("--\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
   print("FAILURES:")
