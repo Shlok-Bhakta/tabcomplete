@@ -43,7 +43,15 @@ def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     started = time.time()
     run(
-        [sys.executable, "-m", "pip", "install", "-q", "transformers==5.5.0"],
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-q",
+            "transformers==5.5.0",
+            "flash-linear-attention==0.5.2",
+        ],
         name="pip",
     )
     run(
