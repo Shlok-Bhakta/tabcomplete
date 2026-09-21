@@ -15,7 +15,11 @@ from tinycomplete.eval.code_benchmark import (
     load_suite,
     summarize_results,
 )
-from tinycomplete.eval.code_generation import build_causal_prompt, generate_predictions
+from tinycomplete.eval.code_generation import (
+    OpenAICompatibleGenerationProvider,
+    build_causal_prompt,
+    generate_predictions,
+)
 
 
 def python_case(**overrides) -> BenchmarkCase:
@@ -259,6 +263,31 @@ def test_prediction_generation_flushes_and_resumes(tmp_path: Path):
             max_new_tokens=17,
             run_metadata={**metadata, "model_revision": "different-model"},
         )
+
+
+def test_server_generation_uses_configured_request_timeout(monkeypatch):
+    seen: dict[str, float] = {}
+
+    class Response:
+        def raise_for_status(self) -> None:
+            return
+
+        def json(self) -> dict:
+            return {"choices": [{"text": "pass"}], "usage": {"completion_tokens": 1}}
+
+    def fake_post(url: str, *, json: dict, timeout: float):
+        seen["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr("tinycomplete.eval.code_generation.httpx.post", fake_post)
+    provider = OpenAICompatibleGenerationProvider(
+        "http://localhost:8080", "fixture", timeout_seconds=900
+    )
+    assert provider.generate("def f():\n    ", 4) == ("pass", 1)
+    assert seen["timeout"] == 900
+
+    with pytest.raises(ValueError, match="positive"):
+        OpenAICompatibleGenerationProvider("http://localhost:8080", "fixture", timeout_seconds=0)
 
 
 def test_prediction_resume_refuses_missing_metadata(tmp_path: Path):

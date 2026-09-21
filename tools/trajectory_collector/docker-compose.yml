@@ -14,7 +14,10 @@ services:
     volumes:
       - /mnt/ssd/collector-data:/data
     healthcheck:
-      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8787/healthz'); if (!r.ok) process.exit(1)"]
+      # CMD-SHELL string form: podman-compose mangles multi-arg CMD arrays
+      # through /bin/sh (JS parentheses break it). A plain command string
+      # passes through intact. See server/healthcheck.ts.
+      test: ["CMD-SHELL", "bun ./healthcheck.ts"]
       interval: 10s
       timeout: 3s
       retries: 5

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
+import os
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -131,6 +133,15 @@ class OpenAICompatibleProvider:
 
 
 class PlaygroundServer:
+    TELEMETRY_ROUTES = {
+        "/api/telemetry/session": "/v1/session/start",
+        "/api/telemetry/session/end": "/v1/session/end",
+        "/api/telemetry/events": "/v1/events/batch",
+        "/api/telemetry/blobs/check": "/v1/blobs/check",
+        "/api/telemetry/blobs/upload": "/v1/blobs/upload",
+        "/api/telemetry/snapshot": "/v1/repository/snapshot",
+    }
+
     def __init__(
         self,
         *,
@@ -138,12 +149,15 @@ class PlaygroundServer:
         feedback_path: Path,
         host: str = "127.0.0.1",
         port: int = 8765,
+        collector_url: str | None = None,
     ) -> None:
         self.provider = provider
         self.feedback_path = feedback_path
         self._feedback_lock = threading.Lock()
         self.host = host
         self.port = port
+        raw = collector_url or os.environ.get("TABCOMPLETE_COLLECTOR_URL", "http://crabcake:8787")
+        self.collector_url = raw.rstrip("/")
 
     @staticmethod
     def serialize_prompt(*, language: str, prefix: str, context_files: list[dict[str, str]]) -> str:
@@ -152,6 +166,30 @@ class PlaygroundServer:
             path = item["path"].replace('"', "")
             pieces.append(f'<file path="{path}">\n{item["content"]}\n</file>\n')
         pieces.append(f'<target language="{language}">\n{prefix}')
+        return "".join(pieces)
+
+    @staticmethod
+    def serialize_next_edit_prompt(
+        *,
+        path: str,
+        prefix: str,
+        region: str,
+        suffix: str,
+        recent_edits: list[str],
+        context_files: list[dict[str, str]],
+    ) -> str:
+        """Serialize the marked-region next-edit protocol used by the benchmark."""
+        safe_path = path.replace("\n", "").replace("\r", "") or "untitled.txt"
+        pieces = [f"<repo {safe_path}>\n"]
+        pieces.extend(f"{edit}\n" for edit in recent_edits if edit)
+        for item in sorted(context_files, key=lambda value: value["path"]):
+            context_path = item["path"].replace("\n", "").replace("\r", "")
+            pieces.append(f"<context {context_path}>\n{item['content']}\n</context>\n")
+        byte_offset = len(prefix.encode("utf-8"))
+        pieces.append(
+            f"<file {safe_path}>\n{prefix}[[EDIT]]{region}[[/EDIT]]{suffix}\n</file>\n"
+            f"<P {safe_path} {byte_offset}>\n"
+        )
         return "".join(pieces)
 
     def _complete(self, payload: dict) -> dict:
@@ -167,7 +205,30 @@ class PlaygroundServer:
                 raise ValueError("each context file needs path and content")
             safe_context.append({"path": str(item["path"]), "content": str(item["content"])})
         max_new_tokens = max(1, min(256, int(payload.get("max_new_tokens", 96))))
-        prompt = self.serialize_prompt(language=language, prefix=prefix, context_files=safe_context)
+        mode = str(payload.get("mode", "next_edit"))
+        if mode == "next_edit":
+            region = str(payload.get("region", ""))
+            suffix = str(payload.get("suffix", ""))
+            path = str(payload.get("path", "untitled.txt"))
+            raw_recent_edits = payload.get("recent_edits", [])
+            if not isinstance(raw_recent_edits, list):
+                raise ValueError("recent_edits must be a list")
+            prompt = self.serialize_next_edit_prompt(
+                path=path,
+                prefix=prefix,
+                region=region,
+                suffix=suffix,
+                recent_edits=[str(edit) for edit in raw_recent_edits],
+                context_files=safe_context,
+            )
+        elif mode == "autocomplete":
+            prompt = self.serialize_prompt(
+                language=language,
+                prefix=prefix,
+                context_files=safe_context,
+            )
+        else:
+            raise ValueError("mode must be next_edit or autocomplete")
         return asdict(
             self.provider.complete(
                 model=model,
@@ -187,9 +248,46 @@ class PlaygroundServer:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
         return {"saved": True}
 
+    def _telemetry_status(self) -> dict:
+        try:
+            response = httpx.get(self.collector_url + "/healthz", timeout=5)
+            body = response.json()
+            version = body.get("protocol_version") if isinstance(body, dict) else None
+            return {
+                "collector_url": self.collector_url,
+                "reachable": bool(response.status_code == 200),
+                "protocol_version": version,
+            }
+        except Exception as exc:
+            return {
+                "collector_url": self.collector_url,
+                "reachable": False,
+                "error": type(exc).__name__,
+            }
+
+    def _collector_forward(self, route: str, payload: dict) -> tuple[int, dict]:
+        """Proxy a telemetry body to the trajectory collector (tailnet-only).
+
+        Never raises: collector outages surface as 502 JSON so the editor
+        keeps working offline.
+        """
+        try:
+            response = httpx.post(self.collector_url + route, json=payload, timeout=15)
+            try:
+                body = response.json()
+            except ValueError:
+                body = {"raw": response.text[:500]}
+            if not isinstance(body, dict):
+                body = {"value": body}
+            return response.status_code, body
+        except Exception as exc:
+            return 502, {"error": "collector_unreachable", "message": type(exc).__name__}
+
     def build_http_server(self) -> ThreadingHTTPServer:
         app = self
-        static_path = Path(__file__).with_name("static") / "index.html"
+        static_dir = Path(__file__).with_name("static")
+        static_root = static_dir.resolve()
+        index_path = static_dir / "index.html"
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, format: str, *args) -> None:
@@ -215,8 +313,8 @@ class PlaygroundServer:
             def do_GET(self) -> None:
                 path = urlsplit(self.path).path
                 if path == "/":
-                    if static_path.exists():
-                        body = static_path.read_bytes()
+                    if index_path.exists():
+                        body = index_path.read_bytes()
                     else:
                         body = (
                             b"<!doctype html><title>TabComplete</title>"
@@ -228,8 +326,23 @@ class PlaygroundServer:
                     self._json(HTTPStatus.OK, {"models": models})
                 elif path == "/api/health":
                     self._json(HTTPStatus.OK, {"ok": True})
+                elif path == "/api/telemetry/status":
+                    self._json(HTTPStatus.OK, app._telemetry_status())
                 else:
-                    self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+                    candidate = (static_dir / path.lstrip("/")).resolve()
+                    if (
+                        candidate.is_file()
+                        and candidate != static_root
+                        and static_root in candidate.parents
+                    ):
+                        content_type, _ = mimetypes.guess_type(str(candidate))
+                        self._send(
+                            HTTPStatus.OK,
+                            candidate.read_bytes(),
+                            content_type or "application/octet-stream",
+                        )
+                    else:
+                        self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
             def do_POST(self) -> None:
                 path = urlsplit(self.path).path
@@ -244,6 +357,11 @@ class PlaygroundServer:
                         self._json(HTTPStatus.OK, app._complete(payload))
                     elif path == "/api/feedback":
                         self._json(HTTPStatus.OK, app._feedback(payload))
+                    elif path in PlaygroundServer.TELEMETRY_ROUTES:
+                        status, body = app._collector_forward(
+                            PlaygroundServer.TELEMETRY_ROUTES[path], payload
+                        )
+                        self._json(status, body)
                     else:
                         self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
                 except (ValueError, json.JSONDecodeError) as exc:
@@ -272,6 +390,11 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--feedback", type=Path, default=Path("data/playground/feedback.jsonl"))
+    parser.add_argument(
+        "--collector-url",
+        default=None,
+        help="Trajectory collector base URL (default: $TABCOMPLETE_COLLECTOR_URL or http://crabcake:8787)",
+    )
     args = parser.parse_args()
     if args.model:
         provider: CompletionProvider = TransformersProvider(
@@ -284,6 +407,7 @@ def main() -> None:
         feedback_path=args.feedback,
         host=args.host,
         port=args.port,
+        collector_url=args.collector_url,
     ).serve_forever()
 
 

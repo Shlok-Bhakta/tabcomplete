@@ -107,9 +107,12 @@ class TransformersGenerationProvider:
 
 
 class OpenAICompatibleGenerationProvider:
-    def __init__(self, server_url: str, model: str) -> None:
+    def __init__(self, server_url: str, model: str, *, timeout_seconds: float = 300) -> None:
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
         self.url = server_url.rstrip("/") + "/v1/completions"
         self.model = model
+        self.timeout_seconds = timeout_seconds
 
     def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int]:
         response = httpx.post(
@@ -121,7 +124,7 @@ class OpenAICompatibleGenerationProvider:
                 "temperature": 0,
                 "stream": False,
             },
-            timeout=300,
+            timeout=self.timeout_seconds,
         )
         response.raise_for_status()
         body = response.json()
