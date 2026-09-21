@@ -1,0 +1,14 @@
+{
+  "id": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+  "title": "tabcomplete-code-cpt-resume-r1",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": ["shlokbhakta/tabcomplete-code-cpt-parents-r1"],
+  "competition_sources": [],
+  "kernel_sources": ["shlokbhakta/tabcomplete-code-cpt-prepare-r1"]
+}

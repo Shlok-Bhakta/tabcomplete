@@ -21,6 +21,7 @@ from tinycomplete.code_cpt.prepare import (
     hash_packed_blocks,
     research_split_for_bucket,
 )
+from tinycomplete.code_cpt.resume_compare import compare_tensor_states, flatten_tensor_state
 from tinycomplete.code_cpt.runtime import ProductionRuntime
 from tinycomplete.code_cpt.train import (
     PackedBlocksDataset,
@@ -157,6 +158,38 @@ def test_training_counters_count_real_tokens_and_microsteps() -> None:
     assert counters.microsteps == 2
     assert counters.optimizer_steps == 1
     assert counters.data_wait_seconds == pytest.approx(0.35)
+
+
+def test_resume_state_comparison_covers_every_nested_tensor() -> None:
+    first = {
+        "model": {"weight": torch.tensor([1.0, 2.0])},
+        "optimizer": {0: {"state": torch.tensor([3.0]), "step": torch.tensor(4)}},
+    }
+    second = {
+        "model": {"weight": torch.tensor([1.0, 2.25])},
+        "optimizer": {0: {"state": torch.tensor([3.0]), "step": torch.tensor(4)}},
+    }
+
+    flattened = flatten_tensor_state(first)
+    comparison = compare_tensor_states(flattened, flatten_tensor_state(second))
+
+    assert sorted(flattened) == [
+        "model/weight",
+        "optimizer/0/state",
+        "optimizer/0/step",
+    ]
+    assert comparison["tensor_count"] == 3
+    assert comparison["different_tensor_count"] == 1
+    assert comparison["different_element_count"] == 1
+    assert comparison["max_abs_difference"] == pytest.approx(0.25)
+
+
+def test_resume_state_comparison_rejects_incomplete_inventory() -> None:
+    with pytest.raises(ValueError, match="tensor inventory"):
+        compare_tensor_states(
+            {"model/a": torch.ones(1)},
+            {"model/b": torch.ones(1)},
+        )
 
 
 def test_milestones_crossed_returns_each_new_threshold_once() -> None:
