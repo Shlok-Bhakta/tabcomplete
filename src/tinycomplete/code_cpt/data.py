@@ -189,7 +189,7 @@ class BlockPacker:
         self.documents += 1
         self.source_tokens += len(document)
         self.pending_tokens.extend(document)
-        blocks = []
+        blocks: list[list[int]] = []
         while len(self.pending_tokens) >= self.block_size:
             blocks.append(self.pending_tokens[: self.block_size])
             del self.pending_tokens[: self.block_size]
@@ -237,11 +237,11 @@ class BlockProvenanceTracker:
             self._append("__boundary__", 1)
         self.documents += 1
         self._append(repository, token_count)
-        blocks = []
+        blocks: list[list[dict[str, str | int]]] = []
         while self.pending_tokens >= self.block_size:
             remaining = self.block_size
             position = 0
-            spans = []
+            spans: list[dict[str, str | int]] = []
             while remaining:
                 repository_name = str(self.pending[0][0])
                 available = int(self.pending[0][1])

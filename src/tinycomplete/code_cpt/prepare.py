@@ -400,7 +400,7 @@ def _prepare_research_language(
         name: BlockProvenanceTracker(block_size) for name, limit in limits.items() if limit
     }
     block_provenance: dict[str, list[dict]] = {name: [] for name in limits}
-    written = Counter()
+    written: Counter[str] = Counter()
     rejected: Counter[str] = Counter()
     manifests: dict[str, list[dict]] = {name: [] for name in limits}
     stats = StreamStats()

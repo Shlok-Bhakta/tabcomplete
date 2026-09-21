@@ -44,6 +44,7 @@ class ParsedNextEditAction(BaseModel):
 
 def serialize_next_edit_action(action: NextEditAction) -> str:
     """Serialize the protocol independently of prompt/tokenizer formatting."""
+    value: dict[str, str | None]
     if action.action == "no_edit":
         value = {"action": "no_edit"}
     else:
@@ -168,7 +169,9 @@ def evaluate_next_edit_action_prediction(
         generated_tokens=prediction.generated_tokens,
         max_tokens=max_tokens,
     )
-    gold_action = "no_edit" if case.action == "noop" else "replace"
+    gold_action: Literal["no_edit", "replace"] = (
+        "no_edit" if case.action == "noop" else "replace"
+    )
     predicted_action = parsed.action.action if parsed.action is not None else None
     if parsed.action is None:
         return NextEditActionResult(
