@@ -731,6 +731,7 @@ def run_training(config: RunConfig) -> dict:
         },
         "milestones": list(config.milestones),
         "baseline_path": str(config.baseline_path) if config.baseline_path else None,
+        "init_from": str(config.init_from) if config.init_from else None,
         "resume_from": str(config.resume_from) if config.resume_from else None,
     }
     if accelerator.is_main_process:
