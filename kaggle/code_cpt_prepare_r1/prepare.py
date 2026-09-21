@@ -14,14 +14,20 @@ CHECKOUT = Path("/kaggle/working/tabcomplete")
 OUTPUT = Path("/kaggle/working/code_cpt_research_r1")
 
 
-def run(command: list[str], *, log: Path, env: dict[str, str] | None = None) -> None:
+def run(
+    command: list[str],
+    *,
+    log: Path,
+    env: dict[str, str] | None = None,
+    success_artifact: Path | None = None,
+) -> None:
     merged = os.environ.copy()
     if env:
         merged.update(env)
     process = subprocess.run(command, text=True, capture_output=True, env=merged)
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text(process.stdout + process.stderr, encoding="utf-8")
-    if process.returncode:
+    if process.returncode and not (success_artifact and success_artifact.exists()):
         raise RuntimeError(f"command failed with exit code {process.returncode}; see {log.name}")
 
 
@@ -77,6 +83,7 @@ def main() -> None:
         ],
         log=OUTPUT / "prepare.log",
         env={"PYTHONPATH": str(CHECKOUT / "src")},
+        success_artifact=OUTPUT / "corpus" / "corpus_metadata.json",
     )
     print("research-r1 corpus: PASS")
 

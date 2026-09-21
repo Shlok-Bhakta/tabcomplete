@@ -8,10 +8,9 @@
   "enable_gpu": true,
   "enable_internet": true,
   "machine_shape": "NvidiaTeslaT4",
-  "dataset_sources": [],
+  "dataset_sources": ["shlokbhakta/tabcomplete-code-cpt-parents-r1"],
   "competition_sources": [],
   "kernel_sources": [
-    "shlokbhakta/tabcomplete-code-cpt-prepare",
-    "shlokbhakta/tabcomplete-code-cpt-stage1"
+    "shlokbhakta/tabcomplete-code-cpt-prepare"
   ]
 }
