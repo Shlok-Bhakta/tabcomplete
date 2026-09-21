@@ -120,6 +120,7 @@ def test_summary_excludes_markdown_from_code_rates():
         markdown_case, Prediction(case_id=markdown_case.id, completion="Some prose.")
     )
     summary = summarize_code_output([code_result, markdown_result])
+    assert summary["total"] == 2
     assert summary["code_cases"] == 1
     assert summary["markdown_cases"] == 1
     assert summary["behavior_pass_rate"] == 1.0

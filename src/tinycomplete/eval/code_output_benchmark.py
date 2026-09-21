@@ -167,11 +167,13 @@ def summarize_code_output(results: list[CodeOutputResult]) -> dict[str, object]:
         }
 
     languages = sorted({result.language for result in code})
+    overall_code = code_breakdown(code)
+    overall_code.pop("total")
     return {
         "total": len(results),
         "code_cases": len(code),
         "markdown_cases": len(markdown),
-        **code_breakdown(code),
+        **overall_code,
         "parse_available": len(parse_available),
         "parse_pass_rate": _rate(
             sum(item.parse.status == "pass" for item in parse_available), len(parse_available)
