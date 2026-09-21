@@ -115,7 +115,7 @@ def compare_checkpoints(
     lr_floor: float,
     decay_end_update: int,
 ) -> dict[str, Any]:
-    from torch.distributed.checkpoint.state_dict import StateDictOptions, get_state_dict
+    from torch.distributed.checkpoint.state_dict import StateDictOptions, get_model_state_dict
 
     from tinycomplete.code_cpt.runtime import ProductionRuntime, build_production_accelerator
     from tinycomplete.code_cpt.train import (
@@ -151,7 +151,8 @@ def compare_checkpoints(
         scheduler=scheduler,
         source=checkpoint_a,
     )
-    model_a, optimizer_a = get_state_dict(model, raw_optimizer, options=options)
+    model_a = get_model_state_dict(model, options=options)
+    optimizer_a = raw_optimizer.state_dict()
     first_model = {
         key: value.detach().to(device="cpu").clone()
         for key, value in flatten_tensor_state(model_a).items()
@@ -172,7 +173,8 @@ def compare_checkpoints(
         scheduler=scheduler,
         source=checkpoint_b,
     )
-    model_b, optimizer_b = get_state_dict(model, raw_optimizer, options=options)
+    model_b = get_model_state_dict(model, options=options)
+    optimizer_b = raw_optimizer.state_dict()
     result = {
         "checkpoint_a": str(checkpoint_a),
         "checkpoint_b": str(checkpoint_b),

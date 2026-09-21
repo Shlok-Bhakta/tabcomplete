@@ -400,7 +400,7 @@ def save_training_checkpoint(
     """Atomically save same-world-size model, optimizer, scaler, RNG, and counters."""
     import torch
     import torch.distributed.checkpoint as dcp
-    from torch.distributed.checkpoint.state_dict import StateDictOptions, get_state_dict
+    from torch.distributed.checkpoint.state_dict import StateDictOptions, get_model_state_dict
 
     temporary = destination.with_name(f".{destination.name}.incomplete")
     if accelerator.is_main_process:
@@ -409,10 +409,16 @@ def save_training_checkpoint(
     accelerator.wait_for_everyone()
     raw_optimizer = getattr(optimizer, "optimizer", optimizer)
     options = StateDictOptions(full_state_dict=False, cpu_offload=False, strict=True)
-    model_state, optimizer_state = get_state_dict(model, raw_optimizer, options=options)
-    dcp.save(
-        {"model": model_state, "optimizer": optimizer_state},
-        checkpoint_id=temporary / "distributed",
+    model_state = get_model_state_dict(model, options=options)
+    dcp.save({"model": model_state}, checkpoint_id=temporary / "distributed")
+    # bitsandbytes deliberately nests quantization tensors in state_dict() so
+    # FSDP does not cast or reshape them. PyTorch's FSDP optimizer-state gather
+    # treats that nested mapping as replicated metadata and fails when rank-local
+    # shards have different lengths. A same-layout checkpoint may safely keep
+    # each optimizer shard through the optimizer's public state_dict API.
+    torch.save(
+        raw_optimizer.state_dict(),
+        temporary / f"optimizer-rank-{accelerator.process_index:02d}.pt",
     )
     runtime_state = {
         "scheduler": scheduler.state_dict(),
@@ -452,8 +458,8 @@ def load_training_checkpoint(*, accelerator, model, optimizer, scheduler, source
     import torch.distributed.checkpoint as dcp
     from torch.distributed.checkpoint.state_dict import (
         StateDictOptions,
-        get_state_dict,
-        set_state_dict,
+        get_model_state_dict,
+        set_model_state_dict,
     )
 
     if not (source / "COMPLETE.json").exists():
@@ -463,16 +469,16 @@ def load_training_checkpoint(*, accelerator, model, optimizer, scheduler, source
         raise ValueError("resume requires the same world size")
     raw_optimizer = getattr(optimizer, "optimizer", optimizer)
     options = StateDictOptions(full_state_dict=False, cpu_offload=False, strict=True)
-    model_state, optimizer_state = get_state_dict(model, raw_optimizer, options=options)
-    state = {"model": model_state, "optimizer": optimizer_state}
+    model_state = get_model_state_dict(model, options=options)
+    state = {"model": model_state}
     dcp.load(state, checkpoint_id=source / "distributed")
-    set_state_dict(
-        model,
-        raw_optimizer,
-        model_state_dict=state["model"],
-        optim_state_dict=state["optimizer"],
-        options=options,
+    set_model_state_dict(model, state["model"], options=options)
+    optimizer_state = torch.load(
+        source / f"optimizer-rank-{accelerator.process_index:02d}.pt",
+        map_location="cpu",
+        weights_only=False,
     )
+    raw_optimizer.load_state_dict(optimizer_state)
     runtime_state = torch.load(
         source / f"runtime-rank-{accelerator.process_index:02d}.pt",
         map_location="cpu",
