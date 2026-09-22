@@ -106,12 +106,13 @@ class TransformersGenerationProvider:
             tokenizer_path or model_path, trust_remote_code=False
         )
         self.tokenizer = getattr(self.tokenizer, "tokenizer", self.tokenizer)
-        self.model: Any = AutoModelForCausalLM.from_pretrained(
+        loaded_model: Any = AutoModelForCausalLM.from_pretrained(
             model_path,
             trust_remote_code=False,
             dtype=torch.float16 if self.device.type == "cuda" else torch.float32,
             low_cpu_mem_usage=True,
-        ).to(self.device)
+        )
+        self.model: Any = loaded_model.to(self.device)
         self.model.eval()
 
     def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int]:

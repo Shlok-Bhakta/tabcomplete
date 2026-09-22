@@ -116,7 +116,7 @@ def main() -> None:
     fig.savefig(args.output_dir / "per_language_changes.png", dpi=160)
     plt.close(fig)
 
-    schedule = {}
+    schedule: dict[str, dict[str, float]] = {}
     for parent in ("P5", "P12"):
         schedule[parent] = {}
         for kind in ("constant", "cosine"):

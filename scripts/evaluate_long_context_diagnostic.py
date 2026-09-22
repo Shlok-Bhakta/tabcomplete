@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from tinycomplete.eval.long_context_diagnostic import (
     LongContextDiagnosticCase,
@@ -48,13 +49,14 @@ def main() -> None:
         (tokenizer_source / "tokenizer.json").read_bytes()
     ).hexdigest()
     tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
-    model = AutoModelForCausalLM.from_pretrained(
+    model: Any = AutoModelForCausalLM.from_pretrained(
         args.model_path,
         trust_remote_code=False,
         dtype=torch.float16,
         low_cpu_mem_usage=True,
         attn_implementation="sdpa",
-    ).to("cuda")
+    )
+    model = model.to("cuda")
     model.eval()
     cases = [
         LongContextDiagnosticCase.model_validate_json(line)

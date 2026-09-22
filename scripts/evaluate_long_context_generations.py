@@ -8,7 +8,12 @@ import json
 import tempfile
 from pathlib import Path
 
-from tinycomplete.eval.code_benchmark import Prediction, evaluate_prediction, summarize_results
+from tinycomplete.eval.code_benchmark import (
+    BenchmarkResult,
+    Prediction,
+    evaluate_prediction,
+    summarize_results,
+)
 from tinycomplete.eval.long_context_diagnostic import (
     LongContextDiagnosticCase,
     diagnostic_case_to_benchmark,
@@ -35,7 +40,7 @@ def main() -> None:
         for line in args.scores.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    results = []
+    results: list[BenchmarkResult] = []
     with tempfile.TemporaryDirectory(prefix="tabcomplete-long-context-v2-") as directory:
         root = Path(directory)
 

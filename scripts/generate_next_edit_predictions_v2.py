@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from tinycomplete.eval.code_generation import (
+    GenerationProvider,
     OpenAICompatibleGenerationProvider,
     TransformersGenerationProvider,
     build_prediction_run_metadata,
@@ -40,6 +41,7 @@ def main() -> None:
     if not 1 <= args.max_new_tokens <= MAX_NEW_TOKENS:
         parser.error(f"--max-new-tokens must be between 1 and {MAX_NEW_TOKENS}")
     cases = load_next_edit_suite(args.suite)
+    provider: GenerationProvider
     if args.model_path:
         if args.workers != 1:
             parser.error("Transformers generation supports only --workers 1")

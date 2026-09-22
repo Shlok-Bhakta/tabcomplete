@@ -29,7 +29,7 @@ EXPECTED_REPLACEMENTS = {
 
 def upgrade(case: BenchmarkCase) -> BenchmarkCase:
     check = case.check
-    updates = {}
+    updates: dict[str, object] = {}
     if case.id in EXPECTED_STDOUT:
         updates["expected_stdout"] = EXPECTED_STDOUT[case.id]
     if case.language in {"c", "cpp"} and check.test and not check.run:
