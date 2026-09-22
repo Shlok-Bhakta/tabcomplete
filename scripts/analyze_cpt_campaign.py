@@ -205,11 +205,20 @@ def main() -> None:
     if quota:
         baseline = quota[0]["used_gpu_hours"]
         consumed = [row["used_gpu_hours"] - baseline for row in quota]
+        quota_hours_per_wall_hour = quota[-1].get(
+            "quota_hours_per_t4x2_wall_hour", 1.0
+        )
+        wall_hours = [value / quota_hours_per_wall_hour for value in consumed]
         fig, axis = plt.subplots(figsize=(8, 4))
-        axis.plot(range(len(quota)), consumed, marker="o", label="GPU-hours")
         axis.plot(
             range(len(quota)),
-            [value / 2 for value in consumed],
+            consumed,
+            marker="o",
+            label="Kaggle account quota-hours",
+        )
+        axis.plot(
+            range(len(quota)),
+            wall_hours,
             marker="x",
             label="T4x2 wall-hours",
         )

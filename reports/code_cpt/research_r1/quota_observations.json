@@ -3,6 +3,7 @@
     "observed_at_utc": "2026-09-21T18:46:21Z",
     "used_gpu_hours": 12.619809444444444,
     "remaining_gpu_hours": 32.38019055555556,
+    "quota_hours_per_t4x2_wall_hour": 1.0,
     "event": "campaign baseline",
     "source": "authenticated Kaggle quota API"
   },
@@ -10,6 +11,7 @@
     "observed_at_utc": "2026-09-21T23:04:47Z",
     "used_gpu_hours": 14.01,
     "remaining_gpu_hours": 30.99,
+    "quota_hours_per_t4x2_wall_hour": 1.0,
     "event": "matched campaign running",
     "source": "authenticated kaggle quota --format json"
   },
@@ -17,6 +19,7 @@
     "observed_at_utc": "2026-09-22T03:05:15Z",
     "used_gpu_hours": 18.0,
     "remaining_gpu_hours": 27.0,
+    "quota_hours_per_t4x2_wall_hour": 1.0,
     "event": "matched campaign complete; context probe submitted",
     "source": "authenticated kaggle quota --format json"
   },
@@ -24,6 +27,7 @@
     "observed_at_utc": "2026-09-22T03:29:50Z",
     "used_gpu_hours": 18.41,
     "remaining_gpu_hours": 26.59,
+    "quota_hours_per_t4x2_wall_hour": 1.0,
     "event": "context training feasibility probe running",
     "source": "authenticated kaggle quota --format json"
   }
