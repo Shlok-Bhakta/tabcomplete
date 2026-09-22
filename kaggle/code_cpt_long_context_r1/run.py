@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 REPOSITORY = "https://github.com/Shlok-Bhakta/tabcomplete.git"
@@ -100,6 +101,7 @@ def main() -> None:
     record = {
         "schema_version": 1,
         "status": "running",
+        "gpu_parallelism": 2,
         "models": list(models),
         "development_eligible_models": eligible,
         "provisional_development_selection": selected,
@@ -109,11 +111,17 @@ def main() -> None:
     (OUTPUT / "progress.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    estimate = 45 * 60
-    for label, model_path in models.items():
-        if time.time() - started + estimate + FINALIZATION_RESERVE_SECONDS > SESSION_LIMIT_SECONDS:
-            record["skipped"].append({"model": label, "reason": "session reserve"})
-            continue
+    jobs: list[tuple[str, Path, tuple[int, ...], str]] = [
+        (label, model_path, (2048, 32000), "2k-32k")
+        for label, model_path in models.items()
+    ]
+    if selected and selected in models:
+        jobs.append((selected, models[selected], (4096, 8192, 16384), "4k-8k-16k"))
+
+    def evaluate_job(
+        job: tuple[str, Path, tuple[int, ...], str], gpu_index: int
+    ) -> tuple[dict[str, object], float]:
+        label, model_path, lengths, suffix = job
         elapsed = run(
             [
                 sys.executable,
@@ -127,52 +135,42 @@ def main() -> None:
                 "--tokenizer-path",
                 str(models["P12"]),
                 "--output",
-                str(OUTPUT / "results" / f"{label}-2k-32k.jsonl"),
+                str(OUTPUT / "results" / f"{label}-{suffix}.jsonl"),
                 "--context-tokens",
-                "2048",
-                "32000",
+                *(str(length) for length in lengths),
                 "--max-new-tokens",
                 "96",
             ],
-            name=f"evaluate-{label}",
-            env={**environment, "CUDA_VISIBLE_DEVICES": "0"},
+            name=f"evaluate-{label}-{suffix}",
+            env={**environment, "CUDA_VISIBLE_DEVICES": str(gpu_index)},
         )
-        estimate = max(estimate, elapsed * 1.10)
-        record["completed"].append(
-            {"model": label, "lengths": [2048, 32000], "elapsed_seconds": elapsed}
-        )
+        return {"model": label, "lengths": list(lengths), "elapsed_seconds": elapsed}, elapsed
+
+    estimate = float(45 * 60)
+    for batch_start in range(0, len(jobs), 2):
+        batch = jobs[batch_start : batch_start + 2]
+        if time.time() - started + estimate + FINALIZATION_RESERVE_SECONDS > SESSION_LIMIT_SECONDS:
+            record["skipped"].extend(
+                {
+                    "model": label,
+                    "lengths": list(lengths),
+                    "reason": "session reserve",
+                }
+                for label, _, lengths, _ in batch
+            )
+            continue
+        with ThreadPoolExecutor(max_workers=len(batch)) as executor:
+            futures = {
+                executor.submit(evaluate_job, job, gpu_index): job
+                for gpu_index, job in enumerate(batch)
+            }
+            for future in as_completed(futures):
+                completed, elapsed = future.result()
+                record["completed"].append(completed)
+                estimate = max(estimate, elapsed * 1.10)
         (OUTPUT / "progress.json").write_text(
             json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-    if selected and selected in models:
-        if time.time() - started + estimate + FINALIZATION_RESERVE_SECONDS <= SESSION_LIMIT_SECONDS:
-            elapsed = run(
-                [
-                    sys.executable,
-                    str(CHECKOUT / "scripts" / "evaluate_long_context_diagnostic.py"),
-                    "--suite",
-                    str(suite),
-                    "--model-path",
-                    str(models[selected]),
-                    "--model-label",
-                    selected,
-                    "--tokenizer-path",
-                    str(models["P12"]),
-                    "--output",
-                    str(OUTPUT / "results" / f"{selected}-4k-8k-16k.jsonl"),
-                    "--context-tokens",
-                    "4096",
-                    "8192",
-                    "16384",
-                    "--max-new-tokens",
-                    "96",
-                ],
-                name=f"evaluate-{selected}-middle-lengths",
-                env={**environment, "CUDA_VISIBLE_DEVICES": "0"},
-            )
-            record["completed"].append(
-                {"model": selected, "lengths": [4096, 8192, 16384], "elapsed_seconds": elapsed}
-            )
     record["status"] = "complete"
     record["elapsed_seconds"] = time.time() - started
     (OUTPUT / "progress.json").write_text(
