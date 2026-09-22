@@ -1,0 +1,14 @@
+{
+  "completion": " return a + b\n\n\ndef subtract(a",
+  "device": "cpu",
+  "finish_reason": "length",
+  "generated_code_executed": false,
+  "generated_tokens": 8,
+  "label": "D5",
+  "loaded_and_generated": true,
+  "model_file_sha256": "47772f912bb7993ad31a2bdd8f1bc4f8afd961101cf26dd30b1bc0a4344e72fc",
+  "model_path": "/home/crabcake/Projects/tabcomplete-cpt-recipe-r1/artifacts/code_cpt/research_r1/campaign_full/code_cpt_campaign_r1/arms/D5/final",
+  "model_weight_fingerprint": "21aebff6f224632c2fc825a1e469329b2eb73c08935a43f7f91431ce15f084eb",
+  "prompt": "def add(a: int, b: int) -> int:\n    ",
+  "schema_version": 1
+}

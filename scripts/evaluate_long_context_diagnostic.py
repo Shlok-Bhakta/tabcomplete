@@ -28,6 +28,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--suite", type=Path, required=True)
     parser.add_argument("--model-path", type=Path, required=True)
+    parser.add_argument("--tokenizer-path", type=Path)
     parser.add_argument("--model-label", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--context-tokens", type=int, nargs="*")
@@ -39,7 +40,13 @@ def main() -> None:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.tokenizer_path or args.model_path, trust_remote_code=False
+    )
+    tokenizer_source = (args.tokenizer_path or args.model_path).resolve()
+    tokenizer_sha256 = hashlib.sha256(
+        (tokenizer_source / "tokenizer.json").read_bytes()
+    ).hexdigest()
     tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
     model = AutoModelForCausalLM.from_pretrained(
         args.model_path,
@@ -93,6 +100,8 @@ def main() -> None:
                 **case.model_dump(exclude={"prompt"}),
                 "model_label": args.model_label,
                 "model_sha256": weight_sha256,
+                "tokenizer_source": str(tokenizer_source),
+                "tokenizer_sha256": tokenizer_sha256,
                 "scorer_verification": scorer_check,
                 "correct": correct,
                 "distractor_score": distractor,

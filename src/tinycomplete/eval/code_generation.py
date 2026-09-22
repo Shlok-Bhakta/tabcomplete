@@ -18,6 +18,14 @@ from .code_benchmark import BenchmarkCase, Prediction
 PREDICTION_PROTOCOL = "causal-context-v1"
 
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(8 * 2**20):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def prediction_metadata_path(output_path: Path) -> Path:
     return output_path.with_suffix(output_path.suffix + ".metadata.json")
 
@@ -84,7 +92,9 @@ class DetailedGeneration:
 
 
 class TransformersGenerationProvider:
-    def __init__(self, model_path: str, *, device: str = "cpu") -> None:
+    def __init__(
+        self, model_path: str, *, device: str = "cpu", tokenizer_path: str | None = None
+    ) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -92,7 +102,9 @@ class TransformersGenerationProvider:
             raise RuntimeError(f"requested generation device is unavailable: {device}")
         self.torch = torch
         self.device = torch.device(device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=False)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            tokenizer_path or model_path, trust_remote_code=False
+        )
         self.tokenizer = getattr(self.tokenizer, "tokenizer", self.tokenizer)
         self.model: Any = AutoModelForCausalLM.from_pretrained(
             model_path,

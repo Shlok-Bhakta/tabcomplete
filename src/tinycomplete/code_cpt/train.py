@@ -606,6 +606,11 @@ def _sha256_file(path: Path) -> str:
 def checkpoint_identity(path: Path) -> dict[str, Any]:
     """Hash the intended parent artifact before model construction."""
     weight_files = sorted(path.glob("*.safetensors"))
+    tokenizer_files = [
+        path / name
+        for name in ("tokenizer.json", "tokenizer_config.json", "chat_template.jinja")
+        if (path / name).exists()
+    ]
     if not weight_files:
         raise FileNotFoundError(f"checkpoint has no safetensors files: {path}")
     return {
@@ -616,6 +621,10 @@ def checkpoint_identity(path: Path) -> dict[str, Any]:
         ],
         "config_sha256": _sha256_file(path / "config.json"),
         "tokenizer_sha256": _sha256_file(path / "tokenizer.json"),
+        "tokenizer_files": [
+            {"name": item.name, "bytes": item.stat().st_size, "sha256": _sha256_file(item)}
+            for item in tokenizer_files
+        ],
     }
 
 

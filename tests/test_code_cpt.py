@@ -35,6 +35,7 @@ from tinycomplete.code_cpt.train import (
     RunConfig,
     TrainingCounters,
     bounded_optimizer_steps,
+    checkpoint_identity,
     consecutive_regression_guard,
     distributed_block_indices,
     extract_mtp_from_snapshot,
@@ -43,6 +44,25 @@ from tinycomplete.code_cpt.train import (
     learning_rate_factor,
     milestones_crossed,
 )
+
+
+def test_checkpoint_identity_hashes_tokenizer_configuration(tmp_path: Path) -> None:
+    for name, content in {
+        "model.safetensors": b"weights",
+        "config.json": b"{}",
+        "tokenizer.json": b"{}",
+        "tokenizer_config.json": b'{"tokenizer_class":"fixture"}',
+        "chat_template.jinja": b"fixture",
+    }.items():
+        (tmp_path / name).write_bytes(content)
+
+    identity = checkpoint_identity(tmp_path)
+
+    assert [row["name"] for row in identity["tokenizer_files"]] == [
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "chat_template.jinja",
+    ]
 
 
 def test_repo_split_is_stable_and_keeps_whole_repo_together() -> None:

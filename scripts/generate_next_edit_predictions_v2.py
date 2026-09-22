@@ -9,6 +9,7 @@ from tinycomplete.eval.code_generation import (
     OpenAICompatibleGenerationProvider,
     TransformersGenerationProvider,
     build_prediction_run_metadata,
+    file_sha256,
     generate_predictions,
     model_weight_fingerprint,
 )
@@ -28,6 +29,7 @@ def main() -> None:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--model-path")
     source.add_argument("--server-url")
+    parser.add_argument("--tokenizer-path")
     parser.add_argument("--server-model", default="local-model")
     parser.add_argument("--model-revision")
     parser.add_argument("--max-new-tokens", type=int, default=MAX_NEW_TOKENS)
@@ -45,7 +47,9 @@ def main() -> None:
         provider_name = "transformers"
         model_source = str(model_path)
         model_revision = model_weight_fingerprint(model_path)
-        provider = TransformersGenerationProvider(str(model_path), device=args.device)
+        provider = TransformersGenerationProvider(
+            str(model_path), device=args.device, tokenizer_path=args.tokenizer_path
+        )
     else:
         if not args.model_revision:
             parser.error("--model-revision is required with --server-url")
@@ -63,6 +67,10 @@ def main() -> None:
         workers=args.workers,
         protocol=PROTOCOL_VERSION,
     )
+    if args.model_path:
+        tokenizer_path = Path(args.tokenizer_path).resolve() if args.tokenizer_path else model_path
+        metadata["tokenizer_source"] = str(tokenizer_path)
+        metadata["tokenizer_sha256"] = file_sha256(tokenizer_path / "tokenizer.json")
     predictions = generate_predictions(
         cases,
         provider,

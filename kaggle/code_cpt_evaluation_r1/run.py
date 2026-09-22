@@ -242,6 +242,8 @@ def main() -> None:
                 str(suite),
                 "--model-path",
                 str(models[label]["path"]),
+                "--tokenizer-path",
+                str(models["P12"]["path"]),
                 "--device",
                 "cuda",
                 "--max-new-tokens",
