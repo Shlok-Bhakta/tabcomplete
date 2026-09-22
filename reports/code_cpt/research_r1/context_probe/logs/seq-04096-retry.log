@@ -1,0 +1,158 @@
+
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+[W922 03:17:26.541596837 socket.cpp:207] [c10d] The hostname of the client socket cannot be retrieved. err=-3
+sharding_strategy is deprecated in favor of reshard_after_forward. This will be removed in a future version of Accelerate.
+[W922 03:17:29.350528813 socket.cpp:207] [c10d] The hostname of the client socket cannot be retrieved. err=-3
+sharding_strategy is deprecated in favor of reshard_after_forward. This will be removed in a future version of Accelerate.
+[W922 03:17:29.422607782 socket.cpp:207] [c10d] The hostname of the client socket cannot be retrieved. err=-3
+The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+
+Loading weights:   0%|          | 0/321 [00:00<?, ?it/s]The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+
+Loading weights:   0%|          | 1/321 [00:01<07:56,  1.49s/it]
+Loading weights: 100%|██████████| 321/321 [00:01<00:00, 214.15it/s]
+
+Loading weights:   0%|          | 0/321 [00:00<?, ?it/s]
+Loading weights:   0%|          | 1/321 [00:01<07:33,  1.42s/it]
+Loading weights: 100%|██████████| 321/321 [00:01<00:00, 225.14it/s]
+[rank0]:W0922 03:17:51.877000 1260 torch/_logging/_internal.py:1204] [0/0] Profiler function <class 'torch.autograd.profiler.record_function'> will be ignored
+[rank1]:W0922 03:17:51.882000 1261 torch/_logging/_internal.py:1204] [0/0] Profiler function <class 'torch.autograd.profiler.record_function'> will be ignored
+[rank1]:W0922 03:19:48.617000 1261 torch/_inductor/utils.py:1679] [14/1] Not enough SMs to use max_autotune_gemm mode
+[rank0]:W0922 03:19:48.659000 1260 torch/_inductor/utils.py:1679] [14/1] Not enough SMs to use max_autotune_gemm mode
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "<frozen runpy>", line 198, in _run_module_as_main
+[rank0]:   File "<frozen runpy>", line 88, in _run_code
+[rank0]:   File "/kaggle/working/tabcomplete/src/tinycomplete/code_cpt/train.py", line 1394, in <module>
+[rank0]:     main()
+[rank0]:   File "/kaggle/working/tabcomplete/src/tinycomplete/code_cpt/train.py", line 1388, in main
+[rank0]:     summary = run_training(config)
+[rank0]:               ^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/kaggle/working/tabcomplete/src/tinycomplete/code_cpt/train.py", line 885, in run_training
+[rank0]:     accelerator.backward(loss)
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/accelerate/accelerator.py", line 2834, in backward
+[rank0]:     self.scaler.scale(loss).backward(**kwargs)
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_tensor.py", line 630, in backward
+[rank0]:     torch.autograd.backward(
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/__init__.py", line 364, in backward
+[rank0]:     _engine_run_backward(
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/graph.py", line 865, in _engine_run_backward
+[rank0]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/function.py", line 317, in apply
+[rank0]:     return user_fn(self, *args)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2338, in backward
+[rank0]:     return impl_fn()
+[rank0]:            ^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2324, in impl_fn
+[rank0]:     out = CompiledFunction._backward_impl(ctx, all_args)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2494, in _backward_impl
+[rank0]:     out = call_func_at_runtime_with_args(
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/utils.py", line 134, in call_func_at_runtime_with_args
+[rank0]:     out = normalize_as_list(f(args))
+[rank0]:                             ^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1181, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/output_code.py", line 638, in __call__
+[rank0]:     return self.current_callable(inputs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/utils.py", line 3220, in run
+[rank0]:     out = model(new_inputs)
+[rank0]:           ^^^^^^^^^^^^^^^^^
+[rank0]:   File "/tmp/torchinductor_root/tg/ctgjfkdsrlloefzhm6k7rfzicgxilb2v4gl2y45bioadene7lkkv.py", line 217, in call
+[rank0]:     buf1 = empty_strided_cuda((1, 4096, 248320), (1017118720, 248320, 1), torch.float16)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.89 GiB. GPU 0 has a total capacity of 14.56 GiB of which 1.60 GiB is free. Including non-PyTorch memory, this process has 12.96 GiB memory in use. Of the allocated memory 11.17 GiB is allocated by PyTorch, and 1.23 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "<frozen runpy>", line 198, in _run_module_as_main
+[rank1]:   File "<frozen runpy>", line 88, in _run_code
+[rank1]:   File "/kaggle/working/tabcomplete/src/tinycomplete/code_cpt/train.py", line 1394, in <module>
+[rank1]:     main()
+[rank1]:   File "/kaggle/working/tabcomplete/src/tinycomplete/code_cpt/train.py", line 1388, in main
+[rank1]:     summary = run_training(config)
+[rank1]:               ^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/kaggle/working/tabcomplete/src/tinycomplete/code_cpt/train.py", line 885, in run_training
+[rank1]:     accelerator.backward(loss)
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/accelerate/accelerator.py", line 2834, in backward
+[rank1]:     self.scaler.scale(loss).backward(**kwargs)
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_tensor.py", line 630, in backward
+[rank1]:     torch.autograd.backward(
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/__init__.py", line 364, in backward
+[rank1]:     _engine_run_backward(
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/graph.py", line 865, in _engine_run_backward
+[rank1]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/autograd/function.py", line 317, in apply
+[rank1]:     return user_fn(self, *args)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2338, in backward
+[rank1]:     return impl_fn()
+[rank1]:            ^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2324, in impl_fn
+[rank1]:     out = CompiledFunction._backward_impl(ctx, all_args)
+[rank1]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 2494, in _backward_impl
+[rank1]:     out = call_func_at_runtime_with_args(
+[rank1]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_functorch/_aot_autograd/utils.py", line 134, in call_func_at_runtime_with_args
+[rank1]:     out = normalize_as_list(f(args))
+[rank1]:                             ^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_dynamo/eval_frame.py", line 1181, in _fn
+[rank1]:     return fn(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/output_code.py", line 638, in __call__
+[rank1]:     return self.current_callable(inputs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/utils.py", line 3220, in run
+[rank1]:     out = model(new_inputs)
+[rank1]:           ^^^^^^^^^^^^^^^^^
+[rank1]:   File "/tmp/torchinductor_root/aw/cawddupvobiunl67vweye7vqsjscx5e2yjz6fudeskgze2ahlsmf.py", line 217, in call
+[rank1]:     buf1 = empty_strided_cuda((1, 4096, 248320), (1017118720, 248320, 1), torch.float16)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.89 GiB. GPU 1 has a total capacity of 14.56 GiB of which 1.60 GiB is free. Including non-PyTorch memory, this process has 12.96 GiB memory in use. Of the allocated memory 11.17 GiB is allocated by PyTorch, and 1.23 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+W0922 03:23:24.515000 1252 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1260 closing signal SIGTERM
+E0922 03:23:24.580000 1252 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 1 (pid: 1261) of binary: /usr/bin/python3
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 995, in <module>
+    main()
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+tinycomplete.code_cpt.train FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-09-22_03:23:24
+  host      : b8127cc6b1a3
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1260)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-09-22_03:23:24
+  host      : b8127cc6b1a3
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 1261)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

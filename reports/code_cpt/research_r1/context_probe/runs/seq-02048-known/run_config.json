@@ -1,0 +1,120 @@
+{
+  "baseline_path": null,
+  "corpus_dir": "/kaggle/working/code_cpt_context_probe_r1/corpora/seq-02048",
+  "credential_source": "anonymous_public_model",
+  "deadline_seconds": 0,
+  "decay_end_update": 153,
+  "distributed_mode": "fsdp",
+  "eval_final": false,
+  "evaluation_milestones": [],
+  "expected_initial_sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43",
+  "fsdp_forward_prefetch": true,
+  "gradient_accumulation": 8,
+  "gradient_checkpointing": false,
+  "init_from": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P12",
+  "initial_checkpoint": {
+    "config_sha256": "acc1badd3017c913c512fb2555f5ed1218db987a555e8c8d9397609e06e61dee",
+    "path": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P12",
+    "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+    "weight_files": [
+      {
+        "bytes": 2013387056,
+        "name": "model.safetensors",
+        "sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43"
+      },
+      {
+        "bytes": 40907296,
+        "name": "mtp-original.safetensors",
+        "sha256": "94a8afbe3c204a6e82669193a1cd5107277a30529deb2b54d4d63720f8f2097c"
+      }
+    ]
+  },
+  "initial_model_diagnostic": {
+    "inventory_sha256": "c26b831d3ebdf458da68629ffbf0218d55180f3a1b5e8beaadc195b6cc6c7c7f",
+    "parameter_count": 752393024,
+    "parameter_tensor_count": 320,
+    "selected_tensors": {
+      "model.embed_tokens.weight": {
+        "first_values": [
+          0.01251220703125,
+          0.0141754150390625,
+          -0.0166778564453125,
+          -0.01116180419921875
+        ],
+        "sample_sha256": "016126881114d2ce2b54fd6d489a52946373091652c5d5d8a71c7e605cac8e81",
+        "shape": [
+          248320,
+          1024
+        ]
+      },
+      "model.layers.0.input_layernorm.weight": {
+        "first_values": [
+          1.0,
+          0.294921875,
+          0.53515625,
+          0.74609375
+        ],
+        "sample_sha256": "df797181c71a4a6a570db5d952567db6412615fe996f2e7102d5c82ca459cf96",
+        "shape": [
+          1024
+        ]
+      },
+      "model.norm.weight": {
+        "first_values": [
+          -0.77783203125,
+          2.75,
+          2.640625,
+          3.0625
+        ],
+        "sample_sha256": "b337c62f93fb7c98891fd7ffd03db7974de32a56a062f21f072f933db5b5e5fe",
+        "shape": [
+          1024
+        ]
+      }
+    },
+    "weight_tying": {
+      "config_tie_word_embeddings": true,
+      "same_storage": true,
+      "shapes_equal": true
+    }
+  },
+  "initialization_mode": "weights",
+  "learning_rate": 3e-06,
+  "lr_floor": 3e-07,
+  "lr_schedule": "constant",
+  "master_parameter_dtype": "float32",
+  "max_grad_norm": 1.0,
+  "max_tokens": 32768,
+  "microbatch": 1,
+  "milestones": [],
+  "model_id": "Qwen/Qwen3.5-0.8B-Base",
+  "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+  "optimizer": "adamw_8bit",
+  "output_dir": "/kaggle/working/code_cpt_context_probe_r1/runs/seq-02048-known",
+  "parent_training_tokens": 11993088,
+  "precision": "fp16 autocast with dynamic loss scaling",
+  "prefetch_factor": 2,
+  "resume_from": null,
+  "runtime": {
+    "attention": "sdpa",
+    "backward_prefetch": "BACKWARD_PRE",
+    "compile_dynamic": false,
+    "compile_mode": "default",
+    "forward_prefetch": true,
+    "fp16_compute": true,
+    "fp32_master_parameters": true,
+    "fsdp": "FULL_SHARD",
+    "gradient_checkpointing": false,
+    "initial_loss_scale": 256.0,
+    "torch_compile": true
+  },
+  "save_final": false,
+  "save_resume": false,
+  "seed": 271828,
+  "start_block": 0,
+  "tokens_per_update": 32768,
+  "warmup_steps": 5,
+  "weight_decay": 0.01,
+  "workers": 1,
+  "world_size": 2
+}
