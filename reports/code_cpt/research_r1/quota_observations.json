@@ -38,5 +38,13 @@
     "quota_hours_per_t4x2_wall_hour": 1.0,
     "event": "repository bootstrap and causal prediction evaluation complete",
     "source": "authenticated kaggle quota --format json"
+  },
+  {
+    "observed_at_utc": "2026-09-22T06:15:09Z",
+    "used_gpu_hours": 20.73,
+    "remaining_gpu_hours": 24.27,
+    "quota_hours_per_t4x2_wall_hour": 1.0,
+    "event": "long-context diagnostic attempts finalized; no further GPU jobs",
+    "source": "authenticated kaggle quota --format json"
   }
 ]

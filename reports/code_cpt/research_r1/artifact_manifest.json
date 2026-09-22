@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "models": {
+    "P5": "d499c3fe2d720246c710c5c9e20653a4599aa25d77ebef871cb28431ccc888e8",
+    "P12": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43",
+    "C12": "ce3a666ad9eab501c6400a5b248d3532af758ad3e4bc0452e2098a19d58e2fb9",
+    "C5": "54cb68207afb20fa33897cef813c726e272ee3e778294ad164728a698d62315f",
+    "D12": "ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e",
+    "D5": "47772f912bb7993ad31a2bdd8f1bc4f8afd961101cf26dd30b1bc0a4344e72fc",
+    "mtp_sidecar": "94a8afbe3c204a6e82669193a1cd5107277a30529deb2b54d4d63720f8f2097c"
+  },
+  "files": {
+    "data/benchmarks/code_completion_v2.jsonl": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+    "data/benchmarks/next_edit_v2.jsonl": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff",
+    "reports/code_cpt/research_r1/context_probe/probe_results.json": "d38a3d9e5746bb333828a34aba712a7972723b52fb6d7df21ecdd2b858e46ea0",
+    "reports/code_cpt/research_r1/evaluation/selection.json": "a23fd86299cf57d064398bb6fa9a1da48e3c852e3c7a2215324939fc111feca6",
+    "reports/code_cpt/research_r1/fresh_corpus_metadata.json": "fe15e47665c9d9d8979d5bc041242c2967aa41ecb230b218afbfa067fc220873",
+    "reports/code_cpt/research_r1/long_context/attempts.json": "c7fb1e68bc814973a14a85392e9bbf5590a9791536d7b8cf0e53decd3820a3ab",
+    "reports/code_cpt/research_r1/long_context/summary.json": "4919dd1eb4f1b6674a08a493e4466a8f76d462da58d8eaa33de156ffc35d314c",
+    "reports/code_cpt/research_r1/plots/campaign_analysis.json": "559407322db160b74ae32e3e52343cdddb28416ce27658d3a8cd5f4fb6780e0f",
+    "reports/code_cpt/research_r1/resume_test.json": "40a661afc238a79a949512f02adf96c2f1ce4c063c4103241402bf9725a7c272"
+  },
+  "local_inference_exports": "artifacts/code_cpt/research_r1/campaign_full/code_cpt_campaign_r1/arms",
+  "local_exports_gitignored": true,
+  "download_hash_verification": "all four model.safetensors hashes matched campaign_progress.json and loaded for deterministic CPU smoke generation"
+}
