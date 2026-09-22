@@ -1,0 +1,102 @@
+{
+  "causal_predictions": [
+    {
+      "elapsed_seconds": 785.2509195804596,
+      "model": "P5",
+      "status": "complete"
+    },
+    {
+      "elapsed_seconds": 755.4449758529663,
+      "model": "P12",
+      "status": "complete"
+    },
+    {
+      "elapsed_seconds": 749.1738078594208,
+      "model": "C12",
+      "status": "complete"
+    },
+    {
+      "elapsed_seconds": 760.6464788913727,
+      "model": "C5",
+      "status": "complete"
+    },
+    {
+      "elapsed_seconds": 764.0577948093414,
+      "model": "D12",
+      "status": "complete"
+    },
+    {
+      "elapsed_seconds": 742.7133133411407,
+      "model": "D5",
+      "status": "complete"
+    }
+  ],
+  "development_evaluations": [
+    {
+      "elapsed_seconds": 444.693900346756,
+      "model": "P5",
+      "output": "/kaggle/working/code_cpt_evaluation_r1/development/P5.json"
+    },
+    {
+      "elapsed_seconds": 406.58549427986145,
+      "model": "P12",
+      "output": "/kaggle/working/code_cpt_evaluation_r1/development/P12.json"
+    },
+    {
+      "elapsed_seconds": 389.9688723087311,
+      "model": "C12",
+      "output": "/kaggle/working/code_cpt_evaluation_r1/development/C12.json"
+    },
+    {
+      "elapsed_seconds": 384.0125343799591,
+      "model": "C5",
+      "output": "/kaggle/working/code_cpt_evaluation_r1/development/C5.json"
+    },
+    {
+      "elapsed_seconds": 384.3561544418335,
+      "model": "D12",
+      "output": "/kaggle/working/code_cpt_evaluation_r1/development/D12.json"
+    },
+    {
+      "elapsed_seconds": 385.4353005886078,
+      "model": "D5",
+      "output": "/kaggle/working/code_cpt_evaluation_r1/development/D5.json"
+    }
+  ],
+  "elapsed_seconds": 7060.547354221344,
+  "git_sha": "f56160dec176b88f54b19b31211c50900c013026",
+  "models": {
+    "C12": {
+      "parent": "P12",
+      "path": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-campaign-r1/code_cpt_campaign_r1/arms/C12/final",
+      "sha256": "ce3a666ad9eab501c6400a5b248d3532af758ad3e4bc0452e2098a19d58e2fb9"
+    },
+    "C5": {
+      "parent": "P5",
+      "path": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-campaign-r1/code_cpt_campaign_r1/arms/C5/final",
+      "sha256": "54cb68207afb20fa33897cef813c726e272ee3e778294ad164728a698d62315f"
+    },
+    "D12": {
+      "parent": "P12",
+      "path": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-campaign-r1/code_cpt_campaign_r1/arms/D12/final",
+      "sha256": "ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e"
+    },
+    "D5": {
+      "parent": "P5",
+      "path": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-campaign-r1/code_cpt_campaign_r1/arms/D5/final",
+      "sha256": "47772f912bb7993ad31a2bdd8f1bc4f8afd961101cf26dd30b1bc0a4344e72fc"
+    },
+    "P12": {
+      "parent": "None",
+      "path": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P12",
+      "sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43"
+    },
+    "P5": {
+      "parent": "None",
+      "path": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P5",
+      "sha256": "d499c3fe2d720246c710c5c9e20653a4599aa25d77ebef871cb28431ccc888e8"
+    }
+  },
+  "schema_version": 1,
+  "status": "complete"
+}

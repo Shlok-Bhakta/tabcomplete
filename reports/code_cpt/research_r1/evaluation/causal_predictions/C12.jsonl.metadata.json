@@ -1,0 +1,17 @@
+{
+  "case_count": 200,
+  "decoding": {
+    "do_sample": false,
+    "temperature": 0
+  },
+  "max_new_tokens": 96,
+  "model_revision": "9d4258afa0c579e93173dfc3e6a37d707fdc5d947373c45866b09f7cec94c745",
+  "model_source": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-campaign-r1/code_cpt_campaign_r1/arms/C12/final",
+  "protocol": "causal-context-v1",
+  "provider": "transformers",
+  "schema_version": 1,
+  "suite_sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+  "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+  "tokenizer_source": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P12",
+  "workers": 1
+}

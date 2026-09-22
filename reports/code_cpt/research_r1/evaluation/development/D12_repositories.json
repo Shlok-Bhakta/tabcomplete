@@ -1,0 +1,3800 @@
+[
+  {
+    "language": "c",
+    "nll_sum": 100.57936096191406,
+    "repository": "004bff7fe51ed9f2f08872b689e6cfd26e5fb96d2065a760d3be14de025a777e",
+    "tokens": 85
+  },
+  {
+    "language": "c",
+    "nll_sum": 868.0000610351562,
+    "repository": "00e1a0fff31d687701fec8402b3243f4c3352e9d7907701b457cb9155c4e544b",
+    "tokens": 449
+  },
+  {
+    "language": "java",
+    "nll_sum": 1430.0261840820312,
+    "repository": "0132220e7661a90550edbf3574c96e882a455d3e0dceb26e77fdc32bb74aa49d",
+    "tokens": 1458
+  },
+  {
+    "language": "rust",
+    "nll_sum": 187.05419921875,
+    "repository": "018b46e7a0bce5f3ca983e2fade6af96262ffa30a0276d1d9b9a08545f2552f8",
+    "tokens": 223
+  },
+  {
+    "language": "python",
+    "nll_sum": 647.193603515625,
+    "repository": "019051082564419ffcc8df4e9e38a343b1e0405362b7e9c2f5170db6df814cd4",
+    "tokens": 563
+  },
+  {
+    "language": "java",
+    "nll_sum": 13499.1318359375,
+    "repository": "01a09822a543d516b30158e857a5b0b2d6d8d4b1877921d7d5db2025a5917d7c",
+    "tokens": 14023
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1401.9608154296875,
+    "repository": "01fdbaad6f6670f9b8c7b2c2ab4757f3b13b56bfa77eafcf3526cfb9caf15cb9",
+    "tokens": 1004
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 618.9841651916504,
+    "repository": "02a3c6ac311eafba39330d6ec3d0be1e936c8a95d3f1832c4e770b4ad97ba914",
+    "tokens": 520
+  },
+  {
+    "language": "java",
+    "nll_sum": 1088.941162109375,
+    "repository": "0313c4125c08b83280b184d007086b64b11a5741d418ce23271c4d8d2e333833",
+    "tokens": 885
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 321.82464599609375,
+    "repository": "03167f63e58d2a82ef2b89ee8d5f2d61e504b63ec12fa5189ea57f0694edd107",
+    "tokens": 284
+  },
+  {
+    "language": "java",
+    "nll_sum": 120.1163558959961,
+    "repository": "035cc0b57cfdab7a8294c1f520e8c24aa02a12e1aa02711b6b306874fa917701",
+    "tokens": 116
+  },
+  {
+    "language": "c",
+    "nll_sum": 152.89300537109375,
+    "repository": "03b503e8736de744a2af2e9a8ecc055dfc7359da8fe1b2589b2a2acf06048711",
+    "tokens": 116
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 4355.34716796875,
+    "repository": "03cc8aeac84495f312e9c457b5d49543d76f3cb926e915ae4a7e7afcf58b02fe",
+    "tokens": 2987
+  },
+  {
+    "language": "python",
+    "nll_sum": 1729.3550415039062,
+    "repository": "03e201dabcdc3ef29c0d2bfab4b69404d5cad6d4b1b07a5ac70fb7979e9c22d8",
+    "tokens": 1443
+  },
+  {
+    "language": "python",
+    "nll_sum": 697.4293823242188,
+    "repository": "04bbca24863706e746f04c2b5870cf26c3151b1e9e0e36b00f6c573efda56b1d",
+    "tokens": 975
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1009.7811889648438,
+    "repository": "04cfaa404b4d894a200d8651dc34913bcca2db410af3d97896cd4d5419882e3c",
+    "tokens": 848
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 396.9713439941406,
+    "repository": "050996735e58c93c901b51e5ee13a7c48121148fe106981a984fc2425126c61d",
+    "tokens": 256
+  },
+  {
+    "language": "python",
+    "nll_sum": 914.2796020507812,
+    "repository": "053212de4d67abef2107a239ec285805945a4af1d97a276478550b517def9d42",
+    "tokens": 711
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 530.6756591796875,
+    "repository": "059e793052d09dc324d1950f5b1f34f59e7c8f61c5de7fb1b03f2aebfc99b6ac",
+    "tokens": 496
+  },
+  {
+    "language": "c",
+    "nll_sum": 1160.9320068359375,
+    "repository": "05d38c2ee2fae1f8d8aec419e9f22a801b86db85cb7aab869ae2968ce8b983ea",
+    "tokens": 499
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1306.7332763671875,
+    "repository": "064a481fa86f32e22aa1e5a46e50a2abdbf5a84bcbee9ea58913c3137aec032f",
+    "tokens": 1353
+  },
+  {
+    "language": "rust",
+    "nll_sum": 294.536865234375,
+    "repository": "06ccce1370aafd0f310855b8c1fe851802487e0b5071be70a6c802e92f661d71",
+    "tokens": 229
+  },
+  {
+    "language": "rust",
+    "nll_sum": 5451.356689453125,
+    "repository": "070e1966684ca20acf3721a3d8e1b0e6d5c19e165141604f806651bc3b083c25",
+    "tokens": 5345
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 2609.24951171875,
+    "repository": "074b48d0d6a0b30e5a48dcf63805d0c3320183ee0fa5b8aaea4df0f7df28b2ea",
+    "tokens": 2842
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 118.03988647460938,
+    "repository": "077f5b08c2b90c1fd68db46c8a52aec11a996e99d992b0267f272553a6126bc6",
+    "tokens": 199
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1275.328369140625,
+    "repository": "0785d0476b9f05b3c0f82422c09297debbe7fc063c758b7f05fdb7b581e58b83",
+    "tokens": 2344
+  },
+  {
+    "language": "c",
+    "nll_sum": 554.2689208984375,
+    "repository": "07b29e76c94c32d20f7965999e8f4185fe7effdfc393b92ef6957288d3799938",
+    "tokens": 651
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 142.34014415740967,
+    "repository": "07c8c44ed0da10cd0adf6728200dec47ee8e890f9bdc932ff3b77a18b815eba5",
+    "tokens": 173
+  },
+  {
+    "language": "rust",
+    "nll_sum": 464.54249572753906,
+    "repository": "07cee413f29f5322ac14558b17b9b5c7a15fcd1a26dc2e51fb9e546db532ae35",
+    "tokens": 533
+  },
+  {
+    "language": "rust",
+    "nll_sum": 338.682373046875,
+    "repository": "082c6e0fb763b0d2c99833b1edf4613c023494460b812869d168c8e59d1b7c8d",
+    "tokens": 234
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 262.97265625,
+    "repository": "0872b7b81eb0e83bb73158729378ab2c9e91c7dda0726501d709dc51d61097b2",
+    "tokens": 251
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1410.2593078613281,
+    "repository": "0a6ac4fd99eaf0dc8c4319ec2227510915e25f472b429666c2fcf8e60fbd82a0",
+    "tokens": 1027
+  },
+  {
+    "language": "c",
+    "nll_sum": 242.85299682617188,
+    "repository": "0abeddbc21df81c217d7e2a4f009689ea2d931010154446d0fcf6dd9015f2d20",
+    "tokens": 106
+  },
+  {
+    "language": "rust",
+    "nll_sum": 529.4425048828125,
+    "repository": "0ad2182aeb856c903d4628552d9a2ef4f2dd0b86eb6084e28e028ce652a7b484",
+    "tokens": 652
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 260.2950439453125,
+    "repository": "0b01879da012d94631c1d4a6caa831e0ef9a46231c8d73607a4da8fc5d8b0ece",
+    "tokens": 297
+  },
+  {
+    "language": "rust",
+    "nll_sum": 325.232666015625,
+    "repository": "0ba23e5331b5336da1bcdba4fd0274d2f0b0a2e552f5d6cc607e01e0d82fd728",
+    "tokens": 280
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 468.57037353515625,
+    "repository": "0bb7e5bfb1edd77c1aa96f9b72cbf26c0537601986d9331a0f4dd57f568f5115",
+    "tokens": 331
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 420.89752197265625,
+    "repository": "0c0a680ce607735eb062d01a7643b195d9dd6b28e565b6d5713e900f818e7f1b",
+    "tokens": 418
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 917.2987670898438,
+    "repository": "0c7abd9136a4d547cfc8461ca0866950949bc750dc1871fa67c68f8eca629dab",
+    "tokens": 1349
+  },
+  {
+    "language": "rust",
+    "nll_sum": 640.8456420898438,
+    "repository": "0cd7dbadb60c3dea7628db163def68d5e69d820daee5d757a36fc4150db86f83",
+    "tokens": 1399
+  },
+  {
+    "language": "java",
+    "nll_sum": 93.18949127197266,
+    "repository": "0cfdcd62e32e3ea61761b889640a436992b69e3c2f35fda4e1b8734ba7e1c603",
+    "tokens": 67
+  },
+  {
+    "language": "java",
+    "nll_sum": 1715.8900756835938,
+    "repository": "0d48be0f45e5796bfe22a5728fc61e80ce3d22759264836b2d4997a7df09597e",
+    "tokens": 1044
+  },
+  {
+    "language": "c",
+    "nll_sum": 238.033447265625,
+    "repository": "0d607063366c69e337a0edb59106597c2b9662cd01082a3ab5e6278d19402e2c",
+    "tokens": 144
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 53.886940002441406,
+    "repository": "0d740f14b98580ac18487ec8336b41b57d720e60aff5bc126c581bb7c5d45218",
+    "tokens": 31
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 148.7493133544922,
+    "repository": "0db70e08345b0de9d241fd39b5bc0359139908124ae244e88c23f68a22a46432",
+    "tokens": 187
+  },
+  {
+    "language": "python",
+    "nll_sum": 1107.465576171875,
+    "repository": "0e394bb1a57d3bbb669ad4bc95f760b8238021bc8c438a9dc421869c31650365",
+    "tokens": 945
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 217.77264404296875,
+    "repository": "0e409aaad1bae398313ca9ae895f9d7d43e15a17221e696b5091324e5dbb64a8",
+    "tokens": 208
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 48.751258850097656,
+    "repository": "0f5b6c498d65fef989aba91c21491f5a8655235f76f381aa59b7a3b6ed6846c5",
+    "tokens": 30
+  },
+  {
+    "language": "python",
+    "nll_sum": 261.57733154296875,
+    "repository": "0fda1255a2753f084cb28a3f61ebc923e9030bd15c6f9fc1a7f38b6d0f751ad3",
+    "tokens": 216
+  },
+  {
+    "language": "python",
+    "nll_sum": 640.90576171875,
+    "repository": "0fdaf69cfcf802186f0c6724b3fc63fa958e1e971538f05c08e23d3128788af2",
+    "tokens": 311
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 324.83935546875,
+    "repository": "100bcb2da7ac0a9a51db2e95c86cb72eb2ca55be6c92ba81992dda768300152c",
+    "tokens": 408
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1863.3641357421875,
+    "repository": "105d1a9581003a25f42033193fde47402a4f7eaaf9cf55dd3fa2fde2b1ade9b3",
+    "tokens": 1445
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 290.9700622558594,
+    "repository": "108d7a5759f77efbb848b83fc5795a8eb11329b262a2b9a461802426cb02a241",
+    "tokens": 381
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 144.373779296875,
+    "repository": "1140cc726ad3b4030eab5c00e4bd3befdc80cfb8a81ae4123e5ec14ec17433ef",
+    "tokens": 134
+  },
+  {
+    "language": "c",
+    "nll_sum": 1857.2301025390625,
+    "repository": "115294b98705788b5ecfd3d885af983d11fd195e0a144b653034282054da6bd8",
+    "tokens": 1851
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 175.24667358398438,
+    "repository": "118c95f6c174d2c408d4bcb389276d89fe2c10f19269f95a8e63c2ef6ce2c7f1",
+    "tokens": 113
+  },
+  {
+    "language": "rust",
+    "nll_sum": 3515.4063110351562,
+    "repository": "11df07c830172129dc756e667d18326214260c434670a2b02981d76fb0a4e176",
+    "tokens": 3159
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 640.1516723632812,
+    "repository": "11e7f668c16060a2a22df548b381c8598d9d7f4efef348234966482fbe393995",
+    "tokens": 451
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 780.0166625976562,
+    "repository": "1211b92044b84cd7a13a5675e6ad562f989422e388da299f69481cc71b42d57b",
+    "tokens": 1673
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 231.7257080078125,
+    "repository": "124905b0fcf9efe3a955da6068300b6464210cad69f8293a47a8b4494a63e154",
+    "tokens": 319
+  },
+  {
+    "language": "python",
+    "nll_sum": 1316.068603515625,
+    "repository": "12a75f5865e7cbf52f66d814229e7929ef6c0fa86a4b37d6a32ce7b6f57366c5",
+    "tokens": 874
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 999.1728210449219,
+    "repository": "12d4c4cd34247849c9ddad0458aa24d359b4cf74d620b8b5f448b9e5c6e2694a",
+    "tokens": 1167
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 377.8514404296875,
+    "repository": "13be083b7d54af617977f7400d35683abed4dd88b0dc8d5d9411d0d9c04a1bc5",
+    "tokens": 248
+  },
+  {
+    "language": "java",
+    "nll_sum": 181.9556121826172,
+    "repository": "1414276ea36605ba3f89b2fde43b568abbcf830263f643f4652212c0bd35773e",
+    "tokens": 59
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 508.4916687011719,
+    "repository": "14ebb2ec9aa288ed81e34d7b642b3e9287154d2bdcc0333150149683ea55ad4e",
+    "tokens": 499
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 643.7738037109375,
+    "repository": "156c87b744ece0328e54ac80ee0942ef883a9720adc534838faeb0765c2de9f1",
+    "tokens": 949
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 694.3021240234375,
+    "repository": "15a34390f42a5076089e1abdba1aeae6ed1e5aa83026101d0a1150eb845c5d83",
+    "tokens": 588
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 114.40869903564453,
+    "repository": "1668f67b8aa2918884d4816bd15cb9094e942fbcde77e2a1daef452158a4131b",
+    "tokens": 115
+  },
+  {
+    "language": "python",
+    "nll_sum": 968.2645263671875,
+    "repository": "16fcea3b4abad46bcc58638cc7a75b520bfdf522588852ede5d42c1e2d92dabd",
+    "tokens": 547
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 847.8251953125,
+    "repository": "17182b15b5d12352d9acc72002a6492d7796b0281df1577c51a9dd54ac1aecaf",
+    "tokens": 502
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 626.8209228515625,
+    "repository": "1779f3732aaaeb988e8ef33fb3e157420828724202148c878d0734d8c96c99f3",
+    "tokens": 505
+  },
+  {
+    "language": "c",
+    "nll_sum": 725.8715515136719,
+    "repository": "18383bf20d96e34d01ba40764fce565e28d296800572d0fff7e842de619ee282",
+    "tokens": 809
+  },
+  {
+    "language": "go",
+    "nll_sum": 389.3299560546875,
+    "repository": "18c8b6925cf550ea203da77c5bf730cf0286e23d4cad8d2841fd5796cebd544c",
+    "tokens": 517
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 491.6236267089844,
+    "repository": "18cc42f981fa03ad44f9d8b08180f2bb356f9577c99ee3785b7f0c565263fb4d",
+    "tokens": 388
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 126.15393829345703,
+    "repository": "18fcc26bce779b3b4d94afd054c46c961f4c9e327d144deebd537eccba685124",
+    "tokens": 111
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 36322.096923828125,
+    "repository": "1932921474db142bc49677afad684d8cdb321296520a49bbfebb197f073f0836",
+    "tokens": 46959
+  },
+  {
+    "language": "python",
+    "nll_sum": 1132.5648193359375,
+    "repository": "199802deae327dfa19de0319f07304fdabdfeeb50de3ef7ee625255b9586106e",
+    "tokens": 758
+  },
+  {
+    "language": "java",
+    "nll_sum": 331.9988098144531,
+    "repository": "1af8a38252cabf90546438b509eb15be189052718b38a486566b5a3d02a77953",
+    "tokens": 385
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1603.2865600585938,
+    "repository": "1b320ef9a5fba0ecf1272cd4897a1e99618c9c8beb9389d92a476ed4a49309f3",
+    "tokens": 1391
+  },
+  {
+    "language": "c",
+    "nll_sum": 1039.1682739257812,
+    "repository": "1b488abe752f2dc3c8b1702baea5da9f4beb00d313068180311e71c4e4934cec",
+    "tokens": 469
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1207.921142578125,
+    "repository": "1b61898a9110b0036a030f3ffbe85a654e83b3938fdfd052030c762cd006e357",
+    "tokens": 747
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 272.31805419921875,
+    "repository": "1ba4f97ac3224c17a4918354d4deb9178cdc27973c7b9d5414326351792559b4",
+    "tokens": 201
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 277.6719970703125,
+    "repository": "1bb8b9d19ec2e48a1455460d7aa3773e6a5be93c7b691b7134cb3e15204ab972",
+    "tokens": 411
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 78.3134765625,
+    "repository": "1bc1eda95b386f6f905bd12b2077e37d0e72a6631826ea858b2ed258b67d090e",
+    "tokens": 33
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 217.05459594726562,
+    "repository": "1bd3797a9446f1850a074816e9b3887573686df6333f67c6a84924ffce4c5634",
+    "tokens": 551
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 541.9447631835938,
+    "repository": "1be39716786cbcced5f3e92b0ca12b74f2099c34e424a33e5e9e9bf8f9b8ed3f",
+    "tokens": 370
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 495.4466247558594,
+    "repository": "1c18716bb5318df2fbca317e81b9fd902ddd852eab9d74dad816c9419626240d",
+    "tokens": 528
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 240.16555786132812,
+    "repository": "1cd870bb198a770c9b3b03d7d064c30139228aa0c310547b436f06e765d49e25",
+    "tokens": 123
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 769.7498168945312,
+    "repository": "1e0850b490a6dbbbda688f15b223e141440e826592a86eb0c613fe0c7f2fff22",
+    "tokens": 505
+  },
+  {
+    "language": "rust",
+    "nll_sum": 6758.952880859375,
+    "repository": "1e7c36310b01b4ba3fea8fe464ce7d96051de9e86ce39209984821f85638c233",
+    "tokens": 7899
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 874.5168762207031,
+    "repository": "1e8c70562d02d69bbafe601d96b459258e3da1036142d1ba901b069cebb0d8bb",
+    "tokens": 668
+  },
+  {
+    "language": "java",
+    "nll_sum": 590.1604919433594,
+    "repository": "1e8c70562d02d69bbafe601d96b459258e3da1036142d1ba901b069cebb0d8bb",
+    "tokens": 505
+  },
+  {
+    "language": "java",
+    "nll_sum": 1205.5081329345703,
+    "repository": "1ef750802fd1ba8d6d6fa3dbf7905cbdf9d25f5a034b612d7ed9a21c2372bcf9",
+    "tokens": 1178
+  },
+  {
+    "language": "c",
+    "nll_sum": 1359.1039428710938,
+    "repository": "1fb7c1ad4524b6ba27a286b4b2f5a84fe537e92b4a4cdd65ab993875d6bf7cca",
+    "tokens": 2822
+  },
+  {
+    "language": "java",
+    "nll_sum": 401.7305908203125,
+    "repository": "20ef7108da224dc7af7737c838fa4434c7a64b369e7dc49f960c844b82de484a",
+    "tokens": 244
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 291.430908203125,
+    "repository": "215ea45d8561c31da5ec1f99f9de599ab27e62394b443ab16eafb729f9061aa1",
+    "tokens": 354
+  },
+  {
+    "language": "python",
+    "nll_sum": 2913.935302734375,
+    "repository": "224928b7f9b090700b0f2282545ac2a955b2f034d5eda3c19ddadb1536159f9f",
+    "tokens": 4805
+  },
+  {
+    "language": "java",
+    "nll_sum": 77.10520935058594,
+    "repository": "224f310d5f59b0dbbe1896b7bdb221a508ddbb179fed4b09037f8479d0081852",
+    "tokens": 24
+  },
+  {
+    "language": "go",
+    "nll_sum": 1092.5404663085938,
+    "repository": "22c082b32e299256fe45282a7e1d44bd1e5a89c706b52b5ed3d0b5ef7984a021",
+    "tokens": 2328
+  },
+  {
+    "language": "go",
+    "nll_sum": 85.80256652832031,
+    "repository": "22e03c13e2c71da050a97d8284fb870a43fcc52ca2165d71df03b347bfa2e99a",
+    "tokens": 34
+  },
+  {
+    "language": "python",
+    "nll_sum": 393.17218017578125,
+    "repository": "22edcff2fd7492fb95625ad5ffa5c8e6f50be662891904e9441c3623ad423991",
+    "tokens": 395
+  },
+  {
+    "language": "java",
+    "nll_sum": 1145.874755859375,
+    "repository": "23c5e65dd3b35bc43de7a367f2a40f8ecaa461f14cfeefc014427c2dcd769342",
+    "tokens": 1231
+  },
+  {
+    "language": "java",
+    "nll_sum": 95.26980590820312,
+    "repository": "25259a016652ff2ca25b55d48ba507a29147b2fd715d4335e5e3dc9488364ee1",
+    "tokens": 75
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 77.93203735351562,
+    "repository": "2575e9e433506f190b7a57fee6f62346fade624caeee18df24a717b4aa643744",
+    "tokens": 43
+  },
+  {
+    "language": "c",
+    "nll_sum": 166.05809020996094,
+    "repository": "25fb0c126ee0eb68f511b5dc3eeefbb15a3ef277db3e53500d4cc7deeef26586",
+    "tokens": 88
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 190.7891082763672,
+    "repository": "2753a29cbfe0e1fa613029c4f04fcf2bf32ff16092efa5a61a5f4b5efeaa9016",
+    "tokens": 218
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 50.599361419677734,
+    "repository": "2779b27a4dc91d65a1f4173997e49053628bc3b3bfeb150926c2bc5b16752f3a",
+    "tokens": 27
+  },
+  {
+    "language": "c",
+    "nll_sum": 1529.5383911132812,
+    "repository": "2839ad33c93e4edff15e01dbee6396ec7e5bca3d07f56a2b2d37a0d6f8ff9d1f",
+    "tokens": 928
+  },
+  {
+    "language": "rust",
+    "nll_sum": 471.199462890625,
+    "repository": "284274d13ae2166b7f1efb2cf901800d83d0d0733c7832d0516d6b23dfabe20a",
+    "tokens": 330
+  },
+  {
+    "language": "python",
+    "nll_sum": 455.92645263671875,
+    "repository": "2850c496057f76f174a6cc6b9f63a0bad9db52dc25b9b5535c3f85f9412b9522",
+    "tokens": 234
+  },
+  {
+    "language": "java",
+    "nll_sum": 884.283203125,
+    "repository": "287f063d5f3b5b710f68cf2a1095065d17afc0427954995bd7026c45bd8fc7e1",
+    "tokens": 1003
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 468.9585876464844,
+    "repository": "289ecbbb254398e30e814467d4580ef2c9c7b227631738531e87ce00f24dc524",
+    "tokens": 305
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 93.12666320800781,
+    "repository": "2a90761aeb331adc71584fcb4b74263a5c1712e417a5919d942a8fe701176fdf",
+    "tokens": 65
+  },
+  {
+    "language": "rust",
+    "nll_sum": 8881.026123046875,
+    "repository": "2b01bc3cd298b24149fe836b4376fa32a1e0978b92cbd5a1f604cf040feb4cbb",
+    "tokens": 7125
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 750.5775146484375,
+    "repository": "2bfd25bb4c4b816244f89f90f3a0c3c3ea04df63a1d78d1288a4dbe6506e6571",
+    "tokens": 632
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1511.5426025390625,
+    "repository": "2d8f8fb953a876b28dea945fcc86abaf1840fb0bc9c0878252dfbf5a5eba82ce",
+    "tokens": 914
+  },
+  {
+    "language": "c",
+    "nll_sum": 976.500244140625,
+    "repository": "2de7127185a4439f68ae19343fd0b7f2e178c4029049d37fc27a06a6a932776b",
+    "tokens": 973
+  },
+  {
+    "language": "c",
+    "nll_sum": 2504.4666748046875,
+    "repository": "2ed08d0790e76212dadaf200ad3fb1f370048d8552eebb38d27c9480f4cf099a",
+    "tokens": 1552
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 2828.3491821289062,
+    "repository": "2f859c42264fa2a07f637c7a2e4c256602d4c01b113206b11a432e728011e080",
+    "tokens": 3853
+  },
+  {
+    "language": "c",
+    "nll_sum": 189.8211669921875,
+    "repository": "2f97f5b486d459caf2524627e158e6e2243e926cc3f64a611af3d59d4da2b77a",
+    "tokens": 311
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 107.1669921875,
+    "repository": "307a23b91921b7c85b82b12907b3c27842ce2ee583fa39b51a53d272f84166a7",
+    "tokens": 46
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1724.8114318847656,
+    "repository": "30819345775c8c70e0fed00226bc25a3a2d37338f77f72465b425a6310985b92",
+    "tokens": 2137
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 89.26475524902344,
+    "repository": "308ade50daf50c80cd7b74e73221d04acd5cb5093641979cda66464e85335a3e",
+    "tokens": 129
+  },
+  {
+    "language": "python",
+    "nll_sum": 2108.0615310668945,
+    "repository": "31fe0d3e253573f9ea79e75bf443839879e49326779b5597631caa64aa6ec26a",
+    "tokens": 1410
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 46.03155517578125,
+    "repository": "324674164c52095b08e5ab8f5a35ef35384067644abc8894c257e52cccdd106c",
+    "tokens": 116
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 30.437713623046875,
+    "repository": "32fed0b3450fc06645ffc6ae64a8a52d009cbc9e96f6627a91c63dadbe65ed46",
+    "tokens": 18
+  },
+  {
+    "language": "java",
+    "nll_sum": 321.96246337890625,
+    "repository": "3309cea61a4df41e8492addb29cf97164d1207155b5d4a2c0c5c1a63cc80f722",
+    "tokens": 223
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 394.06646728515625,
+    "repository": "337629df56629822b2c2b7ba77cd05c506e7ce1af856c79fae84b5c3237306f8",
+    "tokens": 257
+  },
+  {
+    "language": "python",
+    "nll_sum": 2332.3992919921875,
+    "repository": "3377b0345b418f8f6d84a239cec9e841b91c304e60f6842c9157a1f3528b40bf",
+    "tokens": 1768
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 712.2952880859375,
+    "repository": "3387850979e601b181c2ec638f504f561e99f020a9a4e71d9b1fabb405372446",
+    "tokens": 577
+  },
+  {
+    "language": "python",
+    "nll_sum": 6692.0888671875,
+    "repository": "338fe8afcef0196556ab5cbd2b803348afad0915ff83fa81c7c9317c3cdfb9e9",
+    "tokens": 4824
+  },
+  {
+    "language": "python",
+    "nll_sum": 1721.21435546875,
+    "repository": "34a4ca01542001a1c54436410f7337ff600bed828170dcd892667892ea58a0c0",
+    "tokens": 1504
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 955.9190063476562,
+    "repository": "35b171bf65f2fc1b0a87d46931fec42ec1fa82b26c7f345800c8ecfa44656539",
+    "tokens": 567
+  },
+  {
+    "language": "python",
+    "nll_sum": 110.24200439453125,
+    "repository": "35d66e77f80293a82ed7683b5e599980c03982bbf53310ee071a918fdcb4f837",
+    "tokens": 154
+  },
+  {
+    "language": "c",
+    "nll_sum": 1532.605712890625,
+    "repository": "35ee92c355f3b25ae2f5b21753ebbcd0fcc97ae5411ba0489c6b311e199c3d57",
+    "tokens": 1546
+  },
+  {
+    "language": "python",
+    "nll_sum": 204.8605499267578,
+    "repository": "360109e14334a39dacd8ad7db4a34fdf300437939847d73333e6475c1cceb462",
+    "tokens": 230
+  },
+  {
+    "language": "c",
+    "nll_sum": 1369.2273864746094,
+    "repository": "36245c8a6dd43c4fc4ea83f3ea7d45cc0fc625a5b548c48d736ec38d0f324333",
+    "tokens": 1095
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 289.1414794921875,
+    "repository": "363090eed60420e3d39ce541f52e994a9729bb1583911012ea9a91a000787fec",
+    "tokens": 401
+  },
+  {
+    "language": "java",
+    "nll_sum": 580.8379135131836,
+    "repository": "36fd37399b9091a258334f7da3beebe875c85adb29f6012cec873bc7ac488249",
+    "tokens": 812
+  },
+  {
+    "language": "java",
+    "nll_sum": 2203.1102294921875,
+    "repository": "37159f2e1602a3cfb23aa4fc1a2ab5784cf8f3e0528c578f17f65eb92b7d2b1e",
+    "tokens": 2515
+  },
+  {
+    "language": "java",
+    "nll_sum": 763.636474609375,
+    "repository": "3730ecb805f4350bd94c499436910f083f63a0adae205b27a73e46319da80dbb",
+    "tokens": 802
+  },
+  {
+    "language": "rust",
+    "nll_sum": 580.1842041015625,
+    "repository": "37354894b2166111ec72cda863f2931d2b5c9d323e9d58851e880f685007a306",
+    "tokens": 496
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 204.64161682128906,
+    "repository": "373d032a6394811bd2e9ab6e1586e8b5bce06a9c6dbab61e1a943af9ea7fd691",
+    "tokens": 202
+  },
+  {
+    "language": "java",
+    "nll_sum": 735.4658699035645,
+    "repository": "377c567b1121606e5e35c5f9ccce92e480e762c1251cad7ab233060f2ea281f0",
+    "tokens": 807
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1725.5178833007812,
+    "repository": "379ab799caf9d364f36ffbca575ff6039926f56dee2e8c34d7c8538f67f0900b",
+    "tokens": 2059
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 839.828369140625,
+    "repository": "3a37343773a8ac5ae163ce0fa0b808e96b634f98c5f1bf431162024aa858ae41",
+    "tokens": 853
+  },
+  {
+    "language": "python",
+    "nll_sum": 1441.1157531738281,
+    "repository": "3ab88b048d5c433421c008be50af4f54247df761066724b9b6183d88c5e09462",
+    "tokens": 1288
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 403.7852783203125,
+    "repository": "3b661a349e0f085ec79dc8882433993c4a8256031a44515319a7247f27f9d434",
+    "tokens": 394
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1396.4425659179688,
+    "repository": "3b6ff999cc9aedbb201d6f9033d77d22264b8902890e0ceaee3fad7714a3da74",
+    "tokens": 1084
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1325.7820739746094,
+    "repository": "3bab4a51e22eaecbdf941fba7781a8cf30ca8cd698e9c51c3fc960cbccf1e25f",
+    "tokens": 2104
+  },
+  {
+    "language": "rust",
+    "nll_sum": 20044.722076416016,
+    "repository": "3c714aa57ec4a4d0d4b9b1e1b2433ee1ae4c44806f0f98dbee62bc551630b7fa",
+    "tokens": 16760
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 254.77841186523438,
+    "repository": "3cccdedd452ba594e50709ac0f2afc8bb2c4d045e978bf4e776b09542f2fd615",
+    "tokens": 149
+  },
+  {
+    "language": "c",
+    "nll_sum": 927.9542846679688,
+    "repository": "3d285b126ac75a849050bebb424383abf8661a4d2c6589fea2502540b7a04b4f",
+    "tokens": 773
+  },
+  {
+    "language": "rust",
+    "nll_sum": 994.208984375,
+    "repository": "3df56b1964d9e202f9391ae8252151e20c1f72f2cfc249ef172f1d85edff6d2e",
+    "tokens": 860
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 201.65939331054688,
+    "repository": "3e42cded80e8f7db28b9381c631c998ea90aac2a6b08bdb3579aeb37b78aad97",
+    "tokens": 99
+  },
+  {
+    "language": "rust",
+    "nll_sum": 755.5856323242188,
+    "repository": "3efb41d9178ffa24d11c13f9ef2cca069987c96dca28c474fce05ff9d9e76a25",
+    "tokens": 1066
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 147.57772827148438,
+    "repository": "3f7e5ca21c9b886a4ebe2d766289223a0806a02c334d1f4c1c2d6dde6f0fb11c",
+    "tokens": 62
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 2724.6146850585938,
+    "repository": "3faba0416ec1bc87e1051a40bedad26780c80a5b4d5262b7ab98db001659f1f0",
+    "tokens": 2161
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 609.71630859375,
+    "repository": "3fbb1a1d80381b261a9012645002090524acf9f0af3db2278df4f9487265b30e",
+    "tokens": 763
+  },
+  {
+    "language": "python",
+    "nll_sum": 171.01937866210938,
+    "repository": "401909aad3d8cf3a5400e60ced036634bb39be4d9783ff2a87f0a206c6379e4f",
+    "tokens": 65
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 496.62396240234375,
+    "repository": "404f577d7cd95897d42859be2238369ae47d4fccacbb4bf0a4ce33f2ca25c349",
+    "tokens": 463
+  },
+  {
+    "language": "c",
+    "nll_sum": 532.3179931640625,
+    "repository": "4050d592d24cfe037e65d952f4b760a4a1de8d64a8d038d882989a97f76fd532",
+    "tokens": 231
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 219.45315551757812,
+    "repository": "40a77a838a94a7dc72999c466692063624cf2ac10007ad8619febac0b6e96eff",
+    "tokens": 160
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 2679.5025634765625,
+    "repository": "41400b0454c7f8afb986e5da403e0c093a20c0af26d21f94030a526358e58a07",
+    "tokens": 3131
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 139.0408935546875,
+    "repository": "41965659b7b09f7b8c9eef4b34d56c66258722c2e65f29ebba79a8dfef5311b6",
+    "tokens": 94
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 586.67578125,
+    "repository": "41ebbb9ae022e943d82d6f57ab4dc0cacc0b69cb0bbe3c20c361e6f11e5a16a9",
+    "tokens": 304
+  },
+  {
+    "language": "python",
+    "nll_sum": 1272.1894912719727,
+    "repository": "41fcc61f2b7bbeb55844a574c23c57fc2b9b70d92e93059e00d7d7db548ea7c8",
+    "tokens": 1387
+  },
+  {
+    "language": "c",
+    "nll_sum": 1679.4778137207031,
+    "repository": "4278dc5de3185f3b13b94ebe3b47c73dbb5172d1bf422ee8799a6b30e1e58d41",
+    "tokens": 1373
+  },
+  {
+    "language": "python",
+    "nll_sum": 151.2579345703125,
+    "repository": "42e9264a2e44f0b2dee9c0d08eabedfd0b1e4f8a39a1ec4c6552385bd3d73a35",
+    "tokens": 146
+  },
+  {
+    "language": "java",
+    "nll_sum": 76.06192779541016,
+    "repository": "4478dcc07accd095b254fa7fc12fd543fca5cc7ea4d0a29f0eec92c1686c770b",
+    "tokens": 53
+  },
+  {
+    "language": "c",
+    "nll_sum": 5308.22607421875,
+    "repository": "45de6084ba3d9da614e83fd4d194a4146dde9eb77ceb2b54e915b82c8dd14114",
+    "tokens": 4757
+  },
+  {
+    "language": "rust",
+    "nll_sum": 182.1231689453125,
+    "repository": "469ecd8447ab49101ebfe85742755bc12572c1234397f556a8c24bc16c02235d",
+    "tokens": 146
+  },
+  {
+    "language": "python",
+    "nll_sum": 96.28704071044922,
+    "repository": "46a4bd57601e2d9c0bc45d74906616fe20e2ee50c30a9c105f074a5cd0ed8ad8",
+    "tokens": 86
+  },
+  {
+    "language": "go",
+    "nll_sum": 1747.1135864257812,
+    "repository": "46ac75a8df5f4a725899a379a91a2f492d43b2647f0d30827708334913009674",
+    "tokens": 1597
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 658.8935546875,
+    "repository": "47063b23d2365a880b8dd4327a02157a8b38998ca43d445dea126c4c428c149f",
+    "tokens": 284
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 932.8549499511719,
+    "repository": "4773ead7a67606fe9d5f994f04be35b9b38ea62478e4f50ed824ee95fb75c24b",
+    "tokens": 1411
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 769.3233032226562,
+    "repository": "47e9d1db2c3eda9e805f01db0ff1dd4efab6f0d9cbc8f26e655e7cd45caff883",
+    "tokens": 541
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 243.73007202148438,
+    "repository": "480bf740f6d5a210590b1a41f10e5d3cb675df20fc87756bc631222e7a3bc2eb",
+    "tokens": 313
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 891.4094772338867,
+    "repository": "48a5612e822facc1b83a72048b02cde264d7b77a32b3d32d06a62e7724248c87",
+    "tokens": 1155
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 276.4846496582031,
+    "repository": "48d0beac358b7c7e83998a871b5109e08cc9e044b8a40b32f2ba245aaa05c699",
+    "tokens": 124
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 95.00576782226562,
+    "repository": "497ca47000caa69b866a7cc00db470bc2fad28bd23e0f6ee1ca6d6992f39bd86",
+    "tokens": 54
+  },
+  {
+    "language": "java",
+    "nll_sum": 1340.81884765625,
+    "repository": "498d989a947a726bc9d6e5a24ca7451d8b2bd2cee8adf2275878b3aaf317baff",
+    "tokens": 1003
+  },
+  {
+    "language": "c",
+    "nll_sum": 1406.6992797851562,
+    "repository": "4b35553a3b93e0226cebf6aec013f41253a9e5eb7a90676991d29c3215d62488",
+    "tokens": 1767
+  },
+  {
+    "language": "java",
+    "nll_sum": 944.3240356445312,
+    "repository": "4c3e82c92a0c728eaceb908e76fc6180e802eb4a9f5a16d3dabacd8faa4654bc",
+    "tokens": 550
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 257.60003662109375,
+    "repository": "4c4bcb6baaf41f293868059ea79bffdea4fbd29e2b08b6241a27aab3a6cb2e72",
+    "tokens": 402
+  },
+  {
+    "language": "rust",
+    "nll_sum": 323.92755126953125,
+    "repository": "4cb25cc6370f720576e1cbbfddd58e320f2779cc0e6d2a971b8b76400f9bfa60",
+    "tokens": 300
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 636.4583740234375,
+    "repository": "4d3fb1731cebbc54af5f5fa3cb6f4213de147256fcd439d5cfba87c34f0e6dd1",
+    "tokens": 884
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 105.68255615234375,
+    "repository": "4d4a680010f55d6b7bb4c38ffbb8be2d8c07c0c7a50671ba1703925a6fdc0b6d",
+    "tokens": 149
+  },
+  {
+    "language": "python",
+    "nll_sum": 463.5868835449219,
+    "repository": "4e05c9075173f44ba4650184777e5814fbfee27a747f21e31e8bf64a8317cd37",
+    "tokens": 571
+  },
+  {
+    "language": "c",
+    "nll_sum": 4071.3402099609375,
+    "repository": "4e92235615614a93fa79ff9b8cc81595d0a688c1d3ef0c0b9d3cc8d8124a53fe",
+    "tokens": 2156
+  },
+  {
+    "language": "python",
+    "nll_sum": 84.27281951904297,
+    "repository": "4e92235615614a93fa79ff9b8cc81595d0a688c1d3ef0c0b9d3cc8d8124a53fe",
+    "tokens": 21
+  },
+  {
+    "language": "go",
+    "nll_sum": 308.4931945800781,
+    "repository": "4eb00b6876b7ba291b981ac067c1dbdd546bf9d01af1bd5894d79807cbaee185",
+    "tokens": 335
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 105.04877471923828,
+    "repository": "4f05c68b67666db0a6d4ee7669a65e5f031e34d28536f760737ed4c3d5a7764f",
+    "tokens": 121
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 414.3253479003906,
+    "repository": "4f3cbd928ced2d232c6417b669b08feba4ce9bda430b3550ccfd57b9d002d4b4",
+    "tokens": 328
+  },
+  {
+    "language": "java",
+    "nll_sum": 149.56523895263672,
+    "repository": "4fa3a1c0ebf76e409b8164361ee916ab67d924f80def379494123f03f06ff87d",
+    "tokens": 56
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 145.77793884277344,
+    "repository": "4fede3679ddf57fae62cccc3e25de9bb3a4eb0facc1a7f817749b2664dc44fd9",
+    "tokens": 91
+  },
+  {
+    "language": "java",
+    "nll_sum": 133.60903930664062,
+    "repository": "501b050ce064bb8293ed9a1045d0e0fb6b39ecf9acd06d611e5187bcef350380",
+    "tokens": 29
+  },
+  {
+    "language": "python",
+    "nll_sum": 488.2003479003906,
+    "repository": "522966b9318fc815687e997aac314ddd657cfa8a60cec85f859a5ebcfb792d29",
+    "tokens": 255
+  },
+  {
+    "language": "c",
+    "nll_sum": 641.757080078125,
+    "repository": "52732a36f6ec96d4bfbbfa7c895c83b7df95107c4b07c5a0acdd82a8e296048c",
+    "tokens": 782
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 197.37066650390625,
+    "repository": "52b513a2a223db11553e537c9ec94a1da5653e8848b98a70946866f14b28184c",
+    "tokens": 67
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 356.33929443359375,
+    "repository": "52c111648953ddd1a9a9a4bbdb3f01bef891fad08c8947d2b7e71581adaca6c2",
+    "tokens": 334
+  },
+  {
+    "language": "python",
+    "nll_sum": 1137.4295654296875,
+    "repository": "52e0002937c1788272b04a9cc512d5ee78f49174cb65041f93af7bd34fa34572",
+    "tokens": 743
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1720.6180419921875,
+    "repository": "539caac668969aad995648c8632833eef7a98829c7ebc0b4925b1464fd15f0d2",
+    "tokens": 1318
+  },
+  {
+    "language": "python",
+    "nll_sum": 1229.4181213378906,
+    "repository": "541258ab3b4457db22381a7ad29d74ceb06da90a9417119b9531f6b3d05ac778",
+    "tokens": 827
+  },
+  {
+    "language": "java",
+    "nll_sum": 418.09832763671875,
+    "repository": "54b51d51e8bd6c70d114907ef3576c221f738cd571de84d7442e095ad54c4dce",
+    "tokens": 542
+  },
+  {
+    "language": "rust",
+    "nll_sum": 52.57242202758789,
+    "repository": "54f92d2b2f00723d4367eba2ec3d539307e408d30c8f217288e6cc01261cf1b1",
+    "tokens": 22
+  },
+  {
+    "language": "python",
+    "nll_sum": 970.38720703125,
+    "repository": "554ba37223ac725b9575c97183c870f4c5e7dd229886e1ff6911624ffc3da070",
+    "tokens": 613
+  },
+  {
+    "language": "rust",
+    "nll_sum": 5250.7821044921875,
+    "repository": "561a49e6948aa347611fb9594d3088271591e12d154abe8ef20533e5e383b598",
+    "tokens": 8050
+  },
+  {
+    "language": "rust",
+    "nll_sum": 2688.4931640625,
+    "repository": "565136941969f9f4f3e34c2383c5b9919d08beb00b2a9a1dafd727a2fbc2ec74",
+    "tokens": 1906
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 158.75946044921875,
+    "repository": "568c8b21183c54c50a5bd35df5e5062f268f797fdd1836e1673007b8ed0044b3",
+    "tokens": 142
+  },
+  {
+    "language": "java",
+    "nll_sum": 948.8447265625,
+    "repository": "5691dc04242a9153b58933683d3f14c445c795a52b810d678a3430fb777cae88",
+    "tokens": 866
+  },
+  {
+    "language": "rust",
+    "nll_sum": 311.74224853515625,
+    "repository": "56ee957873ef9989ed042ad509f6a0539dcc85c2b4341b3ba375ac9bf5b790a5",
+    "tokens": 407
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 5252.4576416015625,
+    "repository": "57d4a4584fbb940f028fd2fa017523724e5c625d248463f4aa6d3c941619a090",
+    "tokens": 3843
+  },
+  {
+    "language": "python",
+    "nll_sum": 934.44921875,
+    "repository": "58152d8642c315822c4733953b57b38ca8fba6558aea788d81941c5bf104cbe6",
+    "tokens": 497
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 5259.467224121094,
+    "repository": "58b6bb8478a0e414ab762db72962459cf793acbf578046de6786567119f59245",
+    "tokens": 4683
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 519.4302062988281,
+    "repository": "58cc7f037c8e09ba3123ad2d88806b50f76fc4b446be229f275e878d61c634ad",
+    "tokens": 522
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 347.5845947265625,
+    "repository": "5970c120fefda238164363865d7c7a1d0c57e5a95ac7f456cb4bc44e1372388e",
+    "tokens": 523
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1455.2469482421875,
+    "repository": "59f5aa759e67cb8a17259fef88d2653ba8ab6a8b84cd67fa2f4f541ed0353325",
+    "tokens": 1292
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 723.1168212890625,
+    "repository": "5ab66e5dcb710438e8148e330831a0755da3a476c8948bbd29ad8ac27ea8d506",
+    "tokens": 597
+  },
+  {
+    "language": "python",
+    "nll_sum": 630.974609375,
+    "repository": "5ad3520b22708d00893892088f2e22cfe5ea772fce7cc00dc96843777e9d5b08",
+    "tokens": 552
+  },
+  {
+    "language": "c",
+    "nll_sum": 245.29147338867188,
+    "repository": "5b29e7138484ed7e6d9e2924e0278d91bc790d20f24b3abd9746fd6ee789003e",
+    "tokens": 251
+  },
+  {
+    "language": "java",
+    "nll_sum": 896.359130859375,
+    "repository": "5b549082f89ea8fb67da731f455c94ff8f46a9d21d880ff5a4b1e76b8e4dd6bc",
+    "tokens": 748
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 72.4046859741211,
+    "repository": "5b8a0403802e4a45a9a7baab3e7e6e622a6ac085e312c6de29d2910de36b36ba",
+    "tokens": 82
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1047.475341796875,
+    "repository": "5ba4fa35c5a9b943df4f4ca42ffb877be51166dc09d8c2c5bf61e2bd04aed0ac",
+    "tokens": 927
+  },
+  {
+    "language": "rust",
+    "nll_sum": 160.15960693359375,
+    "repository": "5bc0e21c42a0f6e6e007082fab0cc02bfb8365e746cc455b586f9821380e00fd",
+    "tokens": 87
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 242.23330688476562,
+    "repository": "5bfa63f1f41b86c92860165736821fc3b97d4302f41f938c848bebdc85446460",
+    "tokens": 147
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 608.5753173828125,
+    "repository": "5c61aa009915fe17f803f27b5e12c5956696003d95a142a5b8d3421076c53061",
+    "tokens": 314
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 58.043731689453125,
+    "repository": "5c7940f7b8f65e578b8dce0ae5f952d3448b344cdf36a8e238bb9acdd35f2c5d",
+    "tokens": 21
+  },
+  {
+    "language": "rust",
+    "nll_sum": 933.3306884765625,
+    "repository": "5cd8277efe61fd19d7a5bd968f8f4d2ce8712d0ea0676b0a4dd77bc0a73fa37e",
+    "tokens": 452
+  },
+  {
+    "language": "rust",
+    "nll_sum": 2657.863250732422,
+    "repository": "5e1d14a76bd5ab00a9065e624db7476b262ca5a52fac5ee89486bc089f9c71ba",
+    "tokens": 2172
+  },
+  {
+    "language": "python",
+    "nll_sum": 23166.341369628906,
+    "repository": "5e1dfad8382c345035b7bcd605958943fb3bbdfb5e2ddadbca942b3aff88cb7a",
+    "tokens": 20269
+  },
+  {
+    "language": "java",
+    "nll_sum": 1512.5784912109375,
+    "repository": "5f05d20d7f87f6ee4b5b65c3f4105911b10d46d6c6d2a4abdb34784b6815892f",
+    "tokens": 1789
+  },
+  {
+    "language": "python",
+    "nll_sum": 272.13616943359375,
+    "repository": "5f12437ea923a6f3b0de6289d382fee7f06c5bb20344554f1570d900743dcf76",
+    "tokens": 142
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 228.72515869140625,
+    "repository": "5f931232634a1ea8af21266a91f4bd9de595246941f0c903d5eef5f6fd71b281",
+    "tokens": 145
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 569.6982574462891,
+    "repository": "5fafe73ea2101012a4c924c47872642f1b7353ad5671b637b1bc722b89818f24",
+    "tokens": 375
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 486.9235534667969,
+    "repository": "5fcb8cb77682fdba53e31ec2bfd2e3923169e79cbde290a782b790227b9a1029",
+    "tokens": 413
+  },
+  {
+    "language": "java",
+    "nll_sum": 228.12734985351562,
+    "repository": "5fe7b1a246125bbecfd55a41ef7da7d1d376719a621fffd35553299299f53485",
+    "tokens": 138
+  },
+  {
+    "language": "rust",
+    "nll_sum": 402.1756896972656,
+    "repository": "612a796420f29e6b7deaaa126f57c9cd471be9c2f4323d136e5c848a103dadbf",
+    "tokens": 635
+  },
+  {
+    "language": "python",
+    "nll_sum": 139.38528442382812,
+    "repository": "6171927fadc38225e10ce254e8ae5db9e8920633ebb220972443680d8a625803",
+    "tokens": 51
+  },
+  {
+    "language": "go",
+    "nll_sum": 246.08554077148438,
+    "repository": "61eb9864dd96ff5f831bb14227db71f04615176111a91567a4a906173ed69168",
+    "tokens": 231
+  },
+  {
+    "language": "c",
+    "nll_sum": 817.2631683349609,
+    "repository": "62057e4234b4e66a712e3e497ea3a8601b247df6951a8578c6da0e2965f122cd",
+    "tokens": 432
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1589.1375732421875,
+    "repository": "6282659ad2f93f5c28feee304e8232ff5b4806d6e7a63e350aa95742736ea85c",
+    "tokens": 1922
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 99.10762786865234,
+    "repository": "6293eb259de257da0da9e9d7c0d4210f9eaf8a9faa60bb53762d954d755f966c",
+    "tokens": 94
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 645.1124877929688,
+    "repository": "63b18169d711c544fffbde9798f020c32ea7f19b8dab0a737ba5ba910254829a",
+    "tokens": 583
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 365.0174255371094,
+    "repository": "63b302825acf1195c752c4aee23e2ab65c65f24c56279016bf568f75d5ff312e",
+    "tokens": 498
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 238.2638702392578,
+    "repository": "63e6921857feb435c2b6413e6a3fc4be5261dd43b8398117fb89b0e6b13cc6e7",
+    "tokens": 141
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 3379.5496215820312,
+    "repository": "64b7ecb7cef40ae3390453ef302e86c6b09432dac78cafee3639cb6bf678fd16",
+    "tokens": 3071
+  },
+  {
+    "language": "rust",
+    "nll_sum": 217.08609008789062,
+    "repository": "6521b7d934043f5ba730bafce2367d4a022c9ced9c261ced10bffc78face2d97",
+    "tokens": 208
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 2222.271240234375,
+    "repository": "65fe87ae500289a5260a397b5fafe7ebe726dc644c8fdcb6dc4f21119de18faa",
+    "tokens": 1589
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 807.3898315429688,
+    "repository": "6636f472f753eb1abeb5f2b43467e740e322ca0c8f4fe3872adca92e6a6c704a",
+    "tokens": 490
+  },
+  {
+    "language": "python",
+    "nll_sum": 153.65017700195312,
+    "repository": "6703afc3090684ab6751d1b99e04a49aec1478c6216693a002bb28f348556906",
+    "tokens": 139
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 957.188720703125,
+    "repository": "671117211eeebe991986d6cb446e53910d7771a9325b7daf99e06a70720ce702",
+    "tokens": 1290
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1334.549072265625,
+    "repository": "67b84ff7e9a69522c3f74ce892b56e7bc3446fc64951f56131ecf02b3ec5e6e1",
+    "tokens": 1379
+  },
+  {
+    "language": "python",
+    "nll_sum": 425.1778564453125,
+    "repository": "6801f3ba5603df75b8f24855581eaceefa1b735a3bc62e1a92eb74258d7a05de",
+    "tokens": 1225
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 107.50543212890625,
+    "repository": "682f91ee99a6bed1b546d0d32c4ae0b07025b63a354ffa505b7056e0fc2f289a",
+    "tokens": 79
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 143.8299560546875,
+    "repository": "68d88af80811ae5f53165a6c7765cd6dcb0edca615e08a58dd1cd4d5aa0b0cf7",
+    "tokens": 122
+  },
+  {
+    "language": "c",
+    "nll_sum": 406.8288879394531,
+    "repository": "69a198baf8d30d7befbabca846810e5ce4e0782c9159ca8a441261da437a9a02",
+    "tokens": 382
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 171.5021514892578,
+    "repository": "6b7031737e24ab278380218307112b91d2910199e6ead94ad70374a747c8c19f",
+    "tokens": 144
+  },
+  {
+    "language": "c",
+    "nll_sum": 2159.1898193359375,
+    "repository": "6bcbbfba89c13ffe8b957e8b321108e13f183dfbf14932594611f21e326e49a2",
+    "tokens": 2233
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1430.0896224975586,
+    "repository": "6c1795e90313fb9b7cfe696ded1366c081d2871764a5590f9fd93b2948e44c07",
+    "tokens": 2564
+  },
+  {
+    "language": "java",
+    "nll_sum": 303.4921875,
+    "repository": "6c23175a91facfa975a83b693c9af9d2ce6d7334bc051b5d37e8c8c61b220cba",
+    "tokens": 198
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 488.8607177734375,
+    "repository": "6c2fab7be9d2df12f239562778036c2277c20e06e9eae950d8799d1a369fb5d1",
+    "tokens": 298
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 50.6614990234375,
+    "repository": "6c4f8c31262b29d1d92517a546d6d9085c35fcfd8768ee33bfdf204505ea43bb",
+    "tokens": 107
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1212.403076171875,
+    "repository": "6d7ba27f3214676e2c9d0d889fc9dcbab2de9af1a83bfb68c8c1eeeedaa87f64",
+    "tokens": 1196
+  },
+  {
+    "language": "python",
+    "nll_sum": 786.0964965820312,
+    "repository": "6df04af6183b6f57c42b6851f7c81ac55d8fe6556899e3ba5a6b8b6120ab6a77",
+    "tokens": 441
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 385.201416015625,
+    "repository": "6df96cdaa53d03d07c24833edbb481a185b4321dfaed716a53e359de92634a5a",
+    "tokens": 385
+  },
+  {
+    "language": "go",
+    "nll_sum": 183728.73025512695,
+    "repository": "6eaed9b65fd6829203e7a1ae362769f48de84059266cde9a7eef88171a02af4e",
+    "tokens": 106292
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 72.88749694824219,
+    "repository": "6f62a4fd812bd2028395ceaa6343095f1adde6d60550f00a8e2a9d20194d3167",
+    "tokens": 32
+  },
+  {
+    "language": "java",
+    "nll_sum": 1924.94189453125,
+    "repository": "70a6d1921b015fcba3826dfc8adaba8204fa9821c91ac898bd5f016da61f4def",
+    "tokens": 1730
+  },
+  {
+    "language": "python",
+    "nll_sum": 1108.5925598144531,
+    "repository": "710483b61ea5b845e964a0d630f81305c1e98ddd69751a30e1210af9a399bfc2",
+    "tokens": 702
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 675.3872680664062,
+    "repository": "71990f6896ac74a7dd827f174e76db54defd7c16be8f80579ef92afae268a543",
+    "tokens": 595
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 2540.2609672546387,
+    "repository": "72bbc9c69c8a6ee36b9ea94a782634d71dc29ca39bb8e46da91fc7e59a6b80bc",
+    "tokens": 3390
+  },
+  {
+    "language": "rust",
+    "nll_sum": 143.29727172851562,
+    "repository": "72ec4c7f73b50fe24426b460ef0e60be84d16c0a82f49f06fda817a02da95788",
+    "tokens": 268
+  },
+  {
+    "language": "python",
+    "nll_sum": 3679.564208984375,
+    "repository": "73fa740db5f9caf1dac21643b090810fa477a43a19a994584696b6924b190ace",
+    "tokens": 2585
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1271.9498748779297,
+    "repository": "74174ecc986812ffa9dc7e1724d00571079dc466969f1430e3317cf643399b3b",
+    "tokens": 530
+  },
+  {
+    "language": "python",
+    "nll_sum": 2992.0906982421875,
+    "repository": "741ccdc7291a08f73ca00f0499134e863ce451bef30f9104a092c02cbcf3eb8e",
+    "tokens": 2622
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 212.7295684814453,
+    "repository": "7427449ab6af345226e9b159ad5e09ae83d71fe31021bf8ba5e3b4246ee784b6",
+    "tokens": 240
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 782.8124084472656,
+    "repository": "744cfaff018bc8b43ebd6a1fec1275a7dfbc339e15ce1a0e24f053915dcb5a35",
+    "tokens": 618
+  },
+  {
+    "language": "java",
+    "nll_sum": 1768.4149780273438,
+    "repository": "748a7fc160554226fd5e6892ac989f928a3b0f266efe86946d3568bd90a79742",
+    "tokens": 1914
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1109.5250244140625,
+    "repository": "758d75179b2c247d7addd80144728ac05de49aca23257ca8b4e1e8e24ef68fc5",
+    "tokens": 1986
+  },
+  {
+    "language": "c",
+    "nll_sum": 533.00146484375,
+    "repository": "75d99ff2ad646a1e2e901eb656299631bd445748fa4cc3027acfabc47014d640",
+    "tokens": 283
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1256.473388671875,
+    "repository": "7601aa836901d6d90276bf66b3a0f55bfd5af7a0f6bd1ae58fdf072edf1f6669",
+    "tokens": 909
+  },
+  {
+    "language": "c",
+    "nll_sum": 1772.3291625976562,
+    "repository": "76b4de54715697c3ca118b5a5701ffa453cc18d69413583e05540f5ad7903ff4",
+    "tokens": 1225
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1239.265380859375,
+    "repository": "773c6d9f0d7cefa6f3f80b60d6199afbc5d9c93b9105f2c3a17396909be95ec0",
+    "tokens": 2327
+  },
+  {
+    "language": "java",
+    "nll_sum": 1448.343017578125,
+    "repository": "77cd62913b266da556bbd6f549931079e1fe4fa2081622ff2f8962967580f233",
+    "tokens": 1154
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1344.2649536132812,
+    "repository": "77f6588a15d3c14bf9faba0fec4b7acd2b04b75c4a7c9928a58a47ec46de4ea9",
+    "tokens": 788
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 349.84149169921875,
+    "repository": "780f4c3b65397d2c339aac70511b610e3410216367cc0c7c0c0d287765100d84",
+    "tokens": 293
+  },
+  {
+    "language": "rust",
+    "nll_sum": 2866.8467407226562,
+    "repository": "781c15316d2658542d4e701144c892ea0e7a80594db48b0385bb5f0a36114e47",
+    "tokens": 2322
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 945.2444458007812,
+    "repository": "785a5847e9b53e867ca7d5676311042bb2b64cb0f43fb8b9c42dd1fc32a5edad",
+    "tokens": 1146
+  },
+  {
+    "language": "python",
+    "nll_sum": 4865.522705078125,
+    "repository": "7889afb0d3d66044ae6e6501ba1cbc1c212a0469faa0383c6d7d107e1b3586d0",
+    "tokens": 4011
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 642.780029296875,
+    "repository": "793fce2da35c64827837d2977a79d20533aaeacfb8a9fa7c0f60e98efce04570",
+    "tokens": 439
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1207.886474609375,
+    "repository": "79cd17f1cad04e072ca53e8425a236b7e61b7cdbbff2076da8ae01475a7f37bc",
+    "tokens": 1093
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 998.9156494140625,
+    "repository": "7a2662abe07ad8a05142516edd693f0dad17edce454323675719da72fcd92f36",
+    "tokens": 843
+  },
+  {
+    "language": "rust",
+    "nll_sum": 4005.099868774414,
+    "repository": "7a7004e2cdaaa3e0374f1ce83a1dd5189680de7077a7871c4c3533d6e433257a",
+    "tokens": 2724
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 174.22178649902344,
+    "repository": "7a96976fa28f2232aca7d16a7ce587258579b9cc001886fdf9bdee025f724791",
+    "tokens": 183
+  },
+  {
+    "language": "java",
+    "nll_sum": 1609.39111328125,
+    "repository": "7ad3e2a6a396d02353b4c4edc51d72df7b0adab739f3ad2b98bdba29d8577159",
+    "tokens": 1856
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 5272.357498168945,
+    "repository": "7b9f6a98e48b19ba804f6b78191ae7d2c1b103aa5cbd333d6bc4be9d9dab3dc3",
+    "tokens": 3784
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1021.9651947021484,
+    "repository": "7c51af38eb81b1dd3f7a65fbbe25b5e48832be8d1ff20497f035c6314efcfb72",
+    "tokens": 886
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 737.5296020507812,
+    "repository": "7c7e0b17faa4523a39d319a0ae794ad82b90c819795ec10ed3a68c14182baf59",
+    "tokens": 499
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 98.08169555664062,
+    "repository": "7d6e942992a597ee16146727335ee2533eb6169b3044b4040e336b8371d43428",
+    "tokens": 42
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 575.7347106933594,
+    "repository": "7dfc1a239ef558bef0ebb5a4a38ca092d6f0403f0db974d55bb0cae53136a7ee",
+    "tokens": 749
+  },
+  {
+    "language": "python",
+    "nll_sum": 250.3115997314453,
+    "repository": "7e0cd13d453b6361f75d444ff7edddb643c80ce22201aabec7dcae8cecf99d2c",
+    "tokens": 206
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 522.671875,
+    "repository": "7f1fc71b04b154963a9d6bba3d617ca9f908f3a174028a51345e2f11542ecda6",
+    "tokens": 561
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 69.2170181274414,
+    "repository": "7f4e0685399272c8731d2b84ec51bb7e6a8d1186254a87fc261ea96c6ee64a4a",
+    "tokens": 52
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 281.1781005859375,
+    "repository": "7f65b9b8d3ab8b2d08057c32f518255293d3ec16bcc9be24dc3b11c076889454",
+    "tokens": 181
+  },
+  {
+    "language": "java",
+    "nll_sum": 3726.863021850586,
+    "repository": "7f94e0c284bd3e73f61ae930c44a18cee25fbb94b538909d723cf749995a3618",
+    "tokens": 4151
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 357.2146301269531,
+    "repository": "8013e1503bcf83e6b3ad1e267356c5c32b0624db768972af7234b7f2fd7df0d3",
+    "tokens": 446
+  },
+  {
+    "language": "java",
+    "nll_sum": 131.81069946289062,
+    "repository": "808f2268c20f011e35d3485f962ec186b89cf1f8270458497fc4cee5128dd9b7",
+    "tokens": 132
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 2120.6336669921875,
+    "repository": "8103a0b44ff062427b67507942c32c083f2253dd6156fb25af7a4dc09363f5d0",
+    "tokens": 1943
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 942.8844909667969,
+    "repository": "81d3b149d842da3723401d5d774b0a4d54fa18a12bffddf1d5966afa41ce39cb",
+    "tokens": 934
+  },
+  {
+    "language": "go",
+    "nll_sum": 979.9664916992188,
+    "repository": "823681279577ef6ad3739ceec57bc2b44d9447d839ba18551fa31a06f509e7da",
+    "tokens": 1059
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 161.79849243164062,
+    "repository": "82b6556f7ee619e396c5455969b2a0998dc5c9bbd67b372ba4584010c33c2646",
+    "tokens": 235
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 213.68822479248047,
+    "repository": "82faa8471a4687ff7977b559a972b0572838dc7f7f35df5873d2cb3708fa848f",
+    "tokens": 131
+  },
+  {
+    "language": "rust",
+    "nll_sum": 305.62225341796875,
+    "repository": "83fec6b263a78ad70b6fb213df2fbde24e17a4d8c28e21c487b032684fe4ef42",
+    "tokens": 160
+  },
+  {
+    "language": "python",
+    "nll_sum": 392.0034484863281,
+    "repository": "84eaa58fcfe1c852e1d0aa682613d253ea345155eb32f1732efa38b26ef02261",
+    "tokens": 250
+  },
+  {
+    "language": "c",
+    "nll_sum": 216.21054077148438,
+    "repository": "8580a2638a6f33b42dfea8fd364d0e2374ae4734fe1bf2ab28c88a42397db95d",
+    "tokens": 192
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 49.272705078125,
+    "repository": "85eb021708181913a3da2343f67fdcec5521bdf253d218938c75288804f754e6",
+    "tokens": 34
+  },
+  {
+    "language": "c",
+    "nll_sum": 231.33157348632812,
+    "repository": "85fb4c522a65f3d356686d13eebc268a9a3bd5fff9d8f40ad8fb7650159e8c33",
+    "tokens": 182
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 184.76219177246094,
+    "repository": "860535558d1a259d3048fd2726a6b8581622d0ea573913810d12d1d7ef8191d0",
+    "tokens": 189
+  },
+  {
+    "language": "c",
+    "nll_sum": 2614.143798828125,
+    "repository": "868850c1987b6723fa7f2704ab481b0d1473ac8d6906450d2f48f066512d3b70",
+    "tokens": 2973
+  },
+  {
+    "language": "python",
+    "nll_sum": 1298.98828125,
+    "repository": "86b5eb4f16124cfd9fba51ee92e642625a7dd83e63069dd992fee10ed1b1ac5e",
+    "tokens": 1078
+  },
+  {
+    "language": "python",
+    "nll_sum": 172.4027862548828,
+    "repository": "8806ee32b2ba81800e4bf47041de2d047d27e67aa8b299b19c58d4519bd6750b",
+    "tokens": 105
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 486.9205017089844,
+    "repository": "880818623ea2e4f3ded757a257194f2ed91d8186686819401bebdd1b6562a31c",
+    "tokens": 524
+  },
+  {
+    "language": "rust",
+    "nll_sum": 878.5580024719238,
+    "repository": "8888b1dd4a5ca5caef4c0c2b6d9404478a39edb9d7ab23b68a4f48c6f985e6cb",
+    "tokens": 616
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 82.7507095336914,
+    "repository": "88a45df7ece667e46cbd1e12bdd0932f72ee93a27aca7f6bcdde30b5b36845da",
+    "tokens": 83
+  },
+  {
+    "language": "python",
+    "nll_sum": 2604.610076904297,
+    "repository": "89e13004d991c00bb9b39d3d77b24d3b78bae555ce3894e7781776a8ea9b7ef0",
+    "tokens": 1961
+  },
+  {
+    "language": "c",
+    "nll_sum": 131.7340545654297,
+    "repository": "8a6f948aaad607773977fc93535810eb3b1b3919a62525b57faf32903d5a9d7f",
+    "tokens": 64
+  },
+  {
+    "language": "python",
+    "nll_sum": 713.9056396484375,
+    "repository": "8c76143552ea3b798fa8d411f4c88f46b01e9a5285b4e68e4f28ef36fa3d4e2a",
+    "tokens": 565
+  },
+  {
+    "language": "java",
+    "nll_sum": 1252.4080810546875,
+    "repository": "8c7f1b67108b3f84bb541d58b9ac4ab2f99a4e62865aaafe1ad9bff432e46d50",
+    "tokens": 1097
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 723.5286636352539,
+    "repository": "8ca074d63f97ac51899ce94e11e354345770c8f739faf910595a65f40955d207",
+    "tokens": 667
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 66.63165283203125,
+    "repository": "8cd6a2702aa7373f7ca701a4dec16edc29bdeda1027fc6ba41698e6081d2201d",
+    "tokens": 62
+  },
+  {
+    "language": "java",
+    "nll_sum": 5998.9542236328125,
+    "repository": "8cf1e918228a8375a4c6ce4e85cb0fd417e36ee7c3c2e2ce6cef0c69aaa88441",
+    "tokens": 7975
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 793.30810546875,
+    "repository": "8cfa01cc9d50bb9832d7784fc3ecb855975d32bed69decbf7b8e3105849cd58f",
+    "tokens": 832
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 854.37939453125,
+    "repository": "8d61ed4ab824aa1c2e50b88036618c3f2fd572416ce60fd734574a2cac607bbe",
+    "tokens": 369
+  },
+  {
+    "language": "python",
+    "nll_sum": 324.89300537109375,
+    "repository": "8dfedf241522ced7d7775c3a2fbd58ae4758db417c06bd49471c842e83d07f9f",
+    "tokens": 223
+  },
+  {
+    "language": "java",
+    "nll_sum": 139.79783630371094,
+    "repository": "8dffc935fdd821e30c373f3ebdcba0d54c92fb6247db1071783b283ee8fd3ab5",
+    "tokens": 95
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1363.05908203125,
+    "repository": "8e76b4cd3cb547bab9e8e2399c3796af2309319876d2deb2ec34ce1ef70697fb",
+    "tokens": 1449
+  },
+  {
+    "language": "python",
+    "nll_sum": 433.0570373535156,
+    "repository": "8e9e7d7f507de4d263f46f29c56217e02de23925be0d2c458f8d8c5eb1a4f5e7",
+    "tokens": 238
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 172.15914916992188,
+    "repository": "8ec058ffd56f1adb2046ce31cd669fb2c8a252e940e2a2a0eb71823a931fc57d",
+    "tokens": 85
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 159.84243774414062,
+    "repository": "8ee279f66b71116a0e48cda47b4a2546e7470a7f697dd69ee9f1e286c743855e",
+    "tokens": 112
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 9605.806365966797,
+    "repository": "8ee279f66b71116a0e48cda47b4a2546e7470a7f697dd69ee9f1e286c743855e",
+    "tokens": 7772
+  },
+  {
+    "language": "python",
+    "nll_sum": 558.745849609375,
+    "repository": "8f0a882eb4fe92349ba922ac9db17742045fa0673b3bf13c32b7759d9a0d2974",
+    "tokens": 311
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 325.60253143310547,
+    "repository": "8f0b7dd87e6d09429bc590f28ad192fe6c75823e97d0ec78cf64571ea90cfb2d",
+    "tokens": 203
+  },
+  {
+    "language": "java",
+    "nll_sum": 533.2462158203125,
+    "repository": "8ff2cb73538cd65ac316c2650bbad063c8eee3a91319e76694f74c63b76d8c8d",
+    "tokens": 489
+  },
+  {
+    "language": "java",
+    "nll_sum": 422.65870666503906,
+    "repository": "8ff5112a7c23fefe11716b87f3b4c6aa895ab51597995a1cec261bd2c0eb554d",
+    "tokens": 1058
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 304.165283203125,
+    "repository": "8ffa20321080405630b4369a7bb56ad94c0afabcd8c25e9619751869bce0f3f9",
+    "tokens": 650
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 2717.428466796875,
+    "repository": "901efd01481d3dd8a6c865c8a5460703c56a01b49e312dff6d65f02d00440cb9",
+    "tokens": 6787
+  },
+  {
+    "language": "c",
+    "nll_sum": 1649.845458984375,
+    "repository": "90327fed48eb6a511665452563a5ab1c015140989293242962d8742fd28070e2",
+    "tokens": 2673
+  },
+  {
+    "language": "java",
+    "nll_sum": 241.20648193359375,
+    "repository": "90b14777409aa1d9bf1b4b3c728237b04dce516528519fb5638faa4e339ca742",
+    "tokens": 341
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 882.0128784179688,
+    "repository": "90b858378c4bd4faab6c27cbf6d47d007af17282a6184acf74e8f38267cba5d1",
+    "tokens": 1199
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 118.11282348632812,
+    "repository": "90f74ca6168657eda0d76c2fb851cde0f573ad93822b00be504852929519ba01",
+    "tokens": 103
+  },
+  {
+    "language": "c",
+    "nll_sum": 246.36468505859375,
+    "repository": "91318a502a8f5c7133f9ad8703d8d30fb18b0947cdd3d24545c31f538509ad7e",
+    "tokens": 175
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 57.44957733154297,
+    "repository": "91a8d3bdcc2ef0fb8cf9c52f678565f1f6be69d525722d892b5b356903a3a318",
+    "tokens": 60
+  },
+  {
+    "language": "rust",
+    "nll_sum": 4802.0001220703125,
+    "repository": "91b1dccec719a47355293b7fd1b429fc0bee2d51023f039462e43ac8b7be63a5",
+    "tokens": 5629
+  },
+  {
+    "language": "rust",
+    "nll_sum": 126.79454040527344,
+    "repository": "91cb253302f056ebd776b0c4dd0847b2e69fb8b07e5cf47e51b32c20b369cdcd",
+    "tokens": 47
+  },
+  {
+    "language": "c",
+    "nll_sum": 67.54890441894531,
+    "repository": "92535d54a24b21ea537b62093187a27176adeca51f84957e38555ae8f5482bc0",
+    "tokens": 116
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 109.09918212890625,
+    "repository": "92a19bb85600402829058bc987668f52aeb91b19aed6b07286f8434f46cd941b",
+    "tokens": 108
+  },
+  {
+    "language": "python",
+    "nll_sum": 188.77728748321533,
+    "repository": "92bee68d64b76ca2c81a51464080241737b567cfbc1c2231dd0a58384216f08f",
+    "tokens": 182
+  },
+  {
+    "language": "java",
+    "nll_sum": 758.9675369262695,
+    "repository": "931389440789cd5dbb4ab4a3d3fb4a2054c3951edcac5d48b4acb298e048121b",
+    "tokens": 626
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 631.5816650390625,
+    "repository": "9358f34e2dbeb58f4291860d6475f31fa1c265ed73154c21dcbec0a9f87a26cb",
+    "tokens": 313
+  },
+  {
+    "language": "python",
+    "nll_sum": 387.8839111328125,
+    "repository": "93d71345460c54a0639db5c79fb7e71f685d694ccaf6ad90390b00000baedefd",
+    "tokens": 424
+  },
+  {
+    "language": "rust",
+    "nll_sum": 926.450927734375,
+    "repository": "93dc9f47852108f14b327354e7bd8f2ec904ee8c6aa86a75f4fb49686d9cf818",
+    "tokens": 1591
+  },
+  {
+    "language": "java",
+    "nll_sum": 8464.8251953125,
+    "repository": "93e1d14d35dca5ee28b6873091608419003bb7619fcc12c89c48782f702bb81a",
+    "tokens": 9912
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 203.3946533203125,
+    "repository": "9433c41597bd8fc1ad688a9295598bc0ce93c9876c85c425934211867f9c57af",
+    "tokens": 667
+  },
+  {
+    "language": "c",
+    "nll_sum": 208.572509765625,
+    "repository": "94f7a1ee01e798831e9381ea36629dd1195c78f8f307ddde7da62549cc340b5e",
+    "tokens": 97
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 939.0921630859375,
+    "repository": "95a7be18eddc535a7f58f88e5c546320dc856865c8c5e7e97044f87900cba44b",
+    "tokens": 924
+  },
+  {
+    "language": "go",
+    "nll_sum": 84.70233154296875,
+    "repository": "963c07b8fa6ea98785c78b9c4defd6387053f373eb4a6ea779354f6c1f52d19f",
+    "tokens": 91
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 784.455810546875,
+    "repository": "96402ad12439034db3623d24608012f8374a5389816158f852c02d3f2d5d5fb7",
+    "tokens": 699
+  },
+  {
+    "language": "java",
+    "nll_sum": 1138.47509765625,
+    "repository": "96552b86be9df88e03cecc0644938b7d288e3777ade8aa45dfb64e176134e123",
+    "tokens": 899
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 3889.1007690429688,
+    "repository": "96d60462826745a2d59d82cb79450c190d64e68717b88aba1fe8bf17a5bc5f4e",
+    "tokens": 3138
+  },
+  {
+    "language": "python",
+    "nll_sum": 372.0035400390625,
+    "repository": "96f5ad0474469bd35535aac0f91f868b7dd86d0d23e116e8e4888dfbf380753a",
+    "tokens": 128
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 2120.1669311523438,
+    "repository": "975c0d0d2af00e616b740613abc4f0e6925c04fa0ae27d123995b09018f0a36e",
+    "tokens": 2605
+  },
+  {
+    "language": "python",
+    "nll_sum": 746.1640625,
+    "repository": "97d45adbd8ed62a37053d02d116cc5345588606d56a5b08ea5111baefa34bf34",
+    "tokens": 555
+  },
+  {
+    "language": "rust",
+    "nll_sum": 784.3282470703125,
+    "repository": "97da9cb10e2140813a3d03e2bd4d74648bf3b820f72848c76a7ffe63af0684be",
+    "tokens": 556
+  },
+  {
+    "language": "c",
+    "nll_sum": 578.7963562011719,
+    "repository": "98073008f96617baaa2ac599f0bf3b7a220b5b396903c86f55305d18ec65c4b6",
+    "tokens": 275
+  },
+  {
+    "language": "c",
+    "nll_sum": 12297.468627929688,
+    "repository": "986510da3e3485e44eb1324f4535d05a03d2d0992b998f4bb432d8463a5673d0",
+    "tokens": 11617
+  },
+  {
+    "language": "c",
+    "nll_sum": 410.0510559082031,
+    "repository": "9879615f57a25f204cfff427b4a2b0ed3904de48de0f177398726cc805393b99",
+    "tokens": 375
+  },
+  {
+    "language": "java",
+    "nll_sum": 2372.73974609375,
+    "repository": "991054a1fdeb16e5e10f3fbe6c1fb0b6e9b86ae94402edb977e3f30960604426",
+    "tokens": 3381
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1196.920654296875,
+    "repository": "99384c6a3e7085f9e6df76deeb46939b25a93310d63aeb5d1f8bf05c5896ed87",
+    "tokens": 839
+  },
+  {
+    "language": "python",
+    "nll_sum": 868.6094360351562,
+    "repository": "99664b7aa39705a3e043d1dc6ee47c2498a3adfbb7f035c0d2cee0b8c0ed078c",
+    "tokens": 719
+  },
+  {
+    "language": "rust",
+    "nll_sum": 86.57249450683594,
+    "repository": "9a9797df533ae4f2b7acbfb4944a83e81a62b3f3ee819c6ee3bf9c3597ab242c",
+    "tokens": 66
+  },
+  {
+    "language": "c",
+    "nll_sum": 584.6499633789062,
+    "repository": "9b16bfef62f5ac148a630de1444c8ee8e0d58f6f57ec5690ab6004f330bd1af1",
+    "tokens": 266
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 489.82191467285156,
+    "repository": "9b97569e112e8cd2242469b3c4afbf1a14fda7156d8e272f5c7b75146ed3a2c0",
+    "tokens": 540
+  },
+  {
+    "language": "python",
+    "nll_sum": 1044.787841796875,
+    "repository": "9b9c6fab78043da2bb0684709eb8007db3c86d3caf6a2829586865b35cf2bce7",
+    "tokens": 793
+  },
+  {
+    "language": "java",
+    "nll_sum": 110.70116424560547,
+    "repository": "9c5a2690121c367f4ac3c95c0865de4b42a4f124ef747cd11835b7d8c9bf546e",
+    "tokens": 260
+  },
+  {
+    "language": "java",
+    "nll_sum": 1841.0643310546875,
+    "repository": "9c6c0761b83adb73a883895aaefa7f5439acc5fd7f2df3459723aa9fc89339e5",
+    "tokens": 1800
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 41.188209533691406,
+    "repository": "9cf4a822a6162682950adc9d906645f38eddc7a9c7df5003181ea53e9660f91f",
+    "tokens": 18
+  },
+  {
+    "language": "python",
+    "nll_sum": 5211.304443359375,
+    "repository": "9d6d7efec5a6b7dbfacb6b827e5fd93e98e9b0d90ad9fe755ecd1fc614063b5b",
+    "tokens": 2707
+  },
+  {
+    "language": "c",
+    "nll_sum": 186.89404296875,
+    "repository": "9e6fd6f163137688f1df4481365bc8862942243825c61e8a3e4ee440ea19bd47",
+    "tokens": 152
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 327.1061706542969,
+    "repository": "9e7413001b6a509c87d82e63433c8a7282fb21a74e17aebe936be33ce852e27c",
+    "tokens": 366
+  },
+  {
+    "language": "java",
+    "nll_sum": 197.6095733642578,
+    "repository": "9e9984cf86a78340beefeb4de09d6c95399abace0cbd9d7fcadd008479596a8e",
+    "tokens": 229
+  },
+  {
+    "language": "go",
+    "nll_sum": 128.88600158691406,
+    "repository": "9f0e613a24681b8334526beda81cecb6e7b8b10ba150cf82f6dddbb9d74149a7",
+    "tokens": 109
+  },
+  {
+    "language": "c",
+    "nll_sum": 364.9651184082031,
+    "repository": "9f4d70dd52327879e9ecefe5a25c2fb9dc48098709a36de147f01636604a2e3b",
+    "tokens": 137
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 58.64088821411133,
+    "repository": "9f5c80608dc7369538af03a3f8241e660ab0b10eeaefdcca50899c1f86a4a490",
+    "tokens": 24
+  },
+  {
+    "language": "c",
+    "nll_sum": 116.26144409179688,
+    "repository": "9f639cd86d8c2d9496fbc4cf68d74c68e168f78fa2810ea2e2eeff536e8e8a4a",
+    "tokens": 83
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 3882.3399200439453,
+    "repository": "a060b013076613200920877b5ee6e738cd9087937d7fbff5efdde37686fd11a3",
+    "tokens": 5153
+  },
+  {
+    "language": "python",
+    "nll_sum": 4220.939636230469,
+    "repository": "a060b013076613200920877b5ee6e738cd9087937d7fbff5efdde37686fd11a3",
+    "tokens": 6633
+  },
+  {
+    "language": "python",
+    "nll_sum": 85.75763702392578,
+    "repository": "a08e755e3f25daf2db7ca72659f4fc129a6a9daa88ff6bb08094204a0ee4c792",
+    "tokens": 139
+  },
+  {
+    "language": "c",
+    "nll_sum": 2037.62353515625,
+    "repository": "a13ba8f650f916359d84b48ac16d21c1b9719f8343496407013d93a0bea817a8",
+    "tokens": 1932
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 93.51506805419922,
+    "repository": "a1592b7b2d2066aed30d0945e97aea0270933a81cb517dc21a0115845672be3d",
+    "tokens": 57
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 206.66334533691406,
+    "repository": "a1bddb52b3e45ace693f2461a37656f2ed73d757b1c54aa3d02f76c257b7f2e0",
+    "tokens": 185
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1919.7134704589844,
+    "repository": "a1df388655d13cabd31f3b93c4b2a29ba5d2ab51da5a7cb24f30d9dff54efc20",
+    "tokens": 2010
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 252.9259490966797,
+    "repository": "a1f5b39ce797d989e65a6ab98ce927cabc223b4a6122fcffec82a759c651dee7",
+    "tokens": 293
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 164.40640258789062,
+    "repository": "a2307fa037f45b1592d3077f5e73980a3d28f3357a29fae36418aaab558d35bd",
+    "tokens": 118
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 840.4561767578125,
+    "repository": "a267ad65e254d24631ac73fbbf75112a9a782e276a31228243f389dd0dfa314e",
+    "tokens": 666
+  },
+  {
+    "language": "python",
+    "nll_sum": 1179.5841674804688,
+    "repository": "a348240b632009b8a3e314b196d57ecbda4c105d18d5b775e8b5c7afa3841104",
+    "tokens": 1019
+  },
+  {
+    "language": "c",
+    "nll_sum": 9523.109985351562,
+    "repository": "a36f70534028ab6d69a5ef7b5121f85a028cc0f42605c058059901c33ca142db",
+    "tokens": 15371
+  },
+  {
+    "language": "python",
+    "nll_sum": 489.2349548339844,
+    "repository": "a3961d80870bb9ed9bb2f597712ce81b32bd62c26e9bbce393b249f8c57af6c2",
+    "tokens": 378
+  },
+  {
+    "language": "python",
+    "nll_sum": 514.411865234375,
+    "repository": "a3bcff9d35467466d77946dcd2174d8a18aa8a353697fef212c1297181f31748",
+    "tokens": 599
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 44.63441848754883,
+    "repository": "a45685af389b597f34efdf038797896300914961fdf962ca8ce07560fbeee9e4",
+    "tokens": 46
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 59.59263610839844,
+    "repository": "a470dca858d91c680aa8a887c2b48f6c332526c3e3f620c61453f6750c0da077",
+    "tokens": 53
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 86.34900665283203,
+    "repository": "a4a323221f03dee2cff11dd46dd6bcb8227c67fefd790e6e53e3df3a8bf662c9",
+    "tokens": 114
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 297.76800537109375,
+    "repository": "a4cf142da579094a6017f608dd620ba60d84c278df71f4f883b7c4354e14b961",
+    "tokens": 272
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1790.59130859375,
+    "repository": "a4ec15a6a65a46f2e122391d6681b0f4c2d936610db8b936f5b6ee53ce035066",
+    "tokens": 1441
+  },
+  {
+    "language": "python",
+    "nll_sum": 375.56524658203125,
+    "repository": "a4f181c8c022e8151c16db8dd4d4293db90f3e582a1f064c23983b2576ce0406",
+    "tokens": 355
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 537.414005279541,
+    "repository": "a598defdf37ddb928321a13c2aa10b19a57035e7f1384eff7b8e808e57e23460",
+    "tokens": 645
+  },
+  {
+    "language": "rust",
+    "nll_sum": 612.1746215820312,
+    "repository": "a5ab48f842a6131b6ee4774969a294fb16b25f9af236ebf5a5af6e54df4ce7df",
+    "tokens": 1021
+  },
+  {
+    "language": "java",
+    "nll_sum": 504.27093505859375,
+    "repository": "a5b186ca678a82bb9cd13600dc6c58e0c9583b938fd0a61450d491f8c83b1a95",
+    "tokens": 472
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 178.5246124267578,
+    "repository": "a62951f36c54219e8a27df60a1fa1ead06396e88b199fe97204ada78606146b6",
+    "tokens": 194
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 262.5224609375,
+    "repository": "a62df0020eb0c308eea6c77a0e200418e60307ed6b76edd93f90efc06f9e35a0",
+    "tokens": 279
+  },
+  {
+    "language": "python",
+    "nll_sum": 1710.0872802734375,
+    "repository": "a68e5157080aca4e3356fe182dc5d174d0df6044e99fa26e4dca09936c999c8d",
+    "tokens": 2508
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 205.78814697265625,
+    "repository": "a69fb9091b7eba7e53d133ae12fddbda178738f7a4afb2e005274274f7598635",
+    "tokens": 214
+  },
+  {
+    "language": "python",
+    "nll_sum": 446.0643310546875,
+    "repository": "a72d2799489147bb8dcb2ceaddaf6a865296aef7db873cd19e95d926ae07e3ae",
+    "tokens": 323
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 924.0326843261719,
+    "repository": "a74cc733d1ad9e06b0e036402c0ec16e48b368da0ee962f3d1e791178b1b16a5",
+    "tokens": 1006
+  },
+  {
+    "language": "java",
+    "nll_sum": 160.55471801757812,
+    "repository": "a7aa3c4223440fee49a57b2910dd043f33320b757c10cb399c5cff9841b707a3",
+    "tokens": 148
+  },
+  {
+    "language": "go",
+    "nll_sum": 427.49169921875,
+    "repository": "a84717ca15d4c4cde4cc315156fc1e231f4f954e8bc3ffd624c6f05e6a05d558",
+    "tokens": 632
+  },
+  {
+    "language": "rust",
+    "nll_sum": 684.3494873046875,
+    "repository": "a85bbc3297c4452dc2ce9dfc32942d6394cd603aea58ff24fb45a2fa46ddced8",
+    "tokens": 1388
+  },
+  {
+    "language": "java",
+    "nll_sum": 4475.37353515625,
+    "repository": "a8b89e5d7835d15df4f9a8185e934c1222eadce9a4660a84e7f5e964302c4038",
+    "tokens": 4213
+  },
+  {
+    "language": "rust",
+    "nll_sum": 384.1663818359375,
+    "repository": "a91a9fb81e081bfac27cada0b92b56a6eb6d9525d7bd44f4f4f1b5cc1344dd30",
+    "tokens": 395
+  },
+  {
+    "language": "java",
+    "nll_sum": 338.99698638916016,
+    "repository": "a9b3fdbd162c35ea0cb270e0c61de24dbdfaf26882b442c59b8aed8b1f0e7db6",
+    "tokens": 285
+  },
+  {
+    "language": "java",
+    "nll_sum": 151.93760681152344,
+    "repository": "aa4964f2ff199d6843197633966552708d557071ce41c46ba3f48d3b873f6201",
+    "tokens": 127
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 195.85943603515625,
+    "repository": "aa773d64e8739ccda54d6ab2a8c5860b34c015e7fe0354bc3f5c5031dba4ac74",
+    "tokens": 77
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1553.190673828125,
+    "repository": "ab99123c692d8ce0b8116c02cc3d9bac1feb9f563b6790cbbe08cb31aac9cd94",
+    "tokens": 1029
+  },
+  {
+    "language": "c",
+    "nll_sum": 144.1946563720703,
+    "repository": "ac5676808db1ed95a1b4b78e894e4105612dadc369f54a6b039ba48bfc9adaf8",
+    "tokens": 127
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 190.3218994140625,
+    "repository": "ad1fe3eff6d540a4fb849a1b0fb07d71a048b625db1e3147af4eb04015ecd2d9",
+    "tokens": 126
+  },
+  {
+    "language": "python",
+    "nll_sum": 933.209228515625,
+    "repository": "ad867626b82acf7b38a88a2c9a7f6009bc77893f6a81b2c530c63e9311aba849",
+    "tokens": 553
+  },
+  {
+    "language": "java",
+    "nll_sum": 316.52105712890625,
+    "repository": "ade8f53c97bc1dca949200057e99ed53010966a95b2c3e6aaabf8547e8b92cd7",
+    "tokens": 286
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 82.7099609375,
+    "repository": "ae72e556c6abc65edf918c7aad1d4a4d2bf96e68ac8338bb2f27038a5dcd9bf8",
+    "tokens": 71
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 382.1424255371094,
+    "repository": "aed88f638d1c126e2da802fce8d2c1f9c8634baae57a2262775a3f5c8697a7fd",
+    "tokens": 180
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 416.1249694824219,
+    "repository": "af69d9436cb2825eca7fdce6957518acd2f379cb4e16ec22ad6117d8f417bc77",
+    "tokens": 506
+  },
+  {
+    "language": "c",
+    "nll_sum": 1343.28955078125,
+    "repository": "b083e5376c110f4a34c1641d2d090503b1afedfa755c2cc19cd258f3776dca09",
+    "tokens": 1015
+  },
+  {
+    "language": "java",
+    "nll_sum": 3034.1389770507812,
+    "repository": "b0ae1d11536a2a6b56e6b715c243d112fb5526ce0b0ce667422ef2030776768f",
+    "tokens": 4691
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 155.91049194335938,
+    "repository": "b0fad0a81eb6ac4eca11bcadd1631ff805df0d65a6d9e16579bf928171c8a5be",
+    "tokens": 162
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 203.70684814453125,
+    "repository": "b110a0d24cd375401ffc02bacd5b421b6da46a48a89aa1ff3b84dfa55c3fe57a",
+    "tokens": 98
+  },
+  {
+    "language": "python",
+    "nll_sum": 207.28125,
+    "repository": "b1bd42cf657ea233320dc5cb5059d969ef2657c0eda155daf06006b0242de098",
+    "tokens": 129
+  },
+  {
+    "language": "java",
+    "nll_sum": 1629.8778381347656,
+    "repository": "b1d097079a585ab105e9ee7c57c64af3035a938270babcc7c637cef04c7bba79",
+    "tokens": 1558
+  },
+  {
+    "language": "java",
+    "nll_sum": 365.7463684082031,
+    "repository": "b1f3263136c485b191cf06f9d2b7e8628edd1711da0482c3a55748bea28b6d8d",
+    "tokens": 353
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 180.4025115966797,
+    "repository": "b27701e560bf93281478098b8b8f6e48e1780852da1dd5c118920b2219f8c1e6",
+    "tokens": 222
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 2624.1707763671875,
+    "repository": "b353db528a7147fb7ce9bbf7f8626beded4d111ea4aa8d807de12e64d2c99364",
+    "tokens": 3288
+  },
+  {
+    "language": "python",
+    "nll_sum": 355.49688720703125,
+    "repository": "b3a077f81d008e8b856f3b5301db01188b4cd1659a0bb1364284d738be3b2116",
+    "tokens": 132
+  },
+  {
+    "language": "python",
+    "nll_sum": 1615.6820678710938,
+    "repository": "b3b5e1f5c939ecea1f32b6b8df5562b2e37ef902ac86a183219d06490fb5ef1c",
+    "tokens": 752
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 425.25750732421875,
+    "repository": "b498ec9ce409441b293fb14a3faf7b17298519002801e0d2d93e51f9f1447232",
+    "tokens": 442
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1485.8414916992188,
+    "repository": "b4aa3561d2f488d8b0fe15780709f7918b8b6c1e2f74c3dd376e06ba73f63271",
+    "tokens": 1196
+  },
+  {
+    "language": "c",
+    "nll_sum": 216.07579040527344,
+    "repository": "b4cbd184d9daf7a21a08358708fb72b8bccb81692a70645450226910f8d8e8b6",
+    "tokens": 206
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 469.054443359375,
+    "repository": "b4f2c7bc938ef9625086112300a60a1b4ddc1cdf0a28e438e44c4deca7f0eba3",
+    "tokens": 345
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 630.3694458007812,
+    "repository": "b606c802c7454630f37a6c69a5c794dcd99e04d4fa5c4a0a083bc7a52dc8b935",
+    "tokens": 422
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 443.4399719238281,
+    "repository": "b68dee4dd14d99699195ca0a9c17285f9ce30977169ecd9127edd930980f90e6",
+    "tokens": 277
+  },
+  {
+    "language": "python",
+    "nll_sum": 133.70095920562744,
+    "repository": "b6a8863cd342ddb9313fa1bdaa47036647036c37b9b0376c3e890dd4fea6bcb5",
+    "tokens": 72
+  },
+  {
+    "language": "python",
+    "nll_sum": 211.957763671875,
+    "repository": "b712cd15a3a3b3dbebd5d0aa6b2c6be1ace2155728177efd39fca59ad40597c1",
+    "tokens": 84
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 610.7506103515625,
+    "repository": "b7468f8a2bad84b683b5201969e4cd89f39f863eb44732bd124ee2189bf6cdd9",
+    "tokens": 423
+  },
+  {
+    "language": "go",
+    "nll_sum": 121.86611938476562,
+    "repository": "b78042b1efc4211a12dce59c33597b3d6436f232af7069873b204afafe4b1b23",
+    "tokens": 94
+  },
+  {
+    "language": "c",
+    "nll_sum": 149.09791564941406,
+    "repository": "b874acd5e35b304d9e356b79f79b2ef770b8ebcb5e72bb1600a70816da1acd03",
+    "tokens": 37
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 651.3030700683594,
+    "repository": "b8eba3765f50ab27826016305b81c4b42e91c12dd64655c2d9b47e63e73c9e7c",
+    "tokens": 492
+  },
+  {
+    "language": "rust",
+    "nll_sum": 901.0384979248047,
+    "repository": "b97c9b6fbe2271bb532eb7f679d4e0f152b49b894cad9c662bbcf622bb737291",
+    "tokens": 725
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 5310.59228515625,
+    "repository": "b9b7e8c2f9154b6ca117f386e65fb0f5d9bf145f98fc80e78e9344eebb651b80",
+    "tokens": 4008
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1162.9148406982422,
+    "repository": "ba0581e3ccea70b59bfe88e5b4b8017bfbe6c621b2503989a8eb8e1f087d0aa5",
+    "tokens": 1228
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 430.8956298828125,
+    "repository": "ba150db9d711b6976fb762943e51f3bfca42662776c37ccaa7790b10a0d1ad2e",
+    "tokens": 498
+  },
+  {
+    "language": "go",
+    "nll_sum": 353.1122131347656,
+    "repository": "bb02f86d1e3d551349267144e48e024f420cfc845fffc68025903411bf5af930",
+    "tokens": 267
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 192.80752563476562,
+    "repository": "bbdf2dcb3f54a0625e209914b34ca707d5fb0f463001fdd51caea6e386332abc",
+    "tokens": 177
+  },
+  {
+    "language": "python",
+    "nll_sum": 238.56167602539062,
+    "repository": "bc8ce4b505336e7aef187c5900c7bd31880bb1c09aff128dc825170cceb421a6",
+    "tokens": 573
+  },
+  {
+    "language": "go",
+    "nll_sum": 240.122314453125,
+    "repository": "bcaa3abaa749918a817a5dfc7769acd202a8524ce7affbf5b3a24d79c8856090",
+    "tokens": 376
+  },
+  {
+    "language": "java",
+    "nll_sum": 1267.398681640625,
+    "repository": "bcdfeb1ec1de360bf93cbaa92cb049923a80073a270df1c033bd2632f4ba5847",
+    "tokens": 1352
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 69.46568298339844,
+    "repository": "bd7ff44427e487865177aa872e824f2eae4616cf399c383883e30033010a57f6",
+    "tokens": 30
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 146.62318420410156,
+    "repository": "bdf48788526af8119500e6734e8904266ed69c620341e80cf562e733c4e9a7e9",
+    "tokens": 113
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1124.6726989746094,
+    "repository": "be25816186db60b25159fd131cbae9bf6f6ba42353309d8bd7bc6670ea325b84",
+    "tokens": 1163
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 264.0296630859375,
+    "repository": "be679e2e20a4a64b5845071dafdd0191d3e7b727fe8fc04f928499cce05257e8",
+    "tokens": 256
+  },
+  {
+    "language": "c",
+    "nll_sum": 233.31100463867188,
+    "repository": "be7b0ad13602db3f53ad50c4a8a9ff01fdf2d3f87f8de1780fac4f231c9ee14f",
+    "tokens": 127
+  },
+  {
+    "language": "java",
+    "nll_sum": 122.82615661621094,
+    "repository": "c0134f6c5c5955e667ccbdf4b368c1fbe6d334c2ca0bfc60393ab3711a3cd9a2",
+    "tokens": 343
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 227.91119384765625,
+    "repository": "c018b5fc6858de30343d15b12fbbdfa27863405bf7465380f97251f673d7e1b7",
+    "tokens": 269
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 693.7729187011719,
+    "repository": "c1096d4174951a3bb73a177b06bdc49e0af582fdb9477cdbea3f281f913c4238",
+    "tokens": 695
+  },
+  {
+    "language": "java",
+    "nll_sum": 216.1649627685547,
+    "repository": "c15510b10bbdb03c999c6d92465f3e0ba237bfe8891d8f5a2b3ccb3a9655b6a8",
+    "tokens": 117
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 69.14996337890625,
+    "repository": "c1fe4c2060accc90bd434d36eabaaef66e044b0008741a566983fd0a457d703b",
+    "tokens": 61
+  },
+  {
+    "language": "rust",
+    "nll_sum": 533.399169921875,
+    "repository": "c27f1fc297dafe9750805110038631563d501972e9623e6a736e973c53035ed6",
+    "tokens": 560
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 54.86015319824219,
+    "repository": "c28afd77f94cbad7d3adbed6052f2dc4e130c652d7fc2b7643eadac328ce1000",
+    "tokens": 24
+  },
+  {
+    "language": "c",
+    "nll_sum": 763.1698608398438,
+    "repository": "c290f51220b2a8c3d00c9a8c7600c2e237a06728b447467307efa096e0a586a5",
+    "tokens": 515
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 425.99285888671875,
+    "repository": "c2a2a7ef50cdc5e4e40328cfb70221a117ff4a40cfde563e1357ecff72f8f9e4",
+    "tokens": 619
+  },
+  {
+    "language": "python",
+    "nll_sum": 731.2899169921875,
+    "repository": "c2bf8c57b5ad903b12d0e8eeb24dceb8f4839928c3e76eb8fbd706a14e669230",
+    "tokens": 336
+  },
+  {
+    "language": "python",
+    "nll_sum": 434.78448486328125,
+    "repository": "c31fa4e8792de26e13bbc7f69bfa92c26673c4c3a092717a66553d8f988af311",
+    "tokens": 271
+  },
+  {
+    "language": "rust",
+    "nll_sum": 520.2557983398438,
+    "repository": "c37b7aa25aea3bd77f347a9cc4ce144a0e0656e23af0bea5073bee5a8dbee2bd",
+    "tokens": 298
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 2631.20166015625,
+    "repository": "c3ac8cca6992ad08476cae2c7290a58f5a4b94e662f36b72041067fadbfe2a9f",
+    "tokens": 2151
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 287.41339111328125,
+    "repository": "c400200a47233180c0c57dfc8e10842621d3afbd44dae46c2434e8336e6585e8",
+    "tokens": 233
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1710.7723388671875,
+    "repository": "c45c70ea2a265c29bb9bc79292d59decbdb9b5c31d5c67108b7e8a9e197f64d2",
+    "tokens": 1434
+  },
+  {
+    "language": "java",
+    "nll_sum": 90.93292236328125,
+    "repository": "c4dbd070e2cca0d92a365256e4399fe63f586a56ade996cdd235403802cd5af4",
+    "tokens": 30
+  },
+  {
+    "language": "python",
+    "nll_sum": 2925.016357421875,
+    "repository": "c543b50de11972b3320058fffc89f9f5361858553eb9d39f2263412bb70aa37b",
+    "tokens": 3329
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 188.58364868164062,
+    "repository": "c56882910d2e008924174d994e5b6527074c523002055388d29f2284746f1146",
+    "tokens": 166
+  },
+  {
+    "language": "java",
+    "nll_sum": 513.2587890625,
+    "repository": "c5a32c8ea1a704d2d6d32befc3b24d217b051e883af5c01e3d948469db18c801",
+    "tokens": 553
+  },
+  {
+    "language": "java",
+    "nll_sum": 671.114013671875,
+    "repository": "c5ae67e91d3770a9dba733921a3f3c7351602860d7666b25e5e557e4e88d37e1",
+    "tokens": 1017
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 214.97549438476562,
+    "repository": "c606ec5cc7071ddfe98b4ce90cd0dcd964c3829945897d0bc2a79e7d5c1a5d1d",
+    "tokens": 95
+  },
+  {
+    "language": "rust",
+    "nll_sum": 2951.752197265625,
+    "repository": "c634591e6f4ff7531fc876e1c89babeceeb16ee962d7ffb410ec287b6a962bdb",
+    "tokens": 2612
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 363.0935363769531,
+    "repository": "c638a840988033904e39f491af57d8fd92b53d75ec8051ef6eaa8ef7ee63a7e5",
+    "tokens": 270
+  },
+  {
+    "language": "java",
+    "nll_sum": 1255.6595458984375,
+    "repository": "c6603ca5c7d1c47b5317d0079f8f9e520f1bada31a234306b7f6c7f649bc8db3",
+    "tokens": 1708
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 479.12774658203125,
+    "repository": "c70db04158980b709c4428c0492ae7c82943c37a83084cc1d7d1aa62dfefc1da",
+    "tokens": 468
+  },
+  {
+    "language": "c",
+    "nll_sum": 34665.39666748047,
+    "repository": "c778fbb2ab49bd725715882dde86af20abc6e2e25878b150bae994e5c46446d6",
+    "tokens": 30896
+  },
+  {
+    "language": "c",
+    "nll_sum": 331.5748291015625,
+    "repository": "c7e5a03bbf91366a4340cdcec4719b4fac9d603f29cf2667a40ae721e7fd24db",
+    "tokens": 210
+  },
+  {
+    "language": "python",
+    "nll_sum": 119.79431915283203,
+    "repository": "c80ede1d8bf39662f4bd00ca6574bdd1e80498268b2140c3b664cc988185cc00",
+    "tokens": 35
+  },
+  {
+    "language": "java",
+    "nll_sum": 2741.434814453125,
+    "repository": "c88cdc4a8b4639dad93939fd95c40cf82633ab57733cc03b5b1867f8ee2aa590",
+    "tokens": 3445
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 735.480712890625,
+    "repository": "c96cef1d4369f31259c98c8b60fe4b786e07607b15730c47dac7639723fcd459",
+    "tokens": 459
+  },
+  {
+    "language": "java",
+    "nll_sum": 949.0364990234375,
+    "repository": "c98e0f603462cac70a5a6fc649e0f758692745128880ba09b2f75ae1750b10e6",
+    "tokens": 975
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 4183.204376220703,
+    "repository": "c9f34725d2c3e89bc26fb0e67d337ee40097a25a2214abe9a93ab554aa0fec94",
+    "tokens": 5285
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1097.3550109863281,
+    "repository": "cbce0116043ef802794e10f45ea407665f7c15dfdbb10ebaefb62426d920da96",
+    "tokens": 2129
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 251.3145751953125,
+    "repository": "cd19f827c57ced3ae6181b6172a37c8db0276dc22ab5e402b89d2baa8e06a9e9",
+    "tokens": 280
+  },
+  {
+    "language": "c",
+    "nll_sum": 188.905029296875,
+    "repository": "ce0ed34f53dc794b4722dd309318d79f8cd327a3f5e12742f36abee8a2732eca",
+    "tokens": 110
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 218.59034729003906,
+    "repository": "ce3fd36b6f6bb04f801031d3c1964ae14db41ec6bb0550009d0a3af83f0bf71e",
+    "tokens": 215
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 30.258777618408203,
+    "repository": "ce43db4859dfc059e4db983c8fbb173f04bcb25e9e6984509d0038a2d9a49de1",
+    "tokens": 30
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 3466.9022216796875,
+    "repository": "ce8050a7e378a963ca823f893644ca123efdb02e6067ff834c4222af1bcd45fb",
+    "tokens": 2488
+  },
+  {
+    "language": "python",
+    "nll_sum": 753.0322265625,
+    "repository": "cf631b2b7273249b4951667110aeabec8bd954c0da0adf2cbeabdcbbe01025aa",
+    "tokens": 377
+  },
+  {
+    "language": "java",
+    "nll_sum": 161.52389526367188,
+    "repository": "cf8da251051d2cba525bd56b496e36c512a2aeb587275fc2365cd8710e4bccc8",
+    "tokens": 370
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1079.315185546875,
+    "repository": "cff0d231187c6082b7ac1ee65dd253e5ef5cfd7281ec3aeb1c346261e2d22139",
+    "tokens": 1199
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 359.7908020019531,
+    "repository": "d071c688a0372bfbcbf03e9fb08231e3fd9c7a0aa0336b8c0ea2309df00650f5",
+    "tokens": 247
+  },
+  {
+    "language": "go",
+    "nll_sum": 102.23021697998047,
+    "repository": "d16b4c1b175d92280184b2c316756847324a81abef63ce679c98e9d60463b493",
+    "tokens": 71
+  },
+  {
+    "language": "c",
+    "nll_sum": 214.29444885253906,
+    "repository": "d1efaa82104fa1ba8805196b60d9815abbd290ca4809be0077ec078f767e1c80",
+    "tokens": 103
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 604.619873046875,
+    "repository": "d2a2ba96b563ff0309cebd970ac8dc5c59335c602acbf889ac8f2a76017afce9",
+    "tokens": 546
+  },
+  {
+    "language": "java",
+    "nll_sum": 422.8614501953125,
+    "repository": "d4967a7e5f4b6397601f718562074c279f4160b31da7d462259b8c35ac606fbf",
+    "tokens": 243
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 20833.434051513672,
+    "repository": "d5357535fd0c573371ab637872047738e642dc138fdd67b1a63870914f85762b",
+    "tokens": 35868
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 147.06015014648438,
+    "repository": "d5e4efa957067f4968c9e8c8d78aaeaae8b19c8dcbc9214bca403a29bc8b5d06",
+    "tokens": 78
+  },
+  {
+    "language": "python",
+    "nll_sum": 1132.7835998535156,
+    "repository": "d609fc6a0c168e8b218e342a714f008815fa602ed282a40bf7edab78f46b82a5",
+    "tokens": 1457
+  },
+  {
+    "language": "java",
+    "nll_sum": 237.47740173339844,
+    "repository": "d6277a843fca9e39ec170d763e543959be54f7e7d7d0a87089749b9c8f6639f8",
+    "tokens": 252
+  },
+  {
+    "language": "java",
+    "nll_sum": 1785.325439453125,
+    "repository": "d70320a9896e01909414a70de5da05c949b205b328d5a0245644dcf2c41b82d2",
+    "tokens": 1497
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 101.71879577636719,
+    "repository": "d7349ca1c8ccbd19cdbc6de5a9f1b8fe36b6cd839c137de50597eef3357eeacc",
+    "tokens": 55
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 243.5593719482422,
+    "repository": "d73a8c70b6ec334a8aed02911df63de795c5487bf6d6e61dc38f214e080143d4",
+    "tokens": 508
+  },
+  {
+    "language": "cpp",
+    "nll_sum": 33161.66226196289,
+    "repository": "d8f6d63bf185e4da13b00fed53ae652606fad70e9139c9f729dd89ad4333cfe3",
+    "tokens": 97231
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 7961.5931396484375,
+    "repository": "d996e692c0722be2bc16f33c3aecc476ae25f7642e29dcf354cf72b7be15e033",
+    "tokens": 5100
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 187.01251220703125,
+    "repository": "da65d419da81c96e82d22d9a434e254b9f67434986dfb5b7d2141ebd9642b2d2",
+    "tokens": 140
+  },
+  {
+    "language": "python",
+    "nll_sum": 231.33895874023438,
+    "repository": "db7467f210c62e0c6ad2a64a9efd7639b29c7002fe4633609120d6220e199c93",
+    "tokens": 413
+  },
+  {
+    "language": "c",
+    "nll_sum": 3876.2322387695312,
+    "repository": "db8e1e97bb9c49cd0456726d9c67e11493876e074470dd5f2e1fcb045da85c75",
+    "tokens": 2675
+  },
+  {
+    "language": "java",
+    "nll_sum": 1724.6204833984375,
+    "repository": "db988d6acd6c8a1dbb6bc576e5a63ce90c68a21ae33b40aabafaa351173c111d",
+    "tokens": 2213
+  },
+  {
+    "language": "rust",
+    "nll_sum": 53.824501037597656,
+    "repository": "dba6da538ef2cb2e804090875bea792a93b85173cf10b38132b46fa49e29f22a",
+    "tokens": 21
+  },
+  {
+    "language": "c",
+    "nll_sum": 196.68478393554688,
+    "repository": "dc37f13153fe4bdb1d6c3b587fc43d8a93484a629746fa9a54570c68ec88d046",
+    "tokens": 156
+  },
+  {
+    "language": "c",
+    "nll_sum": 1075.591064453125,
+    "repository": "dd41cac48d6fab1bf6024d5f7a9bb8cf025a2aa1a4a1801ca2143d3223fc8a36",
+    "tokens": 690
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1868.57763671875,
+    "repository": "dd89495de4521ee5c9846d4c1196cfdecbfe24ca5a936538a01601a57b5b7f93",
+    "tokens": 2463
+  },
+  {
+    "language": "java",
+    "nll_sum": 470.4363250732422,
+    "repository": "dd9b1654ee8c8cfd7f0459577360f08a12ac54c55c7d13e31acccc3d79d523f4",
+    "tokens": 317
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 81.33570861816406,
+    "repository": "ddff703d039649b3906485b3f982e7921c57c52aae4f5fbf36af2ec80905b3c7",
+    "tokens": 126
+  },
+  {
+    "language": "python",
+    "nll_sum": 3432.3671875,
+    "repository": "de48aa9c99936d967aa3e67c9741c1b5394802c38efeacece4a778378e558586",
+    "tokens": 2488
+  },
+  {
+    "language": "python",
+    "nll_sum": 1230.98388671875,
+    "repository": "de54c45b8c88a3db9ed6b8290b4a95102c62e8de1aaf84730f34c332f34de38a",
+    "tokens": 889
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 228.59237670898438,
+    "repository": "de5848a774e789f354c375380b5cd11c21adaa7310bc670499dac76eb81ff466",
+    "tokens": 281
+  },
+  {
+    "language": "c",
+    "nll_sum": 1080.584716796875,
+    "repository": "df79bc49396ffc5df08a824fd82edf0691688aad7840432ab747595937cc2206",
+    "tokens": 415
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 477.3583984375,
+    "repository": "dfb3535b339fef5b9dfdf12b30346975576caf2a84d5cff60bbddb6566761894",
+    "tokens": 445
+  },
+  {
+    "language": "c",
+    "nll_sum": 6734.8211669921875,
+    "repository": "dfb7871c5e6608a5218b3eac2432ad28769e3fc30f98610552f32731bc00e023",
+    "tokens": 4273
+  },
+  {
+    "language": "rust",
+    "nll_sum": 315.01014709472656,
+    "repository": "e0368923526a06bc639908e07e722451c76246cb068d2fd66e7a742da88572f8",
+    "tokens": 210
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 1183.3645629882812,
+    "repository": "e0a13f6ee04d96eb618c9e70eb45020b712ad32321930967af2cab28dee68204",
+    "tokens": 1306
+  },
+  {
+    "language": "c",
+    "nll_sum": 172.0003204345703,
+    "repository": "e0ab62bb43facc4d5747183205ae7eb0ad13a8f17d08c0df95b2d8e71bbe4dee",
+    "tokens": 96
+  },
+  {
+    "language": "python",
+    "nll_sum": 2617.1357421875,
+    "repository": "e164a4a6ec71c2d07305bd464fca770a912959ef3b750ae8237d431c934ac796",
+    "tokens": 1948
+  },
+  {
+    "language": "python",
+    "nll_sum": 1674.076171875,
+    "repository": "e172f483576567d472a76a3ed85344b17e333f50e8afd5eb432f570cdd368126",
+    "tokens": 1020
+  },
+  {
+    "language": "rust",
+    "nll_sum": 606.5028228759766,
+    "repository": "e1803d35fe7ac00fa7c69f7c43c6b7f0fcf8c2903b6d0b389484275dff6eb5f0",
+    "tokens": 613
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 271.94219970703125,
+    "repository": "e183af4fabf581111d36e4abe3d982494b9d2f22d4ced2ec5461c5b88dbb647a",
+    "tokens": 241
+  },
+  {
+    "language": "java",
+    "nll_sum": 667.8379516601562,
+    "repository": "e20a61a0104e3e94805f6e16b693aba848100c7cacce4975b4e11e00a2e357c8",
+    "tokens": 662
+  },
+  {
+    "language": "python",
+    "nll_sum": 44.546592712402344,
+    "repository": "e217df7a3aa71c146f2c47efd6ade460146f4b21184096f143f440f0a09448e2",
+    "tokens": 31
+  },
+  {
+    "language": "java",
+    "nll_sum": 174.83621215820312,
+    "repository": "e224f243e297dcab52734c482f9781fe55fd8c64f89904f054510454fcba4958",
+    "tokens": 121
+  },
+  {
+    "language": "rust",
+    "nll_sum": 52.013702392578125,
+    "repository": "e23842c853e544fa716301661940eee9ba1aec2584dfbf9699ca2838ab514b73",
+    "tokens": 20
+  },
+  {
+    "language": "java",
+    "nll_sum": 264.7904357910156,
+    "repository": "e2498c39489302db270cc043f16964b236e6999a504eef03c180a17203d79e46",
+    "tokens": 279
+  },
+  {
+    "language": "python",
+    "nll_sum": 6289.846588134766,
+    "repository": "e2975502fcba166c984e581dbd15180b76aaf33e7c4c4c9c4bf3d0a1b649ef94",
+    "tokens": 4079
+  },
+  {
+    "language": "rust",
+    "nll_sum": 3136.3035888671875,
+    "repository": "e2aadc32452b7ee49b330afd0d8723d09f64d1581e116629dad39abf10c5dc78",
+    "tokens": 3608
+  },
+  {
+    "language": "java",
+    "nll_sum": 640.18994140625,
+    "repository": "e2b4ca96d4b265bc9239b932f2d8dfb834da8ff01d06b9540e9aa71c5fcb4b05",
+    "tokens": 671
+  },
+  {
+    "language": "java",
+    "nll_sum": 288.1373291015625,
+    "repository": "e2f91fac103566bb06174bcdcafec9bc6b100dccf9ba5e1361f4d9169756c031",
+    "tokens": 394
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 264.6644287109375,
+    "repository": "e3cfd3d87ba156c4e99c874213b105c829706d07fd103879d9037c60517dd63c",
+    "tokens": 289
+  },
+  {
+    "language": "python",
+    "nll_sum": 3165.242431640625,
+    "repository": "e5cb94def0f35d2fe0ae8a0e661d7d819bf315cf85e8487ed98d7a07d8eb6025",
+    "tokens": 3044
+  },
+  {
+    "language": "java",
+    "nll_sum": 915.6163330078125,
+    "repository": "e5ec70a86f5ccec2c4bd5c8fb1e4ec7991138344c396e65dc6421ad36f4d912b",
+    "tokens": 1559
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 407.52960205078125,
+    "repository": "e6213e27228c179c9c861bc53c576cb980b029372f78433b38eacadce0d682eb",
+    "tokens": 405
+  },
+  {
+    "language": "rust",
+    "nll_sum": 5660.64990234375,
+    "repository": "e66524351e328ee2a5b1610f6f895de0fb7d01d64e723b57069ed9645e284825",
+    "tokens": 5674
+  },
+  {
+    "language": "java",
+    "nll_sum": 716.5090942382812,
+    "repository": "e694610a8bab1a4d220d0d65f830a14164f04ee90fc9a54981eebc7481ee9b0e",
+    "tokens": 1076
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1025.9788360595703,
+    "repository": "e6e4d7dca48ebe2073bd290417d00b555075138f3ed7339e611d36355e13e9cf",
+    "tokens": 1562
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 393.2821044921875,
+    "repository": "e727a3a9967cbae2c614c713d477925f05a8b5ce926de542f9b5218932f6cb4f",
+    "tokens": 184
+  },
+  {
+    "language": "c",
+    "nll_sum": 1513.9159636497498,
+    "repository": "e7cc49fdca5212fb7f1fef2b84c79c0f909a609f7dafb2e24b01ebf1fe65e758",
+    "tokens": 902
+  },
+  {
+    "language": "c",
+    "nll_sum": 1946.7214965820312,
+    "repository": "e80bf74c18e469cea67e4666719493b297b103e3be6137211b4c60f10f16ef49",
+    "tokens": 2839
+  },
+  {
+    "language": "python",
+    "nll_sum": 4780.0325927734375,
+    "repository": "e858570dae4d26bfa22e84000861f509c3c71dbb8a801fabab645b5e2c3e2043",
+    "tokens": 4968
+  },
+  {
+    "language": "rust",
+    "nll_sum": 791.7229309082031,
+    "repository": "e871794535af5a7b0c1c9fbc80cc714abae6f90986db89fdf1b244100762ab43",
+    "tokens": 904
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 170.46929931640625,
+    "repository": "e8a93bb8ee7c49bf01f3420dda988cedb38ab8ce843540e9651464573a1f5dd9",
+    "tokens": 152
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1310.0423889160156,
+    "repository": "e8add78a4bdb90f1c334ce3b27aeab5f0a60d6e60938bcf64b291441c6a3b1f4",
+    "tokens": 951
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 801.0189819335938,
+    "repository": "e8c6d9405d302e30e281a3226e8d825ca247f36c06fc50e43ea4f637313a5f13",
+    "tokens": 642
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 3963.414306640625,
+    "repository": "e9261ce3bf6e49b1d5b94bccd31f4d6f4c26ad14fe54f2f78dd5f1ade3c15679",
+    "tokens": 3947
+  },
+  {
+    "language": "java",
+    "nll_sum": 453.1201171875,
+    "repository": "e9c5c58efc5df42dcccbcb00261f5cd2fe8f72b1f9e59b77a81c518c4672305d",
+    "tokens": 594
+  },
+  {
+    "language": "c",
+    "nll_sum": 113.08930969238281,
+    "repository": "e9d6f71267097ed956ec8bb632c216b1c88ee3edec6fa8aa5a71668315091f47",
+    "tokens": 170
+  },
+  {
+    "language": "rust",
+    "nll_sum": 68.74043273925781,
+    "repository": "eb69010d27269767129c8557977692a46123b5ad0a1fd65ecd74831c99f055f6",
+    "tokens": 50
+  },
+  {
+    "language": "java",
+    "nll_sum": 509.11224365234375,
+    "repository": "eb6a0f9c79f105724caf5841b504f7a70c1eb8d6a58f28aae8243ddfea213ac5",
+    "tokens": 201
+  },
+  {
+    "language": "java",
+    "nll_sum": 5936.599853515625,
+    "repository": "eb9ad1f636c28266fa785f6e70f9cd26c65a0a13fdfc5f7696a24c6bfd3c9f3f",
+    "tokens": 6641
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 232.63267135620117,
+    "repository": "ebaa0a55e1760eba41c7b11d745831d94f081bb32ebdd738bb637a15f1fa70f5",
+    "tokens": 212
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 396.3094482421875,
+    "repository": "ebb0c8d6977374640e93826d328844144098214d492736a0a72fcbafd0971c83",
+    "tokens": 283
+  },
+  {
+    "language": "rust",
+    "nll_sum": 118.38577270507812,
+    "repository": "ebc9a5478bf178dfd37028d04697efec2e3abd0e3bd4e349c79323841e614a5c",
+    "tokens": 102
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 2743.8167724609375,
+    "repository": "ecd2cf941d6ff2cc4e446d36e47b7f8152deb836226a7d987a8b5075756879b7",
+    "tokens": 1592
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 3239.7898559570312,
+    "repository": "ecf2ed16ce2a848daa89d54c83034bf376e47a25bd4e3131cf4962a5bcd6e02e",
+    "tokens": 3691
+  },
+  {
+    "language": "go",
+    "nll_sum": 197.21633911132812,
+    "repository": "ed165c718671c4da8e0bbd7ead236246ce3e25318ec9ad5dc1c1b57c92be3a1f",
+    "tokens": 157
+  },
+  {
+    "language": "java",
+    "nll_sum": 419.304443359375,
+    "repository": "edc650db941f8fcbc2b114c1851dac51e5c54e8220329d9288e7ef22aab97219",
+    "tokens": 471
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 66.79393768310547,
+    "repository": "edd1c7bef765cada530bf7d782fbadcbd0a355780c8fe44ebe33c633c4f49f84",
+    "tokens": 20
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 224.5303497314453,
+    "repository": "ee889182bb4ca798f5af103c9e534bd332d43b62c0289e82fff32eaea657085b",
+    "tokens": 126
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 79.78054809570312,
+    "repository": "eeb01b14b3be440975f3b1fbda59a80daf25115506845dfb36b2b269f650e37b",
+    "tokens": 47
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 163.1820831298828,
+    "repository": "eee20a33f9f33b00c4be1400c19fc2e23449111d7d493e33dcb2d8a04e6903e5",
+    "tokens": 88
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 225.23440551757812,
+    "repository": "eef91e28f622ff92d15c28cd0a3a0ff8d9a946730b52ee56d88e4f04b77ae953",
+    "tokens": 168
+  },
+  {
+    "language": "rust",
+    "nll_sum": 52.780113220214844,
+    "repository": "ef0fb0c32ebb6d651ebae90bb20c63ab148aaceb24406ac8972e3fa0b354cfeb",
+    "tokens": 31
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 2252.0487365722656,
+    "repository": "f0278ca116ac4c5b6e7d27654cdfde11dc6c6b14053d591ab3ad381dd1aed6a7",
+    "tokens": 1669
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 138.14976501464844,
+    "repository": "f06d57712041bc1e7bd7ccbdd081e80b541c15f5998e982fb05e934eef8c85ae",
+    "tokens": 106
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 110.2745361328125,
+    "repository": "f1510a75ed41e9eb287554dac8196a6884b8b44c7f391c999d9f5ce72e62cf66",
+    "tokens": 122
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 1356.7916870117188,
+    "repository": "f17ef6880ef56a9b32533ef8b496498cdc1f94585f15ae1594d81c25f1181c4c",
+    "tokens": 823
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1513.7283935546875,
+    "repository": "f1cc2c9c5e927bfb97f551424985d0364c62b0ed80307cdbe1b7bd8869ff1c2a",
+    "tokens": 1169
+  },
+  {
+    "language": "python",
+    "nll_sum": 287.699462890625,
+    "repository": "f36dbfcf157305759ee14cedd6a50528ebe7ae39cabb324f9e7d0bcdc1a72c6e",
+    "tokens": 133
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 373.3412170410156,
+    "repository": "f3c36ca9ef46317a48c000ed0aa2051c7de34535362e5ce969b53ad61acd32f7",
+    "tokens": 234
+  },
+  {
+    "language": "java",
+    "nll_sum": 273.0662536621094,
+    "repository": "f423b199abb988792bd1af1ecd866788cc6c020b13778f1262722418e4f34735",
+    "tokens": 101
+  },
+  {
+    "language": "rust",
+    "nll_sum": 1049.3485107421875,
+    "repository": "f6398c82595f8d0a99acbba60fba31567e3abde82fbdc3d47c3e1ce29dec3c61",
+    "tokens": 1123
+  },
+  {
+    "language": "cpp",
+    "nll_sum": 19924.256713867188,
+    "repository": "f6e49c87a89aad375ac07f1d4752db280bb37dc8170a905d1a10da2d73d53d08",
+    "tokens": 17400
+  },
+  {
+    "language": "java",
+    "nll_sum": 656.065673828125,
+    "repository": "f710c06f658e1996c74b4082a4b94bc81a557868a059c2058a1d472eafc9f183",
+    "tokens": 616
+  },
+  {
+    "language": "java",
+    "nll_sum": 1506.6346435546875,
+    "repository": "f75ce59e9f2f6f3324a11b76cd82605e0c90e15e64af6d640fe61b596807f22d",
+    "tokens": 531
+  },
+  {
+    "language": "go",
+    "nll_sum": 392.43909454345703,
+    "repository": "f7b2e7a51fc719c892feb6c702781bc0cc42d4f5d58173115b4a3ea17ace035a",
+    "tokens": 426
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1819.758544921875,
+    "repository": "f7c6d1ec0e924ca0f26d218d3f88b82d40f36d57da1b5e937f8fabb5375e85e2",
+    "tokens": 3138
+  },
+  {
+    "language": "python",
+    "nll_sum": 666.5866088867188,
+    "repository": "f81bb491268e53068f91dac14d86dae1566f253796b331bcd8c798653c6f1e9c",
+    "tokens": 624
+  },
+  {
+    "language": "python",
+    "nll_sum": 707.0435791015625,
+    "repository": "f8f8e03dc67e36bbe8e87923bc9d9119366eef7f955827fda3d47afcfc25b21e",
+    "tokens": 940
+  },
+  {
+    "language": "csharp",
+    "nll_sum": 478.89019775390625,
+    "repository": "f99d4d4d93023903d638b4eeb8c0f702cf0fd4e85ded2632b31dbe1cec0837c9",
+    "tokens": 422
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 196.57333374023438,
+    "repository": "f9adf4cefcd0d7bb336facf90dbcfed7c767e3096b60ea94198c7f14670843de",
+    "tokens": 127
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 48344.345153808594,
+    "repository": "f9e22b5e29524cf3bd354da070155428814ea62666491fb89581d990cbce6e7d",
+    "tokens": 41403
+  },
+  {
+    "language": "c",
+    "nll_sum": 678.126220703125,
+    "repository": "fa7643fc64b56efbe180ce79841db5d7b4b5bda65f5b31cddf55d59258825c32",
+    "tokens": 794
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 1484.503173828125,
+    "repository": "fbe6a9cdabba4936606e980f199f84495189dbba89e5b3967bc1e3658203a4b5",
+    "tokens": 1115
+  },
+  {
+    "language": "python",
+    "nll_sum": 280.1395568847656,
+    "repository": "fbfc4e91f6e0a09e4c42d16e76dcef4a34defef0e4d11e15c889c3862e1262d3",
+    "tokens": 153
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 110.60712432861328,
+    "repository": "fc550b6e770b318bf4286886feb551372f7672d8c23e14adb82eb5f955272c74",
+    "tokens": 34
+  },
+  {
+    "language": "javascript",
+    "nll_sum": 496.5059814453125,
+    "repository": "fc78e13c4f36cf421e3655a3e10ad65696fb96ca1310c4e6a0a08a2036fb1ee4",
+    "tokens": 308
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 425.79083251953125,
+    "repository": "fcda047bae8e36696a9702022e02750e57885a175878d74bcf8cc1382c089035",
+    "tokens": 522
+  },
+  {
+    "language": "c",
+    "nll_sum": 97.93531799316406,
+    "repository": "fcf3f2b769d7b31a1f19133f46f4870ad2f5b6a623ee6d76f2085f863d8dcc02",
+    "tokens": 129
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 560.0040893554688,
+    "repository": "fd64e80f1be71d3b40d150381443f468e5e4d4ce597e63c46e7053f4469b9205",
+    "tokens": 701
+  },
+  {
+    "language": "java",
+    "nll_sum": 583.0570068359375,
+    "repository": "fdc79495ca9bf22eafc611aa0b13114eae0b1dac901e74f8ad2fe35f1aa38b21",
+    "tokens": 1276
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 422.6853942871094,
+    "repository": "fe058e19c588caea6fb15fbca79f04feae1c7b7d8276f58c2c3d00fc7dadcc8f",
+    "tokens": 414
+  },
+  {
+    "language": "typescript",
+    "nll_sum": 190.80172729492188,
+    "repository": "fe8cefc99057e57145f8f1088f2b3d1ce01a0d77473582285ca4b16d2456b019",
+    "tokens": 203
+  },
+  {
+    "language": "rust",
+    "nll_sum": 2127.3797607421875,
+    "repository": "feb3f497b78993d3db6e2257f3f1754daa77630ff089da358ea64b5f88a55696",
+    "tokens": 1927
+  },
+  {
+    "language": "python",
+    "nll_sum": 821.5894775390625,
+    "repository": "fed67b65c921b56555dd61cd2c6928205f0fdc9f411897f649b942d265391dc6",
+    "tokens": 528
+  },
+  {
+    "language": "c",
+    "nll_sum": 181.57901000976562,
+    "repository": "ff999f034723f86e528f60e491f208535ef0eb697910a09f1582ae132615b418",
+    "tokens": 251
+  },
+  {
+    "language": "python",
+    "nll_sum": 646.1707153320312,
+    "repository": "ffce76606681949ba4a273901e7c21440fa5fc14d4f698230bf1ac47e5c48f48",
+    "tokens": 876
+  },
+  {
+    "language": "java",
+    "nll_sum": 639.1036376953125,
+    "repository": "ffde2c36d11d0b429d2eb34ed74e575b152ed9bc338b2d2d9fb8e18f0f8e5b06",
+    "tokens": 252
+  }
+]

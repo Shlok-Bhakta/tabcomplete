@@ -14,7 +14,9 @@ REPOSITORY = "https://github.com/Shlok-Bhakta/tabcomplete.git"
 BRANCH = "stage1/cpt-recipe-r1"
 CHECKOUT = Path("/kaggle/working/tabcomplete")
 OUTPUT = Path("/kaggle/working/code_cpt_long_context_r1")
-SESSION_LIMIT_SECONDS = 8 * 60 * 60
+# The post-evaluation account reading left 4.26 hours under the 12-hour
+# campaign ceiling. This limit includes setup, model evaluation, and finalization.
+SESSION_LIMIT_SECONDS = 4 * 60 * 60
 FINALIZATION_RESERVE_SECONDS = 30 * 60
 
 
