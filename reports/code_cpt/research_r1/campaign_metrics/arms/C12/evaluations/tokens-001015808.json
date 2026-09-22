@@ -1,0 +1,56 @@
+{
+  "actual_training_tokens": 1015808,
+  "guard": {
+    "code_consecutive": 0,
+    "general_consecutive": 0,
+    "stop": false
+  },
+  "metrics": {
+    "c": {
+      "nll": 1.091275314135211,
+      "tokens": 114632
+    },
+    "cpp": {
+      "nll": 0.4651008392018931,
+      "tokens": 114632
+    },
+    "csharp": {
+      "nll": 0.8495357515556472,
+      "tokens": 114632
+    },
+    "general": {
+      "nll": 2.496382921934128,
+      "tokens": 16376
+    },
+    "go": {
+      "nll": 1.668444677921278,
+      "tokens": 114632
+    },
+    "java": {
+      "nll": 0.9344019921762603,
+      "tokens": 114632
+    },
+    "javascript": {
+      "nll": 1.1481044366955757,
+      "tokens": 114632
+    },
+    "overall_code": {
+      "nll": 1.0331682483887388,
+      "tokens": 1031688
+    },
+    "python": {
+      "nll": 1.1769660317472048,
+      "tokens": 114632
+    },
+    "rust": {
+      "nll": 1.003076268626111,
+      "tokens": 114632
+    },
+    "typescript": {
+      "nll": 0.9616089234394687,
+      "tokens": 114632
+    }
+  },
+  "milestone": 1015808,
+  "optimizer_steps": 31
+}

@@ -1,0 +1,62 @@
+{
+  "completed_arms": [
+    {
+      "additional_input_tokens": 5013504,
+      "elapsed_seconds": 4029.8760662078857,
+      "lr_schedule": "constant",
+      "model_bytes": 2013387056,
+      "model_sha256": "ce3a666ad9eab501c6400a5b248d3532af758ad3e4bc0452e2098a19d58e2fb9",
+      "name": "C12",
+      "parent": "P12",
+      "steady_state_tokens_per_second": 1680.7251655523478,
+      "stop_reason": "max_tokens",
+      "successful_optimizer_updates": 153
+    },
+    {
+      "additional_input_tokens": 5013504,
+      "elapsed_seconds": 3911.6784303188324,
+      "lr_schedule": "constant",
+      "model_bytes": 2013387056,
+      "model_sha256": "54cb68207afb20fa33897cef813c726e272ee3e778294ad164728a698d62315f",
+      "name": "C5",
+      "parent": "P5",
+      "steady_state_tokens_per_second": 1646.1829629825377,
+      "stop_reason": "max_tokens",
+      "successful_optimizer_updates": 153
+    },
+    {
+      "additional_input_tokens": 5013504,
+      "elapsed_seconds": 3646.163033723831,
+      "lr_schedule": "cosine",
+      "model_bytes": 2013387056,
+      "model_sha256": "ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e",
+      "name": "D12",
+      "parent": "P12",
+      "steady_state_tokens_per_second": 1689.1672657483318,
+      "stop_reason": "max_tokens",
+      "successful_optimizer_updates": 153
+    },
+    {
+      "additional_input_tokens": 5013504,
+      "elapsed_seconds": 3641.5856597423553,
+      "lr_schedule": "cosine",
+      "model_bytes": 2013387056,
+      "model_sha256": "47772f912bb7993ad31a2bdd8f1bc4f8afd961101cf26dd30b1bc0a4344e72fc",
+      "name": "D5",
+      "parent": "P5",
+      "steady_state_tokens_per_second": 1690.8205054455966,
+      "stop_reason": "max_tokens",
+      "successful_optimizer_updates": 153
+    }
+  ],
+  "corpus_fingerprint": "92f3a73fa43e937379ba04dc974489328dfb07020d2415b19ac0dd5815b7664a",
+  "elapsed_seconds": 16983.477152585983,
+  "final_free_bytes": 12634431488,
+  "git_sha": "021e95657d73725ab48480e5ab8b35793748eb5b",
+  "initial_free_bytes": 20940513280,
+  "pilot_tokens_per_arm": 5013504,
+  "schema_version": 1,
+  "skipped_arms": [],
+  "started_unix": 1790029257.8366873,
+  "status": "complete"
+}

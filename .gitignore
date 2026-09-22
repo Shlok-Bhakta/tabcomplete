@@ -13,6 +13,7 @@ kaggle/dataset/*.csv
 checkpoints/
 outputs/
 *.safetensors
+artifacts/code_cpt/research_r1/
 
 # trajectory collector (local-only artifacts; appends only — do not rewrite above)
 *.sqlite*

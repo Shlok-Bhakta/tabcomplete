@@ -1,0 +1,123 @@
+{
+  "checkpoint": "/kaggle/working/code_cpt_campaign_r1/arms/D5/final",
+  "checkpoint_identity": {
+    "config_sha256": "acc1badd3017c913c512fb2555f5ed1218db987a555e8c8d9397609e06e61dee",
+    "path": "/kaggle/working/code_cpt_campaign_r1/arms/D5/final",
+    "tokenizer_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+    "weight_files": [
+      {
+        "bytes": 2013387056,
+        "name": "model.safetensors",
+        "sha256": "47772f912bb7993ad31a2bdd8f1bc4f8afd961101cf26dd30b1bc0a4344e72fc"
+      },
+      {
+        "bytes": 40907296,
+        "name": "mtp-original.safetensors",
+        "sha256": "94a8afbe3c204a6e82669193a1cd5107277a30529deb2b54d4d63720f8f2097c"
+      }
+    ]
+  },
+  "corpus_dir": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-prepare/code_cpt_corpus",
+  "corpus_fingerprint": null,
+  "credential_source": "anonymous_public_model",
+  "metrics": {
+    "c": {
+      "nll": 1.3223701789975166,
+      "tokens": 16376
+    },
+    "cpp": {
+      "nll": 1.312313012778759,
+      "tokens": 16376
+    },
+    "csharp": {
+      "nll": 0.866492185741663,
+      "tokens": 16376
+    },
+    "general": {
+      "nll": 2.502562254667282,
+      "tokens": 16376
+    },
+    "go": {
+      "nll": 0.8458946794271469,
+      "tokens": 16376
+    },
+    "java": {
+      "nll": 0.9026100859045982,
+      "tokens": 16376
+    },
+    "javascript": {
+      "nll": 1.2181433364748955,
+      "tokens": 16376
+    },
+    "overall_code": {
+      "nll": 1.0984146210054557,
+      "tokens": 147384
+    },
+    "python": {
+      "nll": 1.2500326484441757,
+      "tokens": 16376
+    },
+    "rust": {
+      "nll": 1.0022246688604355,
+      "tokens": 16376
+    },
+    "typescript": {
+      "nll": 1.1656507924199104,
+      "tokens": 16376
+    }
+  },
+  "model_diagnostic": {
+    "inventory_sha256": "c26b831d3ebdf458da68629ffbf0218d55180f3a1b5e8beaadc195b6cc6c7c7f",
+    "parameter_count": 752393024,
+    "parameter_tensor_count": 320,
+    "selected_tensors": {
+      "model.embed_tokens.weight": {
+        "first_values": [
+          0.01247406005859375,
+          0.014190673828125,
+          -0.0166473388671875,
+          -0.01120758056640625
+        ],
+        "sample_sha256": "de8fb20f7e050e84294cc832f96c2665f29ebc8476dd10594cac4a04e878ac29",
+        "shape": [
+          248320,
+          1024
+        ]
+      },
+      "model.layers.0.input_layernorm.weight": {
+        "first_values": [
+          1.0,
+          0.294921875,
+          0.53515625,
+          0.74609375
+        ],
+        "sample_sha256": "7e1b9ce89bab9ef7fa78a0b52539a732877b1979f54552a5d356c7898d92901f",
+        "shape": [
+          1024
+        ]
+      },
+      "model.norm.weight": {
+        "first_values": [
+          -0.77734375,
+          2.75,
+          2.640625,
+          3.0625
+        ],
+        "sample_sha256": "fbc04741f9419a1d57b13c0ecde435fb3020f82c0a4089b86bd98bb35256185d",
+        "shape": [
+          1024
+        ]
+      }
+    },
+    "weight_tying": {
+      "config_tie_word_embeddings": true,
+      "same_storage": true,
+      "shapes_equal": true
+    }
+  },
+  "packages": {
+    "torch": "2.10.0+cu128",
+    "transformers": "5.5.0"
+  },
+  "precision": "fp16 autocast over fp32 parameters"
+}

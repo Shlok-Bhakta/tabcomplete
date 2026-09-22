@@ -1,0 +1,123 @@
+{
+  "checkpoint": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P5",
+  "checkpoint_identity": {
+    "config_sha256": "acc1badd3017c913c512fb2555f5ed1218db987a555e8c8d9397609e06e61dee",
+    "path": "/kaggle/input/datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P5",
+    "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+    "weight_files": [
+      {
+        "bytes": 2013387056,
+        "name": "model.safetensors",
+        "sha256": "d499c3fe2d720246c710c5c9e20653a4599aa25d77ebef871cb28431ccc888e8"
+      },
+      {
+        "bytes": 40907296,
+        "name": "mtp-original.safetensors",
+        "sha256": "94a8afbe3c204a6e82669193a1cd5107277a30529deb2b54d4d63720f8f2097c"
+      }
+    ]
+  },
+  "corpus_dir": "/kaggle/input/notebooks/shlokbhakta/tabcomplete-code-cpt-prepare/code_cpt_corpus",
+  "corpus_fingerprint": null,
+  "credential_source": "anonymous_public_model",
+  "metrics": {
+    "c": {
+      "nll": 1.3238218873739243,
+      "tokens": 16376
+    },
+    "cpp": {
+      "nll": 1.3105953559279442,
+      "tokens": 16376
+    },
+    "csharp": {
+      "nll": 0.8689670488238335,
+      "tokens": 16376
+    },
+    "general": {
+      "nll": 2.4831224381923676,
+      "tokens": 16376
+    },
+    "go": {
+      "nll": 0.8483865782618523,
+      "tokens": 16376
+    },
+    "java": {
+      "nll": 0.9032371491193771,
+      "tokens": 16376
+    },
+    "javascript": {
+      "nll": 1.2227352410554886,
+      "tokens": 16376
+    },
+    "overall_code": {
+      "nll": 1.1010701639784708,
+      "tokens": 147384
+    },
+    "python": {
+      "nll": 1.2526100277900696,
+      "tokens": 16376
+    },
+    "rust": {
+      "nll": 1.0088122487068176,
+      "tokens": 16376
+    },
+    "typescript": {
+      "nll": 1.1704659387469292,
+      "tokens": 16376
+    }
+  },
+  "model_diagnostic": {
+    "inventory_sha256": "c26b831d3ebdf458da68629ffbf0218d55180f3a1b5e8beaadc195b6cc6c7c7f",
+    "parameter_count": 752393024,
+    "parameter_tensor_count": 320,
+    "selected_tensors": {
+      "model.embed_tokens.weight": {
+        "first_values": [
+          0.01248931884765625,
+          0.0141754150390625,
+          -0.016632080078125,
+          -0.01122283935546875
+        ],
+        "sample_sha256": "17829ed8cf32e10ca98ba0095aa065a048be9ed3273c0e90b9466fe01fb5c763",
+        "shape": [
+          248320,
+          1024
+        ]
+      },
+      "model.layers.0.input_layernorm.weight": {
+        "first_values": [
+          1.0,
+          0.294921875,
+          0.53515625,
+          0.74609375
+        ],
+        "sample_sha256": "7e1b9ce89bab9ef7fa78a0b52539a732877b1979f54552a5d356c7898d92901f",
+        "shape": [
+          1024
+        ]
+      },
+      "model.norm.weight": {
+        "first_values": [
+          -0.77734375,
+          2.75,
+          2.640625,
+          3.0625
+        ],
+        "sample_sha256": "fbc04741f9419a1d57b13c0ecde435fb3020f82c0a4089b86bd98bb35256185d",
+        "shape": [
+          1024
+        ]
+      }
+    },
+    "weight_tying": {
+      "config_tie_word_embeddings": true,
+      "same_storage": true,
+      "shapes_equal": true
+    }
+  },
+  "packages": {
+    "torch": "2.10.0+cu128",
+    "transformers": "5.5.0"
+  },
+  "precision": "fp16 autocast over fp32 parameters"
+}
