@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "signoz_version": "v0.142.1",
+  "name": "tabcomplete-runs-and-models",
+  "title": "TabComplete — Runs and Models",
+  "description": "Observed telemetry. Scientific result files are authoritative; raw counts may include retry delivery. Use the no-login monitoring gateway for deduplicated case drill-down.",
+  "panels": [
+    {"id":"runs","title":"Run lifecycle and freshness","filter":"name IN ('run.start','run.heartbeat','run.summary')","fields":["tabcomplete.run_id","tabcomplete.run.state","tabcomplete.cases.completed","tabcomplete.cases.planned","host.name"]},
+    {"id":"models","title":"Model calls — duration and known usage","filter":"name = 'model.generate'","fields":["tabcomplete.request_id","gen_ai.request.model","tabcomplete.timing.total_ms","gen_ai.usage.input_tokens","gen_ai.usage.output_tokens"]},
+    {"id":"quality","title":"Quality — keep suites and protocols separate","filter":"name = 'eval.case'","fields":["tabcomplete.case_id","tabcomplete.suite.sha256","tabcomplete.protocol","tabcomplete.quality.parse","tabcomplete.quality.compile","tabcomplete.quality.functional"]},
+    {"id":"failures","title":"Infrastructure and quality failures","filter":"tabcomplete.failure.type EXISTS OR tabcomplete.outcome = 'failed'","fields":["tabcomplete.run_id","tabcomplete.case_id","tabcomplete.failure.type","tabcomplete.failure.message"]},
+    {"id":"training","title":"Training and checkpoints","filter":"name IN ('training.progress','checkpoint.save','checkpoint.load')","fields":["tabcomplete.run_id","tabcomplete.training.loss","tabcomplete.training.validation_nll","tabcomplete.training.input_tokens"]},
+    {"id":"storage","title":"External storage health","filter":"name = 'storage.health'","fields":["host.name","tabcomplete.storage.healthy","tabcomplete.storage.free_bytes","tabcomplete.storage.artifact_bytes"]}
+  ]
+}

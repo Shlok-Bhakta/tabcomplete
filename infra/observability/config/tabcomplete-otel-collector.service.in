@@ -1,0 +1,16 @@
+[Unit]
+Description=TabComplete local OpenTelemetry collector
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=@@ENV@@
+ExecStartPre=-/usr/bin/podman rm -f tabcomplete-otel-collector
+ExecStart=/usr/bin/podman run --rm --name tabcomplete-otel-collector --user 0:0 --read-only --cap-drop=all --security-opt=no-new-privileges --memory=512m --pids-limit=128 --log-opt=max-size=10mb -p 127.0.0.1:4317:4317 -p 127.0.0.1:4318:4318 -v @@CONFIG@@:/etc/otelcol-contrib/config.yaml:ro -v @@WAL@@:/var/lib/otelcol:rw -e TABCOMPLETE_KIWI_OTLP_HTTP_ENDPOINT @@IMAGE@@ --config=/etc/otelcol-contrib/config.yaml
+ExecStop=/usr/bin/podman stop --time 10 tabcomplete-otel-collector
+Restart=always
+RestartSec=5
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

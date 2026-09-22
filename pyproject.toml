@@ -20,6 +20,9 @@ dependencies = [
   "tokenizers>=0.21",
   "safetensors>=0.4",
   "numpy>=1.26",
+  "opentelemetry-api==1.44.0",
+  "opentelemetry-sdk==1.44.0",
+  "opentelemetry-exporter-otlp-proto-http==1.44.0",
 ]
 
 [dependency-groups]

@@ -18,6 +18,7 @@ from tinycomplete.eval.long_context_diagnostic import (
     LongContextDiagnosticCase,
     diagnostic_case_to_benchmark,
 )
+from tinycomplete.observability.runs import context_map, evaluation_scope
 
 
 def main() -> None:
@@ -41,7 +42,10 @@ def main() -> None:
         if line.strip()
     ]
     results: list[BenchmarkResult] = []
-    with tempfile.TemporaryDirectory(prefix="tabcomplete-long-context-v2-") as directory:
+    with (
+        evaluation_scope(args, "long-context-v2"),
+        tempfile.TemporaryDirectory(prefix="tabcomplete-long-context-v2-") as directory,
+    ):
         root = Path(directory)
 
         def evaluate(item):
@@ -63,7 +67,7 @@ def main() -> None:
             return result
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-            results.extend(executor.map(evaluate, enumerate(scores, 1)))
+            results.extend(context_map(executor, evaluate, enumerate(scores, 1)))
     args.output_dir.mkdir(parents=True, exist_ok=True)
     with (args.output_dir / "results.jsonl").open("w", encoding="utf-8") as handle:
         for result in results:

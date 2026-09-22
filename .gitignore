@@ -29,5 +29,12 @@ tools/trajectory_collector/.smoke*
 # smoke-test repos under /tmp/*trajectory* live outside the repo (no rule needed)
 # keep the .env template committable despite .env.* above
 !.env.example
+infra/observability/deployment-manifest.json
+infra/observability/.admin.env
+infra/observability/.artifact-upload-token
 node_modules/
 **/node_modules/
+infra/observability/.tools/
+infra/observability/.bootstrap-state.json
+infra/observability/.provision-state.json
+.tabcomplete-observability/

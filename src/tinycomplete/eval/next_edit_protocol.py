@@ -8,6 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from tinycomplete.observability.hooks import observed_next_edit
 from tinycomplete.protocol.events import byte_splice
 
 PROTOCOL_VERSION = "marked-region-next-edit-action-v2"
@@ -111,9 +112,12 @@ def apply_next_edit_action(
 ) -> str:
     """Apply byte-precise action semantics without normalizing replacement text."""
     if action.action == "no_edit":
-        byte_splice(current, region_start, region_end, current.encode("utf-8")[
-            region_start:region_end
-        ].decode("utf-8"))
+        byte_splice(
+            current,
+            region_start,
+            region_end,
+            current.encode("utf-8")[region_start:region_end].decode("utf-8"),
+        )
         return current
     assert action.text is not None
     return byte_splice(current, region_start, region_end, action.text)
@@ -152,6 +156,7 @@ class NextEditActionResult(BaseModel):
     test_check: str
 
 
+@observed_next_edit
 def evaluate_next_edit_action_prediction(
     case,
     prediction,
@@ -169,9 +174,7 @@ def evaluate_next_edit_action_prediction(
         generated_tokens=prediction.generated_tokens,
         max_tokens=max_tokens,
     )
-    gold_action: Literal["no_edit", "replace"] = (
-        "no_edit" if case.action == "noop" else "replace"
-    )
+    gold_action: Literal["no_edit", "replace"] = "no_edit" if case.action == "noop" else "replace"
     predicted_action = parsed.action.action if parsed.action is not None else None
     if parsed.action is None:
         return NextEditActionResult(
@@ -272,9 +275,7 @@ def summarize_next_edit_action_results(results: list[NextEditActionResult]) -> d
         ),
         "deletion_success_count": sum(row.deletion_success for row in deletions),
         "deletion_success_rate": (
-            sum(row.deletion_success for row in deletions) / len(deletions)
-            if deletions
-            else None
+            sum(row.deletion_success for row in deletions) / len(deletions) if deletions else None
         ),
         "functional_success_edit_required_rate": (
             sum(row.functional_success for row in edit_required) / len(edit_required)
@@ -282,8 +283,7 @@ def summarize_next_edit_action_results(results: list[NextEditActionResult]) -> d
             else None
         ),
         "false_positive_edits": sum(
-            row.gold_action == "no_edit" and row.predicted_action == "replace"
-            for row in results
+            row.gold_action == "no_edit" and row.predicted_action == "replace" for row in results
         ),
         "wrong_action_count": sum(row.wrong_action for row in results),
         "wrong_code_count": sum(row.wrong_code for row in results),

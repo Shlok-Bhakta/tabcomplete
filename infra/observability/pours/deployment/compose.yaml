@@ -1,0 +1,370 @@
+name: tabcomplete-observability
+networks:
+  tabcomplete-observability-network:
+    name: tabcomplete-observability-network
+services:
+  gateway:
+    build:
+      context: ../../gateway
+    depends_on:
+      tabcomplete-observability-signoz-0:
+        condition: service_healthy
+    environment:
+    - PORT=9090
+    - SIGNOZ_URL=http://tabcomplete-observability-signoz-0:8080
+    - TABCOMPLETE_ARTIFACT_ROOT=/artifacts
+    - SIGNOZ_API_KEY=${SIGNOZ_API_KEY:?set read-only service key}
+    - TABCOMPLETE_ARTIFACT_UPLOAD_TOKEN=${TABCOMPLETE_ARTIFACT_UPLOAD_TOKEN:?set upload
+      token}
+    - TABCOMPLETE_ARTIFACT_CAP_BYTES=${TABCOMPLETE_ARTIFACT_CAP_BYTES:-21474836480}
+    - TABCOMPLETE_ARTIFACT_RETENTION_DAYS=${TABCOMPLETE_ARTIFACT_RETENTION_DAYS:-30}
+    - TABCOMPLETE_ALLOWED_HOSTS=${TABCOMPLETE_OBS_ALLOWED_HOSTS:?set allowed hosts}
+    healthcheck:
+      interval: 15s
+      retries: 5
+      start_period: 20s
+      test:
+      - CMD
+      - bun
+      - -e
+      - fetch('http://127.0.0.1:9090/api/v1/status',{headers:{Host:'kiwi'}}).then(r=>{if(!r.ok)process.exit(1)})
+      timeout: 5s
+    image: tabcomplete-observability-gateway:1.0.0
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 256m
+    networks:
+    - tabcomplete-observability-network
+    pids_limit: 128
+    ports:
+    - ${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_GATEWAY_PORT:-9090}:9090
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    volumes:
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/model-artifacts
+      target: /artifacts
+      type: bind
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/gateway-state
+      target: /state
+      type: bind
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json
+      target: /etc/tabcomplete-volume-identity.json
+      type: bind
+  ingester:
+    command:
+    - -c
+    - |
+      /signoz-otel-collector migrate sync check &&
+      /signoz-otel-collector --config=/etc/otel-collector-config.yaml --manager-config=/etc/opamp-config.yaml --copy-path=/var/tmp/collector-config.yaml
+    deploy:
+      replicas: 1
+    entrypoint:
+    - /bin/sh
+    environment:
+    - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://tabcomplete-observability-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    image: signoz/signoz-otel-collector:v0.142.1@sha256:9278f7d9ba911e4facb5273364067c7aa606b9ef4e024a017ddfba51977cb3cc
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 1g
+    networks:
+      tabcomplete-observability-network:
+        aliases:
+        - tabcomplete-observability-ingester
+    ports:
+    - ${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_OTLP_GRPC_PORT:-4317}:4317
+    - ${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_OTLP_HTTP_PORT:-4318}:4318
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    volumes:
+    - ./ingester/ingester.yaml:/etc/otel-collector-config.yaml:ro
+    - ./ingester/opamp.yaml:/etc/opamp-config.yaml:ro
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/collector-wal
+      target: /var/lib/otelcol
+      type: bind
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json
+      target: /etc/tabcomplete-volume-identity.json
+      type: bind
+  mcp:
+    deploy:
+      replicas: 1
+    environment:
+    - MCP_SERVER_PORT=8000
+    - SIGNOZ_URL=http://tabcomplete-observability-signoz-0:8080
+    - TRANSPORT_MODE=http
+    - SIGNOZ_API_KEY=${SIGNOZ_API_KEY:?set read-only service key}
+    image: signoz/signoz-mcp-server:v0.14.0@sha256:5a71dd65958aa0504622072b654fad9b0555703f909aafa578f53fb50f2481a2
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 256m
+    networks:
+      tabcomplete-observability-network:
+        aliases:
+        - tabcomplete-observability-mcp
+    ports:
+    - ${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_MCP_PORT:-8000}:8000
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+  tabcomplete-observability-metastore-postgres-0:
+    container_name: tabcomplete-observability-metastore-postgres-0
+    environment:
+    - POSTGRES_DB=signoz
+    - POSTGRES_PASSWORD=${TABCOMPLETE_OBS_POSTGRES_PASSWORD:?set private metastore
+      password}
+    - POSTGRES_USER=signoz
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+      - CMD-SHELL
+      - pg_isready -U signoz -d signoz
+      timeout: 10s
+    image: postgres:16@sha256:a85daf0dbd5e79586e850e3fe4b21b796799828ad015ce2166aeb98cc24da61c
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 512m
+    networks:
+    - tabcomplete-observability-network
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    volumes:
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/metastore
+      target: /var/lib/postgresql/data
+      type: bind
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json
+      target: /etc/tabcomplete-volume-identity.json
+      type: bind
+  tabcomplete-observability-signoz-0:
+    container_name: tabcomplete-observability-signoz-0
+    depends_on:
+      tabcomplete-observability-metastore-postgres-0:
+        condition: service_healthy
+    environment:
+    - SIGNOZ_SQLSTORE_POSTGRES_DSN=postgres://signoz:${TABCOMPLETE_OBS_POSTGRES_PASSWORD:?set
+      private metastore password}@tabcomplete-observability-metastore-postgres-0:5432/signoz?sslmode=disable
+    - SIGNOZ_SQLSTORE_PROVIDER=postgres
+    - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://tabcomplete-observability-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_TELEMETRYSTORE_PROVIDER=clickhouse
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 60s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - http://localhost:8080/api/v1/health
+      timeout: 10s
+    image: signoz/signoz:v0.142.1@sha256:9ee744714fced5b51db763e338d4bce4b6914941c56c11f5c14616497d7eabb7
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 1536m
+    networks:
+    - tabcomplete-observability-network
+    ports:
+    - ${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_SIGNOZ_PORT:-8080}:8080
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    volumes:
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json
+      target: /etc/tabcomplete-volume-identity.json
+      type: bind
+  tabcomplete-observability-telemetrykeeper-clickhousekeeper-0:
+    container_name: tabcomplete-observability-telemetrykeeper-clickhousekeeper-0
+    entrypoint:
+    - /usr/bin/clickhouse-keeper
+    - --config-file=/etc/clickhouse-keeper/keeper.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 40s
+      test:
+      - CMD
+      - clickhouse-keeper-client
+      - -h
+      - localhost
+      - -p
+      - "9181"
+      - -q
+      - ls
+      timeout: 10s
+    image: clickhouse/clickhouse-keeper:25.12.5@sha256:5493b0fba2fdfc3bf51115db4fb378fac8b0a953c116db442fd4297a8f49a9d7
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 512m
+    networks:
+    - tabcomplete-observability-network
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    volumes:
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/keeper
+      target: /var/lib/clickhouse-keeper
+      type: bind
+    - ./telemetrykeeper/clickhousekeeper/keeper-0.yaml:/etc/clickhouse-keeper/keeper.yaml:ro
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/keeper-image-state
+      target: /var/lib/clickhouse
+      type: bind
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json
+      target: /etc/tabcomplete-volume-identity.json
+      type: bind
+  tabcomplete-observability-telemetrystore-clickhouse-0-0:
+    container_name: tabcomplete-observability-telemetrystore-clickhouse-0-0
+    depends_on:
+      tabcomplete-observability-telemetrykeeper-clickhousekeeper-0:
+        condition: service_healthy
+      tabcomplete-observability-telemetrystore-clickhouse-user-scripts:
+        condition: service_completed_successfully
+    environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+    - CLICKHOUSE_CONFIG=/etc/clickhouse-server/config-0-0.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 40s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - http://localhost:8123/ping
+      timeout: 10s
+    image: clickhouse/clickhouse-server:25.12.5@sha256:10f54f04de6c61b756c4eaf9f1d17464a4ac3e1f94b5b410e0dec92a24dbeda8
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 4g
+    networks:
+    - tabcomplete-observability-network
+    restart: unless-stopped
+    tmpfs:
+    - /tmp:size=64m,mode=1777
+    volumes:
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/clickhouse
+      target: /var/lib/clickhouse
+      type: bind
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/clickhouse-user-scripts
+      target: /var/lib/clickhouse/user_scripts
+      type: bind
+    - ./telemetrystore/clickhouse/config-0-0.yaml:/etc/clickhouse-server/config-0-0.yaml:ro
+    - ./telemetrystore/clickhouse/functions.yaml:/etc/clickhouse-server/functions.yaml:ro
+    - bind:
+        create_host_path: false
+      read_only: true
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json
+      target: /etc/tabcomplete-volume-identity.json
+      type: bind
+  tabcomplete-observability-telemetrystore-clickhouse-user-scripts:
+    command:
+    - bash
+    - -c
+    - |-
+      version="v0.0.1"
+      node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+      node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+      echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
+      cd /tmp
+      wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+      tar -xvzf histogram-quantile.tar.gz
+      mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    container_name: tabcomplete-observability-telemetrystore-clickhouse-user-scripts
+    image: clickhouse/clickhouse-server:25.12.5@sha256:10f54f04de6c61b756c4eaf9f1d17464a4ac3e1f94b5b410e0dec92a24dbeda8
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    networks:
+    - tabcomplete-observability-network
+    restart: on-failure
+    volumes:
+    - bind:
+        create_host_path: false
+      source: ${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/clickhouse-user-scripts
+      target: /var/lib/clickhouse/user_scripts
+      type: bind
+  tabcomplete-observability-telemetrystore-migrator:
+    command:
+    - -c
+    - |
+      /signoz-otel-collector migrate ready &&
+      /signoz-otel-collector migrate bootstrap &&
+      /signoz-otel-collector migrate sync up &&
+      /signoz-otel-collector migrate async up
+    container_name: tabcomplete-observability-telemetrystore-migrator
+    entrypoint:
+    - /bin/sh
+    environment:
+    - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://tabcomplete-observability-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    image: signoz/signoz-otel-collector:v0.142.1@sha256:9278f7d9ba911e4facb5273364067c7aa606b9ef4e024a017ddfba51977cb3cc
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 10m
+    mem_limit: 512m
+    networks:
+    - tabcomplete-observability-network
+    restart: on-failure
+    tmpfs:
+    - /tmp:size=64m,mode=1777

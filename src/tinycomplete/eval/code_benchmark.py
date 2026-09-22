@@ -16,6 +16,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from tinycomplete.observability.context import RunContext, current_run_context
+from tinycomplete.observability.spans import operation
+
 CheckStatus = Literal["pass", "fail", "timeout", "error", "unavailable", "not_run"]
 
 
@@ -304,7 +307,7 @@ def _write_file(root: Path, relative: str, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def evaluate_prediction(
+def _evaluate_prediction_impl(
     case: BenchmarkCase,
     prediction: Prediction,
     *,
@@ -321,52 +324,60 @@ def evaluate_prediction(
     assembled = case.prefix + prediction.completion + case.suffix
     _write_file(work_root, case.path, assembled)
     fixture_sha256 = _tree_hash(work_root)
-    parse = _parse(assembled, case.language)
+    with operation("eval.parse") as parse_span:
+        parse = _parse(assembled, case.language)
+        parse_span.set_attribute("tabcomplete.check.status", parse.status)
     compile_result = CheckResult(status="not_run")
     test_result = CheckResult(status="not_run")
     if execution_backend in {"container", "trusted-host"}:
         if case.check.compile:
-            if execution_backend == "container":
-                compile_result = _run_container(
-                    case.check.compile,
-                    work_root,
-                    case.check.timeout_seconds,
-                    case.check.container_image,
-                )
-            else:
-                compile_result = _run_trusted(
-                    case.check.compile, work_root, case.check.timeout_seconds
-                )
+            with operation("eval.compile") as compile_span:
+                if execution_backend == "container":
+                    compile_result = _run_container(
+                        case.check.compile,
+                        work_root,
+                        case.check.timeout_seconds,
+                        case.check.container_image,
+                    )
+                else:
+                    compile_result = _run_trusted(
+                        case.check.compile, work_root, case.check.timeout_seconds
+                    )
+                compile_span.set_attribute("tabcomplete.check.status", compile_result.status)
         if case.check.test and compile_result.status in {"pass", "not_run"}:
-            if execution_backend == "container":
-                test_result = _run_container(
-                    case.check.test,
-                    work_root,
-                    case.check.timeout_seconds,
-                    case.check.container_image,
-                )
-            else:
-                test_result = _run_trusted(case.check.test, work_root, case.check.timeout_seconds)
-            if test_result.status == "pass" and case.check.run:
+            with operation("eval.execute") as execute_span:
                 if execution_backend == "container":
                     test_result = _run_container(
-                        case.check.run,
+                        case.check.test,
                         work_root,
                         case.check.timeout_seconds,
                         case.check.container_image,
                     )
                 else:
                     test_result = _run_trusted(
-                        case.check.run, work_root, case.check.timeout_seconds
+                        case.check.test, work_root, case.check.timeout_seconds
                     )
-            if (
-                test_result.status == "pass"
-                and case.check.expected_stdout is not None
-                and test_result.stdout != case.check.expected_stdout
-            ):
-                test_result = test_result.model_copy(
-                    update={"status": "fail", "stderr": "stdout did not match expected output"}
-                )
+                if test_result.status == "pass" and case.check.run:
+                    if execution_backend == "container":
+                        test_result = _run_container(
+                            case.check.run,
+                            work_root,
+                            case.check.timeout_seconds,
+                            case.check.container_image,
+                        )
+                    else:
+                        test_result = _run_trusted(
+                            case.check.run, work_root, case.check.timeout_seconds
+                        )
+                if (
+                    test_result.status == "pass"
+                    and case.check.expected_stdout is not None
+                    and test_result.stdout != case.check.expected_stdout
+                ):
+                    test_result = test_result.model_copy(
+                        update={"status": "fail", "stderr": "stdout did not match expected output"}
+                    )
+                execute_span.set_attribute("tabcomplete.check.status", test_result.status)
     return BenchmarkResult(
         case_id=case.id,
         language=case.language,
@@ -384,6 +395,76 @@ def evaluate_prediction(
         latency_seconds=prediction.latency_seconds,
         generated_tokens=prediction.generated_tokens,
     )
+
+
+def evaluate_prediction(
+    case: BenchmarkCase,
+    prediction: Prediction,
+    *,
+    work_root: Path,
+    execution_backend: Literal["none", "container", "trusted-host"] = "none",
+) -> BenchmarkResult:
+    active = current_run_context()
+    case_context = (
+        active
+        if active is not None and active.case_id == case.id
+        else (active or RunContext.new()).for_case(case.id)
+    )
+    with (
+        case_context.activate(),
+        operation(
+            "eval.case",
+            attributes={
+                "tabcomplete.language": case.language,
+                "tabcomplete.execution.backend": execution_backend,
+            },
+        ) as span,
+    ):
+        result = _evaluate_prediction_impl(
+            case,
+            prediction,
+            work_root=work_root,
+            execution_backend=execution_backend,
+        )
+        functional = (
+            result.parse.status == "pass"
+            and (not result.compile_configured or result.compile.status == "pass")
+            and (not result.test_configured or result.test.status == "pass")
+        )
+        span.set_attribute("tabcomplete.quality.parse", result.parse.status)
+        span.set_attribute("tabcomplete.quality.compile", result.compile.status)
+        span.set_attribute("tabcomplete.quality.execute", result.test.status)
+        span.set_attribute("tabcomplete.quality.functional", "pass" if functional else "fail")
+        span.set_attribute("tabcomplete.outcome", "passed" if functional else "failed")
+        span.set_attribute(
+            "tabcomplete.terminal_event_id",
+            f"{case_context.run_id}:{case_context.case_id}:{case_context.case_attempt_id}:quality",
+        )
+        if not functional:
+            from tinycomplete.observability.logging import emit_log
+            from tinycomplete.observability.spans import sanitize_text
+
+            failed_check = next(
+                (
+                    check
+                    for check in (result.parse, result.compile, result.test)
+                    if check.status not in {"pass", "not_run"}
+                ),
+                result.test,
+            )
+            span.set_attribute("tabcomplete.failure.message", sanitize_text(failed_check.stderr))
+
+            emit_log(
+                "quality.failure",
+                {
+                    "tabcomplete.failure.stage": "parse"
+                    if result.parse.status != "pass"
+                    else "compile"
+                    if result.compile_configured and result.compile.status != "pass"
+                    else "execute"
+                },
+            )
+        return result
 
 
 def _rate(results: list[BenchmarkResult], attribute: str) -> float | None:

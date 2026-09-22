@@ -24,3 +24,8 @@ Do not invent library APIs. Inspect installed library versions/source or current
 Do not silently skip requirements.
 Do not leave placeholder implementations if they can be completed.
 Subagents must read this file before doing work.
+
+For model providers, evaluation runners, training/campaign code, deployment,
+telemetry, or run debugging, read
+`.agents/skills/tabcomplete-observability/SKILL.md` and preserve its tested
+telemetry contracts. Query the actual failing run before proposing a fix.

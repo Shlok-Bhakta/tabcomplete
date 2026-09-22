@@ -10,11 +10,12 @@ from typing import Any, Literal, Protocol
 from pydantic import BaseModel
 
 from tinycomplete.eval.code_benchmark import BenchmarkCase, CheckSpec
+from tinycomplete.observability.artifacts import ArtifactStore
+from tinycomplete.observability.bootstrap import current_runtime
+from tinycomplete.observability.spans import operation
 
 DiagnosticFamily = Literal["constant", "enum", "signature", "field", "config"]
-DiagnosticCondition = Literal[
-    "short_control", "long_near", "long_far", "absent", "counterfactual"
-]
+DiagnosticCondition = Literal["short_control", "long_near", "long_far", "absent", "counterfactual"]
 CONDITIONS: tuple[DiagnosticCondition, ...] = (
     "short_control",
     "long_near",
@@ -66,13 +67,9 @@ def _fixture(
         name = _identifier(rng, "BACKGROUND_RETRY_MS")
         dependency = f'"""Shared retry contract."""\n\n{name} = {chosen_value}\n'
         prefix = (
-            f"from repository.contract import {name}\n\n"
-            "def retry_delay_ms() -> int:\n    return "
+            f"from repository.contract import {name}\n\ndef retry_delay_ms() -> int:\n    return "
         )
-        test = (
-            "from solution import retry_delay_ms\n"
-            f"assert retry_delay_ms() == {chosen_value}\n"
-        )
+        test = f"from solution import retry_delay_ms\nassert retry_delay_ms() == {chosen_value}\n"
         return dependency, prefix, str(chosen_value), str(other_value), test
     if family == "enum":
         first = _identifier(rng, "WIRE")
@@ -90,10 +87,7 @@ def _fixture(
             "from repository.contract import WireFormat\n\n"
             "def wire_format() -> WireFormat:\n    return "
         )
-        test = (
-            "from solution import wire_format\n"
-            f'assert wire_format().name == "{chosen}"\n'
-        )
+        test = f'from solution import wire_format\nassert wire_format().name == "{chosen}"\n'
         return dependency, prefix, f"WireFormat.{chosen}", f"WireFormat.{other}", test
     if family == "signature":
         first = _identifier(rng, "payload")
@@ -110,8 +104,7 @@ def _fixture(
             "def encode_event(payload: bytes) -> bytes:\n    return "
         )
         test = (
-            "from solution import encode_event\n"
-            "assert encode_event(b\"x\") == bytes([1, 1]) + b\"x\"\n"
+            'from solution import encode_event\nassert encode_event(b"x") == bytes([1, 1]) + b"x"\n'
         )
         return (
             dependency,
@@ -140,8 +133,7 @@ def _fixture(
         )
         expected_value = second_value if chosen == second else first_value
         test = (
-            "from solution import primary_timeout\n"
-            f"assert primary_timeout() == {expected_value}\n"
+            f"from solution import primary_timeout\nassert primary_timeout() == {expected_value}\n"
         )
         return (
             dependency,
@@ -213,8 +205,7 @@ def _prompt_parts(
         dependency_path = "repository/contract.py"
         files[dependency_path] = dependency
     pieces = [
-        f'<file path="{path}">\n{content}\n</file>\n'
-        for path, content in sorted(files.items())
+        f'<file path="{path}">\n{content}\n</file>\n' for path, content in sorted(files.items())
     ]
     pieces.append(f'<target path="solution.py" language="python">\n{prefix}')
     return "".join(pieces), target, distractor, test_code, dependency_path
@@ -369,14 +360,34 @@ def score_target_continuation(model, tokenizer, prompt: str, target: str, device
     combined = torch.tensor([prompt_ids + target_ids], device=device, dtype=torch.long)
     target_tensor = torch.tensor([target_ids], device=device, dtype=torch.long)
     positions = target_logit_positions(len(prompt_ids), len(target_ids), device)
-    with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
-        output = model(input_ids=combined, use_cache=False, logits_to_keep=positions)
-    nll_sum, token_count = selected_target_nll(output.logits.float(), target_tensor)
+    runtime = current_runtime()
+    store = ArtifactStore(runtime.config.artifact_root, enabled=runtime.config.capture_content)
+    captured_input = store.capture_text(
+        "model-input", prompt, authorized=runtime.config.capture_content
+    )
+    captured_target = store.capture_text(
+        "model-target", target, authorized=runtime.config.capture_content
+    )
+    with operation(
+        "model.score",
+        attributes={
+            "gen_ai.operation.name": "score",
+            "tabcomplete.request.context_tokens": len(prompt_ids),
+            "tabcomplete.request.target_tokens": len(target_ids),
+            **captured_input.attributes("input"),
+            **captured_target.attributes("target"),
+        },
+    ) as span:
+        with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
+            output = model(input_ids=combined, use_cache=False, logits_to_keep=positions)
+        nll_sum, token_count = selected_target_nll(output.logits.float(), target_tensor)
+        nll_value = float(nll_sum.item())
+        span.set_attribute("tabcomplete.result.target_nll_sum", nll_value)
     return {
         "prompt_tokens": len(prompt_ids),
         "target_tokens": token_count,
-        "target_nll_sum": float(nll_sum.item()),
-        "target_nll_mean": float(nll_sum.item()) / token_count,
+        "target_nll_sum": nll_value,
+        "target_nll_mean": nll_value / token_count,
         "selected_logit_positions": [int(positions[0].item()), int(positions[-1].item())],
     }
 

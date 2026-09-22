@@ -15,6 +15,7 @@ from tinycomplete.eval.next_edit_benchmark import (
     summarize_next_edit_results,
     write_next_edit_results,
 )
+from tinycomplete.observability.runs import context_map, evaluation_scope
 
 
 def _load_predictions(path: Path) -> dict[str, Prediction]:
@@ -32,9 +33,7 @@ def _load_predictions(path: Path) -> dict[str, Prediction]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--suite", type=Path, default=Path("data/benchmarks/next_edit_v1.jsonl")
-    )
+    parser.add_argument("--suite", type=Path, default=Path("data/benchmarks/next_edit_v1.jsonl"))
     parser.add_argument("--predictions", type=Path)
     parser.add_argument("--gold", action="store_true")
     parser.add_argument(
@@ -65,7 +64,10 @@ def main() -> None:
         raise SystemExit(f"missing {len(missing)} predictions; first: {missing[0]}")
 
     results = []
-    with tempfile.TemporaryDirectory(prefix="tabcomplete-next-edit-benchmark-") as directory:
+    with (
+        evaluation_scope(args, "next-edit-v1"),
+        tempfile.TemporaryDirectory(prefix="tabcomplete-next-edit-benchmark-") as directory,
+    ):
         root = Path(directory)
 
         def evaluate(item):
@@ -78,7 +80,7 @@ def main() -> None:
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-            for index, result in executor.map(evaluate, enumerate(cases, 1)):
+            for index, result in context_map(executor, evaluate, enumerate(cases, 1)):
                 results.append(result)
                 print(
                     f"[{index:03d}/{len(cases)}] {result.case_id} "

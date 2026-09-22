@@ -15,6 +15,10 @@ from typing import Any
 
 import yaml
 
+from tinycomplete.observability.context import subprocess_environment
+from tinycomplete.observability.hooks import observed
+from tinycomplete.observability.runs import observed_run
+
 TOKENS_PER_UPDATE = 32_768
 FULL_PILOT_UPDATES = 153
 FULL_PILOT_TOKENS = TOKENS_PER_UPDATE * FULL_PILOT_UPDATES
@@ -44,12 +48,8 @@ def affordable_pilot_plan(
     if limits.quota_hours_per_wall_hour <= 0:
         raise ValueError("quota-hours per wall-hour must be positive")
     campaign_wall_left = max(0.0, limits.max_wall_hours - campaign_wall_hours_used)
-    campaign_gpu_wall_left = max(
-        0.0, limits.max_gpu_hours / 2.0 - campaign_wall_hours_used
-    )
-    quota_wall_left = max(
-        0.0, quota_remaining_gpu_hours / limits.quota_hours_per_wall_hour
-    )
+    campaign_gpu_wall_left = max(0.0, limits.max_gpu_hours / 2.0 - campaign_wall_hours_used)
+    quota_wall_left = max(0.0, quota_remaining_gpu_hours / limits.quota_hours_per_wall_hour)
     usable_seconds = max(
         0.0,
         min(campaign_wall_left, campaign_gpu_wall_left, quota_wall_left) * 3600
@@ -89,6 +89,7 @@ def affordable_pilot_plan(
     }
 
 
+@observed("campaign.phase")
 def _run(
     command: list[str],
     *,
@@ -98,6 +99,8 @@ def _run(
     merged_environment = os.environ.copy()
     if environment:
         merged_environment.update(environment)
+    # Keep the scientific worker environment; add only owned correlation fields.
+    merged_environment.update(subprocess_environment({}))
     process = subprocess.run(
         command,
         cwd=cwd,
@@ -172,9 +175,7 @@ class CampaignOrchestrator:
             max_gpu_hours=float(raw["max_gpu_hours"]),
             max_training_tokens=int(raw["max_new_training_input_tokens"]),
             reserve_minutes=int(raw["finalization_reserve_minutes"]),
-            quota_hours_per_wall_hour=float(
-                raw["kaggle_quota_hours_per_t4x2_wall_hour"]
-            ),
+            quota_hours_per_wall_hour=float(raw["kaggle_quota_hours_per_t4x2_wall_hour"]),
         )
 
     def validate(self) -> dict[str, Any]:
@@ -194,9 +195,8 @@ class CampaignOrchestrator:
         reusing_campaign = any(
             state in campaign_status for state in ("COMPLETE", "RUNNING", "QUEUED")
         )
-        if (
-            not reusing_campaign
-            and (plan["arms"] != ARM_ORDER or plan["updates_per_arm"] != FULL_PILOT_UPDATES)
+        if not reusing_campaign and (
+            plan["arms"] != ARM_ORDER or plan["updates_per_arm"] != FULL_PILOT_UPDATES
         ):
             raise RuntimeError(
                 f"uploaded kernel requires the full design, affordable plan is {plan}"
@@ -268,9 +268,7 @@ class CampaignOrchestrator:
     def collect_reference(self, reference: str, destination_name: str) -> Path:
         destination = self.state_dir / destination_name
         destination.mkdir(parents=True, exist_ok=True)
-        _run(
-            ["kaggle", "kernels", "output", reference, "-p", str(destination), "--quiet"]
-        )
+        _run(["kaggle", "kernels", "output", reference, "-p", str(destination), "--quiet"])
         return destination
 
     def collect(self) -> Path:
@@ -291,9 +289,7 @@ class CampaignOrchestrator:
             candidates = list(destination.rglob(f"arms/{arm['name']}/final/model.safetensors"))
             if not candidates:
                 raise RuntimeError(f"missing final model for {arm['name']}")
-            model_path = min(
-                candidates, key=lambda path: len(path.relative_to(destination).parts)
-            )
+            model_path = min(candidates, key=lambda path: len(path.relative_to(destination).parts))
             actual = _sha256(model_path)
             if actual != arm["model_sha256"]:
                 raise RuntimeError(f"model hash mismatch for {arm['name']}")
@@ -375,9 +371,7 @@ class CampaignOrchestrator:
         progress_path = _find_output_file(destination, "progress.json")
         progress = json.loads(progress_path.read_text(encoding="utf-8"))
         if progress.get("status") not in {"complete", "partial"}:
-            raise RuntimeError(
-                f"long-context artifact is not finalized: {progress.get('status')}"
-            )
+            raise RuntimeError(f"long-context artifact is not finalized: {progress.get('status')}")
         scores = sorted((progress_path.parent / "results").glob("*.jsonl"))
         if not scores:
             raise RuntimeError("long-context artifact has no completed score files")
@@ -482,11 +476,7 @@ class CampaignOrchestrator:
             str(long_context_summary),
             "--quota-observations",
             str(
-                self.repository
-                / "reports"
-                / "code_cpt"
-                / "research_r1"
-                / "quota_observations.json"
+                self.repository / "reports" / "code_cpt" / "research_r1" / "quota_observations.json"
             ),
             "--output-dir",
             str(output),
@@ -494,6 +484,7 @@ class CampaignOrchestrator:
         _run(command, cwd=self.repository)
         return output
 
+    @observed_run(lambda self: self.state_dir / "observability-run.json", "campaign")
     def execute(self) -> dict[str, Any]:
         plan = self.validate()
         campaign_submission = self.submit()
@@ -509,9 +500,7 @@ class CampaignOrchestrator:
             deadline_seconds=6 * 60 * 60,
             status_name="evaluation_status.txt",
         )
-        evaluation_destination = self.collect_reference(
-            EVALUATION_KERNEL_REF, "evaluation_output"
-        )
+        evaluation_destination = self.collect_reference(EVALUATION_KERNEL_REF, "evaluation_output")
         evaluation = self.verify_evaluation(evaluation_destination)
         functional_root = self.run_functional_evaluations(evaluation)
         long_context_submission = self.ensure_submitted(

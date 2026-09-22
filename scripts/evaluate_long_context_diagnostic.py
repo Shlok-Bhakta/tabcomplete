@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,11 @@ from tinycomplete.eval.long_context_diagnostic import (
     score_target_continuation,
     verify_selected_scoring,
 )
+from tinycomplete.observability.artifacts import ArtifactStore
+from tinycomplete.observability.bootstrap import current_runtime
+from tinycomplete.observability.context import RunContext, current_run_context
+from tinycomplete.observability.runs import run_scope
+from tinycomplete.observability.spans import operation
 
 
 def model_hash(model_path: Path) -> str:
@@ -77,27 +83,68 @@ def main() -> None:
     weight_sha256 = model_hash(args.model_path)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", encoding="utf-8") as handle:
+    with (
+        run_scope(args.output.with_suffix(".observability.json"), "long_context"),
+        args.output.open("w", encoding="utf-8") as handle,
+    ):
         for index, case in enumerate(cases, 1):
-            correct = score_target_continuation(
-                model, tokenizer, case.prompt, case.target, torch.device("cuda")
-            )
-            distractor = score_target_continuation(
-                model, tokenizer, case.prompt, case.distractor, torch.device("cuda")
-            )
+            case_context = (current_run_context() or RunContext.new()).for_case(case.id)
+            with case_context.activate():
+                correct = score_target_continuation(
+                    model, tokenizer, case.prompt, case.target, torch.device("cuda")
+                )
+                distractor = score_target_continuation(
+                    model, tokenizer, case.prompt, case.distractor, torch.device("cuda")
+                )
             prompt_ids = tokenizer.encode(case.prompt, add_special_tokens=False)
             inputs = torch.tensor([prompt_ids], device="cuda", dtype=torch.long)
-            with torch.inference_mode():
-                generated = model.generate(
-                    input_ids=inputs,
-                    max_new_tokens=args.max_new_tokens,
-                    do_sample=False,
-                    use_cache=True,
-                    pad_token_id=tokenizer.eos_token_id,
+            runtime = current_runtime()
+            store = ArtifactStore(
+                runtime.config.artifact_root, enabled=runtime.config.capture_content
+            )
+            input_ref = store.capture_text(
+                "model-input", case.prompt, authorized=runtime.config.capture_content
+            )
+            with (
+                case_context.activate(),
+                operation(
+                    "model.generate",
+                    attributes={
+                        "gen_ai.request.model": args.model_label,
+                        "tabcomplete.case_id": case.id,
+                        "tabcomplete.model.revision": weight_sha256,
+                        "tabcomplete.tokenizer.revision": tokenizer_sha256,
+                        "tabcomplete.request.context_tokens": len(prompt_ids),
+                        "gen_ai.request.max_tokens": args.max_new_tokens,
+                        **input_ref.attributes("input"),
+                    },
+                ) as model_span,
+            ):
+                started = time.perf_counter()
+                with torch.inference_mode():
+                    generated = model.generate(
+                        input_ids=inputs,
+                        max_new_tokens=args.max_new_tokens,
+                        do_sample=False,
+                        use_cache=True,
+                        pad_token_id=tokenizer.eos_token_id,
+                    )
+                continuation = generated[0, len(prompt_ids) :]
+                generated_tokens = int(continuation.numel())
+                text = tokenizer.decode(continuation, skip_special_tokens=True)
+                model_span.set_attribute(
+                    "tabcomplete.timing.total_ms", (time.perf_counter() - started) * 1000
                 )
-            continuation = generated[0, len(prompt_ids) :]
-            generated_tokens = int(continuation.numel())
-            text = tokenizer.decode(continuation, skip_special_tokens=True)
+                model_span.set_attribute("gen_ai.usage.input_tokens", len(prompt_ids))
+                model_span.set_attribute("gen_ai.usage.output_tokens", generated_tokens)
+                for key, value in (
+                    store.capture_text(
+                        "model-output", text, authorized=runtime.config.capture_content
+                    )
+                    .attributes("output")
+                    .items()
+                ):
+                    model_span.set_attribute(key, value)
             record = {
                 **case.model_dump(exclude={"prompt"}),
                 "model_label": args.model_label,
@@ -107,9 +154,7 @@ def main() -> None:
                 "scorer_verification": scorer_check,
                 "correct": correct,
                 "distractor_score": distractor,
-                "correct_preferred": (
-                    correct["target_nll_mean"] < distractor["target_nll_mean"]
-                ),
+                "correct_preferred": (correct["target_nll_mean"] < distractor["target_nll_mean"]),
                 "generated_text": text,
                 "generated_tokens": generated_tokens,
                 "generation_exact": text == case.target,

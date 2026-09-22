@@ -1,0 +1,5 @@
+{
+  "logs_days": 7,
+  "traces_days": 14,
+  "metrics_days": 90
+}

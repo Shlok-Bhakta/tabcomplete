@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TabComplete monitoring</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div><span class="eyebrow">TabComplete</span><h1>Runs and models</h1></div>
+      <div class="freshness"><span id="health">Checking telemetry</span><span id="refreshed"></span></div>
+    </header>
+    <main>
+      <section class="wide"><h2>Active runs</h2><div id="runs" class="panel empty">Loading runs...</div></section>
+      <section><h2>Model latency and usage</h2><div id="models" class="panel empty">No model calls yet.</div></section>
+      <section><h2>Quality</h2><div id="quality" class="panel empty">No evaluated cases yet.</div></section>
+      <section><h2>Failures</h2><div id="failures" class="panel empty">No failures in this window.</div></section>
+      <section><h2>Training</h2><div id="training" class="panel empty">No training telemetry yet.</div></section>
+      <section><h2>Infrastructure</h2><div id="infrastructure" class="panel empty">Waiting for health signals.</div></section>
+      <section class="wide"><h2>Case drill-down</h2><div id="detail" class="panel empty">Select a run or failed case.</div></section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

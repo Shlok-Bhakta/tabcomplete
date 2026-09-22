@@ -15,6 +15,7 @@ from tinycomplete.eval.code_benchmark import (
     summarize_results,
     write_results,
 )
+from tinycomplete.observability.runs import context_map, evaluation_scope
 
 
 def load_predictions(path: Path) -> dict[str, Prediction]:
@@ -54,7 +55,10 @@ def main() -> None:
     if missing:
         raise SystemExit(f"missing {len(missing)} predictions; first: {missing[0]}")
     results = []
-    with tempfile.TemporaryDirectory(prefix="tabcomplete-code-benchmark-") as directory:
+    with (
+        evaluation_scope(args, "causal-context-v1"),
+        tempfile.TemporaryDirectory(prefix="tabcomplete-code-benchmark-") as directory,
+    ):
         root = Path(directory)
 
         def evaluate(item):
@@ -67,7 +71,7 @@ def main() -> None:
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-            completed = executor.map(evaluate, enumerate(cases, 1))
+            completed = context_map(executor, evaluate, enumerate(cases, 1))
             for index, result in completed:
                 results.append(result)
                 case = cases[index - 1]

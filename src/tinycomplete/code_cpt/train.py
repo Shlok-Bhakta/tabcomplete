@@ -19,6 +19,8 @@ from typing import Any
 import numpy as np
 
 from tinycomplete.code_cpt.prepare import CORE_LANGUAGES, MODEL_ID, MODEL_REVISION
+from tinycomplete.observability.hooks import observed
+from tinycomplete.observability.runs import observed_run
 
 
 def distributed_block_indices(length: int, rank: int, world_size: int) -> list[int]:
@@ -146,6 +148,10 @@ def _append_jsonl(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(value, sort_keys=True) + "\n")
+    if path.name == "train_log.jsonl":
+        from tinycomplete.observability.hooks import training_progress
+
+        training_progress(value)
 
 
 def resolve_optional_hf_token() -> tuple[str | None, str]:
@@ -163,6 +169,7 @@ def resolve_optional_hf_token() -> tuple[str | None, str]:
     return None, "anonymous_public_model"
 
 
+@observed("model.load")
 def _load_model_and_tokenizer(token: str | None, checkpoint: str | None = None):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -302,6 +309,24 @@ def evaluate_micro(
     code_nll_sum = sum(result[name]["nll"] * result[name]["tokens"] for name in CORE_LANGUAGES)
     code_tokens = sum(result[name]["tokens"] for name in CORE_LANGUAGES)
     result["overall_code"] = {"nll": code_nll_sum / code_tokens, "tokens": code_tokens}
+    if rank == 0:
+        from tinycomplete.observability.metrics import record_metric
+        from tinycomplete.observability.spans import operation
+
+        with operation(
+            "training.validation",
+            attributes={
+                "tabcomplete.training.validation_nll": result["overall_code"]["nll"],
+                "tabcomplete.training.scored_tokens": code_tokens,
+            },
+        ):
+            pass
+        record_metric(
+            "tabcomplete.training.validation_nll",
+            result["overall_code"]["nll"],
+            {"rank_role": "authoritative"},
+            kind="gauge",
+        )
     model.train()
     return result
 
@@ -343,9 +368,7 @@ def evaluate_repository_micro(model, micro_dir: Path, device) -> list[dict]:
                 )
                 attributed = attribute_token_losses(losses, record["spans"])
                 for repository, values in attributed.items():
-                    row = totals.setdefault(
-                        (repository, language), {"nll_sum": 0.0, "tokens": 0}
-                    )
+                    row = totals.setdefault((repository, language), {"nll_sum": 0.0, "tokens": 0})
                     row["nll_sum"] = float(row["nll_sum"]) + float(values["nll_sum"])
                     row["tokens"] = int(row["tokens"]) + int(values["tokens"])
                 del batch, logits, losses
@@ -410,6 +433,7 @@ def extract_mtp_sidecar(destination: Path, token: str | None) -> dict:
     return extract_mtp_from_snapshot(snapshot, destination)
 
 
+@observed("checkpoint.save")
 def save_snapshot(
     accelerator, model, tokenizer, destination: Path, metadata: dict, token: str | None
 ) -> None:
@@ -445,6 +469,7 @@ def save_snapshot(
     accelerator.wait_for_everyone()
 
 
+@observed("checkpoint.save")
 def save_training_checkpoint(
     *,
     accelerator,
@@ -509,6 +534,7 @@ def save_training_checkpoint(
     accelerator.wait_for_everyone()
 
 
+@observed("checkpoint.load")
 def load_training_checkpoint(*, accelerator, model, optimizer, scheduler, source: Path) -> dict:
     """Restore a checkpoint created by save_training_checkpoint."""
     import torch
@@ -667,6 +693,7 @@ def loaded_model_diagnostic(model) -> dict[str, Any]:
     }
 
 
+@observed_run(lambda config: config.output_dir / "observability-run.json", "training")
 def run_training(config: RunConfig) -> dict:
     import torch
     from accelerate import Accelerator
@@ -1270,11 +1297,7 @@ def run_checkpoint_evaluation(
     diagnostic = loaded_model_diagnostic(model)
     model.to(device="cuda")
     split_dir = corpus_dir / split
-    metrics = (
-        None
-        if repository_only
-        else evaluate_micro(model, split_dir, torch.device("cuda"))
-    )
+    metrics = None if repository_only else evaluate_micro(model, split_dir, torch.device("cuda"))
     result = {
         "checkpoint": str(checkpoint),
         "checkpoint_identity": identity,
@@ -1291,10 +1314,7 @@ def run_checkpoint_evaluation(
         "metrics": metrics,
     }
     _json_write(output_path, result)
-    if all(
-        (split_dir / f"{language}_provenance.jsonl").exists()
-        for language in CORE_LANGUAGES
-    ):
+    if all((split_dir / f"{language}_provenance.jsonl").exists() for language in CORE_LANGUAGES):
         repository_metrics = evaluate_repository_micro(model, split_dir, torch.device("cuda"))
         repository_path = output_path.with_name(f"{output_path.stem}_repositories.json")
         _json_write(repository_path, repository_metrics)

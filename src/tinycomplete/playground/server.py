@@ -17,6 +17,8 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from tinycomplete.observability.hooks import observed, observed_completion, observed_http_request
+
 
 @dataclass(frozen=True)
 class ModelInfo:
@@ -54,6 +56,7 @@ class TransformersProvider:
             for model_id in self.model_paths
         ]
 
+    @observed("model.load")
     def _load(self, model_id: str):
         if model_id not in self.model_paths:
             raise ValueError(f"unknown model: {model_id}")
@@ -74,6 +77,7 @@ class TransformersProvider:
             self._loaded[model_id] = (model, tokenizer)
         return self._loaded[model_id]
 
+    @observed_completion
     def complete(self, *, model: str, prompt: str, max_new_tokens: int) -> Completion:
         import torch
 
@@ -108,6 +112,7 @@ class OpenAICompatibleProvider:
     def models(self) -> list[ModelInfo]:
         return [ModelInfo(id=self.model, label=self.label, format="openai-compatible")]
 
+    @observed_completion
     def complete(self, *, model: str, prompt: str, max_new_tokens: int) -> Completion:
         if model != self.model:
             raise ValueError(f"unknown model: {model}")
@@ -344,6 +349,7 @@ class PlaygroundServer:
                     else:
                         self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
+            @observed_http_request
             def do_POST(self) -> None:
                 path = urlsplit(self.path).path
                 try:

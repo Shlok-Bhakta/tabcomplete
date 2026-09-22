@@ -1,0 +1,81 @@
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol
+    create_directory: true
+    timeout: 1s
+    compaction:
+      on_start: true
+      rebound_needed_threshold_mib: 256
+      rebound_trigger_threshold_mib: 32
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: tabcomplete-local-collector
+          scrape_interval: 15s
+          static_configs:
+            - targets: [127.0.0.1:8888]
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 384
+    spike_limit_mib: 96
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+exporters:
+  otlphttp/kiwi:
+    endpoint: ${env:TABCOMPLETE_KIWI_OTLP_HTTP_ENDPOINT}
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 0s
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      sizer: bytes
+      queue_size: 134217728
+      storage: file_storage
+
+service:
+  extensions: [file_storage]
+  telemetry:
+    resource:
+      service.name: tabcomplete-local-collector
+      host.name: crabcake
+    logs:
+      level: info
+      encoding: json
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 127.0.0.1
+                port: 8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/kiwi]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/kiwi]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/kiwi]

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "host": "kiwi",
+  "architecture": "linux/amd64",
+  "storage": {
+    "root": "/path/on/verified/external-volume/docker/tabcomplete-observability",
+    "source": "/dev/example",
+    "filesystem_uuid": "machine-local"
+  },
+  "tailscale": {
+    "hostname": "kiwi.example.ts.net",
+    "ip": "100.64.0.1"
+  },
+  "ports": {
+    "gateway": 9090,
+    "signoz": 8080,
+    "mcp": 8000,
+    "otlp_grpc": 4317,
+    "otlp_http": 4318
+  },
+  "secrets_omitted": true
+}

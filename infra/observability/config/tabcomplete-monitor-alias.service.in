@@ -1,0 +1,15 @@
+[Unit]
+Description=TabComplete private-tailnet monitoring alias
+After=network-online.target
+
+[Service]
+EnvironmentFile=@@CONFIG@@/alias.env
+ExecStart=@@BUN@@ @@CONFIG@@/alias.ts
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+MemoryMax=128M
+
+[Install]
+WantedBy=default.target

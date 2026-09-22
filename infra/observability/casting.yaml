@@ -1,0 +1,361 @@
+apiVersion: v1alpha1
+kind: Installation
+metadata:
+  name: tabcomplete-observability
+spec:
+  deployment:
+    mode: docker
+    flavor: compose
+  signoz:
+    spec:
+      image: signoz/signoz:v0.142.1@sha256:9ee744714fced5b51db763e338d4bce4b6914941c56c11f5c14616497d7eabb7
+      version: v0.142.1
+  ingester:
+    spec:
+      image: signoz/signoz-otel-collector:v0.142.1@sha256:9278f7d9ba911e4facb5273364067c7aa606b9ef4e024a017ddfba51977cb3cc
+      version: v0.142.1
+  mcp:
+    spec:
+      enabled: true
+      image: signoz/signoz-mcp-server:v0.14.0@sha256:5a71dd65958aa0504622072b654fad9b0555703f909aafa578f53fb50f2481a2
+      version: v0.14.0
+  metastore:
+    kind: postgres
+    spec:
+      image: postgres:16@sha256:a85daf0dbd5e79586e850e3fe4b21b796799828ad015ce2166aeb98cc24da61c
+      version: "16"
+  telemetrystore:
+    kind: clickhouse
+    spec:
+      image: clickhouse/clickhouse-server:25.12.5@sha256:10f54f04de6c61b756c4eaf9f1d17464a4ac3e1f94b5b410e0dec92a24dbeda8
+      version: 25.12.5
+  telemetrykeeper:
+    kind: clickhousekeeper
+    spec:
+      image: clickhouse/clickhouse-keeper:25.12.5@sha256:5493b0fba2fdfc3bf51115db4fb378fac8b0a953c116db442fd4297a8f49a9d7
+      version: 25.12.5
+  patches:
+    - target: deployment/compose.yaml
+      operations:
+        - op: replace
+          path: /services/tabcomplete-observability-metastore-postgres-0/environment/1
+          value: "POSTGRES_PASSWORD=${TABCOMPLETE_OBS_POSTGRES_PASSWORD:?set private metastore password}"
+        - op: replace
+          path: /services/tabcomplete-observability-signoz-0/environment/0
+          value: "SIGNOZ_SQLSTORE_POSTGRES_DSN=postgres://signoz:${TABCOMPLETE_OBS_POSTGRES_PASSWORD:?set private metastore password}@tabcomplete-observability-metastore-postgres-0:5432/signoz?sslmode=disable"
+        - op: add
+          path: /services/tabcomplete-observability-signoz-0/depends_on
+          value:
+            tabcomplete-observability-metastore-postgres-0:
+              condition: service_healthy
+        - op: replace
+          path: /services/ingester/ports
+          value:
+            - "${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_OTLP_GRPC_PORT:-4317}:4317"
+            - "${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_OTLP_HTTP_PORT:-4318}:4318"
+        - op: add
+          path: /services/ingester/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/collector-wal"
+            target: /var/lib/otelcol
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/ingester/mem_limit
+          value: 1g
+        - op: replace
+          path: /services/mcp/ports
+          value:
+            - "${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_MCP_PORT:-8000}:8000"
+        - op: add
+          path: /services/mcp/environment/-
+          value: "SIGNOZ_API_KEY=${SIGNOZ_API_KEY:?set read-only service key}"
+        - op: add
+          path: /services/mcp/mem_limit
+          value: 256m
+        - op: replace
+          path: /services/tabcomplete-observability-signoz-0/ports
+          value:
+            - "${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_SIGNOZ_PORT:-8080}:8080"
+        - op: add
+          path: /services/tabcomplete-observability-signoz-0/mem_limit
+          value: 1536m
+        - op: replace
+          path: /services/tabcomplete-observability-metastore-postgres-0/volumes/0
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/metastore"
+            target: /var/lib/postgresql/data
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-metastore-postgres-0/mem_limit
+          value: 512m
+        - op: replace
+          path: /services/tabcomplete-observability-telemetrykeeper-clickhousekeeper-0/volumes/0
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/keeper"
+            target: /var/lib/clickhouse-keeper
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-telemetrykeeper-clickhousekeeper-0/mem_limit
+          value: 512m
+        - op: add
+          path: /services/tabcomplete-observability-telemetrykeeper-clickhousekeeper-0/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/keeper-image-state"
+            target: /var/lib/clickhouse
+            bind:
+              create_host_path: false
+        - op: replace
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-0-0/volumes/0
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/clickhouse"
+            target: /var/lib/clickhouse
+            bind:
+              create_host_path: false
+        - op: replace
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-0-0/volumes/1
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/clickhouse-user-scripts"
+            target: /var/lib/clickhouse/user_scripts
+            read_only: true
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-0-0/mem_limit
+          value: 4g
+        - op: replace
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-user-scripts/volumes/0
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/clickhouse-user-scripts"
+            target: /var/lib/clickhouse/user_scripts
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-migrator/mem_limit
+          value: 512m
+        - op: add
+          path: /services/gateway
+          value:
+            build:
+              context: ../../gateway
+            image: tabcomplete-observability-gateway:1.0.0
+            restart: unless-stopped
+            environment:
+              - PORT=9090
+              - SIGNOZ_URL=http://tabcomplete-observability-signoz-0:8080
+              - TABCOMPLETE_ARTIFACT_ROOT=/artifacts
+              - "SIGNOZ_API_KEY=${SIGNOZ_API_KEY:?set read-only service key}"
+              - "TABCOMPLETE_ARTIFACT_UPLOAD_TOKEN=${TABCOMPLETE_ARTIFACT_UPLOAD_TOKEN:?set upload token}"
+              - "TABCOMPLETE_ARTIFACT_CAP_BYTES=${TABCOMPLETE_ARTIFACT_CAP_BYTES:-21474836480}"
+              - "TABCOMPLETE_ARTIFACT_RETENTION_DAYS=${TABCOMPLETE_ARTIFACT_RETENTION_DAYS:-30}"
+              - "TABCOMPLETE_ALLOWED_HOSTS=${TABCOMPLETE_OBS_ALLOWED_HOSTS:?set allowed hosts}"
+            networks:
+              - tabcomplete-observability-network
+            ports:
+              - "${TABCOMPLETE_OBS_TAILSCALE_IP:?set Tailscale IP}:${TABCOMPLETE_OBS_GATEWAY_PORT:-9090}:9090"
+            volumes:
+              - type: bind
+                source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/model-artifacts"
+                target: /artifacts
+                bind:
+                  create_host_path: false
+              - type: bind
+                source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/gateway-state"
+                target: /state
+                bind:
+                  create_host_path: false
+            depends_on:
+              tabcomplete-observability-signoz-0:
+                condition: service_healthy
+            healthcheck:
+              test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:9090/api/v1/status',{headers:{Host:'kiwi'}}).then(r=>{if(!r.ok)process.exit(1)})"]
+              interval: 15s
+              timeout: 5s
+              retries: 5
+              start_period: 20s
+            mem_limit: 256m
+            pids_limit: 128
+        - op: remove
+          path: /volumes
+    - target: deployment/compose.yaml
+      operations:
+        - op: add
+          path: /services/ingester/logging
+          value: &rotated_logs
+            driver: json-file
+            options: {max-size: 10m, max-file: "3"}
+        - op: add
+          path: /services/mcp/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/tabcomplete-observability-metastore-postgres-0/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/tabcomplete-observability-signoz-0/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/tabcomplete-observability-telemetrykeeper-clickhousekeeper-0/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-0-0/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-user-scripts/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-migrator/logging
+          value: *rotated_logs
+        - op: add
+          path: /services/gateway/logging
+          value: *rotated_logs
+    - target: deployment/compose.yaml
+      operations:
+        - op: add
+          path: /services/ingester/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/mcp/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/tabcomplete-observability-signoz-0/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/tabcomplete-observability-metastore-postgres-0/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/tabcomplete-observability-telemetrykeeper-clickhousekeeper-0/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-0-0/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-migrator/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/gateway/tmpfs
+          value: ["/tmp:size=64m,mode=1777"]
+        - op: add
+          path: /services/ingester/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json"
+            target: /etc/tabcomplete-volume-identity.json
+            read_only: true
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-signoz-0/volumes
+          value: []
+        - op: add
+          path: /services/tabcomplete-observability-signoz-0/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json"
+            target: /etc/tabcomplete-volume-identity.json
+            read_only: true
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-metastore-postgres-0/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json"
+            target: /etc/tabcomplete-volume-identity.json
+            read_only: true
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-telemetrykeeper-clickhousekeeper-0/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json"
+            target: /etc/tabcomplete-volume-identity.json
+            read_only: true
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/tabcomplete-observability-telemetrystore-clickhouse-0-0/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json"
+            target: /etc/tabcomplete-volume-identity.json
+            read_only: true
+            bind:
+              create_host_path: false
+        - op: add
+          path: /services/gateway/volumes/-
+          value:
+            type: bind
+            source: "${TABCOMPLETE_OBS_DATA_ROOT:?set verified storage root}/.volume-identity.json"
+            target: /etc/tabcomplete-volume-identity.json
+            read_only: true
+            bind:
+              create_host_path: false
+    - target: deployment/ingester/ingester.yaml
+      operations:
+        - op: replace
+          path: /processors/batch/send_batch_size
+          value: 1024
+        - op: replace
+          path: /processors/batch/send_batch_max_size
+          value: 2048
+        - op: replace
+          path: /processors/batch~1meter/send_batch_size
+          value: 1024
+        - op: replace
+          path: /processors/batch~1meter/send_batch_max_size
+          value: 2048
+        - op: add
+          path: /extensions/file_storage
+          value:
+            directory: /var/lib/otelcol
+            create_directory: true
+            timeout: 1s
+            compaction:
+              on_start: true
+              rebound_needed_threshold_mib: 256
+              rebound_trigger_threshold_mib: 32
+        - op: add
+          path: /processors/memory_limiter
+          value:
+            check_interval: 1s
+            limit_mib: 768
+            spike_limit_mib: 192
+        - op: add
+          path: /service/extensions/-
+          value: file_storage
+        - op: add
+          path: /service/pipelines/traces/processors/0
+          value: memory_limiter
+        - op: add
+          path: /service/pipelines/metrics/processors/0
+          value: memory_limiter
+        - op: add
+          path: /service/pipelines/logs/processors/0
+          value: memory_limiter
+        - op: replace
+          path: /exporters/clickhousetraces/sending_queue
+          value: &persistent_queue
+            enabled: true
+            num_consumers: 2
+            sizer: bytes
+            queue_size: 134217728
+            storage: file_storage
+        - op: replace
+          path: /exporters/signozclickhousemetrics/sending_queue
+          value: *persistent_queue
+        - op: replace
+          path: /exporters/clickhouselogsexporter/sending_queue
+          value: *persistent_queue
+        - op: replace
+          path: /exporters/signozclickhousemeter/sending_queue
+          value: *persistent_queue

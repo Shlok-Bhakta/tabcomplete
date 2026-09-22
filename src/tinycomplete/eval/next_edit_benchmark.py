@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from tinycomplete.observability.hooks import observed_next_edit
+
 from .code_benchmark import (
     BenchmarkCase,
     BenchmarkResult,
@@ -156,6 +158,7 @@ def build_next_edit_prompt(case: NextEditCase) -> str:
     return "".join(pieces)
 
 
+@observed_next_edit
 def evaluate_next_edit_prediction(
     case: NextEditCase,
     prediction: Prediction,
@@ -201,9 +204,7 @@ def summarize_next_edit_results(results: list[NextEditResult]) -> dict:
     summary["action_accuracy"] = (
         sum(row.action_correct for row in results) / len(results) if results else None
     )
-    true_noop = sum(
-        row.gold_action == "noop" and row.predicted_action == "noop" for row in results
-    )
+    true_noop = sum(row.gold_action == "noop" and row.predicted_action == "noop" for row in results)
     false_noop = sum(
         row.gold_action == "replace" and row.predicted_action == "noop" for row in results
     )
