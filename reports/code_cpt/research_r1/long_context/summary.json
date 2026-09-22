@@ -1,0 +1,222 @@
+{
+  "Base": {
+    "by_condition": {
+      "absent": {
+        "cases": 5,
+        "correct_preference_rate": 0.4,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.09159325999072462
+      },
+      "counterfactual": {
+        "cases": 5,
+        "correct_preference_rate": 1.0,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.1469290720412144
+      },
+      "long_far": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.0324110885766835
+      },
+      "long_near": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.9273437858064533
+      },
+      "short_control": {
+        "cases": 6,
+        "correct_preference_rate": 0.8333333333333334,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.1429554312705605
+      }
+    },
+    "cases": 26,
+    "counterfactual_preference_change_rate": 0.8,
+    "distant_preference_conditioned_on_nearby_success": 1.0,
+    "nearby_competence_rate": 0.8,
+    "unresolved_task_competence_groups": 1
+  },
+  "D12": {
+    "by_condition": {
+      "absent": {
+        "cases": 5,
+        "correct_preference_rate": 0.4,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.13157702114119188
+      },
+      "counterfactual": {
+        "cases": 5,
+        "correct_preference_rate": 1.0,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.2300957927482614
+      },
+      "long_far": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.9983401235119327
+      },
+      "long_near": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.6,
+        "mean_nll_margin": 0.9283878703577324
+      },
+      "short_control": {
+        "cases": 6,
+        "correct_preference_rate": 0.8333333333333334,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.6666666666666666,
+        "mean_nll_margin": 1.1419124583573084
+      }
+    },
+    "cases": 26,
+    "counterfactual_preference_change_rate": 0.8,
+    "distant_preference_conditioned_on_nearby_success": 1.0,
+    "nearby_competence_rate": 0.8,
+    "unresolved_task_competence_groups": 1
+  },
+  "D5": {
+    "by_condition": {
+      "absent": {
+        "cases": 5,
+        "correct_preference_rate": 0.4,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.17097614488613316
+      },
+      "counterfactual": {
+        "cases": 5,
+        "correct_preference_rate": 1.0,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.2081653693220118
+      },
+      "long_far": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.0077878214995648
+      },
+      "long_near": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.6,
+        "mean_nll_margin": 0.922720780593863
+      },
+      "short_control": {
+        "cases": 6,
+        "correct_preference_rate": 0.8333333333333334,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.6666666666666666,
+        "mean_nll_margin": 1.121273333018613
+      }
+    },
+    "cases": 26,
+    "counterfactual_preference_change_rate": 0.8,
+    "distant_preference_conditioned_on_nearby_success": 1.0,
+    "nearby_competence_rate": 0.8,
+    "unresolved_task_competence_groups": 1
+  },
+  "P12": {
+    "by_condition": {
+      "absent": {
+        "cases": 5,
+        "correct_preference_rate": 0.4,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.0716731552384859
+      },
+      "counterfactual": {
+        "cases": 5,
+        "correct_preference_rate": 1.0,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.8,
+        "mean_nll_margin": 1.2126793587600793
+      },
+      "long_far": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.8,
+        "mean_nll_margin": 0.9677949369375816
+      },
+      "long_near": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.6,
+        "mean_nll_margin": 0.9038597810428513
+      },
+      "short_control": {
+        "cases": 6,
+        "correct_preference_rate": 0.8333333333333334,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.1191350558908382
+      }
+    },
+    "cases": 26,
+    "counterfactual_preference_change_rate": 0.8,
+    "distant_preference_conditioned_on_nearby_success": 1.0,
+    "nearby_competence_rate": 0.8,
+    "unresolved_task_competence_groups": 1
+  },
+  "P5": {
+    "by_condition": {
+      "absent": {
+        "cases": 5,
+        "correct_preference_rate": 0.4,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 0.1096395119235047
+      },
+      "counterfactual": {
+        "cases": 5,
+        "correct_preference_rate": 1.0,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.2156009883467243
+      },
+      "long_far": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 1.0,
+        "mean_nll_margin": 1.0105181713797087
+      },
+      "long_near": {
+        "cases": 5,
+        "correct_preference_rate": 0.8,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.6,
+        "mean_nll_margin": 0.9095425547493831
+      },
+      "short_control": {
+        "cases": 6,
+        "correct_preference_rate": 0.8333333333333334,
+        "generation_exact_rate": 0.0,
+        "generation_truncation_rate": 0.8333333333333334,
+        "mean_nll_margin": 1.1416665871452887
+      }
+    },
+    "cases": 26,
+    "counterfactual_preference_change_rate": 0.8,
+    "distant_preference_conditioned_on_nearby_success": 1.0,
+    "nearby_competence_rate": 0.8,
+    "unresolved_task_competence_groups": 1
+  }
+}

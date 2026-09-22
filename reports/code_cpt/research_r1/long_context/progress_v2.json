@@ -1,0 +1,62 @@
+{
+  "completed": [],
+  "development_eligible_models": [
+    "D12",
+    "D5"
+  ],
+  "elapsed_seconds": 871.0419507026672,
+  "failed": [
+    {
+      "error": "evaluate-P5-2k-32k failed with exit code 1",
+      "lengths": [
+        2048,
+        32000
+      ],
+      "model": "P5"
+    },
+    {
+      "error": "evaluate-Base-2k-32k failed with exit code 1",
+      "lengths": [
+        2048,
+        32000
+      ],
+      "model": "Base"
+    },
+    {
+      "error": "evaluate-P12-2k-32k failed with exit code 1",
+      "lengths": [
+        2048,
+        32000
+      ],
+      "model": "P12"
+    },
+    {
+      "error": "evaluate-D12-2k-32k failed with exit code 1",
+      "lengths": [
+        2048,
+        32000
+      ],
+      "model": "D12"
+    },
+    {
+      "error": "evaluate-D5-2k-32k failed with exit code 1",
+      "lengths": [
+        2048,
+        32000
+      ],
+      "model": "D5"
+    }
+  ],
+  "gpu_parallelism": 2,
+  "models": [
+    "Base",
+    "P5",
+    "P12",
+    "D12",
+    "D5"
+  ],
+  "provisional_development_selection": null,
+  "schema_version": 1,
+  "skipped": [],
+  "status": "partial"
+}

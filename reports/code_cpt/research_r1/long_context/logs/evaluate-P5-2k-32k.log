@@ -1,0 +1,101 @@
+[001/50] constant/2048/short_control/seed-731942 preferred=True exact=False
+[002/50] constant/2048/long_near/seed-731942 preferred=True exact=False
+[003/50] constant/2048/long_far/seed-731942 preferred=True exact=False
+[004/50] constant/2048/absent/seed-731942 preferred=False exact=False
+[005/50] constant/2048/counterfactual/seed-731942 preferred=True exact=False
+[006/50] enum/2048/short_control/seed-731943 preferred=True exact=False
+[007/50] enum/2048/long_near/seed-731943 preferred=True exact=False
+[008/50] enum/2048/long_far/seed-731943 preferred=True exact=False
+[009/50] enum/2048/absent/seed-731943 preferred=True exact=False
+[010/50] enum/2048/counterfactual/seed-731943 preferred=True exact=False
+[011/50] signature/2048/short_control/seed-731944 preferred=True exact=False
+[012/50] signature/2048/long_near/seed-731944 preferred=True exact=False
+[013/50] signature/2048/long_far/seed-731944 preferred=True exact=False
+[014/50] signature/2048/absent/seed-731944 preferred=False exact=False
+[015/50] signature/2048/counterfactual/seed-731944 preferred=True exact=False
+[016/50] field/2048/short_control/seed-731945 preferred=False exact=False
+[017/50] field/2048/long_near/seed-731945 preferred=False exact=False
+[018/50] field/2048/long_far/seed-731945 preferred=False exact=False
+[019/50] field/2048/absent/seed-731945 preferred=False exact=False
+[020/50] field/2048/counterfactual/seed-731945 preferred=True exact=False
+[021/50] config/2048/short_control/seed-731946 preferred=True exact=False
+[022/50] config/2048/long_near/seed-731946 preferred=True exact=False
+[023/50] config/2048/long_far/seed-731946 preferred=True exact=False
+[024/50] config/2048/absent/seed-731946 preferred=True exact=False
+[025/50] config/2048/counterfactual/seed-731946 preferred=True exact=False
+[026/50] constant/32000/short_control/seed-732346 preferred=True exact=False
+The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+
+Loading weights:   0%|          | 0/321 [00:00<?, ?it/s]
+Loading weights:   3%|▎         | 10/321 [00:00<00:03, 79.13it/s]
+Loading weights:  12%|█▏        | 37/321 [00:00<00:01, 176.65it/s]
+Loading weights:  18%|█▊        | 59/321 [00:00<00:01, 188.98it/s]
+Loading weights:  25%|██▍       | 79/321 [00:00<00:01, 185.12it/s]
+Loading weights:  39%|███▉      | 126/321 [00:00<00:00, 275.20it/s]
+Loading weights:  50%|█████     | 161/321 [00:00<00:00, 270.39it/s]
+Loading weights:  59%|█████▉    | 189/321 [00:00<00:00, 251.43it/s]
+Loading weights:  72%|███████▏  | 231/321 [00:00<00:00, 298.25it/s]
+Loading weights:  85%|████████▍ | 272/321 [00:01<00:00, 328.33it/s]
+Loading weights: 100%|██████████| 321/321 [00:01<00:00, 303.00it/s]
+The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Traceback (most recent call last):
+  File "/kaggle/working/tabcomplete/scripts/evaluate_long_context_diagnostic.py", line 130, in <module>
+    main()
+  File "/kaggle/working/tabcomplete/scripts/evaluate_long_context_diagnostic.py", line 82, in main
+    correct = score_target_continuation(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/tabcomplete/src/tinycomplete/eval/long_context_diagnostic.py", line 373, in score_target_continuation
+    output = model(input_ids=combined, use_cache=False, logits_to_keep=positions)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/utils/generic.py", line 876, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_5/modeling_qwen3_5.py", line 1740, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+                                       ^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/utils/generic.py", line 952, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/utils/output_capturing.py", line 248, in wrapper
+    outputs = func(self, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_5/modeling_qwen3_5.py", line 1275, in forward
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_layers.py", line 93, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_5/modeling_qwen3_5.py", line 766, in forward
+    hidden_states, _ = self.self_attn(
+                       ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_5/modeling_qwen3_5.py", line 677, in forward
+    attn_output, attn_weights = attention_interface(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/transformers/integrations/sdpa_attention.py", line 92, in sdpa_attention_forward
+    attn_output = torch.nn.functional.scaled_dot_product_attention(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 30.61 GiB. GPU 0 has a total capacity of 14.56 GiB of which 5.89 GiB is free. Including non-PyTorch memory, this process has 8.67 GiB memory in use. Of the allocated memory 7.10 GiB is allocated by PyTorch, and 1.19 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

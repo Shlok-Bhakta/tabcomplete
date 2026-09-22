@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "attempts": [
+    {
+      "kernel_version": 1,
+      "status": "error",
+      "elapsed_seconds_approximate": 105,
+      "completed_models": [],
+      "failure": "ambiguous campaign_progress.json discovery included a copy inside the evaluation kernel's cloned repository",
+      "resolution": "scope campaign and selection discovery to their named Kaggle inputs"
+    },
+    {
+      "kernel_version": 2,
+      "status": "partial",
+      "elapsed_seconds": 871.0419507026672,
+      "completed_models": [],
+      "partial_rows_per_model": 26,
+      "models": [
+        "Base",
+        "P5",
+        "P12",
+        "D12",
+        "D5"
+      ],
+      "failure": "SDPA tried to allocate 30.61 GiB on a 14.56 GiB T4 at the first genuinely long 32k condition",
+      "preserved_result": "all 25 2k conditions and the 32k short control were recorded for every model",
+      "resolution": "attempt chunked causal-cache prefill after a short CPU checkpoint check"
+    },
+    {
+      "kernel_version": 3,
+      "status": "partial",
+      "elapsed_seconds": 340.6591486930847,
+      "completed_models": [],
+      "models": [
+        "Base",
+        "P5",
+        "P12",
+        "D12",
+        "D5"
+      ],
+      "failure": "cache-streamed target scoring disagreed with full selected-logit scoring in the pinned Kaggle runtime",
+      "absolute_nll_difference_range": [
+        16.86826181411743,
+        18.710573196411133
+      ],
+      "resolution": "rejected the unverified path and stopped long-context GPU retries"
+    }
+  ]
+}
