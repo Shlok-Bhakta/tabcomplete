@@ -101,6 +101,13 @@ and skill validator passed. An opt-in instrumented pytest session also passed
 and exported through the local collector. CPU Torch and matplotlib were installed
 for verification; no CUDA assumption or training run was used.
 
+Actual ClickHouse metric-series metadata was audited: project metric dimensions
+were `backend` and `token_type`; the backend added `le` for histogram buckets and
+`__temporality__`. Resource keys were service name/version, deployment environment,
+and host name. No run, case, request, trace, prompt, or path labels were found.
+The final metadata backup was restored again into the new isolated
+`tabcomplete_restore_verify_r2` database after temporary-storage hardening.
+
 Measured deterministic boundary overhead across 1,000 iterations:
 disabled 15.45 µs, enabled 110.84 µs, added 95.38 µs per fixture. Three actual local
 requests in each mode had medians 335.35 ms off and 330.55 ms on. This small,
