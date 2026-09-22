@@ -87,15 +87,27 @@ def main() -> None:
     )
     models = {
         "Base": base,
-        "P5": find_one("**/P5/training_metadata.json").parent,
-        "P12": find_one("**/P12/training_metadata.json").parent,
+        "P5": find_one(
+            "datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P5/training_metadata.json"
+        ).parent,
+        "P12": find_one(
+            "datasets/shlokbhakta/tabcomplete-code-cpt-parents-r1/P12/training_metadata.json"
+        ).parent,
     }
-    progress_path = find_one("**/campaign_progress.json")
+    progress_path = find_one(
+        "notebooks/shlokbhakta/tabcomplete-code-cpt-campaign-r1/"
+        "code_cpt_campaign_r1/campaign_progress.json"
+    )
     campaign_root = progress_path.parent
     progress = json.loads(progress_path.read_text(encoding="utf-8"))
     if progress["status"] != "complete":
         raise RuntimeError("campaign source has no completion marker")
-    selection = json.loads(find_one("**/selection.json").read_text(encoding="utf-8"))
+    selection = json.loads(
+        find_one(
+            "notebooks/shlokbhakta/tabcomplete-code-cpt-evaluation-r1/"
+            "code_cpt_evaluation_r1/selection.json"
+        ).read_text(encoding="utf-8")
+    )
     eligible = selection["eligible_improvements"]
     for label in eligible:
         models[label] = campaign_root / "arms" / label / "final"
