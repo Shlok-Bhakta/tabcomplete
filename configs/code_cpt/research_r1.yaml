@@ -48,6 +48,7 @@ pilot:
 limits:
   max_t4x2_wall_hours: 12
   max_gpu_hours: 24
+  kaggle_quota_hours_per_t4x2_wall_hour: 1
   max_new_training_input_tokens: 50000000
   max_concurrent_training_jobs: 1
   finalization_reserve_minutes: 15

@@ -28,7 +28,7 @@ def test_affordable_plan_falls_back_to_matched_constant_pair() -> None:
 
     plan = affordable_pilot_plan(
         limits=limits,
-        quota_remaining_gpu_hours=5.2,
+        quota_remaining_gpu_hours=3.0,
         campaign_wall_hours_used=0.0,
         estimated_seconds_per_full_arm=4_200,
     )
@@ -42,7 +42,7 @@ def test_affordable_plan_reduces_both_constant_arms_equally() -> None:
 
     plan = affordable_pilot_plan(
         limits=limits,
-        quota_remaining_gpu_hours=2.5,
+        quota_remaining_gpu_hours=1.5,
         campaign_wall_hours_used=0.0,
         estimated_seconds_per_full_arm=4_200,
     )

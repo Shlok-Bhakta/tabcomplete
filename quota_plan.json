@@ -15,10 +15,11 @@
     "source": "Authenticated Kaggle CLI 2.2.4 `quota` command and its installed typed quota API"
   },
   "t4x2_accounting": {
-    "gpu_hours_per_wall_hour": 2.0,
+    "quota_hours_per_wall_hour": 1.0,
+    "physical_gpu_hours_per_wall_hour": 2.0,
     "verified": true,
-    "basis": "The account quota is measured in per-accelerator GPU-hours. The recorded Stage-1 T4x2 run used 4.864 wall-hours and reports 9.728 T4 GPU-hours in reports/code_cpt/overnight.md.",
-    "source": "Authenticated Kaggle quota API field documentation plus reports/code_cpt/overnight.md"
+    "basis": "The matched campaign reports 4.718 wall-hours. Together with the measured smoke and resume sessions, the authenticated account meter rose from 12.620 to about 18.000 hours, consistent with one quota-hour per T4x2 wall-hour. Two physical T4s still consume two aggregate accelerator-hours per wall-hour.",
+    "source": "Authenticated Kaggle quota readings before/after the measured research-r1 sessions and campaign_progress.json"
   },
   "session_runtime_limit": {
     "value": null,
@@ -40,11 +41,12 @@
   },
   "campaign_limits": {
     "maximum_t4x2_wall_hours": 12.0,
-    "maximum_gpu_hours_at_t4x2": 24.0,
+    "maximum_account_quota_hours_at_t4x2": 12.0,
+    "maximum_physical_gpu_hours_at_t4x2": 24.0,
     "maximum_new_training_input_tokens": 50000000,
     "maximum_concurrent_t4x2_training_jobs": 1,
     "minimum_initial_finalization_reserve_minutes_per_session": 15,
-    "verified_quota_headroom_after_campaign_gpu_hours": 8.380190555555559,
+    "verified_quota_headroom_after_maximum_campaign_quota_hours": 20.38019055555556,
     "may_consume_newly_refreshed_allocation_automatically": false
   },
   "storage_observation": {

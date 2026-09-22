@@ -26,6 +26,7 @@ class CampaignLimits:
     max_gpu_hours: float
     max_training_tokens: int
     reserve_minutes: int
+    quota_hours_per_wall_hour: float = 1.0
 
 
 def affordable_pilot_plan(
@@ -36,11 +37,15 @@ def affordable_pilot_plan(
     estimated_seconds_per_full_arm: float,
 ) -> dict[str, Any]:
     """Choose four arms, a matched constant pair, or an equal shorter pair."""
+    if limits.quota_hours_per_wall_hour <= 0:
+        raise ValueError("quota-hours per wall-hour must be positive")
     campaign_wall_left = max(0.0, limits.max_wall_hours - campaign_wall_hours_used)
     campaign_gpu_wall_left = max(
         0.0, limits.max_gpu_hours / 2.0 - campaign_wall_hours_used
     )
-    quota_wall_left = max(0.0, quota_remaining_gpu_hours / 2.0)
+    quota_wall_left = max(
+        0.0, quota_remaining_gpu_hours / limits.quota_hours_per_wall_hour
+    )
     usable_seconds = max(
         0.0,
         min(campaign_wall_left, campaign_gpu_wall_left, quota_wall_left) * 3600
@@ -136,6 +141,9 @@ class CampaignOrchestrator:
             max_gpu_hours=float(raw["max_gpu_hours"]),
             max_training_tokens=int(raw["max_new_training_input_tokens"]),
             reserve_minutes=int(raw["finalization_reserve_minutes"]),
+            quota_hours_per_wall_hour=float(
+                raw["kaggle_quota_hours_per_t4x2_wall_hour"]
+            ),
         )
 
     def validate(self) -> dict[str, Any]:
