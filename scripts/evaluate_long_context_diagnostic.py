@@ -10,10 +10,8 @@ from typing import Any
 
 from tinycomplete.eval.long_context_diagnostic import (
     LongContextDiagnosticCase,
-    greedy_generate_streamed,
-    score_target_continuation_streamed,
+    score_target_continuation,
     verify_selected_scoring,
-    verify_streamed_scoring,
 )
 
 
@@ -76,31 +74,30 @@ def main() -> None:
     )
     if scorer_check["absolute_difference"] > 1e-4:
         raise RuntimeError(f"selected-logit scorer differs from full logits: {scorer_check}")
-    streaming_check = verify_streamed_scoring(
-        model, tokenizer, short.prompt, short.target, torch.device("cuda")
-    )
-    if streaming_check["absolute_difference"] > 1e-4:
-        raise RuntimeError(
-            f"streamed scorer differs from full selected logits: {streaming_check}"
-        )
     weight_sha256 = model_hash(args.model_path)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as handle:
         for index, case in enumerate(cases, 1):
-            correct = score_target_continuation_streamed(
+            correct = score_target_continuation(
                 model, tokenizer, case.prompt, case.target, torch.device("cuda")
             )
-            distractor = score_target_continuation_streamed(
+            distractor = score_target_continuation(
                 model, tokenizer, case.prompt, case.distractor, torch.device("cuda")
             )
-            generation = greedy_generate_streamed(
-                model,
-                tokenizer,
-                case.prompt,
-                torch.device("cuda"),
-                max_new_tokens=args.max_new_tokens,
-            )
+            prompt_ids = tokenizer.encode(case.prompt, add_special_tokens=False)
+            inputs = torch.tensor([prompt_ids], device="cuda", dtype=torch.long)
+            with torch.inference_mode():
+                generated = model.generate(
+                    input_ids=inputs,
+                    max_new_tokens=args.max_new_tokens,
+                    do_sample=False,
+                    use_cache=True,
+                    pad_token_id=tokenizer.eos_token_id,
+                )
+            continuation = generated[0, len(prompt_ids) :]
+            generated_tokens = int(continuation.numel())
+            text = tokenizer.decode(continuation, skip_special_tokens=True)
             record = {
                 **case.model_dump(exclude={"prompt"}),
                 "model_label": args.model_label,
@@ -108,17 +105,18 @@ def main() -> None:
                 "tokenizer_source": str(tokenizer_source),
                 "tokenizer_sha256": tokenizer_sha256,
                 "scorer_verification": scorer_check,
-                "streaming_scorer_verification": streaming_check,
                 "correct": correct,
                 "distractor_score": distractor,
                 "correct_preferred": (
                     correct["target_nll_mean"] < distractor["target_nll_mean"]
                 ),
-                "generated_text": generation["text"],
-                "generated_tokens": generation["tokens"],
-                "generation_exact": generation["text"] == case.target,
-                "generation_finish_reason": generation["finish_reason"],
-                "generation_truncated": generation["truncated"],
+                "generated_text": text,
+                "generated_tokens": generated_tokens,
+                "generation_exact": text == case.target,
+                "generation_finish_reason": (
+                    "length" if generated_tokens >= args.max_new_tokens else "eos_or_stop"
+                ),
+                "generation_truncated": generated_tokens >= args.max_new_tokens,
             }
             handle.write(json.dumps(record, sort_keys=True) + "\n")
             handle.flush()
