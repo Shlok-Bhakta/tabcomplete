@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from tinycomplete.code_cpt.campaign import CampaignLimits, affordable_pilot_plan
+from pathlib import Path
+
+from tinycomplete.code_cpt.campaign import (
+    CampaignLimits,
+    _find_output_file,
+    affordable_pilot_plan,
+)
 
 
 def test_affordable_plan_keeps_all_four_matched_arms_when_quota_fits() -> None:
@@ -64,3 +70,16 @@ def test_affordable_plan_refuses_an_unusable_pair() -> None:
 
     assert plan["arms"] == []
     assert plan["reason"] == "a useful matched pair does not fit"
+
+
+def test_output_discovery_prefers_kernel_artifact_over_cloned_report(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "code_cpt_evaluation_r1" / "selection.json"
+    clone = tmp_path / "tabcomplete" / "reports" / "campaign" / "selection.json"
+    artifact.parent.mkdir(parents=True)
+    clone.parent.mkdir(parents=True)
+    artifact.write_text("{}\n", encoding="utf-8")
+    clone.write_text("{}\n", encoding="utf-8")
+
+    assert _find_output_file(tmp_path, "selection.json") == artifact
