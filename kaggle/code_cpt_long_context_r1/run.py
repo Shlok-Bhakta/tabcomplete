@@ -106,6 +106,7 @@ def main() -> None:
         "development_eligible_models": eligible,
         "provisional_development_selection": selected,
         "completed": [],
+        "failed": [],
         "skipped": [],
     }
     (OUTPUT / "progress.json").write_text(
@@ -165,13 +166,25 @@ def main() -> None:
                 for gpu_index, job in enumerate(batch)
             }
             for future in as_completed(futures):
-                completed, elapsed = future.result()
+                job = futures[future]
+                try:
+                    completed, elapsed = future.result()
+                except Exception as error:
+                    label, _, lengths, _ = job
+                    record["failed"].append(
+                        {
+                            "model": label,
+                            "lengths": list(lengths),
+                            "error": str(error),
+                        }
+                    )
+                    continue
                 record["completed"].append(completed)
                 estimate = max(estimate, elapsed * 1.10)
         (OUTPUT / "progress.json").write_text(
             json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-    record["status"] = "complete"
+    record["status"] = "partial" if record["failed"] else "complete"
     record["elapsed_seconds"] = time.time() - started
     (OUTPUT / "progress.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
