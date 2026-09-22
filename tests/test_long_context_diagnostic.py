@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from types import SimpleNamespace
 
 import torch
 
@@ -9,8 +10,11 @@ from tinycomplete.eval.long_context_diagnostic import (
     CONDITIONS,
     build_diagnostic_family,
     diagnostic_case_to_benchmark,
+    greedy_generate_streamed,
+    score_target_continuation_streamed,
     selected_target_nll,
     target_logit_positions,
+    verify_streamed_scoring,
 )
 
 
@@ -18,6 +22,40 @@ class RegexTokenizer:
     def encode(self, text: str, *, add_special_tokens: bool = False) -> list[int]:
         assert add_special_tokens is False
         return list(range(len(re.findall(r"[A-Za-z_]+|\d+|[^\w\s]", text))))
+
+
+class IntegerTokenizer:
+    eos_token_id = 6
+
+    def encode(self, text: str, *, add_special_tokens: bool = False) -> list[int]:
+        assert add_special_tokens is False
+        return [int(value) for value in text.split()]
+
+    def decode(self, token_ids: list[int], *, skip_special_tokens: bool) -> str:
+        values = [token for token in token_ids if not skip_special_tokens or token != 6]
+        return " ".join(str(value) for value in values)
+
+
+class NextIntegerModel:
+    def __call__(
+        self,
+        *,
+        input_ids,
+        past_key_values=None,
+        use_cache: bool,
+        logits_to_keep,
+    ):
+        del use_cache
+        vocabulary = 11
+        logits = torch.full((*input_ids.shape, vocabulary), -8.0, device=input_ids.device)
+        next_ids = (input_ids + 1) % vocabulary
+        logits.scatter_(2, next_ids.unsqueeze(-1), 8.0)
+        if isinstance(logits_to_keep, int) and logits_to_keep > 0:
+            logits = logits[:, -logits_to_keep:, :]
+        elif isinstance(logits_to_keep, torch.Tensor):
+            logits = logits[:, logits_to_keep, :]
+        cached = (past_key_values or 0) + input_ids.shape[1]
+        return SimpleNamespace(logits=logits, past_key_values=cached)
 
 
 def test_matched_family_has_all_dependency_conditions() -> None:
@@ -73,6 +111,47 @@ def test_target_only_selected_logits_match_full_logit_scoring() -> None:
     assert positions.tolist() == [4, 5, 6]
     assert selected_count == 3
     assert torch.allclose(selected_sum, expected)
+
+
+def test_streamed_scoring_and_generation_match_full_short_input() -> None:
+    model = NextIntegerModel()
+    tokenizer = IntegerTokenizer()
+    device = torch.device("cpu")
+
+    comparison = verify_streamed_scoring(
+        model,
+        tokenizer,
+        "1 2 3",
+        "4 5",
+        device,
+        chunk_tokens=2,
+    )
+    score = score_target_continuation_streamed(
+        model,
+        tokenizer,
+        "1 2 3",
+        "4 5",
+        device,
+        chunk_tokens=2,
+    )
+    generation = greedy_generate_streamed(
+        model,
+        tokenizer,
+        "1 2 3",
+        device,
+        max_new_tokens=5,
+        chunk_tokens=2,
+    )
+
+    assert comparison["absolute_difference"] == 0
+    assert score["target_tokens"] == 2
+    assert generation == {
+        "text": "4 5",
+        "tokens": 3,
+        "finish_reason": "eos_or_stop",
+        "truncated": False,
+        "streaming_chunk_tokens": 2,
+    }
 
 
 def test_diagnostic_gold_is_executable(tmp_path) -> None:

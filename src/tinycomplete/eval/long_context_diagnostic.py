@@ -369,7 +369,11 @@ def score_target_continuation(model, tokenizer, prompt: str, target: str, device
     combined = torch.tensor([prompt_ids + target_ids], device=device, dtype=torch.long)
     target_tensor = torch.tensor([target_ids], device=device, dtype=torch.long)
     positions = target_logit_positions(len(prompt_ids), len(target_ids), device)
-    with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
+    with torch.inference_mode(), torch.autocast(
+        device_type=device.type,
+        dtype=torch.float16,
+        enabled=device.type == "cuda",
+    ):
         output = model(input_ids=combined, use_cache=False, logits_to_keep=positions)
     nll_sum, token_count = selected_target_nll(output.logits.float(), target_tensor)
     return {
@@ -381,6 +385,169 @@ def score_target_continuation(model, tokenizer, prompt: str, target: str, device
     }
 
 
+def _stream_prefix_cache(
+    model: Any,
+    token_ids: list[int],
+    device: Any,
+    *,
+    chunk_tokens: int,
+) -> Any:
+    """Prefill a causal cache without a quadratic full-prompt attention allocation."""
+    import torch
+
+    if chunk_tokens < 1:
+        raise ValueError("chunk_tokens must be positive")
+    cache = None
+    for start in range(0, len(token_ids), chunk_tokens):
+        chunk = torch.tensor(
+            [token_ids[start : start + chunk_tokens]], device=device, dtype=torch.long
+        )
+        with torch.inference_mode(), torch.autocast(
+            device_type=device.type,
+            dtype=torch.float16,
+            enabled=device.type == "cuda",
+        ):
+            output = model(
+                input_ids=chunk,
+                past_key_values=cache,
+                use_cache=True,
+                logits_to_keep=1,
+            )
+        cache = output.past_key_values
+    return cache
+
+
+def score_target_continuation_streamed(
+    model: Any,
+    tokenizer: Any,
+    prompt: str,
+    target: str,
+    device: Any,
+    *,
+    chunk_tokens: int = 2048,
+) -> dict[str, Any]:
+    """Score target tokens after chunked prompt prefill, excluding every prompt position."""
+    import torch
+
+    prompt_ids, target_ids = encode_prompt_and_target(tokenizer, prompt, target)
+    cache = _stream_prefix_cache(
+        model,
+        prompt_ids[:-1],
+        device,
+        chunk_tokens=chunk_tokens,
+    )
+    scoring_ids = [prompt_ids[-1], *target_ids[:-1]]
+    inputs = torch.tensor([scoring_ids], device=device, dtype=torch.long)
+    target_tensor = torch.tensor([target_ids], device=device, dtype=torch.long)
+    with torch.inference_mode(), torch.autocast(
+        device_type=device.type,
+        dtype=torch.float16,
+        enabled=device.type == "cuda",
+    ):
+        output = model(
+            input_ids=inputs,
+            past_key_values=cache,
+            use_cache=True,
+            logits_to_keep=len(target_ids),
+        )
+    nll_sum, token_count = selected_target_nll(output.logits.float(), target_tensor)
+    return {
+        "prompt_tokens": len(prompt_ids),
+        "target_tokens": token_count,
+        "target_nll_sum": float(nll_sum.item()),
+        "target_nll_mean": float(nll_sum.item()) / token_count,
+        "selected_logit_positions": [
+            len(prompt_ids) - 1,
+            len(prompt_ids) + len(target_ids) - 2,
+        ],
+        "streaming_chunk_tokens": chunk_tokens,
+    }
+
+
+def greedy_generate_streamed(
+    model: Any,
+    tokenizer: Any,
+    prompt: str,
+    device: Any,
+    *,
+    max_new_tokens: int,
+    chunk_tokens: int = 2048,
+) -> dict[str, Any]:
+    """Greedy generation after chunked prompt prefill."""
+    import torch
+
+    if max_new_tokens < 1:
+        raise ValueError("max_new_tokens must be positive")
+    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+    if not prompt_ids:
+        raise ValueError("prompt must tokenize to at least one token")
+    cache = _stream_prefix_cache(
+        model,
+        prompt_ids[:-1],
+        device,
+        chunk_tokens=chunk_tokens,
+    )
+    current = torch.tensor([[prompt_ids[-1]]], device=device, dtype=torch.long)
+    generated: list[int] = []
+    eos = tokenizer.eos_token_id
+    eos_ids = set(eos if isinstance(eos, list) else [eos])
+    finish_reason = "length"
+    for _ in range(max_new_tokens):
+        with torch.inference_mode(), torch.autocast(
+            device_type=device.type,
+            dtype=torch.float16,
+            enabled=device.type == "cuda",
+        ):
+            output = model(
+                input_ids=current,
+                past_key_values=cache,
+                use_cache=True,
+                logits_to_keep=1,
+            )
+        cache = output.past_key_values
+        token = int(output.logits[:, -1, :].argmax(dim=-1).item())
+        generated.append(token)
+        if token in eos_ids:
+            finish_reason = "eos_or_stop"
+            break
+        current = torch.tensor([[token]], device=device, dtype=torch.long)
+    return {
+        "text": tokenizer.decode(generated, skip_special_tokens=True),
+        "tokens": len(generated),
+        "finish_reason": finish_reason,
+        "truncated": finish_reason == "length",
+        "streaming_chunk_tokens": chunk_tokens,
+    }
+
+
+def verify_streamed_scoring(
+    model: Any,
+    tokenizer: Any,
+    prompt: str,
+    target: str,
+    device: Any,
+    *,
+    chunk_tokens: int = 2048,
+) -> dict[str, float]:
+    """Compare cache-streamed target NLL with full-logit scoring on a short input."""
+    full = score_target_continuation(model, tokenizer, prompt, target, device)
+    streamed = score_target_continuation_streamed(
+        model,
+        tokenizer,
+        prompt,
+        target,
+        device,
+        chunk_tokens=chunk_tokens,
+    )
+    return {
+        "full_selected_nll_sum": float(full["target_nll_sum"]),
+        "streamed_nll_sum": float(streamed["target_nll_sum"]),
+        "absolute_difference": abs(
+            float(full["target_nll_sum"]) - float(streamed["target_nll_sum"])
+        ),
+    }
+
+
 def verify_selected_scoring(model, tokenizer, prompt: str, target: str, device) -> dict[str, float]:
     """Compare selected-logit scoring with full logits on a bounded short input."""
     import torch
@@ -389,7 +556,11 @@ def verify_selected_scoring(model, tokenizer, prompt: str, target: str, device) 
     combined = torch.tensor([prompt_ids + target_ids], device=device, dtype=torch.long)
     target_tensor = torch.tensor([target_ids], device=device, dtype=torch.long)
     positions = target_logit_positions(len(prompt_ids), len(target_ids), device)
-    with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
+    with torch.inference_mode(), torch.autocast(
+        device_type=device.type,
+        dtype=torch.float16,
+        enabled=device.type == "cuda",
+    ):
         selected = model(input_ids=combined, use_cache=False, logits_to_keep=positions).logits
         full = model(input_ids=combined, use_cache=False, logits_to_keep=0).logits[:, positions, :]
     selected_sum, _ = selected_target_nll(selected.float(), target_tensor)
