@@ -46,6 +46,7 @@
     "artifacts/research/model_data_r2/evaluation/model_data_r2_evaluation/q35-p12/line/predictions.jsonl.metadata.json": "38f436e2114852b5d2abd5743fff3020e3efa08c28284b09a738fce9a36a59d6",
     "artifacts/research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
     "data/benchmarks/code_completion_v2.jsonl": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+    "reports/research/model_data_r2/baseline_evaluations/per-language.json": "c98d4ea50de0e9f61fdd337f80686d5bbb188ae435baee69add2f4f3e8ff7032",
     "reports/research/model_data_r2/failure_audit/pilot_strict_changes.json": "1730f2e3d495362005ba2fb84516679c882f16fa28c3f474304ca6059f877106",
     "reports/research/model_data_r2/pilots/R2_FILTERED/completion.json": "09e9d4a58e2ca1fc0db33be22318236915fcd514b722b049e8fbe2d634e8c616",
     "reports/research/model_data_r2/pilots/R2_FILTERED/verified-checkpoint-manifest.json": "2391f1058b3c544ded3a3a9b29795b0e78c6b558a79d895ebf351c0eec3fd8f8",

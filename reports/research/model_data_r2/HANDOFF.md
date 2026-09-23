@@ -29,7 +29,7 @@ PIDs and files before signalling any process.
 
 Telemetry bundles are imported and reconciled; 1,492 evaluation and 164 context
 captured payloads synced, with a remote byte/hash check from each. The
-47-file `artifact_manifest.json` passed hash verification. Full Python
+48-file `artifact_manifest.json` passed hash verification. Full Python
 verification after the only source edit passed 227 tests, Ruff and mypy. The
 remaining independent work is the local 32k runtime grid, then refresh its
 summary and plots and report the actual final counts. The report is a verified

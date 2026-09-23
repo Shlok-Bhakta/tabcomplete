@@ -37,6 +37,41 @@ replacement for P12, and none of these causal tasks measures next-edit quality.
 Base Qwen3.5 and Granite trail on strict quality in this run. The two trained
 pilots regress on strict and line tests, so neither is a promotion candidate.
 
+Strict functional passes by language, from the same 200 cases:
+
+| Language (cases) | P12 | Qwen2.5 | D12 | Qwen3.5 base | Standard | Filtered | Granite FP16 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| C (22) | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| C++ (22) | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| C# (22) | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| Go (22) | 1 | 1 | 1 | 1 | 0 | 1 | 0 |
+| Java (22) | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| JavaScript (22) | 1 | 2 | 0 | 0 | 0 | 0 | 2 |
+| Python (23) | 5 | 8 | 4 | 0 | 2 | 2 | 0 |
+| Rust (22) | 1 | 0 | 0 | 1 | 1 | 1 | 0 |
+| TypeScript (23) | 1 | 0 | 0 | 0 | 1 | 1 | 1 |
+| Total (200) | 9 | 11 | 5 | 4 | 4 | 5 | 3 |
+
+Exact line continuations by language, 20 cases per language:
+
+| Language | P12 | Qwen2.5 | D12 | Qwen3.5 base | Standard | Filtered | Granite Q4 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| C | 2 | 2 | 2 | 2 | 2 | 2 | 0 |
+| C++ | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+| C# | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Go | 5 | 3 | 5 | 4 | 4 | 4 | 1 |
+| Java | 3 | 2 | 3 | 3 | 3 | 3 | 0 |
+| JavaScript | 1 | 1 | 1 | 1 | 1 | 1 | 0 |
+| Python | 1 | 1 | 1 | 1 | 1 | 1 | 0 |
+| Rust | 3 | 2 | 3 | 2 | 3 | 3 | 2 |
+| TypeScript | 3 | 3 | 3 | 3 | 3 | 3 | 1 |
+| Total (180) | 20 | 16 | 20 | 18 | 19 | 19 | 6 |
+
+The complete per-language strict and line tables, including all three native
+Q4 models, are in `model_data_r2/baseline_evaluations/per-language.json`. Most
+strict passes occur in Python; language-specific rates here have only 22 or 23
+cases each and are descriptive.
+
 The context notebook finished its 1,380-second observed session with four
 runtime blocks. P12 observed the efficient-attention operator and identical
 short greedy output, but its short target NLL difference was 0.003134, above
@@ -256,6 +291,12 @@ final general-text diagnostic is 2.505032, versus standard's 2.507587. There is 
 schedule search, FIM objective, next-edit adaptation, paid teacher, or automatic
 deployment promotion.
 
+The matched parent general-text NLL is 2.486807. Standard's final value is
+0.836% higher and filtered's is 0.733% higher. Both remain below the existing
+5% sustained-regression trigger of 2.611148, and neither pilot recorded two
+consecutive guard failures. The general guard passes; strict and line quality
+are the promotion blockers.
+
 Both arms improve matched fresh development loss relative to P12 across 629
 repositories. Standard's token-weighted NLL difference is -0.005319 with a
 2,000-replicate paired 95% interval [-0.006844, -0.003892]; filtered's is
@@ -265,6 +306,27 @@ by -0.001347 on the same repository and token identities, interval
 base Qwen3.5 comparison is +0.005448 against P12 on that same tokenizer and
 source, with interval [+0.000416, +0.013758]. These are within-tokenizer
 comparisons; Qwen2.5 and Granite use different tokenizers.
+
+Fresh held-out NLL by language, with the same scored token counts for all three
+Qwen3.5 checkpoints:
+
+| Language | P12 | Standard | Filtered |
+|---|---:|---:|---:|
+| C | 1.090076 | 1.085739 | 1.084674 |
+| C++ | 0.466103 | 0.464576 | 0.459192 |
+| C# | 0.851537 | 0.845329 | 0.845253 |
+| Go | 1.677929 | 1.667279 | 1.667931 |
+| Java | 0.934518 | 0.930302 | 0.928608 |
+| JavaScript | 1.149572 | 1.145994 | 1.144097 |
+| Python | 1.176552 | 1.172487 | 1.171343 |
+| Rust | 1.005188 | 0.998444 | 0.995719 |
+| TypeScript | 0.959672 | 0.952942 | 0.953831 |
+| Overall code | 1.034572 | 1.029232 | 1.027850 |
+| General text | 2.486807 | 2.507587 | 2.505032 |
+
+Filtered is lower on seven of nine code languages; standard is lower on Go and
+TypeScript. Both have higher general-text NLL than P12 but pass the registered
+general guard. These NLL values are diagnostics, not observed code acceptance.
 
 The strict evaluator had all 200 cases available for each pilot. The pilots'
 shared gain is `rust/11`, where both finish an assertion that P12 cuts off.
@@ -410,7 +472,7 @@ referenced reconciliation file.
 After the plot filter change, repository verification passed 227/227 tests in
 24.76 seconds, Ruff, and mypy across 106 source files. The commands and logs
 are in `model_data_r2/environment/verification-window.json`. The registered
-GPU jobs are terminal. The 47-file `model_data_r2/artifact_manifest.json` passed
+GPU jobs are terminal. The 48-file `model_data_r2/artifact_manifest.json` passed
 hash verification; the local 32k runtime grid remains in progress.
 
 The research recommendation is to investigate Qwen2.5-Coder as the smaller

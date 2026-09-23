@@ -1,0 +1,729 @@
+{
+  "line": {
+    "c": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 2
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 2
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 2
+      }
+    },
+    "cpp": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 2
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 2
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 2
+      }
+    },
+    "csharp": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 0
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 0
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 0
+      }
+    },
+    "go": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 4
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 4
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 4
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 5
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 5
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 5
+      }
+    },
+    "java": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 3
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 3
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 2
+      }
+    },
+    "javascript": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 1
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 1
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 1
+      }
+    },
+    "python": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 1
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 1
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 0
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 1
+      }
+    },
+    "rust": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 3
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 3
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 2
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "typescript": {
+      "R2_FILTERED": {
+        "cases": 20,
+        "exact": 3
+      },
+      "R2_STANDARD": {
+        "cases": 20,
+        "exact": 3
+      },
+      "granite-h350-q4": {
+        "cases": 20,
+        "exact": 1
+      },
+      "q25-coder": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q25-coder-q4": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-base": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-d12": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-p12": {
+        "cases": 20,
+        "exact": 3
+      },
+      "q35-p12-q4": {
+        "cases": 20,
+        "exact": 3
+      }
+    }
+  },
+  "line_suite": "causal_line_v1-r3, 180 cases",
+  "schema_version": 1,
+  "strict": {
+    "c": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 0
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 0
+      }
+    },
+    "cpp": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 0
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 0
+      }
+    },
+    "csharp": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 0
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 0
+      }
+    },
+    "go": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 1
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 0
+      }
+    },
+    "java": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 0
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 0
+      }
+    },
+    "javascript": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 0
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 2
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 2
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 3
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 3
+      }
+    },
+    "python": {
+      "R2_FILTERED": {
+        "cases": 23,
+        "passes": 2
+      },
+      "R2_STANDARD": {
+        "cases": 23,
+        "passes": 2
+      },
+      "granite-h350": {
+        "cases": 23,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 23,
+        "passes": 8
+      },
+      "q25-coder-q4": {
+        "cases": 23,
+        "passes": 4
+      },
+      "q35-base": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q35-d12": {
+        "cases": 23,
+        "passes": 4
+      },
+      "q35-p12": {
+        "cases": 23,
+        "passes": 5
+      },
+      "q35-p12-q4": {
+        "cases": 23,
+        "passes": 4
+      }
+    },
+    "rust": {
+      "R2_FILTERED": {
+        "cases": 22,
+        "passes": 1
+      },
+      "R2_STANDARD": {
+        "cases": 22,
+        "passes": 1
+      },
+      "granite-h350": {
+        "cases": 22,
+        "passes": 0
+      },
+      "granite-h350-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q25-coder-q4": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-d12": {
+        "cases": 22,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 22,
+        "passes": 1
+      },
+      "q35-p12-q4": {
+        "cases": 22,
+        "passes": 1
+      }
+    },
+    "typescript": {
+      "R2_FILTERED": {
+        "cases": 23,
+        "passes": 1
+      },
+      "R2_STANDARD": {
+        "cases": 23,
+        "passes": 1
+      },
+      "granite-h350": {
+        "cases": 23,
+        "passes": 1
+      },
+      "granite-h350-q4": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q25-coder": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q25-coder-q4": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q35-base": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q35-d12": {
+        "cases": 23,
+        "passes": 0
+      },
+      "q35-p12": {
+        "cases": 23,
+        "passes": 1
+      },
+      "q35-p12-q4": {
+        "cases": 23,
+        "passes": 0
+      }
+    }
+  },
+  "strict_suite": "causal-context-v1, 200 cases, 96-token ceiling"
+}
