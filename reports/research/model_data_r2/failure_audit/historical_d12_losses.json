@@ -1,0 +1,213 @@
+[
+  {
+    "case_id": "javascript/501",
+    "checks": {
+      "compile": {
+        "returncode": 1,
+        "seconds": 0.769122042984236,
+        "status": "fail",
+        "stderr": "/workspace/src/data_structures.js:26\nstack.push(7\n           ^\n\nSyntaxError: missing ) after argument list\n    at wrapSafe (node:internal/modules/cjs/loader:1713:18)\n    at checkSyntax (node:internal/main/check_syntax:78:3)\n\nNode.js v22.23.2\n",
+        "stdout": ""
+      },
+      "parse": {
+        "returncode": null,
+        "seconds": null,
+        "status": "fail",
+        "stderr": "",
+        "stdout": ""
+      },
+      "test": {
+        "returncode": null,
+        "seconds": null,
+        "status": "not_run",
+        "stderr": "",
+        "stdout": ""
+      }
+    },
+    "comparison": "historical D12 versus P12",
+    "evidence": "After implementing the Stack methods, D12 adds example calls and ends at stack.push(7. Node reports a missing closing parenthesis.",
+    "official_score_repaired": false,
+    "prefix_analysis": "diagnostic only, no rescoring",
+    "primary": "overgeneration",
+    "raw_predictions": {
+      "D12": {
+        "case_id": "javascript/501",
+        "completion": " return this.items.pop();\n  }\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n}\n\nconst stack = new Stack();\nstack.push(1);\nstack.push(2);\nstack.push(3);\nstack.push(4);\nstack.push(5);\nstack.push(6);\nstack.push(7",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.131175133000397
+      },
+      "P12": {
+        "case_id": "javascript/501",
+        "completion": " return this.items.pop();\n  }\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n}\n\nclass Queue {\n  constructor() {\n    this.items = [];\n  }\n  push(item) {\n    this.items.push(item);\n  }\n  pop() {\n    return this.items.pop();\n ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.072990690000097
+      }
+    },
+    "secondary": [
+      "length truncation",
+      "syntax error"
+    ]
+  },
+  {
+    "case_id": "python/stable_0",
+    "checks": {
+      "compile": {
+        "returncode": 0,
+        "seconds": 0.6677794510032982,
+        "status": "pass",
+        "stderr": "",
+        "stdout": ""
+      },
+      "parse": {
+        "returncode": null,
+        "seconds": null,
+        "status": "pass",
+        "stderr": "",
+        "stdout": ""
+      },
+      "test": {
+        "returncode": 1,
+        "seconds": 0.5186535039974842,
+        "status": "fail",
+        "stderr": "Traceback (most recent call last):\n  File \"/workspace/src/control_flow.py\", line 18, in <module>\n    main()\n  File \"/workspace/src/control_flow.py\", line 13, in main\n    n = int(input('Enter a number: '))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^\nEOFError: EOF when reading a line\n",
+        "stdout": "Enter a number: "
+      }
+    },
+    "comparison": "historical D12 versus P12",
+    "evidence": "The extra generated main() requests interactive input; execution raises EOFError. The number-classification prefix itself handles the three signs.",
+    "official_score_repaired": false,
+    "prefix_analysis": "diagnostic only, no rescoring",
+    "primary": "overgeneration",
+    "raw_predictions": {
+      "D12": {
+        "case_id": "python/stable_0",
+        "completion": "    if n < 0:\n        return 'negative'\n    elif n == 0:\n        return 'zero'\n    else:\n        return 'positive'\n\n\ndef main():\n    \"\"\"Main function.\"\"\"\n    n = int(input('Enter a number: '))\n    print(classify_number(n))\n\n\nif __name__ == '__main__':\n    main()",
+        "finish_reason": "eos_or_stop",
+        "generated_tokens": 83,
+        "hit_token_cap": false,
+        "latency_seconds": 4.461810568999681
+      },
+      "P12": {
+        "case_id": "python/stable_0",
+        "completion": "    if n < 0:\n        return 'negative'\n    elif n == 0:\n        return 'zero'\n    else:\n        return 'positive'\n\n\ndef classify_number_range(n: int, min: int, max: int) -> str:\n    \"\"\"Return 'negative', 'zero', 'positive', 'negative', 'zero', or 'positive'.\"\"\"\n    if n < min:\n        return 'negative'\n   ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 5.014864127999772
+      }
+    },
+    "secondary": [
+      "wrong symbol/API/type"
+    ]
+  },
+  {
+    "case_id": "rust/2",
+    "checks": {
+      "compile": {
+        "returncode": 101,
+        "seconds": 0.5728651209792588,
+        "status": "fail",
+        "stderr": "error: unexpected closing delimiter: `}`\n  --> src/lib.rs:20:5\n   |\n10 | pub fn gcd_iter(mut a: u64, mut b: u64) -> u64 {\n   |                                                - this opening brace...\n...\n17 | }\n   | - ...matches this closing brace\n...\n20 |     }\n   |     ^ unexpected closing delimiter\n\nerror: could not compile `bench_crate` (lib) due to 1 previous error\n",
+        "stdout": ""
+      },
+      "parse": {
+        "returncode": null,
+        "seconds": null,
+        "status": "fail",
+        "stderr": "",
+        "stdout": ""
+      },
+      "test": {
+        "returncode": null,
+        "seconds": null,
+        "status": "not_run",
+        "stderr": "",
+        "stdout": ""
+      }
+    },
+    "comparison": "historical D12 versus P12",
+    "evidence": "D12 completes gcd, adds another gcd function, then starts a third before the cap. The unchanged fixture suffix yields an unexpected closing delimiter.",
+    "official_score_repaired": false,
+    "prefix_analysis": "diagnostic only, no rescoring",
+    "primary": "overgeneration",
+    "raw_predictions": {
+      "D12": {
+        "case_id": "rust/2",
+        "completion": " let mut r = a % b;\n         a = b;\n         b = r;\n    }\n    a\n}\n\npub fn gcd_iter(mut a: u64, mut b: u64) -> u64 {\n    while b != 0 {\n         let mut r = a % b;\n         a = b;\n         b = r;\n    }\n    a\n}\n\npub fn gcd_iter2",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.158416660000512
+      },
+      "P12": {
+        "case_id": "rust/2",
+        "completion": " let mut c = a % b;\n         a = b;\n         b = c;\n    }\n    a\n}\n\npub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n    let mut c = a % b;\n    let mut d = b;\n    while c != 0 {\n        let mut e = c % d;\n        c = d;\n       ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.100446598999952
+      }
+    },
+    "secondary": [
+      "length truncation",
+      "syntax error"
+    ]
+  },
+  {
+    "case_id": "typescript/0",
+    "checks": {
+      "compile": {
+        "returncode": 2,
+        "seconds": 1.725955680012703,
+        "status": "fail",
+        "stderr": "",
+        "stdout": "src/control_flow.ts(21,3): error TS1109: Expression expected.\nsrc/control_flow.ts(22,1): error TS1128: Declaration or statement expected.\n"
+      },
+      "parse": {
+        "returncode": null,
+        "seconds": null,
+        "status": "fail",
+        "stderr": "",
+        "stdout": ""
+      },
+      "test": {
+        "returncode": null,
+        "seconds": null,
+        "status": "not_run",
+        "stderr": "",
+        "stdout": ""
+      }
+    },
+    "comparison": "historical D12 versus P12",
+    "evidence": "After closing classifyNumber, D12 adds classifyString and reaches the cap inside an else-if expression. The compiler reports TS1109/TS1128.",
+    "official_score_repaired": false,
+    "prefix_analysis": "diagnostic only, no rescoring",
+    "primary": "overgeneration",
+    "raw_predictions": {
+      "D12": {
+        "case_id": "typescript/0",
+        "completion": " return \"zero\";\n  }\n}\n\nexport function classifyString(s: string): string {\n  if (s === \"true\") {\n    return \"true\";\n  } else if (s === \"false\") {\n    return \"false\";\n  } else if (s === \"null\") {\n    return \"null\";\n  } else if (s === \"undefined\") {\n    return \"undefined\";\n  } else if (",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.152527708999514
+      },
+      "P12": {
+        "case_id": "typescript/0",
+        "completion": " return \"zero\";\n  }\n}\n\nexport function classifyString(s: string): string {\n  if (s === \"true\") {\n    return \"true\";\n  } else if (s === \"false\") {\n    return \"false\";\n  } else {\n    return \"string\";\n  }\n}\n\nexport function classifyDate(d: Date): string {\n  if (d instanceof Date) {\n    return \"date\";",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.052247456000259
+      }
+    },
+    "secondary": [
+      "length truncation",
+      "syntax error"
+    ]
+  }
+]

@@ -9,6 +9,30 @@ from pathlib import Path
 from typing import Any
 
 
+def numerical_restart_gate(comparison: dict, loss_differences: list[float]) -> bool:
+    """R2's registered same-layout gate; observed I/O wait is not model state."""
+    if not loss_differences or max(loss_differences) > 0.0001:
+        return False
+    if not comparison.get("ranks"):
+        return False
+    for rank in comparison["ranks"]:
+        scientific_a = {k: v for k, v in rank["metadata_a"].items() if k != "data_wait_seconds"}
+        scientific_b = {k: v for k, v in rank["metadata_b"].items() if k != "data_wait_seconds"}
+        if scientific_a != scientific_b:
+            return False
+        if not all(
+            rank[key] for key in ("optimizer_structure_equal", "scheduler_equal", "scaler_equal")
+        ):
+            return False
+        if rank["model"]["max_abs_difference"] > 0.0005:
+            return False
+        if rank["model"]["mean_abs_difference"] > 0.0000001:
+            return False
+        if rank["optimizer"]["max_abs_difference"] > 0.0005:
+            return False
+    return True
+
+
 def _local_tensor(value):
     import torch
 
@@ -197,9 +221,7 @@ def compare_checkpoints(
     if accelerator.is_main_process:
         ranks = [
             json.loads(
-                output.with_name(f"{output.stem}-rank-{rank:02d}.json").read_text(
-                    encoding="utf-8"
-                )
+                output.with_name(f"{output.stem}-rank-{rank:02d}.json").read_text(encoding="utf-8")
             )
             for rank in range(accelerator.num_processes)
         ]

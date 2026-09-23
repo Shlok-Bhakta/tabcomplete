@@ -70,3 +70,100 @@ def test_explicit_campaign_survives_prediction_resume(tmp_path):
     assert first.context.campaign_id == second.context.campaign_id == "synthetic-r2"
     assert first.context.run_id == second.context.run_id
     assert first.context.run_attempt_id != second.context.run_attempt_id
+
+
+def test_restart_gate_ignores_io_wait_but_not_consumed_data():
+    import json
+
+    from tinycomplete.code_cpt.resume_compare import numerical_restart_gate
+
+    historical = json.loads(
+        (Path(__file__).parents[1] / "reports/code_cpt/research_r1/resume_test.json").read_text()
+    )
+    comparison = historical["state_comparison"]
+    differences = historical["loss_absolute_differences"]
+    assert numerical_restart_gate(comparison, differences)
+    comparison["ranks"][0]["metadata_b"]["next_block"] += 1
+    assert not numerical_restart_gate(comparison, differences)
+
+
+def test_incremental_line_stop_preserves_raw_whitespace_and_default_generation(monkeypatch):
+    import torch
+
+    from tinycomplete.eval.code_generation import TransformersGenerationProvider
+
+    monkeypatch.delenv("TABCOMPLETE_OBSERVABILITY_ENABLED", raising=False)
+
+    class Tokenizer:
+        eos_token_id = 0
+
+        def __call__(self, prompt, **kwargs):
+            return {"input_ids": torch.tensor([[ord(c) for c in prompt]])}
+
+        def decode(self, ids, **kwargs):
+            return "".join(chr(int(i)) for i in ids)
+
+    class Model:
+        def generate(self, input_ids, **kwargs):
+            assert kwargs["do_sample"] is False and kwargs["max_new_tokens"] == 96
+            output = input_ids
+            for character in "  kept\nextra":
+                output = torch.cat((output, torch.tensor([[ord(character)]])), dim=1)
+                stopping = kwargs.get("stopping_criteria")
+                if stopping is not None and stopping(output, None).all():
+                    break
+            return output
+
+    provider = TransformersGenerationProvider.__new__(TransformersGenerationProvider)
+    provider.model, provider.tokenizer = Model(), Tokenizer()
+    provider.torch, provider.device = torch, torch.device("cpu")
+    result = provider.generate_line_detailed("prefix", 96)
+    assert result.text == "  kept\n" and result.finish_reason == "newline"
+    assert result.first_output_ms is not None
+    ordinary = provider.generate_detailed("prefix", 96)
+    assert ordinary.text == "  kept\nextra"
+    assert ordinary.first_output_ms is None
+
+
+def test_empty_captured_response_upload_is_an_explicit_stream(tmp_path, monkeypatch):
+    import httpx
+
+    from tinycomplete.observability.artifacts import ArtifactStore, sync_artifacts
+
+    store = ArtifactStore(tmp_path / "cas")
+    store.capture_text("model-output", "", authorized=True)
+    token = tmp_path / "token"
+    token.write_text("synthetic-upload-token")
+    monkeypatch.setenv("TABCOMPLETE_ARTIFACT_UPLOAD_URL", "http://fixture.invalid")
+    monkeypatch.setenv("TABCOMPLETE_ARTIFACT_UPLOAD_TOKEN_FILE", str(token))
+
+    def put(self, url, **kwargs):
+        assert not isinstance(kwargs["content"], bytes)
+        assert b"".join(kwargs["content"]) == b""
+        return httpx.Response(201, request=httpx.Request("PUT", url))
+
+    monkeypatch.setattr(httpx.Client, "put", put)
+    assert sync_artifacts(store.root) == {"accepted": 1, "failed": 0}
+
+
+def test_first_line_removes_crlf_not_meaningful_whitespace():
+    from tinycomplete.eval.code_generation import returned_first_line
+
+    assert returned_first_line("  kept  \r\nnext") == "  kept  "
+    assert returned_first_line("  kept  \nnext") == "  kept  "
+    assert returned_first_line("  kept  ") == "  kept  "
+    assert returned_first_line("trailing CR without LF\r") == "trailing CR without LF\r"
+
+
+def test_pilot_baseline_preserves_production_trainer_json_contract(tmp_path):
+    import json
+    import runpy
+
+    root = Path(__file__).parents[1]
+    worker = runpy.run_path(str(root / "kaggle/model_data_r2/run_pilot.py"), run_name="test")
+    source = (
+        root / "reports/code_cpt/research_r1/campaign_metrics/parents/P12/fresh_development.json"
+    )
+    destination = tmp_path / "baseline.json"
+    worker["save_training_baseline"](source, destination)
+    assert json.loads(destination.read_text())["metrics"]["overall_code"]["nll"] > 0

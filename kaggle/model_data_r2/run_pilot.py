@@ -13,6 +13,8 @@ from pathlib import Path
 
 COMMIT = "__CHECKOUT_COMMIT__"
 ARM = "__ARM__"
+REUSE_RESTART = "__REUSE_RESTART__"
+BASELINE_SHA = "__BASELINE_SHA__"
 SESSION_SECONDS = 9900
 START = time.time()
 DEADLINE = START + SESSION_SECONDS - 900
@@ -40,11 +42,22 @@ def sha(path):
     return h.hexdigest()
 
 
+def save_training_baseline(source, destination):
+    report = read(source)
+    metrics = report["metrics"]
+    assert all(name in metrics for name in ("overall_code", "general", "python", "csharp"))
+    save(destination, report)
+
+
 def run(command, name, environment=None):
     remaining = DEADLINE - time.time()
     if remaining < 60:
         raise TimeoutError("finalization reserve reached")
     started = time.time()
+    print(
+        json.dumps({"stage": name, "state": "started", "elapsed_seconds": started - START}),
+        flush=True,
+    )
     process = subprocess.run(
         command,
         capture_output=True,
@@ -56,10 +69,14 @@ def run(command, name, environment=None):
     (OUT / (name + ".log")).write_text(process.stdout + process.stderr)
     if process.returncode:
         raise RuntimeError(name + " failed; inspect private job artifacts")
+    print(
+        json.dumps({"stage": name, "state": "completed", "seconds": time.time() - started}),
+        flush=True,
+    )
     return time.time() - started
 
 
-def verify_state(directory, updates):
+def verify_state(directory, updates, *, persist=True):
     summary = read(directory / "summary.json")
     assert summary["optimizer_steps"] == updates
     assert summary["training_tokens"] == updates * TOKENS
@@ -73,7 +90,8 @@ def verify_state(directory, updates):
         path = state / entry["path"]
         assert path.stat().st_size == entry["bytes"]
         assert sha(path) == entry["sha256"]
-    save(directory / "verified-checkpoint-manifest.json", manifest)
+    if persist:
+        save(directory / "verified-checkpoint-manifest.json", manifest)
     return summary
 
 
@@ -238,62 +256,101 @@ def main():
     }
     save(OUT / "progress.json", progress)
     parent_eval = OUT / "parent-fresh.json"
-    run(
-        [
-            sys.executable,
-            "-m",
-            "tinycomplete.code_cpt.train",
-            "checkpoint-eval",
-            "--checkpoint",
-            str(parent),
-            "--corpus-dir",
-            str(corpus),
-            "--output",
-            str(parent_eval),
-            "--expected-sha256",
-            P12_SHA,
-        ],
-        "parent-eval",
-        {
-            **environment,
-            "CUDA_VISIBLE_DEVICES": "0",
-            "TABCOMPLETE_OBSERVABILITY_OFFLINE_BUNDLE": str(OUT / "parent-telemetry.jsonl"),
-        },
+    # Reuse the successful parent evaluation from the first session, not its
+    # failed training launch. All per-repository and aggregate measurements remain intact.
+    baselines = list(
+        Path("/kaggle/input").glob(
+            "notebooks/shlokbhakta/tabcomplete-model-data-r2-standard/model_data_r2_pilot/parent-fresh.json"
+        )
+    )
+    assert len(baselines) == 1 and sha(baselines[0]) == BASELINE_SHA
+    parent_report = read(baselines[0])
+    assert parent_report["checkpoint_identity"]["weight_files"][0]["sha256"] == P12_SHA
+    assert parent_report["checkpoint_identity"]["tokenizer_sha256"] == TOKENIZER_SHA
+    standard = corpus.parent / "R2_STANDARD"
+    assert (
+        parent_report["corpus_fingerprint"]
+        == read(standard / "corpus_metadata.json")["corpus_fingerprint"]
+    )
+    for path in (standard / "micro").iterdir():
+        if path.is_file():
+            assert sha(path) == sha(corpus / "micro" / path.name)
+    shutil.copy2(baselines[0], parent_eval)
+    shutil.copy2(
+        baselines[0].with_name("parent-fresh_repositories.json"),
+        OUT / "parent-fresh_repositories.json",
     )
     baseline = OUT / "baseline.json"
-    save(baseline, read(parent_eval)["metrics"])
-    smoke = train(corpus, parent, OUT / "smoke", 3, environment, baseline)
-    progress["training_input_tokens"] += smoke["additional_input_tokens"]
-    assert (OUT / "smoke/final/model.safetensors").stat().st_size > 1_000_000_000
+    save_training_baseline(parent_eval, baseline)
+    previous = None
+    if REUSE_RESTART != "none":
+        matches = list(
+            Path("/kaggle/input").glob(
+                "notebooks/shlokbhakta/" + REUSE_RESTART + "/model_data_r2_pilot/progress.json"
+            )
+        )
+        assert len(matches) == 1 and ARM == "R2_STANDARD"
+        previous = matches[0].parent
+        prior_progress = read(matches[0])
+        assert prior_progress["corpus"]["corpus_fingerprint"] == metadata["corpus_fingerprint"]
+        assert prior_progress["parent_sha256"] == P12_SHA
+        assert not (previous / ARM).exists(), "previous pilot work must not be silently replayed"
+        smoke = verify_state(previous / "smoke", 3, persist=False)
+        assert read(previous / "smoke/run_config.json")["seed"] == 928173
+        progress["reused_smoke_restart_source"] = REUSE_RESTART
+    else:
+        smoke = train(corpus, parent, OUT / "smoke", 3, environment, baseline)
+        progress["training_input_tokens"] += smoke["additional_input_tokens"]
+    assert ((previous or OUT) / "smoke/final/model.safetensors").stat().st_size > 1_000_000_000
     if ARM == "R2_STANDARD":
-        continuous = train(corpus, parent, OUT / "continuous", 8, environment, baseline)
-        resumed = train(
-            corpus, parent, OUT / "resumed", 8, environment, baseline, OUT / "smoke/resume-latest"
-        )
-        progress["training_input_tokens"] += (
-            continuous["additional_input_tokens"] + resumed["additional_input_tokens"]
-        )
-        run(
-            [
-                sys.executable,
-                "-m",
-                "torch.distributed.run",
-                "--standalone",
-                "--nproc_per_node=2",
-                "-m",
-                "tinycomplete.code_cpt.resume_compare",
-                "--checkpoint-a",
-                str(OUT / "continuous/resume-latest"),
-                "--checkpoint-b",
-                str(OUT / "resumed/resume-latest"),
-                "--output",
-                str(OUT / "restart-comparison.json"),
-                "--lr-schedule",
-                "cosine",
-            ],
-            "restart-compare",
-            environment,
-        )
+        if previous:
+            continuous = verify_state(previous / "continuous", 8, persist=False)
+            resumed = verify_state(previous / "resumed", 8, persist=False)
+            for name in ("smoke", "continuous", "resumed"):
+                for filename in (
+                    "summary.json",
+                    "verified-checkpoint-manifest.json",
+                    "run_config.json",
+                ):
+                    save(
+                        OUT / "reused-evidence" / name / filename, read(previous / name / filename)
+                    )
+            save(OUT / "restart-comparison.json", read(previous / "restart-comparison.json"))
+        else:
+            continuous = train(corpus, parent, OUT / "continuous", 8, environment, baseline)
+            resumed = train(
+                corpus,
+                parent,
+                OUT / "resumed",
+                8,
+                environment,
+                baseline,
+                OUT / "smoke/resume-latest",
+            )
+            progress["training_input_tokens"] += (
+                continuous["additional_input_tokens"] + resumed["additional_input_tokens"]
+            )
+            run(
+                [
+                    sys.executable,
+                    "-m",
+                    "torch.distributed.run",
+                    "--standalone",
+                    "--nproc_per_node=2",
+                    "-m",
+                    "tinycomplete.code_cpt.resume_compare",
+                    "--checkpoint-a",
+                    str(OUT / "continuous/resume-latest"),
+                    "--checkpoint-b",
+                    str(OUT / "resumed/resume-latest"),
+                    "--output",
+                    str(OUT / "restart-comparison.json"),
+                    "--lr-schedule",
+                    "cosine",
+                ],
+                "restart-compare",
+                environment,
+            )
         comparison = read(OUT / "restart-comparison.json")
         differences = [
             abs(a["loss"] - b["loss"])
@@ -303,20 +360,9 @@ def main():
                 strict=True,
             )
         ]
-        assert max(differences) <= 0.0001
-        for rank in comparison["ranks"]:
-            assert all(
-                rank[key]
-                for key in (
-                    "metadata_equal",
-                    "optimizer_structure_equal",
-                    "scheduler_equal",
-                    "scaler_equal",
-                )
-            )
-            assert rank["model"]["max_abs_difference"] <= 0.0005
-            assert rank["model"]["mean_abs_difference"] <= 0.0000001
-            assert rank["optimizer"]["max_abs_difference"] <= 0.0005
+        from tinycomplete.code_cpt.resume_compare import numerical_restart_gate
+
+        assert numerical_restart_gate(comparison, differences)
         save(
             OUT / "restart-verification.json",
             {

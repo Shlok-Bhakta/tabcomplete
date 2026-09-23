@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "implemented_not_gpu_verified",
+  "implementation_window_utc": ["2026-09-23T00:33:00Z", "2026-09-23T00:44:00Z"],
+  "bounded_minutes_reserved": 90,
+  "gpu_seconds_reserved": 3600,
+  "approach": "Use the installed Transformers SDPA adapter's explicit repeat_kv path, disable native GQA, and force torch.nn.attention.SDPBackend.EFFICIENT_ATTENTION in a dedicated inference process.",
+  "required_gates": [
+    "Observed profiler operator includes efficient_attention",
+    "Q/K/V head dimensions agree and enable_gqa is false",
+    "Short target mean NLL differs from the stock path by at most 0.002",
+    "Short greedy output matches exactly"
+  ],
+  "scientific_invariants": ["unchanged positional encoding", "unchanged mask and visibility", "full prompt retained", "existing target-only scorer"],
+  "old_streamed_scorer_used": false,
+  "verified_long_context_claim": false
+}

@@ -1,0 +1,43 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 928173,
+  "cases": 200,
+  "difference_second_minus_first": 0.01,
+  "exact_paired_binomial_two_sided_p": 0.803619384765625,
+  "first": "q35-p12",
+  "first_passes": 9,
+  "first_results_sha256": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57",
+  "losses": [
+    "go/stable_526",
+    "javascript/501",
+    "python/100",
+    "python/stable_18",
+    "python/stable_19",
+    "rust/2",
+    "typescript/0"
+  ],
+  "output_ceiling_tokens": 96,
+  "paired_bootstrap_95ci": [
+    -0.03,
+    0.05
+  ],
+  "protocol": "causal-context-v1",
+  "second": "q25-coder",
+  "second_passes": 11,
+  "second_results_sha256": "a57e13918b1d94ba354bbf65f15b64292a07efcaf6007e1a3182cf0a881fb085",
+  "shared_passes": [
+    "python/stable_0",
+    "python/stable_9"
+  ],
+  "wins": [
+    "go/stable_521",
+    "javascript/11_retry_async",
+    "javascript/17_validate_email",
+    "python/stable_10",
+    "python/stable_11",
+    "python/stable_12",
+    "python/stable_15",
+    "python/stable_17",
+    "python/stable_7"
+  ]
+}

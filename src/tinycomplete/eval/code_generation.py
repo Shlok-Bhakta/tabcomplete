@@ -35,6 +35,12 @@ from .code_benchmark import BenchmarkCase, Prediction
 PREDICTION_PROTOCOL = "causal-context-v1"
 
 
+def returned_first_line(raw: str) -> str:
+    """Remove one LF/CRLF terminator only; preserve meaningful whitespace."""
+    line, newline, _ = raw.partition("\n")
+    return line[:-1] if newline and line.endswith("\r") else line
+
+
 def file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -148,10 +154,39 @@ class TransformersGenerationProvider:
 
     @observed_generation
     def generate_detailed(self, prompt: str, max_new_tokens: int) -> DetailedGeneration:
+        return self._generate(prompt, max_new_tokens, stop_first_line=False)
+
+    @observed_generation
+    def generate_line_detailed(self, prompt: str, max_new_tokens: int) -> DetailedGeneration:
+        """Opt-in causal-line diagnostic; ordinary generation is unchanged."""
+        return self._generate(prompt, max_new_tokens, stop_first_line=True)
+
+    def _generate(
+        self, prompt: str, max_new_tokens: int, *, stop_first_line: bool
+    ) -> DetailedGeneration:
         inputs = {
             name: tensor.to(self.device)
             for name, tensor in self.tokenizer(prompt, return_tensors="pt").items()
         }
+        extra: dict[str, Any] = {}
+        arrival: dict[str, float] = {}
+        started = time.perf_counter()
+        if stop_first_line:
+            from transformers import StoppingCriteria, StoppingCriteriaList
+
+            tokenizer = self.tokenizer
+            start_length = inputs["input_ids"].shape[1]
+
+            class FirstNewline(StoppingCriteria):
+                def __call__(self, input_ids, scores, **kwargs):
+                    generated = input_ids[0, start_length:]
+                    decoded = tokenizer.decode(generated, skip_special_tokens=True)
+                    elapsed = time.perf_counter() - started
+                    if generated.shape[0] in (1, 8, 16, 32):
+                        arrival.setdefault(str(generated.shape[0]), elapsed)
+                    return "\n" in decoded
+
+            extra["stopping_criteria"] = StoppingCriteriaList([FirstNewline()])
         with self.torch.inference_mode():
             output = self.model.generate(
                 **inputs,
@@ -159,17 +194,22 @@ class TransformersGenerationProvider:
                 do_sample=False,
                 use_cache=True,
                 pad_token_id=self.tokenizer.eos_token_id,
+                **extra,
             )
         tokens = output[0, inputs["input_ids"].shape[1] :]
         text = self.tokenizer.decode(tokens, skip_special_tokens=True)
         token_count = int(tokens.numel())
         finish_reason = "length" if token_count >= max_new_tokens else "eos_or_stop"
+        if stop_first_line and "\n" in text:
+            finish_reason = "newline"
+        self.last_line_token_arrivals = arrival if stop_first_line else {}
         return DetailedGeneration(
             str(text),
             token_count,
             finish_reason,
             input_tokens=int(inputs["input_ids"].numel()),
             usage_source="tokenizer",
+            first_output_ms=arrival.get("1", 0) * 1000 if "1" in arrival else None,
         )
 
 

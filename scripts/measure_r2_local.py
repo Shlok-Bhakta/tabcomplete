@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 import psutil
 
-from tinycomplete.eval.code_generation import DetailedGeneration
+from tinycomplete.eval.code_generation import DetailedGeneration, returned_first_line
 from tinycomplete.observability.context import RunContext
 from tinycomplete.observability.hooks import observed_generation
 from tinycomplete.observability.runs import run_scope
@@ -122,7 +122,7 @@ class NativeProvider:
         timings = final.get("timings", {})
         self.last = {
             "raw_response": text,
-            "returned_text": text.split("\n", 1)[0],
+            "returned_text": returned_first_line(text),
             "token_ids": tokens,
             "token_arrival_seconds": arrivals,
             "token_arrival_definition": (

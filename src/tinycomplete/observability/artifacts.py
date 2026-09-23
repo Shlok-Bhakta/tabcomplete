@@ -202,7 +202,7 @@ def _transfer_worker() -> None:
                     os.environ["TABCOMPLETE_ARTIFACT_UPLOAD_URL"].rstrip("/")
                     + "/internal/v1/artifacts/"
                     + digest,
-                    content=payload,
+                    content=payload if payload else iter([b""]),
                     headers={
                         "Authorization": "Bearer " + token,
                         "Content-Type": "text/plain; charset=utf-8",
@@ -244,7 +244,9 @@ def sync_artifacts(root: Path) -> dict[str, int]:
                     continue
                 client.put(
                     endpoint + "/internal/v1/artifacts/" + digest,
-                    content=payload,
+                    # An explicit zero-byte stream distinguishes an empty model
+                    # response from a missing body at the existing gateway.
+                    content=payload if payload else iter([b""]),
                     headers={"Authorization": "Bearer " + token},
                 ).raise_for_status()
                 result["accepted"] += 1

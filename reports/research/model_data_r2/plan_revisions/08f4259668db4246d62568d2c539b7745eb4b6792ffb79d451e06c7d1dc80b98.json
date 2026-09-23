@@ -1,8 +1,8 @@
 {
   "amendment": {
     "new_line_or_training_outcomes_inspected": false,
-    "previous_plan_sha256": "06b7469853165281c610b9b1abb902640c755103ca166ea915b2964ecfe68b72",
-    "reason": "The first GPU training attempt failed before the first consumed batch: the launcher flattened the baseline report but the production trainer requires a metrics object. Preserve that existing JSON contract and cover it with a CPU preflight test. Reuse the successfully measured P12 parent evaluation only after verifying its byte hash, model/tokenizer identity and identical MICRO files across arms. No pilot weights, data, schedule, output protocol, or selection rule changes; first attempt consumed zero training input tokens."
+    "previous_plan_sha256": "d3c1f379a4c502d33cf82006fa62c3b3bb64f8b755f944cc11a7298e97c31fb4",
+    "reason": "Restart-gate implementation bug identified from the actual R1 restart artifact before inspecting R2 restart outcomes: metadata_equal includes nondeterministic data_wait_seconds. Compare all scientific counters and next-block positions exactly, while excluding only observed I/O wait. Numerical tolerances and all model/data protocols remain unchanged. The already-running standard smoke/restart job retains its old gate and may stop before the full pilot; count its consumed time and tokens and reuse verified outputs if available."
   },
   "configuration": {
     "campaign_id": "tabcomplete-model-data-r2",
@@ -133,7 +133,6 @@
           "known_evaluation_repositories",
           "sealed_test_slice"
         ],
-        "line_ending": "remove_one_LF_or_CRLF_terminator_only_preserve_other_whitespace",
         "ordering": "sha256_seed_repository_path_content",
         "preserve": [
           "raw_response",
@@ -241,7 +240,7 @@
         "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
       }
     },
-    "plan_revision": 5,
+    "plan_revision": 3,
     "schema_version": 1,
     "seed": 928173,
     "selection": {
@@ -316,9 +315,9 @@
       "warmup_updates": 5
     }
   },
-  "configuration_sha256": "3672b1ef1ae981b6481cde202e6e40172270e27597650a6d845aeb81fe2d0d01",
+  "configuration_sha256": "ed74c33dc9dce6a9dc18fa2dfe5359e5e51d4b86eab7ff2acfc62032601c6fc9",
   "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
-  "frozen_at": "2026-09-23T00:53:18.972946+00:00",
+  "frozen_at": "2026-09-23T00:32:10.832117+00:00",
   "integration": {
     "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
     "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"

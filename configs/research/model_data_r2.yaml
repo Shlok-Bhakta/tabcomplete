@@ -1,6 +1,6 @@
 schema_version: 1
 campaign_id: tabcomplete-model-data-r2
-plan_revision: 2
+plan_revision: 5
 seed: 928173
 models:
   q35-base:
@@ -54,6 +54,7 @@ evaluation:
     decoding: greedy_first_newline_or_eos_96_token_fallback
     unavailable_incremental_stop: labeled_postprocess_full_96_token_cost
     preserve: [raw_response, returned_text, meaningful_whitespace]
+    line_ending: remove_one_LF_or_CRLF_terminator_only_preserve_other_whitespace
   likelihood:
     qwen_only: [fresh_r1_development_per_repository, historical_MICRO, general_text]
     cross_tokenizer_nll_comparison: forbidden

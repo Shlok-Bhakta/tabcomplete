@@ -361,9 +361,37 @@ def package_corpora():
     )
 
 
-def submit_pilot(arm):
-    reference = "shlokbhakta/tabcomplete-model-data-r2-" + arm.lower().replace("r2_", "")
-    state_path = REPORT / "pilots" / arm / "job.json"
+def collect_jobs():
+    for path in REPORT.rglob("job.json"):
+        state = json.loads(path.read_text())
+        status = command(["kaggle", "kernels", "status", state["reference"]]).strip()
+        state["last_status"] = status
+        if not any(s in status for s in ("RUNNING", "QUEUED")):
+            if "terminal_observed_at" not in state:
+                state["terminal_observed_at"] = now()
+                state["observed_wall_upper_bound_seconds"] = (
+                    datetime.fromisoformat(state["terminal_observed_at"])
+                    - datetime.fromisoformat(state["submitted_at"])
+                ).total_seconds()
+            state["terminal"] = True
+        write_json(path, state)
+        print(
+            json.dumps(
+                {
+                    "reference": state["reference"],
+                    "status": status,
+                    "wall_upper_bound_seconds": state.get("observed_wall_upper_bound_seconds"),
+                }
+            )
+        )
+
+
+def submit_pilot(arm, attempt=1):
+    suffix = "" if attempt == 1 else f"-attempt-{attempt}"
+    reference = "shlokbhakta/tabcomplete-model-data-r2-" + arm.lower().replace("r2_", "") + suffix
+    state_path = (
+        REPORT / "pilots" / arm / ("" if attempt == 1 else f"attempt-{attempt}") / "job.json"
+    )
     if state_path.exists():
         print(command(["kaggle", "kernels", "status", reference]).strip())
         return
@@ -379,18 +407,27 @@ def submit_pilot(arm):
     if quota["renewal"] != first["quota_before"]["renewal"]:
         raise RuntimeError("automatic consumption of a renewed allocation is forbidden")
     prior = [json.loads(p.read_text()) for p in REPORT.rglob("job.json")]
-    if sum(p["deadline_seconds"] for p in prior) + seconds > 36000:
+    if (
+        sum(p.get("observed_wall_upper_bound_seconds", p["deadline_seconds"]) for p in prior)
+        + seconds
+        > 36000
+    ):
         raise RuntimeError("aggregate conservative session reservations exceed ten hours")
     revision = command(["git", "rev-parse", "HEAD"]).strip()
     if command(["git", "status", "--porcelain", "--untracked-files=no"]).strip():
         raise RuntimeError("commit scientific code before submission")
-    folder = ARTIFACTS / "submissions" / arm
+    folder = ARTIFACTS / "submissions" / (arm + suffix)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "run.py").write_text(
         (ROOT / "kaggle/model_data_r2/run_pilot.py")
         .read_text()
         .replace("__CHECKOUT_COMMIT__", revision)
         .replace("__ARM__", arm)
+        .replace("__REUSE_RESTART__", "none")
+        .replace(
+            "__BASELINE_SHA__",
+            digest(ARTIFACTS / "standard-attempt1/model_data_r2_pilot/parent-fresh.json"),
+        )
     )
     write_json(
         folder / "kernel-metadata.json",
@@ -408,7 +445,7 @@ def submit_pilot(arm):
                 "shlokbhakta/tabcomplete-code-cpt-parents-r1",
                 "shlokbhakta/tabcomplete-model-data-r2-inputs",
             ],
-            "kernel_sources": [],
+            "kernel_sources": ["shlokbhakta/tabcomplete-model-data-r2-standard"],
             "competition_sources": [],
         },
     )
@@ -447,10 +484,13 @@ def main():
     parser.add_argument("--config", type=Path, default=ROOT / "configs/research/model_data_r2.yaml")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument(
-        "--stage", choices=["freeze", "baseline", "amend", "package", "pilot"], default="baseline"
+        "--stage",
+        choices=["freeze", "baseline", "amend", "package", "pilot", "collect"],
+        default="baseline",
     )
     parser.add_argument("--reason")
     parser.add_argument("--arm", choices=["R2_STANDARD", "R2_FILTERED"])
+    parser.add_argument("--attempt", type=int, default=1)
     args = parser.parse_args()
     if args.stage == "amend":
         if not args.execute:
@@ -458,13 +498,16 @@ def main():
         amend(args.config, args.reason)
         return
     plan = freeze(args.config)
+    if args.execute and args.stage == "collect":
+        collect_jobs()
+        return
     if args.execute and args.stage == "package":
         package_corpora()
         return
     if args.execute and args.stage == "pilot":
         if not args.arm:
             raise ValueError("pilot requires --arm")
-        submit_pilot(args.arm)
+        submit_pilot(args.arm, args.attempt)
         return
     if args.execute and args.stage == "baseline":
         submit_baseline(plan)
