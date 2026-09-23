@@ -45,6 +45,8 @@
     "artifacts/research/model_data_r2/evaluation/model_data_r2_evaluation/q35-p12/line/predictions.jsonl": "309fe1b03017da71d432646edf687f840c1be896f77e5bd6f8aaa73091cf2f68",
     "artifacts/research/model_data_r2/evaluation/model_data_r2_evaluation/q35-p12/line/predictions.jsonl.metadata.json": "38f436e2114852b5d2abd5743fff3020e3efa08c28284b09a738fce9a36a59d6",
     "artifacts/research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "artifacts/research/model_data_r2/local-inference/p12-q4-clean/measurements.jsonl": "fc8c6fa21f5876a446d275d1d2355d5426702877640c3ce3cc060db5c7eed828",
+    "artifacts/research/model_data_r2/local-inference/p12-q4-clean/metadata.json": "c36837c6edd3325bfa09a7a7e495021c77c38aef6ee0c4962a82b857d36a6145",
     "data/benchmarks/code_completion_v2.jsonl": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
     "reports/research/model_data_r2/baseline_evaluations/per-language.json": "c98d4ea50de0e9f61fdd337f80686d5bbb188ae435baee69add2f4f3e8ff7032",
     "reports/research/model_data_r2/failure_audit/pilot_strict_changes.json": "1730f2e3d495362005ba2fb84516679c882f16fa28c3f474304ca6059f877106",
@@ -60,7 +62,7 @@
   "known_incomplete": [
     "Granite FP16 line phase: one of 180 predictions before CUDA OOM",
     "Context job: no model completed all cases or 96-token generation",
-    "Crabcake 32k local timing grids are still running"
+    "Qwen2.5 and Granite Crabcake 32k local timing grids are still running"
   ],
   "local_exports_gitignored": true,
   "schema_version": 1,

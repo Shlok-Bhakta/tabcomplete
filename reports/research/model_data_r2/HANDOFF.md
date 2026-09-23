@@ -1,6 +1,6 @@
 # Model/data R2 campaign handoff
 
-## Continuation update, 2026-09-23 07:04 UTC
+## Continuation update, 2026-09-23 13:32 UTC
 
 The snapshot below is historical. The registered baseline, both pilots,
 evaluation and context Kaggle jobs are now terminal. No further GPU job is
@@ -20,16 +20,19 @@ test slice remains closed. The research direction is Qwen2.5-Coder as a smaller
 candidate for a future matched next-edit study, not a deployed replacement.
 
 The GPU campaign controller has exited after terminal status. The local grid
-controller remains PID 2508891 and its current P12 32k child is PID 2682550 as
-of this update. The cooperative pause request was removed after judging and
-verification; the child is running. Preserve the active grid and its 20 prompts
-with two repetitions per model/bucket. The 32k grids will take many more hours.
-The first P12 32k pair and one following request have completed. Check current
-PIDs and files before signalling any process.
+controller remains PID 2508891. P12's 32k bucket finished all 40 requests and
+passed the pair identity, no-truncation and zero-cache checks. Its median total
+request was 623.769 seconds, with 34,965–35,295 actual prompt tokens and
+8,096,616,448-byte peak server RSS. Qwen2.5's 32k child is PID 2939362 as of
+this update. Its first pair has finished, and the cooperative pause has been
+released. Preserve
+the active grid and its 20 prompts with two repetitions per model/bucket. The
+remaining 32k grids will take many more hours. Check current PIDs and files
+before signalling any process.
 
 Telemetry bundles are imported and reconciled; 1,492 evaluation and 164 context
 captured payloads synced, with a remote byte/hash check from each. The
-48-file `artifact_manifest.json` passed hash verification. Full Python
+50-file `artifact_manifest.json` passed hash verification. Full Python
 verification after the only source edit passed 227 tests, Ruff and mypy. The
 remaining independent work is the local 32k runtime grid, then refresh its
 summary and plots and report the actual final counts. The report is a verified

@@ -300,6 +300,81 @@
     "paired_outputs_identical": true
   },
   {
+    "model": "q35-p12",
+    "host": "crabcake",
+    "precision": "Q4_K_M",
+    "threads": 4,
+    "bucket": 32768,
+    "n": 40,
+    "prompts": 20,
+    "total_median_seconds": 623.7691686480248,
+    "total_p95_seconds": 645.0484177987906,
+    "returned_line_median_seconds": 618.2741841395036,
+    "returned_line_observed_n": 34,
+    "peak_resident_bytes": 8096616448,
+    "source": "artifacts/research/model_data_r2/local-inference/p12-q4-clean/measurements.jsonl",
+    "warm_context": false,
+    "actual_input_token_range": [
+      34965,
+      35295
+    ],
+    "token_arrival_seconds": {
+      "1": {
+        "n": 40,
+        "median": 617.0720284505223,
+        "p95": 638.3331336956151
+      },
+      "8": {
+        "n": 40,
+        "median": 618.6751214744872,
+        "p95": 639.8281078611996
+      },
+      "16": {
+        "n": 40,
+        "median": 620.3844532550138,
+        "p95": 641.536200381274
+      },
+      "32": {
+        "n": 40,
+        "median": 623.7652225460042,
+        "p95": 645.0440083516005
+      }
+    },
+    "complete_line_arrival_seconds": {
+      "n": 34,
+      "median": 618.2741841395036,
+      "p95": 638.0375509401056
+    },
+    "complete_line_definition": "Observed first newline/EOS during the fixed 32-token request; not a line-stopping latency experiment. Missing values stay unknown.",
+    "warm_resident_uncached_seconds": {
+      "n": 39,
+      "median": 623.8421472710324,
+      "p95": 645.0769473315916
+    },
+    "cold_process_first_seconds": {
+      "n": 1,
+      "median": 618.3102133600041,
+      "p95": 618.3102133600041
+    },
+    "model_load_to_health_seconds": {
+      "n": 1,
+      "median": 2.220614337013103,
+      "p95": 2.220614337013103
+    },
+    "prompt_processing_seconds": {
+      "n": 40,
+      "median": 616.6360255,
+      "p95": 638.21015015
+    },
+    "decode_seconds": {
+      "n": 40,
+      "median": 6.619466,
+      "p95": 6.89717205
+    },
+    "verified_uncached": true,
+    "paired_outputs_identical": true
+  },
+  {
     "model": "q25-coder",
     "host": "crabcake",
     "precision": "Q4_K_M",
