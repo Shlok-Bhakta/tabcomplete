@@ -609,6 +609,10 @@ def retrieve_pilot(arm, reference):
     report = REPORT / "pilots" / arm
     for name in ("summary.json", "verified-checkpoint-manifest.json", "run_config.json"):
         write_json(report / name, json.loads((directory / arm / name).read_text()))
+    write_json(
+        report / "final_micro_eval.json",
+        json.loads((directory / arm / "final/micro_eval.json").read_text()),
+    )
     if arm == "R2_STANDARD":
         verification = json.loads((directory / "restart-verification.json").read_text())
         assert verification["numerical_gate_passed"]

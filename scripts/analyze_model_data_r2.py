@@ -157,14 +157,57 @@ def reuse_verified_d12(root):
     )
 
 
+def compare_development(root, evaluation):
+    from tinycomplete.code_cpt.eval import paired_repository_bootstrap
+
+    parent_path = (
+        root
+        / "artifacts/research/model_data_r2/standard-attempt1/model_data_r2_pilot"
+        / "parent-fresh_repositories.json"
+    )
+    if not parent_path.exists():
+        return
+    parent = json.loads(parent_path.read_text())
+    parent_keys = {(row["repository"], row["language"]): row["tokens"] for row in parent}
+    for alias in ("R2_STANDARD", "R2_FILTERED", "q35-base"):
+        path = evaluation / alias / "fresh_repositories.json"
+        if not path.exists():
+            continue
+        candidate = json.loads(path.read_text())
+        keys = {(row["repository"], row["language"]): row["tokens"] for row in candidate}
+        if keys != parent_keys:
+            raise ValueError("development source boundaries/counts differ: " + alias)
+        comparison = paired_repository_bootstrap(parent, candidate, samples=2000, seed=271828)
+        comparison.update(
+            first="q35-p12",
+            second=alias,
+            parent_repository_sha256=hashlib.sha256(parent_path.read_bytes()).hexdigest(),
+            candidate_repository_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+            tokenizer_comparison="same pinned Qwen3.5 tokenizer only",
+            scored_boundaries="Provenance-attributed target tokens; no missing repos dropped",
+        )
+        save(
+            root
+            / "reports/research/model_data_r2/paired_comparisons"
+            / (alias + "-development-vs-p12.json"),
+            comparison,
+        )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--historical-predictions", type=Path)
     parser.add_argument("--reuse-d12", action="store_true")
+    parser.add_argument("--evaluation-directory", type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     report = root / "reports/research/model_data_r2"
     baseline = report / "baseline_evaluations"
+    compare_development(
+        root,
+        args.evaluation_directory
+        or (root / "artifacts/research/model_data_r2/evaluation/model_data_r2_evaluation"),
+    )
     if args.reuse_d12:
         reuse_verified_d12(root)
     if args.historical_predictions:

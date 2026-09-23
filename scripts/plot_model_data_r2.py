@@ -42,6 +42,36 @@ def finish(fig, name):
 
 def main():
     PLOTS.mkdir(parents=True, exist_ok=True)
+    trajectories = {}
+    parent_path = ARTIFACTS / "standard-attempt1/model_data_r2_pilot/parent-fresh.json"
+    if parent_path.exists():
+        parent_nll = json.loads(parent_path.read_text())["metrics"]["overall_code"]["nll"]
+        for arm in ("R2_STANDARD", "R2_FILTERED"):
+            folder = REPORT / "pilots" / arm
+            if not (folder / "completion.json").exists():
+                continue
+            summary = json.loads((folder / "summary.json").read_text())
+            final = json.loads((folder / "final_micro_eval.json").read_text())
+            points = (
+                [(0, parent_nll)]
+                + [
+                    (row["actual_training_tokens"], row["metrics"]["overall_code"]["nll"])
+                    for row in summary["validation_history"]
+                ]
+                + [(summary["additional_input_tokens"], final["overall_code"]["nll"])]
+            )
+            trajectories[arm] = points
+    if trajectories:
+        fig, ax = plt.subplots(figsize=(8, 4))
+        for arm, points in trajectories.items():
+            ax.plot([p[0] / 1e6 for p in points], [p[1] for p in points], "o-", label=arm)
+        ax.set(
+            xlabel="Additional training input tokens (millions)",
+            ylabel="Fresh development NLL",
+            title="P12 parent and registered data-policy pilots · same tokenizer",
+        )
+        ax.legend()
+        finish(fig, "pilot-nll-trajectories")
     causal = {}
     for path in sorted((REPORT / "baseline_evaluations").glob("*/results.jsonl")):
         records = rows(path)
