@@ -194,15 +194,86 @@ def compare_development(root, evaluation):
         )
 
 
+def audit_line_sample(root):
+    report = root / "reports/research/model_data_r2"
+    fixture = root / "artifacts/research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl"
+    cases = {r["id"]: r for r in map(json.loads, fixture.read_text().splitlines())}
+    selected = sorted(
+        cases, key=lambda key: hashlib.sha256(("928173:" + key).encode()).hexdigest()
+    )[:20]
+    save(
+        report / "failure_audit/line-sample-definition.json",
+        {
+            "suite_sha256": hashlib.sha256(fixture.read_bytes()).hexdigest(),
+            "ordering": "First 20 IDs by SHA256('928173:' + case_id), independent of outcomes",
+            "case_ids": selected,
+            "same_sample_for_every_model": True,
+            "passes_retained": True,
+            "semantic_oracle": "None: syntax validity does not establish semantic correctness",
+        },
+    )
+    for path in (report / "baseline_evaluations").glob("*/line/results.jsonl"):
+        predictions = rows(path)
+        if set(predictions) != set(cases):
+            raise ValueError("line audit fixture identities differ: " + path.parent.parent.name)
+        audit = []
+        for identifier in selected:
+            row = predictions[identifier]
+            if row["exact"]:
+                label, evidence = "pass", "Exact reference continuation; no quality failure."
+            elif row["syntax"] == "fail":
+                label, evidence = (
+                    "syntax error",
+                    "Insertion fails syntax; reference restoration passes.",
+                )
+            elif not row["returned_text"]:
+                label, evidence = (
+                    "premature stopping",
+                    "Empty returned line for a nonempty reference.",
+                )
+            elif row["fallback_cap"]:
+                label, evidence = "length truncation", "Recorded 96-token fallback limit reached."
+            else:
+                label, evidence = (
+                    "unresolved",
+                    (
+                        "Exact mismatch with valid syntax. No executable semantic oracle; "
+                        "a different valid continuation is not necessarily wrong logic."
+                    ),
+                )
+            case = cases[identifier]
+            audit.append(
+                {
+                    "case_id": identifier,
+                    "primary": label,
+                    "evidence": evidence,
+                    "left_context_tail": case["source_before"][-240:],
+                    "reference": row["reference"],
+                    "raw_response": row["raw_response"],
+                    "returned_text": row["returned_text"],
+                    "syntax": row["syntax"],
+                    "prefix_characters": row["longest_exact_character_prefix"],
+                    "finish_reason": row["finish_reason"],
+                    "official_score_repaired": False,
+                }
+            )
+        save(
+            report / "failure_audit" / (path.parent.parent.name + "-line-fixed-sample.json"), audit
+        )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--historical-predictions", type=Path)
     parser.add_argument("--reuse-d12", action="store_true")
     parser.add_argument("--evaluation-directory", type=Path)
+    parser.add_argument("--audit-line-sample", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     report = root / "reports/research/model_data_r2"
     baseline = report / "baseline_evaluations"
+    if args.audit_line_sample:
+        audit_line_sample(root)
     compare_development(
         root,
         args.evaluation_directory

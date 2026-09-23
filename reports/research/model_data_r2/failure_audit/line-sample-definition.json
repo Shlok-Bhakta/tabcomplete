@@ -1,0 +1,29 @@
+{
+  "case_ids": [
+    "python/ff34de73d4b5d2e3250d",
+    "go/0450b7530994492d6379",
+    "typescript/bfb86c82e4bbf260d3f7",
+    "java/cff9273a92d9dbc018f1",
+    "python/6b6a7626c9ae5e5e6410",
+    "cpp/39c10e0f73b3779040a7",
+    "go/7ad7ab02594b4e6f3b25",
+    "csharp/12a75121628a07c32bd7",
+    "rust/17e1721c54d09cda016e",
+    "javascript/37bbf184a149daf8c70b",
+    "rust/f5fbdbb4e45f98b0e3db",
+    "cpp/1b6c330b17f5ab58f9f9",
+    "rust/ec21b33956c4820d9dd4",
+    "javascript/0d8b4fe5d3cf0065096f",
+    "java/fa521db8cc2410585f28",
+    "c/5933295d9b8a41ee2f9d",
+    "go/85466ab541f399193a73",
+    "cpp/ba04039c1bee0b257976",
+    "go/1512e39a535686df740d",
+    "c/180e61a90e4bab9b5d56"
+  ],
+  "ordering": "first 20 IDs ordered by SHA256('928173:' + case_id), independent of outcomes",
+  "passes_retained": true,
+  "same_sample_for_every_model": true,
+  "semantic_oracle": "none; syntax and exact-source continuation are separate diagnostics",
+  "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
+}
