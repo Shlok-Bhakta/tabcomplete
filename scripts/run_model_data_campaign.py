@@ -386,6 +386,29 @@ def collect_jobs():
         )
 
 
+def package_baseline():
+    source = ARTIFACTS / "standard-attempt1/model_data_r2_pilot/parent-fresh.json"
+    report = json.loads(source.read_text())
+    assert report["checkpoint_identity"]["weight_files"][0]["sha256"] == (
+        "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43"
+    )
+    assert report["metrics"]["overall_code"]["tokens"] == 1031688
+    destination = ARTIFACTS / "private-dataset"
+    shutil.copy2(source, destination / "r2-parent-fresh.json")
+    shutil.copy2(
+        source.with_name("parent-fresh_repositories.json"),
+        destination / "r2-parent-fresh_repositories.json",
+    )
+    addition = {
+        "parent_report_sha256": digest(source),
+        "frozen_corpus_manifest_sha256": digest(destination / "input-manifest.json"),
+        "reason": "Transport previously verified parent metrics as explicit private dataset input",
+        "training_arrays_changed": False,
+    }
+    write_json(REPORT / "data_audit/baseline-input-addition.json", addition)
+    print(json.dumps(addition))
+
+
 def submit_pilot(arm, attempt=1):
     suffix = "" if attempt == 1 else f"-attempt-{attempt}"
     reference = "shlokbhakta/tabcomplete-model-data-r2-" + arm.lower().replace("r2_", "") + suffix
@@ -445,7 +468,7 @@ def submit_pilot(arm, attempt=1):
                 "shlokbhakta/tabcomplete-code-cpt-parents-r1",
                 "shlokbhakta/tabcomplete-model-data-r2-inputs",
             ],
-            "kernel_sources": ["shlokbhakta/tabcomplete-model-data-r2-standard"],
+            "kernel_sources": [],
             "competition_sources": [],
         },
     )
@@ -485,7 +508,7 @@ def main():
     parser.add_argument("--execute", action="store_true")
     parser.add_argument(
         "--stage",
-        choices=["freeze", "baseline", "amend", "package", "pilot", "collect"],
+        choices=["freeze", "baseline", "amend", "package", "package-baseline", "pilot", "collect"],
         default="baseline",
     )
     parser.add_argument("--reason")
@@ -498,6 +521,9 @@ def main():
         amend(args.config, args.reason)
         return
     plan = freeze(args.config)
+    if args.execute and args.stage == "package-baseline":
+        package_baseline()
+        return
     if args.execute and args.stage == "collect":
         collect_jobs()
         return

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from tinycomplete.eval.code_benchmark import load_suite
@@ -26,6 +27,9 @@ def main() -> None:
     source.add_argument("--model-path")
     source.add_argument("--server-url")
     parser.add_argument("--tokenizer-path")
+    parser.add_argument(
+        "--model-label", help="Optional stable display alias; weights remain hashed"
+    )
     parser.add_argument("--server-model", default="local-model")
     parser.add_argument(
         "--model-revision",
@@ -49,7 +53,7 @@ def main() -> None:
             parser.error("Transformers generation supports only --workers 1")
         model_path = Path(args.model_path).resolve()
         provider_name = "transformers"
-        model_source = str(model_path)
+        model_source = args.model_label or str(model_path)
         model_revision = model_weight_fingerprint(model_path)
         provider = TransformersGenerationProvider(
             str(model_path), device=args.device, tokenizer_path=args.tokenizer_path
@@ -78,6 +82,8 @@ def main() -> None:
         tokenizer_path = Path(args.tokenizer_path).resolve() if args.tokenizer_path else model_path
         metadata["tokenizer_source"] = str(tokenizer_path)
         metadata["tokenizer_sha256"] = file_sha256(tokenizer_path / "tokenizer.json")
+    if os.environ.get("TABCOMPLETE_CAMPAIGN_ID"):
+        metadata["campaign_id"] = os.environ["TABCOMPLETE_CAMPAIGN_ID"]
     predictions = generate_predictions(
         cases,
         provider,

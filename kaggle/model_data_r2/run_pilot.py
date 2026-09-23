@@ -258,11 +258,7 @@ def main():
     parent_eval = OUT / "parent-fresh.json"
     # Reuse the successful parent evaluation from the first session, not its
     # failed training launch. All per-repository and aggregate measurements remain intact.
-    baselines = list(
-        Path("/kaggle/input").glob(
-            "notebooks/shlokbhakta/tabcomplete-model-data-r2-standard/model_data_r2_pilot/parent-fresh.json"
-        )
-    )
+    baselines = list(Path("/kaggle/input").glob("**/r2-parent-fresh.json"))
     assert len(baselines) == 1 and sha(baselines[0]) == BASELINE_SHA
     parent_report = read(baselines[0])
     assert parent_report["checkpoint_identity"]["weight_files"][0]["sha256"] == P12_SHA
@@ -277,7 +273,7 @@ def main():
             assert sha(path) == sha(corpus / "micro" / path.name)
     shutil.copy2(baselines[0], parent_eval)
     shutil.copy2(
-        baselines[0].with_name("parent-fresh_repositories.json"),
+        baselines[0].with_name("r2-parent-fresh_repositories.json"),
         OUT / "parent-fresh_repositories.json",
     )
     baseline = OUT / "baseline.json"

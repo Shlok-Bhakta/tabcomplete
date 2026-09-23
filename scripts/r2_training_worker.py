@@ -11,6 +11,12 @@ if os.environ.get("TABCOMPLETE_OBSERVABILITY_MODE") == "offline":
     )
 
 from tinycomplete.code_cpt.train import main  # noqa: E402
+from tinycomplete.observability.bootstrap import current_runtime  # noqa: E402
+from tinycomplete.observability.spans import operation  # noqa: E402
 
 if __name__ == "__main__":
-    main()
+    try:
+        with operation("campaign.phase", attributes={"tabcomplete.phase": "training.worker"}):
+            main()
+    finally:
+        current_runtime().shutdown()
