@@ -150,6 +150,81 @@
     "paired_outputs_identical": true
   },
   {
+    "model": "q35-p12",
+    "host": "crabcake",
+    "precision": "Q4_K_M",
+    "threads": 4,
+    "bucket": 8192,
+    "n": 40,
+    "prompts": 20,
+    "total_median_seconds": 111.59160316098132,
+    "total_p95_seconds": 118.59575719531567,
+    "returned_line_median_seconds": 109.94871991453692,
+    "returned_line_observed_n": 36,
+    "peak_resident_bytes": 4160626688,
+    "source": "artifacts/research/model_data_r2/local-inference/p12-q4-clean/measurements.jsonl",
+    "warm_context": false,
+    "actual_input_token_range": [
+      8445,
+      8993
+    ],
+    "token_arrival_seconds": {
+      "1": {
+        "n": 40,
+        "median": 108.75968046850176,
+        "p95": 115.90123550562129
+      },
+      "8": {
+        "n": 38,
+        "median": 109.17989914902137,
+        "p95": 115.58908454284247
+      },
+      "16": {
+        "n": 38,
+        "median": 109.87957482549245,
+        "p95": 116.26192579482158
+      },
+      "32": {
+        "n": 38,
+        "median": 111.23383748851484,
+        "p95": 117.54642967506952
+      }
+    },
+    "complete_line_arrival_seconds": {
+      "n": 36,
+      "median": 109.94871991453692,
+      "p95": 117.20566293000593
+    },
+    "complete_line_definition": "Observed first newline/EOS during the fixed 32-token request; not a line-stopping latency experiment. Missing values stay unknown.",
+    "warm_resident_uncached_seconds": {
+      "n": 39,
+      "median": 111.61310200794833,
+      "p95": 118.61375651461421
+    },
+    "cold_process_first_seconds": {
+      "n": 1,
+      "median": 105.99324098497164,
+      "p95": 105.99324098497164
+    },
+    "model_load_to_health_seconds": {
+      "n": 1,
+      "median": 2.2203228790313005,
+      "p95": 2.2203228790313005
+    },
+    "prompt_processing_seconds": {
+      "n": 40,
+      "median": 108.6584445,
+      "p95": 115.84911515
+    },
+    "decode_seconds": {
+      "n": 40,
+      "median": 2.5277979999999998,
+      "p95": 3.0208672500000002
+    },
+    "verified_uncached": true,
+    "paired_outputs_identical": true
+  },
+  {
     "model": "q25-coder",
     "host": "crabcake",
     "precision": "Q4_K_M",

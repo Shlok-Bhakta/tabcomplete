@@ -7,22 +7,22 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": " # This makes a transaction, so it will mine a block",
+    "raw_response": " # Mine a block",
     "reference": "# mines an empty block",
-    "returned_text": " # This makes a transaction, so it will mine a block",
+    "returned_text": " # Mine a block",
     "syntax": "pass"
   },
   {
     "case_id": "go/0450b7530994492d6379",
-    "evidence": "Exact reference continuation; no quality failure.",
+    "evidence": "Exact mismatch with valid syntax. No executable semantic oracle; a different valid continuation is not necessarily wrong logic.",
     "finish_reason": "word",
     "left_context_tail": "package leetcode\n\nimport \"",
     "official_score_repaired": false,
-    "prefix_characters": 8,
-    "primary": "pass",
-    "raw_response": "testing\"",
+    "prefix_characters": 0,
+    "primary": "unresolved",
+    "raw_response": "fmt\"",
     "reference": "testing\"",
-    "returned_text": "testing\"",
+    "returned_text": "fmt\"",
     "syntax": "pass"
   },
   {
@@ -33,9 +33,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "syntax error",
-    "raw_response": ";",
+    "raw_response": "om 'app/core/store';",
     "reference": "rom '@ngrx/store';",
-    "returned_text": ";",
+    "returned_text": "om 'app/core/store';",
     "syntax": "fail"
   },
   {
@@ -46,9 +46,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "l.getInstance();",
+    "raw_response": "cal.getTime();",
     "reference": "ndar.getInstance();",
-    "returned_text": "l.getInstance();",
+    "returned_text": "cal.getTime();",
     "syntax": "pass"
   },
   {
@@ -59,35 +59,35 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "2.tail())",
+    "raw_response": "2018.head())",
     "reference": "data.tail(10))",
-    "returned_text": "2.tail())",
+    "returned_text": "2018.head())",
     "syntax": "pass"
   },
   {
     "case_id": "cpp/39c10e0f73b3779040a7",
-    "evidence": "Exact mismatch with valid syntax. No executable semantic oracle; a different valid continuation is not necessarily wrong logic.",
+    "evidence": "Empty returned line for a nonempty reference.",
     "finish_reason": "word",
     "left_context_tail": "   if (0 != strcmp(it->first.c_str(), defaultLampStateID.c_str())) {\n                presetsList.push_back(it->first);\n            }\n        }\n\n        /*\n         * Clear the Presets\n         */\n        presets.clear();\n        presetUpdat",
     "official_score_repaired": false,
-    "prefix_characters": 1,
-    "primary": "unresolved",
-    "raw_response": "ers.clear();",
+    "prefix_characters": 0,
+    "primary": "premature stopping",
+    "raw_response": "",
     "reference": "es.clear();",
-    "returned_text": "ers.clear();",
+    "returned_text": "",
     "syntax": "pass"
   },
   {
     "case_id": "go/7ad7ab02594b4e6f3b25",
-    "evidence": "Exact mismatch with valid syntax. No executable semantic oracle; a different valid continuation is not necessarily wrong logic.",
+    "evidence": "Empty returned line for a nonempty reference.",
     "finish_reason": "word",
     "left_context_tail": ", multiplicityAndLabels[i])\n\t\t}\n\t\tif label, ok = multiplicityAndLabels[i+1].(string); !ok {\n\t\t\treturn nil, fmt.Errorf(\"invalid label [%v]\", multiplicityAndLabels[i+1])\n\t\t}\n\t\tif id, err = s.AddEdgeLabel(multi, label); err != nil {\n\t\t\treturn ",
     "official_score_repaired": false,
     "prefix_characters": 0,
-    "primary": "unresolved",
-    "raw_response": "0, err",
+    "primary": "premature stopping",
+    "raw_response": "",
     "reference": "nil, err",
-    "returned_text": "0, err",
+    "returned_text": "",
     "syntax": "pass"
   },
   {
@@ -98,9 +98,9 @@
     "official_score_repaired": false,
     "prefix_characters": 3,
     "primary": "unresolved",
-    "raw_response": "() == typeof(Component))",
+    "raw_response": "() == typeof(Scene))",
     "reference": "() != e.Component.GetType())",
-    "returned_text": "() == typeof(Component))",
+    "returned_text": "() == typeof(Scene))",
     "syntax": "pass"
   },
   {
@@ -111,9 +111,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "1 * height * bpp);",
+    "raw_response": "4 * width * height * bpp);",
     "reference": "width * height * bpp);",
-    "returned_text": "1 * height * bpp);",
+    "returned_text": "4 * width * height * bpp);",
     "syntax": "pass"
   },
   {
@@ -137,9 +137,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": " // Regular comment",
+    "raw_response": " // This is a comment",
     "reference": "// Inline comment",
-    "returned_text": " // Regular comment",
+    "returned_text": " // This is a comment",
     "syntax": "pass"
   },
   {
@@ -150,9 +150,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "({end, wt});",
+    "raw_response": "t << \" \" << pathLens[i] << std::endl;",
     "reference": "back(Edge(end, wt));",
-    "returned_text": "({end, wt});",
+    "returned_text": "t << \" \" << pathLens[i] << std::endl;",
     "syntax": "pass"
   },
   {
@@ -161,38 +161,38 @@
     "finish_reason": "word",
     "left_context_tail": "tr = \"vf_intent_entry\";\npub const INTENT_ENTRY_TYPE: &str = \"vf_intent\";\npub const INTENT_SATISFIEDBY_LINK_TYPE: &str = \"vf_intent_satisfied_by\";\npub const INTENT_SATISFIEDBY_LINK_TAG: &str = \"satisfied_by\";\npub const INTENT_INPUT_OF_LINK_T",
     "official_score_repaired": false,
-    "prefix_characters": 0,
+    "prefix_characters": 1,
     "primary": "unresolved",
-    "raw_response": "G_TYPE: &str = \"vf_intent_input_of_link\";",
+    "raw_response": "Y: &str = \"vf_intent_input_of\";",
     "reference": "YPE: &str = \"vf_intent_input_of\";",
-    "returned_text": "G_TYPE: &str = \"vf_intent_input_of_link\";",
+    "returned_text": "Y: &str = \"vf_intent_input_of\";",
     "syntax": "pass"
   },
   {
     "case_id": "javascript/0d8b4fe5d3cf0065096f",
-    "evidence": "Exact mismatch with valid syntax. No executable semantic oracle; a different valid continuation is not necessarily wrong logic.",
+    "evidence": "Insertion fails syntax; reference restoration passes.",
     "finish_reason": "word",
     "left_context_tail": "= 'fixed';\n        },\n        setTitle: function (title) {\n            this.emit('setTitle', title);\n            $(this.titleElem).text(title);\n            return this;\n        },\n        getTitle: function () {\n            return $(this.ti",
     "official_score_repaired": false,
     "prefix_characters": 0,
-    "primary": "unresolved",
-    "raw_response": "Title).text();",
+    "primary": "syntax error",
+    "raw_response": "    return HeaderBar;",
     "reference": "tleElem).text();",
-    "returned_text": "Title).text();",
-    "syntax": "pass"
+    "returned_text": "    return HeaderBar;",
+    "syntax": "fail"
   },
   {
     "case_id": "java/fa521db8cc2410585f28",
-    "evidence": "Exact mismatch with valid syntax. No executable semantic oracle; a different valid continuation is not necessarily wrong logic.",
+    "evidence": "Insertion fails syntax; reference restoration passes.",
     "finish_reason": "word",
     "left_context_tail": "nt Scope Definitions (DTDs)\")\r\n    public List<DTD> getDTDs() {\r\n        return dtds;\r\n    }\r\n\r\n    /**\r\n     * Gets the list of XML namespaces.\r\n     * \r\n     * @return list of XML namespaces\r\n     */\r\n    @ReportableProperty(order = 5, va",
     "official_score_repaired": false,
     "prefix_characters": 0,
-    "primary": "unresolved",
-    "raw_response": "ule = \"List of XML namespaces\")\r",
+    "primary": "syntax error",
+    "raw_response": "tityReferences() {\r",
     "reference": "lue = \"XML Namespace Information\")",
-    "returned_text": "ule = \"List of XML namespaces\")",
-    "syntax": "pass"
+    "returned_text": "tityReferences() {",
+    "syntax": "fail"
   },
   {
     "case_id": "c/5933295d9b8a41ee2f9d",
@@ -200,11 +200,11 @@
     "finish_reason": "word",
     "left_context_tail": "data type element</param>\nstatic inline void print_array(\n    void* data, \n    size_t sizeOfTheType, \n    size_t p_start, \n    size_t p_numOfElements,\n    _GenericPrintArrayFunction printFunction)\n{\n    if ((p_numOfElements < p_start) || (p",
     "official_score_repaired": false,
-    "prefix_characters": 7,
+    "prefix_characters": 1,
     "primary": "unresolved",
-    "raw_response": "_start > sizeOfTheType))",
+    "raw_response": "_numOfElements > sizeOfTheType))",
     "reference": "_start < 0) || (p_numOfElements <= 0))",
-    "returned_text": "_start > sizeOfTheType))",
+    "returned_text": "_numOfElements > sizeOfTheType))",
     "syntax": "pass"
   },
   {
@@ -213,11 +213,11 @@
     "finish_reason": "word",
     "left_context_tail": "[]struct {\n\t\tname string\n\t\targs args\n\t\twant bool\n\t}{\n\t\t{\n\t\t\t\"test-1\",\n\t\t\targs{\"aa\", \"a\"},\n\t\t\tfalse,\n\t\t},\n\t\t{\n\t\t\t\"test-2\",\n\t\t\targs{\"aa\", \"a*\"},\n\t\t\ttrue,\n\t\t},\n\t\t{\n\t\t\t\"test-3\",\n\t\t\targs{\"ab\", \".*\"},\n\t\t\ttrue,\n\t\t},\n\t\t{\n\t\t\t\"test-4\",\n\t\t\targs{\"aab\",",
     "official_score_repaired": false,
-    "prefix_characters": 2,
+    "prefix_characters": 7,
     "primary": "unresolved",
-    "raw_response": " \"a*\"},",
+    "raw_response": " \"c*a*b\"},",
     "reference": " \"c*a*b*\"},",
-    "returned_text": " \"a*\"},",
+    "returned_text": " \"c*a*b\"},",
     "syntax": "pass"
   },
   {
@@ -228,9 +228,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "2 * ans[i] << endl;",
+    "raw_response": " ans[i] << \" \";",
     "reference": "ans[i] << (i == ans.size() - 1 ? '\\n' : ' ');",
-    "returned_text": "2 * ans[i] << endl;",
+    "returned_text": " ans[i] << \" \";",
     "syntax": "pass"
   },
   {
@@ -241,9 +241,9 @@
     "official_score_repaired": false,
     "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "100; i++ {",
+    "raw_response": "10; i++ {",
     "reference": "len(hosts); i++ {",
-    "returned_text": "100; i++ {",
+    "returned_text": "10; i++ {",
     "syntax": "pass"
   },
   {
@@ -252,11 +252,11 @@
     "finish_reason": "word",
     "left_context_tail": " /*\n   * Mandatory - Access Point Name\n   */\n  msg->accesspointname = apn;\n  /*\n   * Mandatory - PDN address\n   */\n  OAILOG_DEBUG(LOG_NAS_ESM, \"ESM-SAP   - pdn_type is %u\\n\", pdn_type);\n  msg->pdnaddress.pdntypevalue = pdn_type;\n  OAILOG_ST",
     "official_score_repaired": false,
-    "prefix_characters": 1,
+    "prefix_characters": 0,
     "primary": "unresolved",
-    "raw_response": "RICT(",
+    "raw_response": "UB(",
     "reference": "REAM_HEX(",
-    "returned_text": "RICT(",
+    "returned_text": "UB(",
     "syntax": "pass"
   }
 ]

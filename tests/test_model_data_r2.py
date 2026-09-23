@@ -19,7 +19,25 @@ def test_line_comparisons_require_identical_fixture_hashes(tmp_path):
             json.dumps({"total": 180, "suite_sha256": digest, "metadata": {}})
         )
         (folder / "results.jsonl").write_text(
-            "".join(json.dumps({"case_id": str(i), "exact": True}) + "\n" for i in range(180))
+            "".join(
+                json.dumps(
+                    {
+                        "case_id": str(i),
+                        "exact": True,
+                        "syntax": "pass",
+                        "finish_reason": "eos",
+                        "fallback_cap": False,
+                        "latency_seconds": 1.0,
+                        "longest_exact_character_prefix": 1,
+                        "returned_characters": 1,
+                        "returned_bytes": 1,
+                        "output_tokens": 1,
+                        "language": "python",
+                    }
+                )
+                + "\n"
+                for i in range(180)
+            )
         )
     with pytest.raises(ValueError, match="different line fixtures"):
         helper["compare_lines"](baseline, tmp_path)

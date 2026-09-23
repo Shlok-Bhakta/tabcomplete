@@ -1,0 +1,66 @@
+[
+  {
+    "name": "tests-final",
+    "command": [
+      "uv",
+      "run",
+      "--no-sync",
+      "pytest",
+      "-q"
+    ],
+    "exit_code": 0,
+    "wall_seconds": 25.614147186279297,
+    "log": "artifacts/research/model_data_r2/tests-final.log"
+  },
+  {
+    "name": "lint-final",
+    "command": [
+      "uv",
+      "run",
+      "--no-sync",
+      "ruff",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "wall_seconds": 0.03047943115234375,
+    "log": "artifacts/research/model_data_r2/lint-final.log"
+  },
+  {
+    "name": "mypy-final",
+    "command": [
+      "uv",
+      "run",
+      "--no-sync",
+      "mypy",
+      "src",
+      "scripts"
+    ],
+    "exit_code": 0,
+    "wall_seconds": 1.9128057956695557,
+    "log": "artifacts/research/model_data_r2/mypy-final.log"
+  },
+  {
+    "name": "evaluate-p12-q4",
+    "command": [
+      "uv",
+      "run",
+      "--no-sync",
+      "python",
+      "scripts/evaluate_code_benchmark.py",
+      "--suite",
+      "data/benchmarks/code_completion_v2.jsonl",
+      "--predictions",
+      "artifacts/research/model_data_r2/quantized-quality/p12-q4/causal-context-v1/predictions.jsonl",
+      "--backend",
+      "container",
+      "--workers",
+      "4",
+      "--output-dir",
+      "reports/research/model_data_r2/baseline_evaluations/q35-p12-q4"
+    ],
+    "exit_code": 0,
+    "wall_seconds": 129.825923204422,
+    "log": "artifacts/research/model_data_r2/evaluate-p12-q4.log"
+  }
+]

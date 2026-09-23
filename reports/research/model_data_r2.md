@@ -17,8 +17,8 @@ were executed on Crabcake in the existing network-disabled containers.
 | P12, Transformers FP16 / T4 | 9/200 | Pending | Not measured by non-streaming baseline | Not measured as host RSS | Short causal fixtures | Executed |
 | Qwen2.5-Coder, Transformers FP16 / T4 | 11/200 | Pending | Not measured by non-streaming baseline | Not measured as host RSS | Short causal fixtures | Executed |
 | D12, Transformers FP16 / T4 | 5/200 | Pending | Unknown | Unknown | Historical short controls only | Verified historical strict-suite reuse |
-| Qwen2.5-Coder, native Q4_K_M / Kiwi CPU | 7/200 | Corrected fixture pending | Saved per case; awaiting paired model analysis | 1.405 GiB in separate Crabcake 2k grid | Line/strict fixtures; not a long-context intelligence claim | Strict executed; old line fixture superseded |
-| P12, native Q4_K_M | 200 predictions saved; judging pending | 19/180 on corrected fixture | 30/40 line-ready observations in Crabcake 2k grid | 3.033 GiB peak server RSS in that grid | 1,990–2,187 actual input tokens | Deployment grid partly executed |
+| Qwen2.5-Coder, native Q4_K_M / Kiwi CPU | 7/200 | 18/180 | 2.641 s median across 180 line cases, Kiwi two-thread CPU | 1.405 GiB in separate Crabcake 2k grid | Line/strict fixtures; not a long-context intelligence claim | Strict and corrected line executed |
+| P12, native Q4_K_M / Kiwi CPU | 200 predictions saved; judging pending | 19/180 | 3.694 s median across 180 line cases, Kiwi two-thread CPU | 3.033 GiB in separate Crabcake 2k grid | Crabcake 2k and 8k timing grids executed | Quality partly judged |
 | Base Qwen3.5 | Pending | Pending | Unknown | Unknown | Pending bounded context run | Not yet executed in R2 |
 | Granite H-350M, native Q4_K_M / Crabcake CPU | Pending | Pending | Saved in 2k grid; quality pending | 1.981 GiB peak server RSS in 2k grid | 1,171–2,005 actual input tokens | Native runtime executed; capability evaluation pending |
 
@@ -69,6 +69,17 @@ The intermediate correction missed generated-tool signatures; its partial P12
 run was cancelled before inspecting its quality. Final exclusions include ANTLR,
 gRPC, JNAerator, AutoRust and Swagger signatures, generated suffixes, documentation
 indexes and embedded byte arrays. They are heuristics, not perfect provenance.
+
+On that corrected fixture, P12 Q4 and Qwen2.5 Q4 share 15 exact continuations;
+Qwen2.5 gains three and loses four. Its difference is −0.56 percentage points,
+paired-bootstrap 95% interval [−3.33, +2.22] points, exact paired p=1.0.
+Syntax-valid insertions are 151/180 and 136/180 respectively. These are not
+functional pass counts. The fixed 20-case source-hash-selected audit contains
+underdetermined imports, names, constants and inline-comment remainders; exact
+mismatch alone does not establish wrong logic. Empty responses and syntax
+failures are labeled separately. The quality-run latency values in the table
+are single observations per variable-length source case, not the repeated,
+controlled runtime grid or evidence of a large speed advantage.
 
 ## Frozen data experiment
 
@@ -192,10 +203,17 @@ Baseline run IDs:
   `43cd20c45fb303c3470d655b8abc072e`. The gateway returned its five real progress
   records through update 8, marked historical/offline. Its missing final restart
   state is reported as a storage failure, not model-quality evidence.
+- Full standard pilot: `r2-r2_standard-R2_STANDARD`. Its rank-zero import yielded
+  412 distinct spans, including 153 progress records, three validation records,
+  and a completed terminal record. The last progress record matches 5,013,504
+  input tokens and 153 successful updates. All records are historical/offline;
+  the failure query was empty. Four additional rank-local model/checkpoint spans
+  were imported separately, without duplicating global training progress.
 
-Repository tests passed 218/218 before the latest corrections; the later targeted
-checkpoint, telemetry and sandbox set passed 44/44. Full lint and type checks
-have passed during the campaign. Final checks and a final commit remain pending.
+Repository tests passed 225/225 in 24.04 seconds at this checkpoint. Full lint
+passed, and mypy reported no issues across 106 source files. Subsequent analysis
+changes also passed all 16 R2-specific tests. Final checks and the final campaign
+commit will be repeated after collection and analysis finish.
 
 The next training recommendation and promotion decision remain open until the
 registered pilots, paired evaluations and failure audits finish. The T480s was

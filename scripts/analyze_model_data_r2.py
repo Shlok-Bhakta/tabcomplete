@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import shutil
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -67,6 +68,48 @@ def compare_lines(baseline, report):
         if len(records) != 180 or metadata["total"] != 180:
             raise ValueError("incomplete line evaluation")
         available[path.parent.parent.name] = (records, metadata)
+
+    def distribution(values):
+        values = list(values)
+        return {
+            "n": len(values),
+            "mean": float(np.mean(values)),
+            "median": float(np.median(values)),
+            "p95": float(np.quantile(values, 0.95)),
+        }
+
+    descriptive = {}
+    for alias, (records, metadata) in available.items():
+        values = list(records.values())
+        descriptive[alias] = {
+            "cases": len(values),
+            "suite_sha256": metadata["suite_sha256"],
+            "exact": sum(row["exact"] for row in values),
+            "syntax_pass": sum(row["syntax"] == "pass" for row in values),
+            "finish_reasons": dict(Counter(row["finish_reason"] for row in values)),
+            "fallback_cap_count": sum(row["fallback_cap"] for row in values),
+            "returned_line_seconds": distribution(row["latency_seconds"] for row in values),
+            "exact_character_prefix": distribution(
+                row["longest_exact_character_prefix"] for row in values
+            ),
+            "returned_characters": distribution(row["returned_characters"] for row in values),
+            "returned_bytes": distribution(row["returned_bytes"] for row in values),
+            "output_tokens": distribution(row["output_tokens"] for row in values),
+            "per_language": {
+                language: {
+                    "cases": sum(row["language"] == language for row in values),
+                    "exact": sum(row["language"] == language and row["exact"] for row in values),
+                }
+                for language in sorted({row["language"] for row in values})
+            },
+            "measurement_caveat": (
+                "One quality request per source case, not paired timing repetitions. "
+                "See source metadata for device, runtime, precision and stopping."
+            ),
+            "metadata": metadata["metadata"],
+        }
+    if descriptive:
+        save(report / "baseline_evaluations/line-descriptive.json", descriptive)
     for alias, (records, metadata) in available.items():
         controls = ["q35-p12"]
         if alias.endswith("-q4"):

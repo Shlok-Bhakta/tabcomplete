@@ -21,9 +21,9 @@
     "go/1512e39a535686df740d",
     "c/180e61a90e4bab9b5d56"
   ],
-  "ordering": "first 20 IDs ordered by SHA256('928173:' + case_id), independent of outcomes",
+  "ordering": "First 20 IDs by SHA256('928173:' + case_id), independent of outcomes",
   "passes_retained": true,
   "same_sample_for_every_model": true,
-  "semantic_oracle": "none; syntax and exact-source continuation are separate diagnostics",
+  "semantic_oracle": "None: syntax validity does not establish semantic correctness",
   "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
 }

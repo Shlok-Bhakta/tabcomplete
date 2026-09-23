@@ -1,0 +1,219 @@
+{
+  "q25-coder-q4": {
+    "cases": 180,
+    "exact": 18,
+    "exact_character_prefix": {
+      "mean": 2.672222222222222,
+      "median": 0.0,
+      "n": 180,
+      "p95": 17.0
+    },
+    "fallback_cap_count": 3,
+    "finish_reasons": {
+      "eos": 1,
+      "limit": 3,
+      "word": 176
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "concurrency": 1,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "hardware": "Kiwi AMD Ryzen 3 PRO 2200GE CPU, 2 threads, Q4_K_M",
+      "max_new_tokens": 96,
+      "model_revision": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30",
+      "model_source": "q25-coder-q4",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-c4421d33-9ff4-4b41-bf75-3da5f15916f2"
+      },
+      "plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
+      "precision": "Q4_K_M",
+      "protocol": "causal_line_v1",
+      "provider": "llama.cpp-native",
+      "raw_response_definition": "exact native API text; native stop string is omitted",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "schema_version": 1,
+      "stopping": "native first newline or EOS, ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "threads": 2,
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 6.722222222222222,
+      "median": 4.0,
+      "n": 180,
+      "p95": 14.0
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 3
+      },
+      "java": {
+        "cases": 20,
+        "exact": 3
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 3
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 18.205555555555556,
+      "median": 13.0,
+      "n": 180,
+      "p95": 39.099999999999966
+    },
+    "returned_characters": {
+      "mean": 18.205555555555556,
+      "median": 13.0,
+      "n": 180,
+      "p95": 39.099999999999966
+    },
+    "returned_line_seconds": {
+      "mean": 8.06948606479305,
+      "median": 2.6407317830307875,
+      "n": 180,
+      "p95": 38.54139750486062
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 136
+  },
+  "q35-p12-q4": {
+    "cases": 180,
+    "exact": 19,
+    "exact_character_prefix": {
+      "mean": 2.888888888888889,
+      "median": 0.0,
+      "n": 180,
+      "p95": 19.0
+    },
+    "fallback_cap_count": 5,
+    "finish_reasons": {
+      "limit": 5,
+      "word": 175
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "concurrency": 1,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "hardware": "Kiwi AMD Ryzen 3 PRO 2200GE CPU, 2 threads, Q4_K_M",
+      "max_new_tokens": 96,
+      "model_revision": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24",
+      "model_source": "q35-p12-q4",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-e8a1e2de-5158-4333-8c54-92d65a212918"
+      },
+      "plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
+      "precision": "Q4_K_M",
+      "protocol": "causal_line_v1",
+      "provider": "llama.cpp-native",
+      "raw_response_definition": "exact native API text; native stop string is omitted",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "schema_version": 1,
+      "stopping": "native first newline or EOS, ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "threads": 2,
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 9.011111111111111,
+      "median": 5.0,
+      "n": 180,
+      "p95": 17.099999999999966
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 5
+      },
+      "java": {
+        "cases": 20,
+        "exact": 2
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 3
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 27.42222222222222,
+      "median": 14.0,
+      "n": 180,
+      "p95": 51.04999999999998
+    },
+    "returned_characters": {
+      "mean": 27.42222222222222,
+      "median": 14.0,
+      "n": 180,
+      "p95": 51.04999999999998
+    },
+    "returned_line_seconds": {
+      "mean": 9.501792780496503,
+      "median": 3.6936309564916883,
+      "n": 180,
+      "p95": 45.39480768379289
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 151
+  }
+}
