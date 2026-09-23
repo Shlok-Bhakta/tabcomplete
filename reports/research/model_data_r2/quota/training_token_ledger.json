@@ -22,9 +22,9 @@
       "status": "verified"
     },
     "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4": {
-      "evidence": "Bounded worker absolute update limits, including smoke and restart work",
+      "evidence": "Summed per-process additional input tokens; verified complete checkpoints",
       "input_tokens": 5537792,
-      "status": "reserved_upper_bound"
+      "status": "verified"
     }
   },
   "limit_input_tokens": 12000000,

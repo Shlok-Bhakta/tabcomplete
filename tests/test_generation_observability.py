@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -88,6 +89,10 @@ def test_prediction_runner_records_threaded_model_calls_and_artifacts(tmp_path: 
         "max_new_tokens": 8,
         "workers": 2,
         "decoding": {"do_sample": False, "temperature": 0},
+        "hardware": "fixture-cpu",
+        "tokenizer_sha256": "tokenizer-123",
+        "runtime_revision": "runtime-123",
+        "precision": "fp32",
     }
     with runtime.activate():
         predictions = generate_predictions(
@@ -109,6 +114,12 @@ def test_prediction_runner_records_threaded_model_calls_and_artifacts(tmp_path: 
     assert all(span.attributes["tabcomplete.usage.source"] == "tokenizer" for span in model_spans)
     assert all("tabcomplete.timing.first_output_ms" not in span.attributes for span in model_spans)
     for span in model_spans:
+        assert span.attributes["tabcomplete.suite.sha256"] == "suite-smoke"
+        assert json.loads(span.attributes["tabcomplete.decoding"]) == metadata["decoding"]
+        assert span.attributes["tabcomplete.device"] == "fixture-cpu"
+        assert span.attributes["tabcomplete.tokenizer.revision"] == "tokenizer-123"
+        assert span.attributes["tabcomplete.runtime.revision"] == "runtime-123"
+        assert span.attributes["tabcomplete.precision"] == "fp32"
         assert span.attributes["tabcomplete.artifact.input.status"] == "captured"
         assert span.attributes["tabcomplete.artifact.output.status"] == "captured"
     assert {span.attributes["tabcomplete.case_id"] for span in case_spans} == {"case-0", "case-1"}

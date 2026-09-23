@@ -357,8 +357,23 @@ def generate_predictions(
                 "gen_ai.request.max_tokens": max_new_tokens,
                 "tabcomplete.model.revision": effective_metadata.get("model_revision", "unknown"),
                 "tabcomplete.protocol": effective_metadata.get("protocol", "unknown"),
+                "tabcomplete.suite.sha256": effective_metadata.get("suite_sha256", "unknown"),
+                "tabcomplete.decoding": json.dumps(
+                    effective_metadata.get("decoding", {}), sort_keys=True
+                ),
                 **input_artifact.attributes("input"),
             }
+            raw_inventory = effective_metadata.get("model_inventory")
+            inventory = raw_inventory if isinstance(raw_inventory, dict) else {}
+            for key, value in {
+                "tabcomplete.device": effective_metadata.get("hardware") or inventory.get("device"),
+                "tabcomplete.tokenizer.revision": effective_metadata.get("tokenizer_sha256"),
+                "tabcomplete.runtime.revision": effective_metadata.get("runtime_revision"),
+                "tabcomplete.precision": effective_metadata.get("precision")
+                or inventory.get("precision"),
+            }.items():
+                if value is not None:
+                    attributes[key] = str(value)
             with operation("request.start", attributes=attributes):
                 pass
             with operation("model.generate", attributes=attributes) as model_span:
