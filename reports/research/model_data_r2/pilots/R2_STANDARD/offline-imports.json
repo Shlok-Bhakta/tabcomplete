@@ -1,0 +1,58 @@
+[
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/R2_STANDARD/telemetry-rank-0.jsonl",
+    "bundle_sha256": "bdc5b5d086576a95f4249e6d01e5ee6678d8ba349ae2a695e7cbc421a045b572",
+    "duplicate": true,
+    "imported_spans": 0,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/R2_STANDARD/telemetry-rank-1.jsonl",
+    "bundle_sha256": "eb8c87cffd37bcea3b1905d24ba043db87e20e9ad1088369b64b1f936155e09f",
+    "duplicate": true,
+    "imported_spans": 0,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/continuous/telemetry-rank-0.jsonl",
+    "bundle_sha256": "fe0c622532d402d28e4cda03b6e9eb030f9e11f6393739331cd532d11d129983",
+    "duplicate": false,
+    "imported_spans": 48,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/continuous/telemetry-rank-1.jsonl",
+    "bundle_sha256": "1bbbde2351611690196ca3f65b9d9ec35973bd949c21e61d5fd81e50c926c1a8",
+    "duplicate": false,
+    "imported_spans": 3,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/resumed/telemetry-rank-0.jsonl",
+    "bundle_sha256": "757111d7e7fa8cd3e7ba5946302a1a53351cebb2567ef7ec39e3b745937aa40e",
+    "duplicate": false,
+    "imported_spans": 24,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/resumed/telemetry-rank-1.jsonl",
+    "bundle_sha256": "4a203e76c794184b2df2ea3e45db6756ac41e739d35e6b8d2cba94527a1df910",
+    "duplicate": false,
+    "imported_spans": 4,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/smoke/telemetry-rank-0.jsonl",
+    "bundle_sha256": "156d4c101b84f6e71034a128f0a048ac9bc7f75b888b55dbb8e0a2870de86d68",
+    "duplicate": false,
+    "imported_spans": 59,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-standard-attempt-4/model_data_r2_pilot/smoke/telemetry-rank-1.jsonl",
+    "bundle_sha256": "bd1034c4e228a78a79af38bb2a9c941112166199e0d42c7a5625df9b1dca7ff2",
+    "duplicate": false,
+    "imported_spans": 4,
+    "schema_version": 1
+  }
+]

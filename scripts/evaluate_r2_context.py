@@ -20,6 +20,29 @@ def save(path, value):
     path.write_text(json.dumps(value, sort_keys=True, indent=2) + "\n")
 
 
+def actual_context_geometry(tokenizer, case):
+    """Fixture token positions belong to its builder, not to every model's tokenizer."""
+    prompt = case["prompt"]
+    count = len(tokenizer.encode(prompt, add_special_tokens=False))
+    marker = '<file path="repository/contract.py">\n'
+    position = (
+        len(tokenizer.encode(prompt[: prompt.index(marker)], add_special_tokens=False))
+        if marker in prompt
+        else None
+    )
+    return {
+        "fixture_prompt_tokens": case["prompt_tokens"],
+        "fixture_dependency_token_position": case["dependency_token_position"],
+        "fixture_dependency_distance_tokens": case["dependency_distance_tokens"],
+        "actual_prompt_tokens": count,
+        "actual_dependency_token_position": position,
+        "actual_dependency_distance_tokens": count - position if position is not None else None,
+        "distance_definition": (
+            "Prompt token count minus tokenized prefix before dependency file marker"
+        ),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--suite", type=Path, required=True)
@@ -100,7 +123,8 @@ def main():
             for case in selected:
                 if time.monotonic() - started > args.seconds - 180:
                     break
-                actual_tokens = len(tokenizer.encode(case["prompt"], add_special_tokens=False))
+                geometry = actual_context_geometry(tokenizer, case)
+                actual_tokens = geometry["actual_prompt_tokens"]
                 limit = getattr(model.config, "max_position_embeddings", 262144)
                 if actual_tokens + 96 > limit:
                     save(
@@ -121,10 +145,20 @@ def main():
                     distractor = score_target_continuation(
                         model, tokenizer, case["prompt"], case["distractor"], torch.device("cuda")
                     )
-                row = {k: v for k, v in case.items() if k != "prompt"}
+                row = {
+                    k: v
+                    for k, v in case.items()
+                    if k
+                    not in {
+                        "prompt",
+                        "prompt_tokens",
+                        "dependency_token_position",
+                        "dependency_distance_tokens",
+                    }
+                }
                 row.update(
                     model=args.alias,
-                    actual_prompt_tokens=actual_tokens,
+                    **geometry,
                     correct=correct,
                     distractor_score=distractor,
                     correct_preferred=correct["target_nll_mean"] < distractor["target_nll_mean"],

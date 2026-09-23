@@ -4,6 +4,36 @@ from pathlib import Path
 import yaml
 
 
+def test_context_geometry_uses_candidate_tokenizer_not_fixture_counts():
+    import runpy
+
+    helper = runpy.run_path(str(Path(__file__).parents[1] / "scripts/evaluate_r2_context.py"))
+
+    class CharacterTokenizer:
+        def encode(self, text, *, add_special_tokens):
+            assert not add_special_tokens
+            return list(text)
+
+    case = {
+        "prompt": 'prefix\n<file path="repository/contract.py">\nx=1\n</file>\n',
+        "prompt_tokens": 7,
+        "dependency_token_position": 2,
+        "dependency_distance_tokens": 5,
+    }
+    result = helper["actual_context_geometry"](CharacterTokenizer(), case)
+    assert result["actual_prompt_tokens"] == len(case["prompt"])
+    assert result["actual_dependency_token_position"] == 7
+    assert result["fixture_prompt_tokens"] == 7
+    assert result["actual_dependency_distance_tokens"] == len(case["prompt"]) - 7
+    case["prompt"] = "no dependency"
+    assert (
+        helper["actual_context_geometry"](CharacterTokenizer(), case)[
+            "actual_dependency_distance_tokens"
+        ]
+        is None
+    )
+
+
 def test_local_pause_acknowledges_only_outside_request_pairs(tmp_path):
     import concurrent.futures
     import json
