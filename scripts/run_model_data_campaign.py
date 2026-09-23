@@ -10,8 +10,10 @@ import json
 import os
 import platform
 import shutil
+import socket
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -48,6 +50,36 @@ def command(args, timeout=60):
     if result.returncode:
         raise RuntimeError(f"command {args[0]} failed with exit {result.returncode}")
     return result.stdout
+
+
+def published_scientific_revision():
+    revision = command(["git", "rev-parse", "HEAD"]).strip()
+    # Reports are updated by collection. Only scientific/deployment code must
+    # remain identical to the published revision used inside the notebook.
+    changed = command(
+        [
+            "git",
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+            "--",
+            "src",
+            "scripts",
+            "kaggle",
+            "configs",
+            "pyproject.toml",
+            "uv.lock",
+            "AGENTS.md",
+            "data/benchmarks",
+            "reports/research/model_data_r2/preregistered_plan.json",
+        ]
+    )
+    if changed.strip():
+        raise RuntimeError("commit and push scientific code before submission")
+    remote = command(["git", "ls-remote", "origin", "refs/heads/research/model-data-r2"])
+    if remote.split()[0] != revision:
+        raise RuntimeError("local scientific revision is not the published campaign branch tip")
+    return revision
 
 
 def observe_quota():
@@ -249,7 +281,7 @@ def submit_baseline(plan):
     print(json.dumps({"reference": reference, "status": "submitted", "deadline_seconds": seconds}))
 
 
-def amend(config_path, reason):
+def amend(config_path, reason, outcomes_inspected):
     if not reason:
         raise ValueError("a recorded reason is required")
     path = REPORT / "preregistered_plan.json"
@@ -269,7 +301,8 @@ def amend(config_path, reason):
         "amendment": {
             "previous_plan_sha256": old_hash,
             "reason": reason,
-            "new_line_or_training_outcomes_inspected": False,
+            "new_line_or_training_outcomes_inspected": outcomes_inspected != "none",
+            "outcomes_inspected": outcomes_inspected,
         },
     }
     write_json(path, revised)
@@ -443,9 +476,7 @@ def submit_pilot(arm, attempt=1):
         > 36000
     ):
         raise RuntimeError("aggregate conservative session reservations exceed ten hours")
-    revision = command(["git", "rev-parse", "HEAD"]).strip()
-    if command(["git", "status", "--porcelain", "--untracked-files=no"]).strip():
-        raise RuntimeError("commit scientific code before submission")
+    revision = published_scientific_revision()
     folder = ARTIFACTS / "submissions" / (arm + suffix)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "run.py").write_text(
@@ -551,6 +582,16 @@ def retrieve_pilot(arm, reference):
     assert summary["additional_input_tokens"] == 5_013_504
     actual_hash = digest(directory / arm / "final/model.safetensors")
     assert actual_hash == progress["final_model_sha256"]
+    parent = Path(
+        os.environ.get(
+            "TABCOMPLETE_R2_PARENT",
+            str(
+                ROOT.parent / "tabcomplete/outputs/kaggle/code_cpt_train_v3/code_cpt_run/main/final"
+            ),
+        )
+    )
+    mtp_hash = digest(directory / arm / "final/mtp-original.safetensors")
+    assert mtp_hash == digest(parent / "mtp-original.safetensors"), "original MTP sidecar changed"
     ledger_path = REPORT / "quota/training_token_ledger.json"
     ledger = json.loads(ledger_path.read_text())
     consumed = sum(
@@ -578,6 +619,7 @@ def retrieve_pilot(arm, reference):
             "reference": reference,
             "verified_at": now(),
             "model_sha256": actual_hash,
+            "original_mtp_sha256": mtp_hash,
             "corpus_fingerprint": progress["corpus"]["corpus_fingerprint"],
             "additional_input_tokens_including_checks": consumed,
             "pilot_input_tokens": summary["additional_input_tokens"],
@@ -589,20 +631,26 @@ def retrieve_pilot(arm, reference):
     print(json.dumps({"arm": arm, "verified": True, "input_tokens": consumed}))
 
 
-def submit_evaluation():
+def submit_evaluation(*, context_only=False):
     # Use a job.json name so the common accounting collector cannot omit this session.
-    path = REPORT / "baseline_evaluations/additional/job.json"
+    path = REPORT / (
+        "long_context/job.json" if context_only else "baseline_evaluations/additional/job.json"
+    )
     if path.exists():
         state = json.loads(path.read_text())
         print(command(["kaggle", "kernels", "status", state["reference"]]).strip())
         return
-    pilots = [
-        json.loads((REPORT / "pilots" / arm / "completion.json").read_text())
-        for arm in ("R2_STANDARD", "R2_FILTERED")
-    ]
+    pilots = (
+        []
+        if context_only
+        else [
+            json.loads((REPORT / "pilots" / arm / "completion.json").read_text())
+            for arm in ("R2_STANDARD", "R2_FILTERED")
+        ]
+    )
     assert all(p["checkpoint_complete_and_hash_verified"] for p in pilots)
     quota = observe_quota()
-    seconds = 9000
+    seconds = 3600 if context_only else 9000
     if quota["active_jobs"] or quota["remaining_account_hours"] is None:
         raise RuntimeError("fresh quota and no other active allocation required")
     if quota["remaining_account_hours"] < seconds / 3600:
@@ -614,17 +662,28 @@ def submit_evaluation():
     reserved = sum(p.get("observed_wall_upper_bound_seconds", p["deadline_seconds"]) for p in prior)
     if reserved + seconds > 36000:
         raise RuntimeError("ten-hour aggregate session budget exceeded")
-    revision = command(["git", "rev-parse", "HEAD"]).strip()
-    if command(["git", "status", "--porcelain", "--untracked-files=no"]).strip():
-        raise RuntimeError("commit and push scientific code before submission")
-    folder = ARTIFACTS / "submissions/evaluation"
+    revision = published_scientific_revision()
+    kind = "context" if context_only else "evaluation"
+    line_fixture = json.loads((REPORT / "data_audit/line-fixture-correction.json").read_text())
+    folder = ARTIFACTS / "submissions" / kind
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "run.py").write_text(
-        (ROOT / "kaggle/model_data_r2/run_evaluation.py")
+        (ROOT / "kaggle/model_data_r2" / ("run_" + kind + ".py"))
         .read_text()
         .replace("__CHECKOUT_COMMIT__", revision)
+        .replace("__LINE_FIXTURE_FILENAME__", line_fixture["fixture_filename"])
+        .replace("__LINE_FIXTURE_SHA__", line_fixture["corrected_sha256"])
+        .replace(
+            "__PILOT_EXPECTED__",
+            json.dumps(
+                {
+                    arm: record["model_sha256"]
+                    for arm, record in zip(("R2_STANDARD", "R2_FILTERED"), pilots, strict=False)
+                }
+            ),
+        )
     )
-    reference = "shlokbhakta/tabcomplete-model-data-r2-evaluation"
+    reference = "shlokbhakta/tabcomplete-model-data-r2-" + kind
     write_json(
         folder / "kernel-metadata.json",
         {
@@ -642,7 +701,8 @@ def submit_evaluation():
                 "shlokbhakta/tabcomplete-model-data-r2-inputs",
             ],
             "kernel_sources": [p["reference"] for p in pilots]
-            + ["shlokbhakta/tabcomplete-code-cpt-campaign-r1"],
+            + ["shlokbhakta/tabcomplete-code-cpt-campaign-r1"]
+            + (["shlokbhakta/tabcomplete-code-cpt-long-context-r1"] if context_only else []),
             "competition_sources": [],
         },
     )
@@ -676,6 +736,180 @@ def submit_evaluation():
     print(json.dumps({"reference": reference, "deadline_seconds": seconds}))
 
 
+def run_local_grid():
+    """One isolated CPU inference process at a time, resuming exact completed pairs."""
+    runtime = ROOT.parent / "tabcomplete/outputs/tools/llama.cpp"
+    prompts = ARTIFACTS / "local-prompts.jsonl"
+    models = {
+        "q35-p12": ("p12-text-Q4_K_M.gguf", "p12-q4-clean"),
+        "q25-coder": ("q25-Q4_K_M.gguf", "q25-q4-clean"),
+        "granite-h350": ("granite-Q4_K_M.gguf", "granite-q4-clean"),
+    }
+    # Wait only for the campaign's currently running isolated measurement process.
+    # Never terminate or replace a process using the port.
+    while True:
+        with socket.socket() as probe:
+            busy = probe.connect_ex(("127.0.0.1", 19091)) == 0
+        if not busy:
+            break
+        print(json.dumps({"local_grid": "waiting_for_existing_isolated_process"}), flush=True)
+        time.sleep(30)
+    blocked = []
+    for bucket in (2048, 8192, 32768):
+        for alias, (model_name, output_name) in models.items():
+            output = ARTIFACTS / "local-inference" / output_name
+            measurements = output / "measurements.jsonl"
+            if measurements.exists():
+                metadata = json.loads((output / "metadata.json").read_text())
+                assert metadata["model_sha256"] == digest(ARTIFACTS / model_name)
+                assert metadata["prompts_sha256"] == digest(prompts)
+                assert metadata["runtime_sha"] == "f072b103714dfa1eee531f80b24512faf38e3dd2"
+                assert metadata["threads"] == 4 and metadata["concurrency"] == 1
+                records = [json.loads(line) for line in measurements.read_text().splitlines()]
+                selected = [r for r in records if r["bucket"] == bucket]
+                if len(selected) == len({(r["case_id"], r["repetition"]) for r in selected}) == 40:
+                    assert all(not r["truncated"] for r in selected)
+                    assert all(r["server_timings"]["cache_n"] == 0 for r in selected)
+                    print(
+                        json.dumps(
+                            {"model": alias, "bucket": bucket, "verified_cached_results": 40}
+                        ),
+                        flush=True,
+                    )
+                    continue
+            cmd = [
+                sys.executable,
+                str(ROOT / "scripts/measure_r2_local.py"),
+                "--model",
+                str(ARTIFACTS / model_name),
+                "--alias",
+                alias,
+                "--runtime",
+                str(runtime),
+                "--prompts",
+                str(prompts),
+                "--output",
+                str(output),
+                "--port",
+                "19091",
+                "--bucket",
+                str(bucket),
+            ]
+            if measurements.exists():
+                cmd.append("--resume")
+            print(json.dumps({"model": alias, "bucket": bucket, "state": "started"}), flush=True)
+            env = {
+                **os.environ,
+                "TABCOMPLETE_OBSERVABILITY_ENABLED": "1",
+                "TABCOMPLETE_OBSERVABILITY_CAPTURE_CONTENT": "1",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:4318",
+                "TABCOMPLETE_CAMPAIGN_ID": "tabcomplete-model-data-r2",
+                "TABCOMPLETE_RUN_ID": "r2-local-" + alias + "-clean",
+            }
+            result = subprocess.run(cmd, cwd=ROOT, env=env)
+            if result.returncode:
+                blocked.append({"model": alias, "bucket": bucket, "exit_code": result.returncode})
+                print(
+                    json.dumps(
+                        {
+                            "model": alias,
+                            "bucket": bucket,
+                            "state": "runtime_blocked",
+                            "exit_code": result.returncode,
+                        }
+                    ),
+                    flush=True,
+                )
+                # Other candidates remain independent; never assign a zero quality score.
+                continue
+    write_json(
+        REPORT / "local_inference/grid-status.json",
+        {
+            "status": "partial" if blocked else "complete",
+            "blocked": blocked,
+            "observed_at": now(),
+            "prompts_sha256": digest(prompts),
+        },
+    )
+    if blocked:
+        raise RuntimeError(
+            "local grid has blocked stages; retained independent completed measurements"
+        )
+
+
+def advance_campaign(plan):
+    """Advance the actual bounded jobs; never call a submitted job a completed experiment."""
+    baseline = REPORT / "baseline_evaluations/job.json"
+    if not baseline.exists():
+        submit_baseline(plan)
+        return False
+    collect_jobs()
+    active = [
+        json.loads(path.read_text())
+        for path in REPORT.rglob("job.json")
+        if not json.loads(path.read_text()).get("terminal")
+    ]
+    if active:
+        print(
+            json.dumps({"campaign": "running", "jobs": [s["reference"] for s in active]}),
+            flush=True,
+        )
+        return False
+    # Resume only verified scientific data, not merely existing output filenames.
+    suite = ROOT / "data/benchmarks/code_completion_v2.jsonl"
+    case_ids = {json.loads(line)["id"] for line in suite.read_text().splitlines()}
+    for alias in ("q35-p12", "q25-coder"):
+        path = ARTIFACTS / "baseline/model_data_r2_baseline" / (alias + ".jsonl")
+        metadata = json.loads(path.with_suffix(".jsonl.metadata.json").read_text())
+        records = [json.loads(line) for line in path.read_text().splitlines()]
+        assert metadata["suite_sha256"] == digest(suite)
+        assert metadata["protocol"] == "causal-context-v1" and metadata["max_new_tokens"] == 96
+        assert len(records) == len(case_ids) == 200
+        assert {row["case_id"] for row in records} == case_ids
+    for arm in ("R2_STANDARD", "R2_FILTERED"):
+        completed = REPORT / "pilots" / arm / "completion.json"
+        if completed.exists():
+            record = json.loads(completed.read_text())
+            final = ROOT / record["artifact_directory"] / arm / "final/model.safetensors"
+            assert record["checkpoint_complete_and_hash_verified"]
+            assert digest(final) == record["model_sha256"]
+            continue
+        jobs = [
+            json.loads(path.read_text()) for path in (REPORT / "pilots" / arm).rglob("job.json")
+        ]
+        if jobs:
+            latest = max(jobs, key=lambda job: job["submitted_at"])
+            if "COMPLETE" not in latest["last_status"]:
+                raise RuntimeError(
+                    "pilot requires diagnosis, not an automatic training retry: " + arm
+                )
+            retrieve_pilot(arm, latest["reference"])
+        else:
+            submit_pilot(arm)
+        return False
+    for context_only, relative in (
+        (False, "baseline_evaluations/additional/job.json"),
+        (True, "long_context/job.json"),
+    ):
+        if not (REPORT / relative).exists():
+            submit_evaluation(context_only=context_only)
+            return False
+    print(
+        json.dumps(
+            {
+                "campaign": "gpu_jobs_terminal",
+                "scientific_completion": False,
+                "next": (
+                    "Retrieve evaluation/context artifacts, judge predictions, "
+                    "reconcile telemetry, and finish local measurements and paired analysis"
+                ),
+            }
+        ),
+        flush=True,
+    )
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/research/model_data_r2.yaml")
@@ -692,20 +926,36 @@ def main():
             "collect",
             "retrieve-pilot",
             "evaluation",
+            "local",
+            "context",
+            "campaign",
         ],
-        default="baseline",
+        default="campaign",
     )
     parser.add_argument("--reason")
+    parser.add_argument("--outcomes-inspected", default="none")
     parser.add_argument("--arm", choices=["R2_STANDARD", "R2_FILTERED"])
     parser.add_argument("--attempt", type=int, default=1)
     parser.add_argument("--reference")
+    parser.add_argument(
+        "--once", action="store_true", help="Advance one verified campaign transition"
+    )
     args = parser.parse_args()
     if args.stage == "amend":
         if not args.execute:
             raise ValueError("amend requires explicit --execute")
-        amend(args.config, args.reason)
+        amend(args.config, args.reason, args.outcomes_inspected)
         return
     plan = freeze(args.config)
+    if args.execute and args.stage == "campaign":
+        while True:
+            terminal = advance_campaign(plan)
+            if terminal or args.once:
+                return
+            time.sleep(30)
+    if args.execute and args.stage == "local":
+        run_local_grid()
+        return
     if args.execute and args.stage == "retrieve-pilot":
         if not args.arm or not args.reference:
             raise ValueError("retrieve-pilot requires --arm and --reference")
@@ -713,6 +963,9 @@ def main():
         return
     if args.execute and args.stage == "evaluation":
         submit_evaluation()
+        return
+    if args.execute and args.stage == "context":
+        submit_evaluation(context_only=True)
         return
     if args.execute and args.stage == "package-baseline":
         package_baseline()

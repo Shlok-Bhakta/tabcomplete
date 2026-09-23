@@ -22,10 +22,21 @@ def rows(path):
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
+def distribution(values):
+    observed = [float(value) for value in values if value is not None]
+    return {
+        "n": len(observed),
+        "median": float(np.median(observed)) if observed else None,
+        "p95": float(np.quantile(observed, 0.95)) if observed else None,
+    }
+
+
 def finish(fig, name):
     fig.tight_layout()
     fig.savefig(PLOTS / (name + ".png"), dpi=150)
-    fig.savefig(PLOTS / (name + ".svg"))
+    vector = PLOTS / (name + ".svg")
+    fig.savefig(vector)
+    vector.write_text("\n".join(line.rstrip() for line in vector.read_text().splitlines()) + "\n")
     plt.close(fig)
 
 
@@ -140,6 +151,52 @@ def main():
                     "peak_resident_bytes": max(r["peak_resident_bytes"] for r in records),
                     "source": str(path.relative_to(ROOT)),
                     "warm_context": False,
+                    "actual_input_token_range": [
+                        min(r["server_timings"]["prompt_n"] for r in records),
+                        max(r["server_timings"]["prompt_n"] for r in records),
+                    ],
+                    "token_arrival_seconds": {
+                        str(count): distribution(
+                            r["token_arrival_seconds"].get(str(count)) for r in records
+                        )
+                        for count in (1, 8, 16, 32)
+                    },
+                    "complete_line_arrival_seconds": distribution(
+                        r["returned_line_seconds"] for r in records
+                    ),
+                    "complete_line_definition": (
+                        "Observed first newline/EOS during the fixed 32-token request; "
+                        "not a line-stopping latency experiment. Missing values stay unknown."
+                    ),
+                    "warm_resident_uncached_seconds": distribution(
+                        r["total_seconds"] for r in records if not r["process_cold_first"]
+                    ),
+                    "cold_process_first_seconds": distribution(
+                        r["total_seconds"] for r in records if r["process_cold_first"]
+                    ),
+                    "model_load_to_health_seconds": distribution(
+                        attempt["model_load_to_health_seconds"]
+                        for attempt in metadata.get("process_attempts", [])
+                        if attempt["attempt_id"]
+                        in {record.get("process_attempt_id") for record in records}
+                    ),
+                    "prompt_processing_seconds": distribution(
+                        r["server_timings"]["prompt_ms"] / 1000
+                        if r["server_timings"].get("prompt_ms") is not None
+                        else None
+                        for r in records
+                    ),
+                    "decode_seconds": distribution(
+                        r["server_timings"]["predicted_ms"] / 1000
+                        if r["server_timings"].get("predicted_ms") is not None
+                        else None
+                        for r in records
+                    ),
+                    "verified_uncached": all(r["server_timings"]["cache_n"] == 0 for r in records),
+                    "paired_outputs_identical": all(
+                        len({r["raw_response"] for r in records if r["case_id"] == case}) == 1
+                        for case in {r["case_id"] for r in records}
+                    ),
                 }
             )
     (REPORT / "local_inference").mkdir(parents=True, exist_ok=True)

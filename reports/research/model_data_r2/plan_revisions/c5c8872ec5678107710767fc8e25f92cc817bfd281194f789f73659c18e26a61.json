@@ -1,9 +1,9 @@
 {
   "amendment": {
     "new_line_or_training_outcomes_inspected": true,
-    "outcomes_inspected": "Same outcomes as revision 10. Partial P12 revision-2 predictions were generated but their quality was not inspected before this source-only correction; the partial run was cancelled. No pilot outcome or revision-3 prediction inspected.",
-    "previous_plan_sha256": "c5c8872ec5678107710767fc8e25f92cc817bfd281194f789f73659c18e26a61",
-    "reason": "Complete the generated-source fixture audit: ANTLR, gRPC, JNAerator, AutoRust, and Swagger signatures were not covered by the first correction. Exclude documented generated-tool signatures/suffixes before deterministic reselection. Training data/policies and strict causal outcomes remain unchanged. Preserve both prior fixture revisions and their predictions."
+    "outcomes_inspected": "P12/Qwen2.5 strict results, Qwen2.5 Q4 original line 21/180 and strict 7/200, historical D12, restart-smoke summaries, clean 2k native timings. No full pilot or corrected-line outcomes inspected. Earlier amendment boolean flags did not enumerate already inspected smoke summaries; their scientific changes remain recorded in their reasons.",
+    "previous_plan_sha256": "a568e2931a07a0f2ee10b1be0a17affbb40690a0c6026076788eb484c41e45fd",
+    "reason": "Source-only audit found generated Doxygen indexes and embedded byte arrays in the line diagnostic; apply explicit diagnostic exclusions and deterministic reselection from the same held-out pool. Preserve prior line outputs as superseded. Frozen training arrays/policies, strict causal protocol, and schedules do not change."
   },
   "configuration": {
     "campaign_id": "tabcomplete-model-data-r2",
@@ -140,8 +140,8 @@
           "known_evaluation_repositories",
           "sealed_test_slice"
         ],
-        "fixture_revision": 3,
-        "generated_exclusion": "existing_markers_plus_tool_generated_signatures_and_suffixes_Doxygen_indexes_embedded_byte_arrays",
+        "fixture_revision": 2,
+        "generated_exclusion": "existing_path_content_markers_plus_Doxygen_indexes_and_embedded_byte_arrays",
         "line_ending": "remove_one_LF_or_CRLF_terminator_only_preserve_other_whitespace",
         "ordering": "sha256_seed_repository_path_content",
         "preserve": [
@@ -250,7 +250,7 @@
         "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
       }
     },
-    "plan_revision": 11,
+    "plan_revision": 10,
     "schema_version": 1,
     "seed": 928173,
     "selection": {
@@ -327,9 +327,9 @@
       "warmup_updates": 5
     }
   },
-  "configuration_sha256": "bedc35655700d123e9f6be14b2c948a2f2436fb96ab092534c1f908cf6606e0e",
+  "configuration_sha256": "fd229b21f09bd71691a7df61e76e69dd5d1a2df8a1976c0e4c4c706124ac54ad",
   "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
-  "frozen_at": "2026-09-23T02:30:20.314128+00:00",
+  "frozen_at": "2026-09-23T02:21:42.971701+00:00",
   "integration": {
     "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
     "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"

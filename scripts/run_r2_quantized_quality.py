@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--line-suite", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--hardware", required=True)
+    parser.add_argument("--line-only", action="store_true")
     args = parser.parse_args()
     httpx.get(args.url + "/health", timeout=10).raise_for_status()
     provider = NativeProvider(args.url, args.alias)
@@ -35,6 +36,8 @@ def main():
     strict = Path("data/benchmarks/code_completion_v2.jsonl")
     for suite, protocol in ((strict, "causal-context-v1"), (args.line_suite, "causal_line_v1")):
         line_mode = protocol == "causal_line_v1"
+        if args.line_only and not line_mode:
+            continue
         raw_cases = [json.loads(line) for line in suite.read_text().splitlines()]
         cases = [SimpleNamespace(**row) for row in raw_cases] if line_mode else load_suite(suite)
         metadata = build_prediction_run_metadata(

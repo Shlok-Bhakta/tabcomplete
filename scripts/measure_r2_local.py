@@ -36,6 +36,20 @@ def save(path, value):
     path.write_text(json.dumps(value, sort_keys=True, indent=2) + "\n")
 
 
+def verify_unused_port(port):
+    with socket.socket() as check:
+        # TIME_WAIT is not an active service. An active listener still refuses
+        # this bind, so no process occupying the experiment port is replaced.
+        check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        check.bind(("127.0.0.1", port))
+
+
+def verify_context_budget(alias, input_tokens, output_tokens=32):
+    declared = {"q35-p12": 262144, "q25-coder": 32768, "granite-h350": 32768}[alias]
+    if input_tokens + output_tokens > min(declared, 40960):
+        raise ValueError("source prompt plus output exceeds declared/runtime context")
+
+
 def prepare_prompts(suite, destination):
     from transformers import AutoTokenizer
 
@@ -169,8 +183,7 @@ def measure(args):
     ).strip()
     if revision != "f072b103714dfa1eee531f80b24512faf38e3dd2":
         raise ValueError("runtime revision differs from preregistration")
-    with socket.socket() as check:
-        check.bind(("127.0.0.1", args.port))
+    verify_unused_port(args.port)
     metadata = {
         "model_alias": args.alias,
         "model_sha256": sha(args.model),
@@ -296,9 +309,19 @@ def measure(args):
             for row in rows:
                 if args.bucket and row["bucket"] != args.bucket:
                     continue
+                if any((row["case_id"], rep) not in completed for rep in range(2)):
+                    tokenized = httpx.post(
+                        url + "/tokenize",
+                        json={"content": row["prompt"], "add_special": True, "parse_special": True},
+                        timeout=30,
+                    )
+                    tokenized.raise_for_status()
+                    verify_context_budget(args.alias, len(tokenized.json()["tokens"]))
+                had_pending = False
                 for repetition in range(2):
                     if (row["case_id"], repetition) in completed:
                         continue
+                    had_pending = True
                     context = (
                         run or RunContext.new(campaign_id="tabcomplete-model-data-r2")
                     ).for_case(row["case_id"])
@@ -319,6 +342,8 @@ def measure(args):
                         handle.write(json.dumps(result) + "\n")
                     first = False
                     completed.add((row["case_id"], repetition))
+                if not had_pending:
+                    continue
                 print(
                     json.dumps(
                         {

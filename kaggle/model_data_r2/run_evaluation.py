@@ -40,14 +40,18 @@ def run(command, name, environment=None, limit=2700):
         raise TimeoutError("finalization reserve reached")
     print(json.dumps({"stage": name, "state": "started"}), flush=True)
     started = time.time()
-    result = subprocess.run(
-        command,
-        cwd=ROOT if ROOT.exists() else None,
-        capture_output=True,
-        text=True,
-        timeout=remaining,
-        env={**os.environ, **(environment or {})},
-    )
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT if ROOT.exists() else None,
+            capture_output=True,
+            text=True,
+            timeout=remaining,
+            env={**os.environ, **(environment or {})},
+        )
+    except subprocess.TimeoutExpired as error:
+        (OUT / (name + ".log")).write_bytes((error.stdout or b"") + (error.stderr or b""))
+        raise
     (OUT / (name + ".log")).write_text(result.stdout + result.stderr)
     if result.returncode:
         raise RuntimeError(name + " failed; see private log")
@@ -106,9 +110,11 @@ def main():
     expected = {
         "q35-p12": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43",
         "q35-d12": "ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e",
+        "q35-base": "c2b1e5a17d9c1e27685d92ed9b382911ebb99955ecd89052d1721241adfbab6c",
     }
     for alias in ("R2_STANDARD", "R2_FILTERED"):
         models[alias] = one("**/" + alias + "/final/model.safetensors").parent
+        expected[alias] = json.loads("""__PILOT_EXPECTED__""")[alias]
         summary = json.loads((models[alias].parent / "summary.json").read_text())
         assert summary["additional_input_tokens"] == 5013504 and summary["optimizer_steps"] == 153
         assert summary["resume_state_saved"]
@@ -130,17 +136,22 @@ def main():
         )
     inventory = {}
     for alias, path in models.items():
-        hashed = sha(path / "model.safetensors")
+        # The immutable Qwen3.5 Hub snapshot uses an indexed single shard;
+        # production inference exports use model.safetensors. Do not rename bytes.
+        weights = sorted(path.glob("model*.safetensors"))
+        assert len(weights) == 1, "unexpected immutable candidate weight layout"
+        hashed = sha(weights[0])
         if alias in expected:
             assert hashed == expected[alias]
         inventory[alias] = {
             "weights_sha256": hashed,
+            "weight_filename": weights[0].name,
             "tokenizer_sha256": sha(path / "tokenizer.json"),
             "config_sha256": sha(path / "config.json"),
         }
     save(OUT / "model-inventory.json", inventory)
-    line_suite = one("**/tabcomplete-model-data-r2-inputs/causal_line_v1.jsonl")
-    assert sha(line_suite) == "d614a7354d3341f0cc3667828c970d47f5646ec046029241d6c91a34411f17dd"
+    line_suite = one("**/tabcomplete-model-data-r2-inputs/__LINE_FIXTURE_FILENAME__")
+    assert sha(line_suite) == "__LINE_FIXTURE_SHA__"
     corpus = one("**/tabcomplete-model-data-r2-inputs/R2_STANDARD/corpus_metadata.json").parent
     historical = one("**/tabcomplete-model-data-r2-inputs/historical/corpus_metadata.json").parent
     progress = {
@@ -187,6 +198,7 @@ def main():
         with LOCK:
             progress[key].append(event)
             save(OUT / "progress.json", progress)
+        return key == "completed"
 
     def lane(gpu, aliases):
         for alias in aliases:
@@ -194,7 +206,7 @@ def main():
                 break
             model = models[alias]
             if alias not in ("q35-p12", "q25-coder", "q35-d12"):
-                phase(
+                ready = phase(
                     alias,
                     "causal",
                     [
@@ -217,6 +229,10 @@ def main():
                     ],
                     gpu,
                 )
+                if not ready and alias == "granite-h350":
+                    # Do not turn one challenger's failed bounded bring-up into
+                    # another 45-minute attempt while required evaluations wait.
+                    continue
             phase(
                 alias,
                 "line",
@@ -250,9 +266,9 @@ def main():
                         str(data),
                         "--output",
                         str(OUT / alias / (name + ".json")),
-                        "--expected-sha256",
-                        inventory[alias]["weights_sha256"],
                     ]
+                    if inventory[alias]["weight_filename"] == "model.safetensors":
+                        command += ["--expected-sha256", inventory[alias]["weights_sha256"]]
                     if repository_only:
                         command.append("--repository-only")
                     phase(alias, name, command, gpu)

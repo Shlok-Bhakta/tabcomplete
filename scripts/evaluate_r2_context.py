@@ -34,9 +34,22 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     provider = TransformersGenerationProvider(str(args.model), device="cuda:0")
     model, tokenizer = provider.model, provider.tokenizer
+    weights = sorted(args.model.glob("model*.safetensors"))
+    assert len(weights) == 1, "unexpected immutable candidate weight layout"
+    inventory = {
+        "model_sha256": file_sha256(weights[0]),
+        "weight_filename": weights[0].name,
+        "tokenizer_sha256": file_sha256(args.model / "tokenizer.json"),
+        "suite_sha256": file_sha256(args.suite),
+        "model_class": type(model).__name__,
+        "parameters": sum(parameter.numel() for parameter in model.parameters()),
+        "device": torch.cuda.get_device_name(),
+        "torch": torch.__version__,
+    }
+    save(args.output / "model-inventory.json", inventory)
     model.set_attn_implementation("sdpa")
     cases = [json.loads(line) for line in args.suite.read_text().splitlines()]
-    selected = [c for c in cases if c["requested_context_tokens"] in (2048, 32000)]
+    selected = list(cases)
     control = next(
         c
         for c in selected
@@ -64,10 +77,7 @@ def main():
             "short_greedy_identical": ordinary_text == efficient_text,
             "profiler_operators": kernels,
             "qkv": observed,
-            "model_sha256": file_sha256(args.model / "model.safetensors"),
-            "tokenizer_sha256": file_sha256(args.model / "tokenizer.json"),
-            "suite_sha256": file_sha256(args.suite),
-            "model_class": type(model).__name__,
+            **inventory,
         }
         save(args.output / "parity.json", verification)
         if (
@@ -79,7 +89,11 @@ def main():
         # Order is registered: short controls, then genuine long contexts. Do not
         # classify a short_control in a 32k family as a completed 32k inference.
         selected.sort(
-            key=lambda c: (c["requested_context_tokens"], c["condition"] != "long_far", c["id"])
+            key=lambda c: (
+                {2048: 0, 32000: 1, 4096: 2, 8192: 3, 16384: 4}[c["requested_context_tokens"]],
+                c["condition"] != "long_far",
+                c["id"],
+            )
         )
         scored = []
         with run_scope(args.output / "observability-run.json", "long-context"):

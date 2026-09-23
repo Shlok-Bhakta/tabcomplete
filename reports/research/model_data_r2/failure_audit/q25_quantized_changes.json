@@ -1,0 +1,23 @@
+{
+  "comparison": "Qwen2.5-Coder native Q4_K_M versus its own Transformers FP16 checkpoint",
+  "caveat": "Runtime and precision differ; not a pure quantization ablation",
+  "official_scores_repaired": false,
+  "losses": [
+    {"case_id": "go/stable_521", "primary": "wrong algorithm/logic", "evidence": "Q4 maps any negative input to GCD(0,0), returning zero. Hidden tests report GCD(-12,18), GCD(12,-18), and GCD(-12,-18) = 0, want 6. Both compile."},
+    {"case_id": "python/stable_11", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "After the same merge implementation and return, Q4 adds example dictionaries and ends inside an opening string at the cap. Compiler reports unterminated string literal."},
+    {"case_id": "python/stable_12", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Q4 adds iterative and second recursive factorial functions after the target, then reaches the cap inside ValueError's string. Compiler reports unterminated string literal."},
+    {"case_id": "python/stable_17", "primary": "overgeneration", "secondary": ["syntax error"], "evidence": "Both outputs start with the same loop completion. Q4 then adds a top-level print; the unchanged suffix produces an unexpected indent at line 10. This is not an inference transport error."},
+    {"case_id": "python/stable_7", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "After a FizzBuzz expression, Q4 adds fizzbuzz_generator and stops at 'for i'. Compiler reports invalid syntax."},
+    {"case_id": "python/stable_9", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Both outputs contain GCD and LCM. Q4 additionally generates an interactive main function and ends inside the __main__ string. Compiler reports unterminated string literal."}
+  ],
+  "gains": [
+    {"case_id": "javascript/509", "primary": "overgeneration", "secondary": ["syntax error"], "evidence": "Both return the same recursive factorial expression. FP16 adds console.log(factorial(5)); its completed function plus the unchanged suffix produces Unexpected token '}' at line 13. Q4 adds extra factorial functions, with the suffix closing the last one, and the actual fixture passes and prints 'ok'. Extra code is not uniformly fatal; strict outcomes depend on the unchanged fixture contract."},
+    {"case_id": "python/stable_5", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Both implement division-by-zero checking. FP16 continues into another unfinished function declaration at the cap; the compiler reports expected an indented block after function definition on line 15. Q4 ends after a complete example try/except and passes the actual fixture despite printing 'Result: 5.0'."}
+  ],
+  "sources": {
+    "fp16_predictions": "artifacts/research/model_data_r2/baseline/model_data_r2_baseline/q25-coder.jsonl",
+    "q4_predictions": "artifacts/research/model_data_r2/quantized-quality/q25-q4/causal-context-v1/predictions.jsonl",
+    "fp16_results": "reports/research/model_data_r2/baseline_evaluations/q25-coder/results.jsonl",
+    "q4_results": "reports/research/model_data_r2/baseline_evaluations/q25-coder-q4/results.jsonl"
+  }
+}

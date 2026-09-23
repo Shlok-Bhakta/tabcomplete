@@ -14,6 +14,7 @@ from tinycomplete.eval.code_generation import (
     build_prediction_run_metadata,
     file_sha256,
     generate_predictions,
+    model_weight_fingerprint,
     returned_first_line,
 )
 from tinycomplete.observability.bootstrap import current_runtime
@@ -75,7 +76,7 @@ def main():
         case_count=len(rows),
         provider="transformers-first-newline",
         model_source=args.alias,
-        model_revision=file_sha256(args.model / "model.safetensors"),
+        model_revision=model_weight_fingerprint(args.model),
         max_new_tokens=96,
         workers=1,
         protocol="causal_line_v1",

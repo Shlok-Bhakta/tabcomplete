@@ -388,10 +388,14 @@ def main():
                 "numerical_gate_passed": True,
             },
         )
-    # Only campaign-owned smoke/restart weights, after their complete manifests and
-    # semantic comparison are preserved. No research checkpoint is removed.
+    # Retain the furthest verified check until a complete final pilot checkpoint
+    # replaces it. STANDARD's resumed state replaces the earlier smoke/control;
+    # FILTERED retains its smoke state. No existing research checkpoint is removed.
+    retained_check = "resumed" if ARM == "R2_STANDARD" else "smoke"
     for name in ("smoke", "continuous", "resumed"):
         for component in ("resume-latest", "final"):
+            if name == retained_check and component == "resume-latest":
+                continue
             path = OUT / name / component
             if path.exists():
                 if component == "final":
@@ -419,6 +423,8 @@ def main():
     assert final["successful_optimizer_updates"] == 153
     assert final["additional_input_tokens"] == 5013504
     save(OUT / "progress.json", progress)
+    # Keep the verified check as an additional recovery/audit artifact. It fits
+    # beside the final export and final complete optimizer state on this runtime.
 
 
 if __name__ == "__main__":

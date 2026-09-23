@@ -1,0 +1,14 @@
+{
+  "R2_STANDARD": {
+    "line_source_hash_overlap": [],
+    "line_repository_alias_overlap": [],
+    "selected_files": 4642,
+    "language_allocation_sha256": "73d36e83a175a4c77653913e620659020742b530f10db8890793732c8c75bd42"
+  },
+  "R2_FILTERED": {
+    "line_source_hash_overlap": [],
+    "line_repository_alias_overlap": [],
+    "selected_files": 6306,
+    "language_allocation_sha256": "73d36e83a175a4c77653913e620659020742b530f10db8890793732c8c75bd42"
+  }
+}

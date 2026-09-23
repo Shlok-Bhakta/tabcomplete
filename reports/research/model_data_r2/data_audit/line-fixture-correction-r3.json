@@ -1,0 +1,113 @@
+{
+  "added": [
+    "c/ab0177cbd0285c6749df",
+    "cpp/8fb828e870c08d739cbe",
+    "csharp/6fb37bd0494dca020900",
+    "go/ef684efb03487db0adaf",
+    "java/6d54390e06489b7a19eb",
+    "java/6f1ef0517a03585aef00",
+    "javascript/259c81628096bf1d2b46",
+    "javascript/439a56c1a4d019139e85",
+    "javascript/499422abe77a7d65b32b",
+    "javascript/dafe4e2a86d36acd114e",
+    "rust/ec21b33956c4820d9dd4",
+    "typescript/e5d86fd4b7d4439c0283"
+  ],
+  "audit": {
+    "c": {
+      "eligible": 38,
+      "rejected": {
+        "generated_embedded_byte_array": 1,
+        "no_valid_target": 71
+      },
+      "selected": 20
+    },
+    "cpp": {
+      "eligible": 39,
+      "rejected": {
+        "generated_tool_signature": 1,
+        "no_valid_target": 9
+      },
+      "selected": 20
+    },
+    "csharp": {
+      "eligible": 39,
+      "rejected": {
+        "generated_tool_signature": 1,
+        "no_valid_target": 2
+      },
+      "selected": 20
+    },
+    "go": {
+      "eligible": 38,
+      "rejected": {
+        "generated_or_vendor_marker": 1,
+        "generated_tool_signature": 1
+      },
+      "selected": 20
+    },
+    "java": {
+      "eligible": 37,
+      "rejected": {
+        "generated_or_vendor_marker": 1,
+        "generated_tool_signature": 2
+      },
+      "selected": 20
+    },
+    "javascript": {
+      "eligible": 35,
+      "rejected": {
+        "generated_documentation_index": 2,
+        "generated_or_vendor_marker": 2,
+        "generated_tool_signature": 1,
+        "no_valid_target": 2
+      },
+      "selected": 20
+    },
+    "python": {
+      "eligible": 39,
+      "rejected": {
+        "generated_or_vendor_marker": 1
+      },
+      "selected": 20
+    },
+    "rust": {
+      "eligible": 38,
+      "rejected": {
+        "generated_or_vendor_marker": 1,
+        "generated_tool_signature": 1
+      },
+      "selected": 20
+    },
+    "typescript": {
+      "eligible": 39,
+      "rejected": {
+        "generated_or_vendor_marker": 1,
+        "no_valid_target": 3
+      },
+      "selected": 20
+    }
+  },
+  "corrected_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+  "fixture_filename": "causal_line_v1-r3.jsonl",
+  "fixture_revision": 3,
+  "known_outcomes": "Qwen2.5 Q4 original line results; neither pilot's line outcomes",
+  "original_sha256": "d614a7354d3341f0cc3667828c970d47f5646ec046029241d6c91a34411f17dd",
+  "plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
+  "previous_predictions": "Preserved as superseded exploratory diagnostic results",
+  "removed": [
+    "c/40e2a7f2fe90668df9c2",
+    "cpp/239b4b7f9cb6140b35c6",
+    "csharp/e001a91cde6db29ee9d8",
+    "go/2483caf8c9021f2abd36",
+    "java/3ae0de8e954104cd6e80",
+    "java/3f7f3fbfc5e44fe677fe",
+    "javascript/08881313f39a74152ffb",
+    "javascript/21ccdf40fd036abc62ea",
+    "javascript/8d87c8151b77a51692f5",
+    "javascript/902b1e18a51b583d7845",
+    "rust/f38712a219c03eac14fe",
+    "typescript/6d737d58e03264ab189e"
+  ],
+  "training_corpora_changed": false
+}

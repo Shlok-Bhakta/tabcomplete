@@ -1,6 +1,6 @@
 schema_version: 1
 campaign_id: tabcomplete-model-data-r2
-plan_revision: 9
+plan_revision: 11
 seed: 928173
 models:
   q35-base:
@@ -41,6 +41,8 @@ evaluation:
     tokenizers: each_model_own
     report: [input_tokens, output_tokens, output_characters, output_bytes, cap_hits]
   causal_line_v1:
+    fixture_revision: 3
+    generated_exclusion: existing_markers_plus_tool_generated_signatures_and_suffixes_Doxygen_indexes_embedded_byte_arrays
     seed: 928173
     cases_per_core_language: 20
     source: pinned_stack_dedup_repository_buckets_30_through_39

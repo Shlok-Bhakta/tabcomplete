@@ -1,0 +1,37 @@
+{
+  "total": 180,
+  "exact": 21,
+  "syntax_pass": 138,
+  "predictions_sha256": "e9f662ee1d05b3fbc4ae8bde297ac12fa67a0d23d5700f6c1d0a2e4fed49e7c0",
+  "suite_sha256": "d614a7354d3341f0cc3667828c970d47f5646ec046029241d6c91a34411f17dd",
+  "metadata": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "case_count": 180,
+    "concurrency": 1,
+    "decoding": {
+      "do_sample": false,
+      "temperature": 0
+    },
+    "hardware": "Kiwi AMD Ryzen 3 PRO 2200GE CPU, 2 threads, Q4_K_M",
+    "max_new_tokens": 96,
+    "model_revision": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30",
+    "model_source": "q25-coder-q4",
+    "observability": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "run_id": "run-721470d1-bf02-4570-bcea-59cfa30caf1a"
+    },
+    "plan_sha256": "3cff9100d8dc4f03700fbc4935d72c34ca8c6ccfb2abe7116a435238b2380c81",
+    "precision": "Q4_K_M",
+    "protocol": "causal_line_v1",
+    "provider": "llama.cpp-native",
+    "raw_response_definition": "exact native API text; native stop string is omitted",
+    "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "schema_version": 1,
+    "stopping": "native first newline or EOS, ceiling 96",
+    "suite_sha256": "d614a7354d3341f0cc3667828c970d47f5646ec046029241d6c91a34411f17dd",
+    "threads": 2,
+    "workers": 1
+  },
+  "scoring_rule": "Registered LF/CRLF removal only; code whitespace preserved",
+  "scoring_code_sha256": "41bf65fbbd2bc12bee5958a045be3e79bea19836c7019a481322e6b707e860c2"
+}

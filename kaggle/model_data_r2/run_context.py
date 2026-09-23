@@ -32,14 +32,18 @@ def run(command, name, env=None):
     remaining = DEADLINE - time.time()
     if remaining < 60:
         raise TimeoutError("context finalization reserve reached")
-    result = subprocess.run(
-        command,
-        cwd=ROOT if ROOT.exists() else None,
-        env={**os.environ, **(env or {})},
-        capture_output=True,
-        text=True,
-        timeout=remaining,
-    )
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT if ROOT.exists() else None,
+            env={**os.environ, **(env or {})},
+            capture_output=True,
+            text=True,
+            timeout=remaining,
+        )
+    except subprocess.TimeoutExpired as error:
+        (OUT / (name + ".log")).write_bytes((error.stdout or b"") + (error.stderr or b""))
+        raise
     (OUT / (name + ".log")).write_text(result.stdout + result.stderr)
     if result.returncode:
         raise RuntimeError(name + " failed; see private log")

@@ -1,9 +1,8 @@
 {
   "amendment": {
-    "new_line_or_training_outcomes_inspected": true,
-    "outcomes_inspected": "Same outcomes as revision 10. Partial P12 revision-2 predictions were generated but their quality was not inspected before this source-only correction; the partial run was cancelled. No pilot outcome or revision-3 prediction inspected.",
-    "previous_plan_sha256": "c5c8872ec5678107710767fc8e25f92cc817bfd281194f789f73659c18e26a61",
-    "reason": "Complete the generated-source fixture audit: ANTLR, gRPC, JNAerator, AutoRust, and Swagger signatures were not covered by the first correction. Exclude documented generated-tool signatures/suffixes before deterministic reselection. Training data/policies and strict causal outcomes remain unchanged. Preserve both prior fixture revisions and their predictions."
+    "new_line_or_training_outcomes_inspected": false,
+    "previous_plan_sha256": "39bab2820a7724b2f37c51ce69111ac2153845e7829c42a45900964c67afc2cd",
+    "reason": "Actual imported restart telemetry contains a repeated heartbeat span ID after the production trainer restores Python random state. OTel 1.44 defaults to that global RNG. Use the supported SDK IdGenerator extension with OS entropy so telemetry neither perturbs the scientific Python RNG nor replays identifiers after checkpoint restoration. Scientific seeds, trainer state restoration, data, model and optimization remain unchanged. Inspected evidence includes smoke/restart counters and runtime failures, not full-pilot quality or line scores."
   },
   "configuration": {
     "campaign_id": "tabcomplete-model-data-r2",
@@ -140,8 +139,6 @@
           "known_evaluation_repositories",
           "sealed_test_slice"
         ],
-        "fixture_revision": 3,
-        "generated_exclusion": "existing_markers_plus_tool_generated_signatures_and_suffixes_Doxygen_indexes_embedded_byte_arrays",
         "line_ending": "remove_one_LF_or_CRLF_terminator_only_preserve_other_whitespace",
         "ordering": "sha256_seed_repository_path_content",
         "preserve": [
@@ -250,7 +247,7 @@
         "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
       }
     },
-    "plan_revision": 11,
+    "plan_revision": 9,
     "schema_version": 1,
     "seed": 928173,
     "selection": {
@@ -327,9 +324,9 @@
       "warmup_updates": 5
     }
   },
-  "configuration_sha256": "bedc35655700d123e9f6be14b2c948a2f2436fb96ab092534c1f908cf6606e0e",
+  "configuration_sha256": "eee0ddb3e9cd3b00ff2fa9d9d9089fc6a3dde3f8afe17968739d3c530d885844",
   "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
-  "frozen_at": "2026-09-23T02:30:20.314128+00:00",
+  "frozen_at": "2026-09-23T01:34:26.776581+00:00",
   "integration": {
     "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
     "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"
