@@ -204,6 +204,10 @@ def main():
     run(["git", "checkout", COMMIT], "checkout")
     sys.path.insert(0, str(ROOT / "src"))
     import torch
+    import transformers
+
+    assert torch.__version__.split("+")[0] == "2.10.0", "Kaggle runtime fingerprint changed"
+    assert transformers.__version__ == "5.5.0"
 
     from tinycomplete.code_cpt.prepare import corpus_fingerprint
 

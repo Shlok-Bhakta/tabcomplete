@@ -1,0 +1,23 @@
+{
+  "observed_at": "2026-09-23T02:52:54.963134+00:00",
+  "host": "crabcake",
+  "purpose": "CPU preparation, analysis and native runtime client; not the Kaggle model backend",
+  "packages": {
+    "torch": "2.14.0+cpu",
+    "transformers": "5.17.0",
+    "datasets": "4.8.5",
+    "matplotlib": "3.11.2",
+    "psutil": "7.2.2",
+    "numpy": "2.4.6",
+    "tree-sitter": "0.26.0",
+    "tree-sitter-language-pack": "1.20.0",
+    "tokenizers": "0.23.2",
+    "huggingface-hub": "1.31.0",
+    "opentelemetry-sdk": "1.44.0"
+  },
+  "kaggle_model_backend": {
+    "torch": "2.10.0+cu128",
+    "transformers": "5.5.0",
+    "source": "verified baseline inventory and pilot progress"
+  }
+}

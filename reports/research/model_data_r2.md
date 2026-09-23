@@ -93,6 +93,14 @@ license metadata also differs from some file notices. The audit preserves those
 limitations and does not claim newly certified permissive-only data. Checkpoints
 and packed source remain private.
 
+A post-hoc coverage audit using the broader diagnostic markers flags 147/4,642
+standard files and 107/6,306 filtered files. These were not the frozen treatment's
+markers, so the audit does not change either arm. Likewise, upstream language
+mislabels can cause false syntax rejection, as the Objective-C example shows.
+Conclusions concern the policy actually applied, not a perfect generated-code or
+language-aware validity filter. These are limitations to fix in a future corpus
+revision, not grounds to relabel this experiment's data after training began.
+
 | Candidate | Parent | Data policy | Added pilot tokens | Dev NLL change | Functional wins/losses | Line-result change | Decision |
 |---|---|---|---:|---|---|---|---|
 | R2_STANDARD | Verified P12 | Existing Stage-1 policy on fresh pool | Full pilot not yet completed | Pending | Pending | Pending | No decision |
@@ -185,3 +193,14 @@ The next training recommendation and promotion decision remain open until the
 registered pilots, paired evaluations and failure audits finish. The T480s was
 not reachable through its existing authorized alias; no T480s or phone result is
 claimed.
+
+## External specifications
+
+The [Qwen2.5-Coder model card](https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B)
+declares a 0.49B pretrained causal model and 32,768-token context. The
+[Granite H-350M model card](https://huggingface.co/ibm-granite/granite-4.0-h-350m-base)
+describes a Mamba2/attention hybrid. Published benchmark results motivate inclusion;
+they are not substituted for this campaign's same-task results. Native FIM support
+is not used. [PyTorch 2.10 SDPA documentation](https://docs.pytorch.org/docs/2.10/generated/torch.nn.functional.scaled_dot_product_attention.html)
+documents backend-dependent GQA support; the context experiment must verify the
+executed operator and short-input parity rather than infer either from `sdpa`.

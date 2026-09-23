@@ -68,7 +68,7 @@ def main():
             "accelerate==1.13.0",
             "flash-linear-attention==0.5.2",
             "tree-sitter==0.25.2",
-            "tree-sitter-language-pack",
+            "tree-sitter-language-pack==1.20.0",
             "opentelemetry-api==1.44.0",
             "opentelemetry-sdk==1.44.0",
             "opentelemetry-exporter-otlp-proto-http==1.44.0",
@@ -87,6 +87,11 @@ def main():
         "clone",
     )
     run(["git", "checkout", COMMIT], "checkout")
+    import torch
+    import transformers
+
+    assert torch.__version__.split("+")[0] == "2.10.0", "Kaggle runtime fingerprint changed"
+    assert transformers.__version__ == "5.5.0"
     from huggingface_hub import snapshot_download
 
     models = {
