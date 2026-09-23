@@ -1,8 +1,8 @@
 {
   "amendment": {
     "new_line_or_training_outcomes_inspected": false,
-    "previous_plan_sha256": "39bab2820a7724b2f37c51ce69111ac2153845e7829c42a45900964c67afc2cd",
-    "reason": "Actual imported restart telemetry contains a repeated heartbeat span ID after the production trainer restores Python random state. OTel 1.44 defaults to that global RNG. Use the supported SDK IdGenerator extension with OS entropy so telemetry neither perturbs the scientific Python RNG nor replays identifiers after checkpoint restoration. Scientific seeds, trainer state restoration, data, model and optimization remain unchanged. Inspected evidence includes smoke/restart counters and runtime failures, not full-pilot quality or line scores."
+    "previous_plan_sha256": "c800f0b8bee65a3654db928a8e772296f973ec3d609b7334d67d2b13dcf72373",
+    "reason": "The second startup check could not locate the referenced parent report in the failed-notebook attachment, and stopped before training. Transfer that exact hash-verified report as an explicit private dataset file instead of relying on a failed notebook mount layout. Existing corpus arrays, source manifests, parent weights, token budget and all scientific protocols are unchanged."
   },
   "configuration": {
     "campaign_id": "tabcomplete-model-data-r2",
@@ -76,11 +76,6 @@
       ],
       "cold_disk_claim": false,
       "concurrency": 1,
-      "conversion_options": {
-        "q35-p12": [
-          "--no-mtp"
-        ]
-      },
       "measures": [
         "load",
         "cold_process_first_request",
@@ -103,8 +98,7 @@
       "runtime": "llama.cpp",
       "source_prompts_per_bucket": 20,
       "threads": 4,
-      "warm_context_claim": "only_if_cache_reuse_observed",
-      "workload_control": "exclude_pre_cleanup_measurements_contended_by_verified_orphan_benchmark_containers"
+      "warm_context_claim": "only_if_cache_reuse_observed"
     },
     "evaluation": {
       "additional": [
@@ -247,7 +241,7 @@
         "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
       }
     },
-    "plan_revision": 9,
+    "plan_revision": 6,
     "schema_version": 1,
     "seed": 928173,
     "selection": {
@@ -306,7 +300,6 @@
         "next_consumed_block",
         "original_mtp_sidecar"
       ],
-      "scratch_policy": "retire_disposable_smoke_inference_export_only_after_complete_restart_checkpoint_verified",
       "seed": 928173,
       "sequence_length": 2048,
       "smoke_updates_per_arm": 3,
@@ -319,14 +312,13 @@
         "finalization_reserve"
       ],
       "successful_updates": 153,
-      "telemetry_rng": "OS_entropy_ID_generator_independent_of_restored_training_Python_RNG",
       "tokens_per_update": 32768,
       "warmup_updates": 5
     }
   },
-  "configuration_sha256": "eee0ddb3e9cd3b00ff2fa9d9d9089fc6a3dde3f8afe17968739d3c530d885844",
+  "configuration_sha256": "4d80eed07a2cc796b6578831a109f882bcf8833cb196d18e8805c77d296caf5a",
   "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
-  "frozen_at": "2026-09-23T01:34:26.776581+00:00",
+  "frozen_at": "2026-09-23T00:59:59.552097+00:00",
   "integration": {
     "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
     "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"

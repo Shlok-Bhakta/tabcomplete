@@ -19,8 +19,10 @@ from tinycomplete.eval.code_generation import (
 from tinycomplete.observability.bootstrap import current_runtime
 
 
-def score_line(case, raw):
-    returned = returned_first_line(raw)
+def score_line(case, raw, *, native_newline_omitted=False):
+    # Native stop APIs omit the matched LF; restore only that known terminator
+    # for the common CRLF rule, never using the reference to alter the output.
+    returned = returned_first_line(raw + "\n" if native_newline_omitted else raw)
     reference = case["reference"]
     prefix = 0
     for actual, expected in zip(returned, reference, strict=False):
@@ -83,6 +85,16 @@ def main():
         tokenizer_sha256=file_sha256(args.model / "tokenizer.json"),
         stopping="incremental first token containing newline or EOS; ceiling 96",
         plan_sha256=file_sha256(Path("reports/research/model_data_r2/preregistered_plan.json")),
+        model_inventory={
+            "class": type(provider.model).__name__,
+            "parameters": sum(parameter.numel() for parameter in provider.model.parameters()),
+            "tokenizer_class": type(provider.tokenizer).__name__,
+            "tokenizer_length": len(provider.tokenizer),
+            "config_vocabulary": provider.model.config.vocab_size,
+            "precision": str(next(provider.model.parameters()).dtype),
+            "device": str(provider.device),
+            "torch": provider.torch.__version__,
+        },
     )
     cases = [SimpleNamespace(**case) for case in rows]
     predictions = generate_predictions(
@@ -101,7 +113,7 @@ def main():
             latency_seconds=prediction.latency_seconds,
             returned_line_latency_seconds=prediction.latency_seconds,
             latency_definition="incremental stopping observed through completed generate call",
-            input_tokens=len(provider.tokenizer.encode(case["prompt"], add_special_tokens=False)),
+            input_tokens=len(provider.tokenizer.encode(case["prompt"])),
             output_tokens=prediction.generated_tokens,
             finish_reason=prediction.finish_reason,
             fallback_cap=prediction.finish_reason == "length",

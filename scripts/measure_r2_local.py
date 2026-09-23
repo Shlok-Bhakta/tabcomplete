@@ -10,6 +10,8 @@ import socket
 import subprocess
 import threading
 import time
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -77,7 +79,15 @@ class NativeProvider:
         self.url = url
         self.model_name = model_name
         self.cache = False
+        self.stop_first_line = False
         self.last = {}
+
+    def generate_line_detailed(self, prompt, max_new_tokens):
+        self.stop_first_line = True
+        try:
+            return self.generate_detailed(prompt, max_new_tokens)
+        finally:
+            self.stop_first_line = False
 
     @observed_generation
     def generate_detailed(self, prompt, max_new_tokens):
@@ -98,6 +108,7 @@ class NativeProvider:
                 "cache_prompt": self.cache,
                 "seed": 928173,
                 "id_slot": 0,
+                "stop": ["\n"] if self.stop_first_line else [],
             },
         ) as response:
             response.raise_for_status()
@@ -130,12 +141,14 @@ class NativeProvider:
             ),
             "returned_line_seconds": line_at
             if line_at is not None
-            else (total if final.get("stop_type") == "eos" else None),
+            else (total if final.get("stop_type") in ("eos", "word") else None),
             "total_seconds": total,
             "server_timings": timings,
             "tokens_cached": final.get("tokens_cached"),
             "tokens_evaluated": final.get("tokens_evaluated"),
             "stop_type": final.get("stop_type"),
+            "stopping_word": final.get("stopping_word"),
+            "server_stop_requested": self.stop_first_line,
             "truncated": final.get("truncated"),
             "cache_requested": self.cache,
         }
@@ -179,9 +192,47 @@ def measure(args):
         ],
     }
     target = args.output / "measurements.jsonl"
+    completed = set()
+    previous_attempts = []
     if target.exists():
-        raise ValueError("measurement output exists; do not mix process-cold attempts")
-    log = (args.output / "server.log").open("w")
+        if not args.resume:
+            raise ValueError(
+                "measurement output exists; explicit --resume and matching hashes required"
+            )
+        saved = json.loads((args.output / "metadata.json").read_text())
+        for key in (
+            "model_alias",
+            "model_sha256",
+            "runtime_sha",
+            "prompts_sha256",
+            "threads",
+            "precision",
+            "platform",
+            "host",
+            "ram_bytes",
+            "concurrency",
+        ):
+            if saved[key] != metadata[key]:
+                raise ValueError("measurement resume fingerprint differs: " + key)
+        for line in target.read_text().splitlines():
+            row = json.loads(line)
+            pair = (row["case_id"], row["repetition"])
+            if pair in completed:
+                raise ValueError("duplicate completed measurement")
+            completed.add(pair)
+        previous_attempts = saved.get(
+            "process_attempts",
+            [
+                {
+                    "attempt_id": "initial-legacy",
+                    "model_load_to_health_seconds": saved["model_load_to_health_seconds"],
+                    "started_at": None,
+                    "note": "Original records predate per-attempt timestamps; wall time unknown",
+                }
+            ],
+        )
+    attempt = {"attempt_id": str(uuid.uuid4()), "started_at": datetime.now(UTC).isoformat()}
+    log = (args.output / ("server-" + attempt["attempt_id"] + ".log")).open("w")
     started = time.perf_counter()
     process = subprocess.Popen(
         [
@@ -234,6 +285,9 @@ def measure(args):
         else:
             raise TimeoutError("model load exceeded 180 seconds")
         metadata["model_load_to_health_seconds"] = time.perf_counter() - started
+        attempt["model_load_to_health_seconds"] = metadata["model_load_to_health_seconds"]
+        metadata["process_attempts"] = [*previous_attempts, attempt]
+        metadata["status"] = "running"
         save(args.output / "metadata.json", metadata)
         provider = NativeProvider(url, args.alias)
         rows = [json.loads(line) for line in args.prompts.read_text().splitlines()]
@@ -243,9 +297,12 @@ def measure(args):
                 if args.bucket and row["bucket"] != args.bucket:
                     continue
                 for repetition in range(2):
+                    if (row["case_id"], repetition) in completed:
+                        continue
                     context = (
                         run or RunContext.new(campaign_id="tabcomplete-model-data-r2")
                     ).for_case(row["case_id"])
+                    observed_at = datetime.now(UTC).isoformat()
                     with context.activate():
                         provider.generate_detailed(row["prompt"], 32)
                     result = {k: v for k, v in row.items() if k != "prompt"}
@@ -255,10 +312,13 @@ def measure(args):
                         model_alias=args.alias,
                         process_cold_first=first,
                         peak_resident_bytes=peak[0],
+                        process_attempt_id=attempt["attempt_id"],
+                        observed_at=observed_at,
                     )
                     with target.open("a") as handle:
                         handle.write(json.dumps(result) + "\n")
                     first = False
+                    completed.add((row["case_id"], repetition))
                 print(
                     json.dumps(
                         {
@@ -270,7 +330,11 @@ def measure(args):
                     flush=True,
                 )
         metadata.update(
-            peak_resident_bytes=peak[0], status="complete", measurement_sha256=sha(target)
+            peak_resident_bytes=peak[0],
+            status="complete" if len(completed) == len(rows) * 2 else "partial_grid",
+            completed_measurements=len(completed),
+            planned_measurements=len(rows) * 2,
+            measurement_sha256=sha(target),
         )
         save(args.output / "metadata.json", metadata)
     finally:
@@ -295,6 +359,7 @@ def main():
     parser.add_argument("--output", type=Path)
     parser.add_argument("--port", type=int, default=19091)
     parser.add_argument("--bucket", type=int, choices=[2048, 8192, 32768])
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     if args.prepare_suite:
         if args.prompts.exists():

@@ -1,0 +1,96 @@
+{
+  "active_jobs": [],
+  "jobs": [
+    {
+      "last_run": "2026-09-23 00:54:24.217000",
+      "ref": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+      "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2 has status \"KernelWorkerStatus.ERROR\""
+    },
+    {
+      "last_run": "2026-09-23 00:27:57.577000",
+      "ref": "shlokbhakta/tabcomplete-model-data-r2-standard",
+      "status": "shlokbhakta/tabcomplete-model-data-r2-standard has status \"KernelWorkerStatus.ERROR\""
+    },
+    {
+      "last_run": "2026-09-23 00:04:20.187000",
+      "ref": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+      "status": "shlokbhakta/tabcomplete-model-data-r2-baseline has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-22 06:08:59.157000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-22 03:33:04.810000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-22 03:05:32.417000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-21 22:20:53.867000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-21 21:59:38.827000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-21 19:30:41.243000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-21 22:34:04.600000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-20 18:45:10.880000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-bench",
+      "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-19 16:15:49.720000",
+      "ref": "shlokbhakta/exercise-functions-and-getting-help",
+      "status": "unknown: status request failed"
+    },
+    {
+      "last_run": "2026-09-19 16:13:53.953000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-stage1",
+      "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+    },
+    {
+      "last_run": "2026-09-19 15:43:31.243000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-prepare",
+      "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-19 15:41:42.413000",
+      "ref": "shlokbhakta/tabcomplete-code-cpt-access",
+      "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2026-09-17 03:23:22.020000",
+      "ref": "shlokbhakta/tabcomplete-lora-smoke",
+      "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "last_run": "2023-11-14 02:30:34.240000",
+      "ref": "shlokbhakta/notebookd2edcfa65c",
+      "status": "unknown: status request failed"
+    }
+  ],
+  "observed_at": "2026-09-23T01:02:21.426043+00:00",
+  "remaining_account_hours": 23.57,
+  "renewal": "2026-09-26T00:00:00",
+  "source": "authenticated kaggle CLI quota and kernel status",
+  "units": "account quota-hours",
+  "used_account_hours": 21.43
+}

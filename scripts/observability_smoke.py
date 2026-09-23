@@ -36,6 +36,10 @@ def main() -> int:
     contexts = {}
 
     class Provider:
+        def generate(self, prompt, max_new_tokens):
+            result = self.generate_detailed(prompt, max_new_tokens)
+            return result.text, result.tokens
+
         def generate_detailed(self, prompt, max_new_tokens):
             context = current_run_context()
             contexts[context.case_id] = context

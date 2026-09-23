@@ -1,0 +1,11 @@
+{
+  "purpose": "synthetic sandbox cleanup verification, not model quality",
+  "result": {
+    "status": "timeout",
+    "returncode": null,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 32.010218087001704
+  },
+  "wall_seconds": 42.260232596017886
+}

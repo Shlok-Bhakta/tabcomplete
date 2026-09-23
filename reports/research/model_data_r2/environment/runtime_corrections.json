@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "orphan_cleanup": {
+    "containers": ["4ad3f6aded82c2c13626f70f291a044bfc6e32e9e60581a3579681ff45fb4ef6", "bd39e1f96e81ea67aff53199d7a65f5c7e998df4e3594d2df6e44597d213e6cf"],
+    "command": "cargo test --quiet",
+    "observed_runtime_hours_lower_bounds": [56, 34],
+    "evidence": "Both benchmark fixture roots were already deleted; each lingering gcd test consumed one CPU core. OCI monitors survived the old CLI watchdog.",
+    "scope": "Only those exact disposable benchmark containers stopped; services and checkpoints preserved",
+    "measurements_excluded": "artifacts/research/model_data_r2/local-inference/q25-q4-r2",
+    "new_measurement_directory": "artifacts/research/model_data_r2/local-inference/q25-q4-clean",
+    "measurement_protocol_changed": false,
+    "prevention": "Unique container name plus scoped rm --force in finally; existing commands and watchdog timeout unchanged"
+  },
+  "p12_conversion": {
+    "failure": "Default converter declared absent MTP layer 24",
+    "fix": "Supported --no-mtp conversion of the already text-only checkpoint",
+    "source_weights_modified": false,
+    "original_mtp_sidecar_preserved": true,
+    "invalid_conversion": "p12-Q4_K_M.gguf",
+    "corrected_conversion": "p12-text-Q4_K_M.gguf",
+    "corrected_sha256": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24"
+  },
+  "restart_scratch": {
+    "run_id": "r2-r2_standard-resumed",
+    "trace_id": "43cd20c45fb303c3470d655b8abc072e",
+    "successful_absolute_update": 8,
+    "additional_updates": 5,
+    "next_consumed_block": 128,
+    "free_gib": 7.20,
+    "save_guard_gib": 8,
+    "final_resume_saved": false,
+    "full_pilot_started": false,
+    "classification": "scratch-storage limitation, not model-quality failure"
+  },
+  "telemetry_rng": {
+    "observed_duplicate_heartbeat_span_id": "2bd21acd1206c269",
+    "trace_id": "762623d7246acda1f050509155709a21",
+    "cause": "OTel default ID generator uses global Python random state restored by trainer",
+    "fix": "Supported SDK IdGenerator using OS entropy, independent of scientific RNG",
+    "historical_ids_rewritten": false
+  }
+}

@@ -151,6 +151,7 @@ def main():
         "status": "running",
         "completed": [],
         "failures": [],
+        "planned_phases": 17,
     }
 
     def phase(alias, label, command, gpu):
@@ -266,7 +267,12 @@ def main():
         for job in jobs:
             job.result()
     progress.update(
-        status="partial" if progress["failures"] else "complete",
+        status="complete"
+        if not progress["failures"] and len(progress["completed"]) == progress["planned_phases"]
+        else "partial",
+        unexecuted_phases=progress["planned_phases"]
+        - len(progress["completed"])
+        - len(progress["failures"]),
         elapsed_seconds=time.time() - START,
     )
     save(OUT / "progress.json", progress)

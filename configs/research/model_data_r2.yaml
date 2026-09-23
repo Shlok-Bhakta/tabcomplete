@@ -1,6 +1,6 @@
 schema_version: 1
 campaign_id: tabcomplete-model-data-r2
-plan_revision: 6
+plan_revision: 9
 seed: 928173
 models:
   q35-base:
@@ -106,11 +106,14 @@ training:
   restart_split_updates: [3, 5]
   restart_tolerances: {loss_absolute: 0.0001, parameter_absolute: 0.0005, parameter_mean: 0.0000001, optimizer_absolute: 0.0005}
   save: [final_inference, optimizer, scheduler, scaler, random_state, next_consumed_block, original_mtp_sidecar]
+  scratch_policy: retire_disposable_smoke_inference_export_only_after_complete_restart_checkpoint_verified
+  telemetry_rng: OS_entropy_ID_generator_independent_of_restored_training_Python_RNG
   stops: [nonfinite, persistent_scaler_overflow, accounting_mismatch, corrupt_artifact, existing_sustained_development_guard, finalization_reserve]
 deployment:
   runtime: llama.cpp
   revision: f072b103714dfa1eee531f80b24512faf38e3dd2
   quantization: Q4_K_M_from_verified_own_checkpoint
+  conversion_options: {q35-p12: [--no-mtp]}
   candidates: [q35-p12, q25-coder, granite-h350_if_supported]
   source_prompts_per_bucket: 20
   buckets: [2048, 8192, 32768]
@@ -121,6 +124,7 @@ deployment:
   prompt_identity: identical_source_text_actual_tokens_reported_output_space_reserved
   measures: [load, cold_process_first_request, warm_resident, actual_first_token, token_8, token_16, token_32, returned_line, peak_RSS, prompt_time, decode_time, total]
   cold_disk_claim: false
+  workload_control: exclude_pre_cleanup_measurements_contended_by_verified_orphan_benchmark_containers
   warm_context_claim: only_if_cache_reuse_observed
 long_context:
   implementation_minutes: 90

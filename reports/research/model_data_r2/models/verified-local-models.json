@@ -1,0 +1,543 @@
+{
+  "granite-h350": {
+    "actual_loaded_model_class": null,
+    "actual_loaded_parameters": null,
+    "configuration": {
+      "architectures": [
+        "GraniteMoeHybridForCausalLM"
+      ],
+      "attention_bias": false,
+      "attention_dropout": 0.0,
+      "attention_multiplier": 0.015625,
+      "bos_token_id": 100257,
+      "embedding_multiplier": 12,
+      "eos_token_id": 100257,
+      "hidden_act": "silu",
+      "hidden_size": 768,
+      "init_method": "mup",
+      "initializer_range": 0.1,
+      "intermediate_size": 2048,
+      "layer_types": [
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "attention",
+        "mamba",
+        "mamba",
+        "attention",
+        "mamba",
+        "mamba",
+        "mamba",
+        "attention",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba",
+        "attention",
+        "mamba",
+        "mamba",
+        "mamba",
+        "mamba"
+      ],
+      "logits_scaling": 3,
+      "mamba_chunk_size": 256,
+      "mamba_conv_bias": true,
+      "mamba_d_conv": 4,
+      "mamba_d_head": 32,
+      "mamba_d_state": 128,
+      "mamba_expand": 2,
+      "mamba_n_groups": 1,
+      "mamba_n_heads": 48,
+      "mamba_proj_bias": false,
+      "max_position_embeddings": 32768,
+      "model_type": "granitemoehybrid",
+      "normalization_function": "rmsnorm",
+      "num_attention_heads": 12,
+      "num_experts_per_tok": 0,
+      "num_hidden_layers": 32,
+      "num_key_value_heads": 4,
+      "num_local_experts": 0,
+      "output_router_logits": false,
+      "pad_token_id": 100256,
+      "position_embedding_type": "nope",
+      "residual_multiplier": 0.246,
+      "rms_norm_eps": 1e-05,
+      "rope_scaling": null,
+      "rope_theta": 10000,
+      "router_aux_loss_coef": 0.01,
+      "shared_intermediate_size": 2048,
+      "tie_word_embeddings": true,
+      "torch_dtype": "bfloat16",
+      "transformers_version": "4.56.0",
+      "use_cache": true,
+      "vocab_size": 100352
+    },
+    "conversion": {
+      "converter_sha256": "e9a1da876330bbce9687541ab31736542a01b4ac43c6686126514a50f122fb7f",
+      "extra_options": [],
+      "outputs": [
+        {
+          "bytes": 684924320,
+          "file": "granite-f16.gguf",
+          "sha256": "33951afab5e45e9e42874b3de6729211b46f8c47d6b31d7d973a96244ef1fbbb"
+        },
+        {
+          "bytes": 222655680,
+          "file": "granite-Q4_K_M.gguf",
+          "sha256": "dc65f73ee3849a62eaa05b58bc5da65f4047a66bd70de77829c245216402aab5"
+        }
+      ],
+      "quantization": "Q4_K_M",
+      "quantized_comparison_caveat": "Own HF checkpoint: runtime and precision both differ",
+      "quantizer_sha256": "cc3716569740e341ee2f28d19c6ab9c1191cb7f555e55f17a8fdc640652385cd",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "server_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+      "source_checkpoint_modified": false,
+      "source_precision": "f16"
+    },
+    "local_weight_bytes_available": true,
+    "parameter_count_source": "R2 GPU loaded text model; null means not yet observed",
+    "source_files": [
+      {
+        "bytes": 1715,
+        "file": "config.json",
+        "sha256": "c11be93f2e5f83096042b19c3df3b0d982819b63c5378e0b6a82c4fdbe017fac"
+      },
+      {
+        "bytes": 7153421,
+        "file": "tokenizer.json",
+        "sha256": "e2bad66439538cb4d5a7580680932432ed9ece9d3b8577e675512bdf11599253"
+      },
+      {
+        "bytes": 680704864,
+        "file": "model.safetensors",
+        "sha256": "ed6e3057de9b5ab9c09674bef2b5cf133aca20affb1a6f53b287af2147c200f7"
+      }
+    ],
+    "tokenizer_class": "GPT2Tokenizer"
+  },
+  "q25-coder": {
+    "actual_loaded_model_class": "Qwen2ForCausalLM",
+    "actual_loaded_parameters": 494032768,
+    "configuration": {
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "attention_dropout": 0.0,
+      "bos_token_id": 151643,
+      "eos_token_id": 151643,
+      "hidden_act": "silu",
+      "hidden_size": 896,
+      "initializer_range": 0.02,
+      "intermediate_size": 4864,
+      "max_position_embeddings": 32768,
+      "max_window_layers": 24,
+      "model_type": "qwen2",
+      "num_attention_heads": 14,
+      "num_hidden_layers": 24,
+      "num_key_value_heads": 2,
+      "rms_norm_eps": 1e-06,
+      "rope_theta": 1000000.0,
+      "sliding_window": 32768,
+      "tie_word_embeddings": true,
+      "torch_dtype": "bfloat16",
+      "transformers_version": "4.43.1",
+      "use_cache": true,
+      "use_sliding_window": false,
+      "vocab_size": 151936
+    },
+    "conversion": {
+      "converter_sha256": "e9a1da876330bbce9687541ab31736542a01b4ac43c6686126514a50f122fb7f",
+      "extra_options": [],
+      "outputs": [
+        {
+          "bytes": 994156256,
+          "file": "q25-f16.gguf",
+          "sha256": "15560618014f9879b36735adaadfbf7e1301dc92f66f4acc2d6fa90ebcb716db"
+        },
+        {
+          "bytes": 397807328,
+          "file": "q25-Q4_K_M.gguf",
+          "sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30"
+        }
+      ],
+      "quantization": "Q4_K_M",
+      "quantized_comparison_caveat": "Own HF checkpoint: runtime and precision both differ",
+      "quantizer_sha256": "cc3716569740e341ee2f28d19c6ab9c1191cb7f555e55f17a8fdc640652385cd",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "server_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+      "source_checkpoint_modified": false,
+      "source_precision": "f16"
+    },
+    "local_weight_bytes_available": true,
+    "parameter_count_source": "R2 GPU loaded text model; null means not yet observed",
+    "source_files": [
+      {
+        "bytes": 659,
+        "file": "config.json",
+        "sha256": "e6bf24d1cf58278dcb4ded7e885b71cb1c56299b34c8046b1b64395d17b1891f"
+      },
+      {
+        "bytes": 7031645,
+        "file": "tokenizer.json",
+        "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+      },
+      {
+        "bytes": 988097824,
+        "file": "model.safetensors",
+        "sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+      }
+    ],
+    "tokenizer_class": "Qwen2Tokenizer"
+  },
+  "q35-base": {
+    "actual_loaded_model_class": null,
+    "actual_loaded_parameters": null,
+    "configuration": {
+      "architectures": [
+        "Qwen3_5ForConditionalGeneration"
+      ],
+      "image_token_id": 248056,
+      "model_type": "qwen3_5",
+      "text_config": {
+        "attention_bias": false,
+        "attention_dropout": 0.0,
+        "attn_output_gate": true,
+        "dtype": "bfloat16",
+        "eos_token_id": 248044,
+        "full_attention_interval": 4,
+        "head_dim": 256,
+        "hidden_act": "silu",
+        "hidden_size": 1024,
+        "initializer_range": 0.02,
+        "intermediate_size": 3584,
+        "layer_types": [
+          "linear_attention",
+          "linear_attention",
+          "linear_attention",
+          "full_attention",
+          "linear_attention",
+          "linear_attention",
+          "linear_attention",
+          "full_attention",
+          "linear_attention",
+          "linear_attention",
+          "linear_attention",
+          "full_attention",
+          "linear_attention",
+          "linear_attention",
+          "linear_attention",
+          "full_attention",
+          "linear_attention",
+          "linear_attention",
+          "linear_attention",
+          "full_attention",
+          "linear_attention",
+          "linear_attention",
+          "linear_attention",
+          "full_attention"
+        ],
+        "linear_conv_kernel_dim": 4,
+        "linear_key_head_dim": 128,
+        "linear_num_key_heads": 16,
+        "linear_num_value_heads": 16,
+        "linear_value_head_dim": 128,
+        "mamba_ssm_dtype": "float32",
+        "max_position_embeddings": 262144,
+        "mlp_only_layers": [],
+        "model_type": "qwen3_5_text",
+        "mtp_num_hidden_layers": 1,
+        "mtp_use_dedicated_embeddings": false,
+        "num_attention_heads": 8,
+        "num_hidden_layers": 24,
+        "num_key_value_heads": 2,
+        "rms_norm_eps": 1e-06,
+        "rope_parameters": {
+          "mrope_interleaved": true,
+          "mrope_section": [
+            11,
+            11,
+            10
+          ],
+          "partial_rotary_factor": 0.25,
+          "rope_theta": 10000000,
+          "rope_type": "default"
+        },
+        "tie_word_embeddings": true,
+        "use_cache": true,
+        "vocab_size": 248320
+      },
+      "tie_word_embeddings": true,
+      "transformers_version": "4.57.0.dev0",
+      "video_token_id": 248057,
+      "vision_config": {
+        "deepstack_visual_indexes": [],
+        "depth": 12,
+        "hidden_act": "gelu_pytorch_tanh",
+        "hidden_size": 768,
+        "in_channels": 3,
+        "initializer_range": 0.02,
+        "intermediate_size": 3072,
+        "model_type": "qwen3_5",
+        "num_heads": 12,
+        "num_position_embeddings": 2304,
+        "out_hidden_size": 1024,
+        "patch_size": 16,
+        "spatial_merge_size": 2,
+        "temporal_patch_size": 2
+      },
+      "vision_end_token_id": 248054,
+      "vision_start_token_id": 248053
+    },
+    "local_weight_bytes_available": false,
+    "parameter_count_source": "R2 GPU loaded text model; null means not yet observed",
+    "source_files": [
+      {
+        "bytes": 2907,
+        "file": "config.json",
+        "sha256": "b90b86f35c8e6925ef74ee04d0e758f0a845c83a42089ad82bbaa948de9b4204"
+      },
+      {
+        "bytes": 12807196,
+        "file": "tokenizer.json",
+        "sha256": "fe000e3ed39ed12b8d2481d527d44f93c65d37e87645d2dcc80d1bf9d50d2927"
+      }
+    ],
+    "tokenizer_class": "Qwen2Tokenizer"
+  },
+  "q35-d12": {
+    "actual_loaded_model_class": null,
+    "actual_loaded_parameters": null,
+    "configuration": {
+      "architectures": [
+        "Qwen3_5ForCausalLM"
+      ],
+      "attention_bias": false,
+      "attention_dropout": 0.0,
+      "attn_output_gate": true,
+      "bos_token_id": null,
+      "dtype": "float32",
+      "eos_token_id": 248044,
+      "full_attention_interval": 4,
+      "head_dim": 256,
+      "hidden_act": "silu",
+      "hidden_size": 1024,
+      "initializer_range": 0.02,
+      "intermediate_size": 3584,
+      "layer_types": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "linear_conv_kernel_dim": 4,
+      "linear_key_head_dim": 128,
+      "linear_num_key_heads": 16,
+      "linear_num_value_heads": 16,
+      "linear_value_head_dim": 128,
+      "mamba_ssm_dtype": "float32",
+      "max_position_embeddings": 262144,
+      "mlp_only_layers": [],
+      "model_type": "qwen3_5_text",
+      "mtp_num_hidden_layers": 1,
+      "mtp_use_dedicated_embeddings": false,
+      "num_attention_heads": 8,
+      "num_hidden_layers": 24,
+      "num_key_value_heads": 2,
+      "pad_token_id": null,
+      "partial_rotary_factor": 0.25,
+      "rms_norm_eps": 1e-06,
+      "rope_parameters": {
+        "mrope_interleaved": true,
+        "mrope_section": [
+          11,
+          11,
+          10
+        ],
+        "partial_rotary_factor": 0.25,
+        "rope_theta": 10000000,
+        "rope_type": "default"
+      },
+      "tie_word_embeddings": true,
+      "transformers_version": "5.5.0",
+      "use_cache": false,
+      "vocab_size": 248320
+    },
+    "local_weight_bytes_available": true,
+    "parameter_count_source": "R2 GPU loaded text model; null means not yet observed",
+    "source_files": [
+      {
+        "bytes": 1789,
+        "file": "config.json",
+        "sha256": "acc1badd3017c913c512fb2555f5ed1218db987a555e8c8d9397609e06e61dee"
+      },
+      {
+        "bytes": 19989343,
+        "file": "tokenizer.json",
+        "sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
+      },
+      {
+        "bytes": 2013387056,
+        "file": "model.safetensors",
+        "sha256": "ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e"
+      }
+    ],
+    "tokenizer_class": "TokenizersBackend"
+  },
+  "q35-p12": {
+    "actual_loaded_model_class": "Qwen3_5ForCausalLM",
+    "actual_loaded_parameters": 752393024,
+    "configuration": {
+      "architectures": [
+        "Qwen3_5ForCausalLM"
+      ],
+      "attention_bias": false,
+      "attention_dropout": 0.0,
+      "attn_output_gate": true,
+      "bos_token_id": null,
+      "dtype": "float32",
+      "eos_token_id": 248044,
+      "full_attention_interval": 4,
+      "head_dim": 256,
+      "hidden_act": "silu",
+      "hidden_size": 1024,
+      "initializer_range": 0.02,
+      "intermediate_size": 3584,
+      "layer_types": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "linear_conv_kernel_dim": 4,
+      "linear_key_head_dim": 128,
+      "linear_num_key_heads": 16,
+      "linear_num_value_heads": 16,
+      "linear_value_head_dim": 128,
+      "mamba_ssm_dtype": "float32",
+      "max_position_embeddings": 262144,
+      "mlp_only_layers": [],
+      "model_type": "qwen3_5_text",
+      "mtp_num_hidden_layers": 1,
+      "mtp_use_dedicated_embeddings": false,
+      "num_attention_heads": 8,
+      "num_hidden_layers": 24,
+      "num_key_value_heads": 2,
+      "pad_token_id": null,
+      "partial_rotary_factor": 0.25,
+      "rms_norm_eps": 1e-06,
+      "rope_parameters": {
+        "mrope_interleaved": true,
+        "mrope_section": [
+          11,
+          11,
+          10
+        ],
+        "partial_rotary_factor": 0.25,
+        "rope_theta": 10000000,
+        "rope_type": "default"
+      },
+      "tie_word_embeddings": true,
+      "transformers_version": "5.5.0",
+      "use_cache": false,
+      "vocab_size": 248320
+    },
+    "conversion": {
+      "converter_sha256": "e9a1da876330bbce9687541ab31736542a01b4ac43c6686126514a50f122fb7f",
+      "extra_options": [
+        "--no-mtp"
+      ],
+      "outputs": [
+        {
+          "bytes": 2025303552,
+          "file": "p12-text-f16.gguf",
+          "sha256": "159eab5fbc8b81cdfedee7a68d14c5b647d31b01455e1270e5561cd77b324dde"
+        },
+        {
+          "bytes": 672329216,
+          "file": "p12-text-Q4_K_M.gguf",
+          "sha256": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24"
+        }
+      ],
+      "quantization": "Q4_K_M",
+      "quantized_comparison_caveat": "Own HF checkpoint: runtime and precision both differ",
+      "quantizer_sha256": "cc3716569740e341ee2f28d19c6ab9c1191cb7f555e55f17a8fdc640652385cd",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "server_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+      "source_checkpoint_modified": false,
+      "source_precision": "f16"
+    },
+    "local_weight_bytes_available": true,
+    "parameter_count_source": "R2 GPU loaded text model; null means not yet observed",
+    "source_files": [
+      {
+        "bytes": 1789,
+        "file": "config.json",
+        "sha256": "acc1badd3017c913c512fb2555f5ed1218db987a555e8c8d9397609e06e61dee"
+      },
+      {
+        "bytes": 19989343,
+        "file": "tokenizer.json",
+        "sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
+      },
+      {
+        "bytes": 2013387056,
+        "file": "model.safetensors",
+        "sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43"
+      }
+    ],
+    "tokenizer_class": "TokenizersBackend"
+  }
+}

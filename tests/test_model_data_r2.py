@@ -155,6 +155,68 @@ def test_first_line_removes_crlf_not_meaningful_whitespace():
     assert returned_first_line("trailing CR without LF\r") == "trailing CR without LF\r"
 
 
+def test_native_line_stop_omission_uses_observed_terminator_not_gold():
+    import runpy
+
+    helper = runpy.run_path(str(Path(__file__).parents[1] / "scripts/evaluate_causal_line.py"))
+    case = {
+        "id": "synthetic",
+        "language": "python",
+        "repository": "fixture",
+        "source_before": "value =",
+        "source_after": "\n",
+        "reference": " 1  ",
+        "source_sha256": "fixture",
+    }
+    result = helper["score_line"](case, " 1  \r", native_newline_omitted=True)
+    assert result["exact"] and result["raw_response"] == " 1  \r"
+    unchanged = helper["score_line"](case, " 1  \r", native_newline_omitted=False)
+    assert not unchanged["exact"]
+
+
+def test_telemetry_ids_do_not_consume_or_replay_training_random_state():
+    import random
+
+    from tinycomplete.observability.bootstrap import ResearchSafeIdGenerator
+
+    before = random.getstate()
+    generator = ResearchSafeIdGenerator()
+    first = (generator.generate_trace_id(), generator.generate_span_id())
+    assert random.getstate() == before
+    random.setstate(before)
+    second = (generator.generate_trace_id(), generator.generate_span_id())
+    assert first != second
+    assert random.getstate() == before
+    assert all(first) and all(second)
+
+
+def test_container_timeout_removes_only_its_unique_disposable_container(tmp_path, monkeypatch):
+    import subprocess
+
+    from tinycomplete.eval import code_benchmark as module
+
+    commands = []
+    monkeypatch.setattr(module, "_container_runtime", lambda: "podman")
+
+    def command(args, **kwargs):
+        commands.append(args)
+        return subprocess.CompletedProcess(args, 0)
+
+    def timed_out(args, *positional, **kwargs):
+        commands.append(args)
+        return module.CheckResult(status="timeout")
+
+    monkeypatch.setattr(module.subprocess, "run", command)
+    monkeypatch.setattr(module, "_run_trusted", timed_out)
+    result = module._run_container(["python3", "fixture.py"], tmp_path, 0.1, "fixture:1")
+    assert result.status == "timeout"
+    launched = commands[1]
+    name = launched[launched.index("--name") + 1]
+    assert name.startswith("tabcomplete-case-")
+    assert "--network=none" in launched
+    assert commands[2] == ["podman", "rm", "--force", name]
+
+
 def test_pilot_baseline_preserves_production_trainer_json_contract(tmp_path):
     import json
     import runpy

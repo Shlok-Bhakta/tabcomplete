@@ -298,6 +298,23 @@ def main():
         smoke = train(corpus, parent, OUT / "smoke", 3, environment, baseline)
         progress["training_input_tokens"] += smoke["additional_input_tokens"]
     assert ((previous or OUT) / "smoke/final/model.safetensors").stat().st_size > 1_000_000_000
+    if previous is None:
+        # The complete, hash-verified smoke restart checkpoint is the recoverable
+        # replacement for this disposable inference export. Release only this
+        # duplicate export before holding three optimizer checkpoints on scratch.
+        inference = OUT / "smoke/final"
+        save(
+            OUT / "smoke/inference-verification.json",
+            {
+                "model_sha256": sha(inference / "model.safetensors"),
+                "tokenizer_sha256": sha(inference / "tokenizer.json"),
+                "recoverable_replacement": "smoke/resume-latest",
+                "replacement_manifest_sha256": sha(
+                    OUT / "smoke/resume-latest/checkpoint_manifest.json"
+                ),
+            },
+        )
+        shutil.rmtree(inference)
     if ARM == "R2_STANDARD":
         if previous:
             continuous = verify_state(previous / "continuous", 8, persist=False)

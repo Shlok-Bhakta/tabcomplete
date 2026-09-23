@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "limit_input_tokens": 12000000,
+  "jobs": {
+    "shlokbhakta/tabcomplete-model-data-r2-baseline": {
+      "input_tokens": 0,
+      "status": "verified",
+      "evidence": "Completed inference-only worker and progress.json"
+    },
+    "shlokbhakta/tabcomplete-model-data-r2-standard": {
+      "input_tokens": 0,
+      "status": "verified",
+      "evidence": "Saved smoke.log: baseline metrics KeyError at train.py:899 before entering the batch loop; no training checkpoint or summary"
+    },
+    "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2": {
+      "input_tokens": 0,
+      "status": "verified",
+      "evidence": "Saved session log: baseline input path assertion before launching training subprocess"
+    },
+    "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3": {
+      "input_tokens": 524288,
+      "status": "verified",
+      "evidence": "Retrieved scientific summaries: smoke 98304 + continuous 262144 + resumed 163840. Zero skipped updates. Full pilot never started; final resumed checkpoint refused at 7.20 GiB free below the 8 GiB guard."
+    }
+  },
+  "filtered_planned_reservation": 5111808,
+  "planned_total_including_active_reservation": 11173888,
+  "reconciliation": "A failed process with uncertain consumed tokens retains its full reservation until scientific evidence establishes consumption. Resumed input consumption counts only additional blocks, not inherited lineage."
+}

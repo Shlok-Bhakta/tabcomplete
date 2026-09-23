@@ -6,6 +6,7 @@ import atexit
 import contextlib
 import contextvars
 import os
+import secrets
 import socket
 import threading
 from collections.abc import Iterator
@@ -17,12 +18,32 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+from opentelemetry.sdk.trace.id_generator import IdGenerator
 
 from .config import ObservabilityConfig
 
 _active_runtime: contextvars.ContextVar[ObservabilityRuntime | None] = contextvars.ContextVar(
     "tabcomplete_observability_runtime", default=None
 )
+
+
+class ResearchSafeIdGenerator(IdGenerator):
+    """SDK IDs must not consume or replay the trainer's Python random state."""
+
+    def generate_span_id(self) -> int:
+        value = secrets.randbits(64)
+        while value == trace.INVALID_SPAN_ID:
+            value = secrets.randbits(64)
+        return value
+
+    def generate_trace_id(self) -> int:
+        value = secrets.randbits(128)
+        while value == trace.INVALID_TRACE_ID:
+            value = secrets.randbits(128)
+        return value
+
+    def is_trace_id_random(self) -> bool:
+        return True
 
 
 @dataclass
@@ -99,7 +120,7 @@ def initialize_observability(
             "host.name": socket.gethostname(),
         }
     )
-    provider = TracerProvider(resource=resource)
+    provider = TracerProvider(resource=resource, id_generator=ResearchSafeIdGenerator())
     if span_exporter is None:
         if config.mode == "offline":
             from .offline import OfflineSpanExporter

@@ -1,0 +1,3743 @@
+{
+  "audit_only_no_selection_changes": true,
+  "languages": [
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 371,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.01904296875,
+          "packed_tokens": 301056,
+          "parser": {
+            "pass": 371
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 19,
+            "repository_token_cap": 18,
+            "syntax_invalid": 623
+          },
+          "repository_count": 361,
+          "source_token_quantiles": [
+            18.0,
+            156.5,
+            382.0,
+            938.0,
+            5732.0
+          ],
+          "source_tokens": 300983,
+          "test_file_share": 0.07816711590296496
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 94,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.3554189253826531,
+          "packed_tokens": 301056,
+          "parser": {
+            "fail": 61,
+            "pass": 33
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 92,
+          "source_token_quantiles": [
+            35.0,
+            184.5,
+            426.5,
+            1268.25,
+            166577.0
+          ],
+          "source_tokens": 360540,
+          "test_file_share": 0.010638297872340425
+        }
+      },
+      "candidate_files": 12544,
+      "common_rejections": {
+        "binary": 2,
+        "known_repository": 204,
+        "long_line": 1,
+        "metadata_alphanumeric": 2,
+        "metadata_average_line": 17,
+        "metadata_size": 104,
+        "reserved_repository_bucket": 293,
+        "vendor_or_generated": 200
+      },
+      "language": "c",
+      "pool_sha256": "b1cacb3c96afd7ef16bca1b2499339c3a33a9f306ed73304db51926c3faa3be7",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 11721,
+      "retained_pool_tokens": 26995875
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 513,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.016737085459183672,
+          "packed_tokens": 501760,
+          "parser": {
+            "pass": 513
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 1,
+            "repository_token_cap": 7,
+            "syntax_invalid": 120
+          },
+          "repository_count": 511,
+          "source_token_quantiles": [
+            14.0,
+            226.0,
+            503.0,
+            1150.0,
+            8397.0
+          ],
+          "source_tokens": 501663,
+          "test_file_share": 0.10916179337231968
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 220,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.39418048469387756,
+          "packed_tokens": 501760,
+          "parser": {
+            "fail": 39,
+            "pass": 181
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 218,
+          "source_token_quantiles": [
+            27.0,
+            214.75,
+            559.5,
+            1779.25,
+            197783.0
+          ],
+          "source_tokens": 501597,
+          "test_file_share": 0.09545454545454546
+        }
+      },
+      "candidate_files": 5218,
+      "common_rejections": {
+        "known_repository": 97,
+        "metadata_average_line": 1,
+        "metadata_size": 26,
+        "reserved_repository_bucket": 119,
+        "vendor_or_generated": 53
+      },
+      "language": "cpp",
+      "pool_sha256": "ac5afbb2e7675aca439c577f8a3064941bfb2836cfb27b837eff2d63ea5b528e",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 4922,
+      "retained_pool_tokens": 11494342
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 490,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.01919576424319728,
+          "packed_tokens": 301056,
+          "parser": {
+            "pass": 490
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 9,
+            "repository_token_cap": 6,
+            "syntax_invalid": 18
+          },
+          "repository_count": 484,
+          "source_token_quantiles": [
+            27.0,
+            135.25,
+            319.0,
+            707.25,
+            5778.0
+          ],
+          "source_tokens": 301946,
+          "test_file_share": 0.08163265306122448
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 6,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 450,
+          "generated_marker_files": 6,
+          "largest_repository_fraction": 0.024610039328231293,
+          "packed_tokens": 301056,
+          "parser": {
+            "fail": 14,
+            "pass": 436
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 444,
+          "source_token_quantiles": [
+            23.0,
+            131.0,
+            331.0,
+            737.5,
+            7408.0
+          ],
+          "source_tokens": 301297,
+          "test_file_share": 0.06888888888888889
+        }
+      },
+      "candidate_files": 3966,
+      "common_rejections": {
+        "known_repository": 55,
+        "metadata_average_line": 1,
+        "metadata_max_line": 1,
+        "metadata_size": 7,
+        "reserved_repository_bucket": 116,
+        "vendor_or_generated": 42
+      },
+      "language": "csharp",
+      "pool_sha256": "a69f5a39d34f6315e4e344f9a29a9f99539c4fe5274fb4e41382ce10d1a67f65",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 3744,
+      "retained_pool_tokens": 3103430
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 371,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.0194091796875,
+          "packed_tokens": 401408,
+          "parser": {
+            "pass": 371
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 42,
+            "repository_token_cap": 5
+          },
+          "repository_count": 369,
+          "source_token_quantiles": [
+            18.0,
+            255.5,
+            581.0,
+            1272.5,
+            7790.0
+          ],
+          "source_tokens": 401214,
+          "test_file_share": 0.18328840970350405
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 24,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 240,
+          "generated_marker_files": 24,
+          "largest_repository_fraction": 0.07724061304209184,
+          "packed_tokens": 401408,
+          "parser": {
+            "pass": 240
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 240,
+          "source_token_quantiles": [
+            18.0,
+            290.75,
+            605.0,
+            1418.5,
+            31004.0
+          ],
+          "source_tokens": 403387,
+          "test_file_share": 0.14166666666666666
+        }
+      },
+      "candidate_files": 5305,
+      "common_rejections": {
+        "known_repository": 53,
+        "metadata_average_line": 4,
+        "metadata_max_line": 2,
+        "metadata_size": 22,
+        "reserved_repository_bucket": 133,
+        "vendor_or_generated": 290
+      },
+      "language": "go",
+      "pool_sha256": "1dbca27bf3cf40513e19aa88180955f40e79ed51f72676d3c20605b360310ba2",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 4801,
+      "retained_pool_tokens": 8527864
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 584,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.019943797831632654,
+          "packed_tokens": 501760,
+          "parser": {
+            "pass": 584
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 3,
+            "repository_token_cap": 3,
+            "syntax_invalid": 5
+          },
+          "repository_count": 579,
+          "source_token_quantiles": [
+            17.0,
+            187.0,
+            475.0,
+            979.25,
+            10006.0
+          ],
+          "source_tokens": 504348,
+          "test_file_share": 0.13356164383561644
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 3,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 548,
+          "generated_marker_files": 3,
+          "largest_repository_fraction": 0.03506656568877551,
+          "packed_tokens": 501760,
+          "parser": {
+            "fail": 5,
+            "pass": 543
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 543,
+          "source_token_quantiles": [
+            17.0,
+            185.75,
+            471.5,
+            982.25,
+            17594.0
+          ],
+          "source_tokens": 502308,
+          "test_file_share": 0.1386861313868613
+        }
+      },
+      "candidate_files": 4311,
+      "common_rejections": {
+        "known_repository": 51,
+        "metadata_average_line": 9,
+        "metadata_max_line": 1,
+        "metadata_size": 13,
+        "reserved_repository_bucket": 106,
+        "vendor_or_generated": 42
+      },
+      "language": "java",
+      "pool_sha256": "46c9a7aad697b41cc5ce9dad1813d32a9bfa2f2e297bc779d12d01bbd2375a83",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 4089,
+      "retained_pool_tokens": 4858031
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 555,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.018363360969387756,
+          "packed_tokens": 501760,
+          "parser": {
+            "pass": 555
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "additional_path": 1,
+            "generated_content_marker": 3,
+            "repository_token_cap": 10,
+            "syntax_invalid": 12
+          },
+          "repository_count": 554,
+          "source_token_quantiles": [
+            15.0,
+            166.5,
+            436.0,
+            1051.5,
+            9213.0
+          ],
+          "source_tokens": 501969,
+          "test_file_share": 0.08648648648648649
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 3,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 414,
+          "generated_marker_files": 3,
+          "largest_repository_fraction": 0.08764748086734694,
+          "packed_tokens": 501760,
+          "parser": {
+            "fail": 7,
+            "pass": 407
+          },
+          "path_marker_files": 1,
+          "rejections": {},
+          "repository_count": 413,
+          "source_token_quantiles": [
+            15.0,
+            168.5,
+            427.0,
+            964.25,
+            43977.0
+          ],
+          "source_tokens": 508667,
+          "test_file_share": 0.09420289855072464
+        }
+      },
+      "candidate_files": 4784,
+      "common_rejections": {
+        "known_repository": 33,
+        "metadata_alphanumeric": 2,
+        "metadata_average_line": 210,
+        "metadata_max_line": 10,
+        "metadata_size": 64,
+        "minified": 12,
+        "repetitive": 1,
+        "reserved_repository_bucket": 119,
+        "vendor_or_generated": 305
+      },
+      "language": "javascript",
+      "pool_sha256": "b0b636317aa9967d64d4e2d53e8baaff5e92c9830884e6ef25f593e3143a3898",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 4028,
+      "retained_pool_tokens": 5110731
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 954,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.01815028278374233,
+          "packed_tokens": 1001472,
+          "parser": {
+            "pass": 954
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 6,
+            "repository_token_cap": 3,
+            "syntax_invalid": 3
+          },
+          "repository_count": 950,
+          "source_token_quantiles": [
+            15.0,
+            176.0,
+            469.0,
+            1132.75,
+            18176.0
+          ],
+          "source_tokens": 1000552,
+          "test_file_share": 0.1310272536687631
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 6,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 821,
+          "generated_marker_files": 6,
+          "largest_repository_fraction": 0.07431161330521473,
+          "packed_tokens": 1001472,
+          "parser": {
+            "fail": 2,
+            "pass": 819
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 817,
+          "source_token_quantiles": [
+            15.0,
+            181.0,
+            472.0,
+            1166.0,
+            74420.0
+          ],
+          "source_tokens": 1008973,
+          "test_file_share": 0.13398294762484775
+        }
+      },
+      "candidate_files": 2690,
+      "common_rejections": {
+        "known_repository": 24,
+        "metadata_average_line": 5,
+        "metadata_max_line": 1,
+        "metadata_size": 56,
+        "reserved_repository_bucket": 63,
+        "vendor_or_generated": 7
+      },
+      "language": "python",
+      "pool_sha256": "991ff59e26bba6191abd2d3017b0a7aaa6e089882d9cbb92c87563da846e0c37",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 2534,
+      "retained_pool_tokens": 3495078
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 368,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.019387755102040816,
+          "packed_tokens": 501760,
+          "parser": {
+            "pass": 368
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 2,
+            "repository_token_cap": 5,
+            "syntax_invalid": 9
+          },
+          "repository_count": 367,
+          "source_token_quantiles": [
+            19.0,
+            254.75,
+            757.0,
+            1703.25,
+            9727.0
+          ],
+          "source_tokens": 501734,
+          "test_file_share": 0.11684782608695653
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 1,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 265,
+          "generated_marker_files": 1,
+          "largest_repository_fraction": 0.17841198979591838,
+          "packed_tokens": 501760,
+          "parser": {
+            "fail": 5,
+            "pass": 260
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 265,
+          "source_token_quantiles": [
+            24.0,
+            257.0,
+            748.0,
+            1776.0,
+            89519.0
+          ],
+          "source_tokens": 506563,
+          "test_file_share": 0.12452830188679245
+        }
+      },
+      "candidate_files": 4120,
+      "common_rejections": {
+        "known_repository": 96,
+        "metadata_average_line": 1,
+        "metadata_size": 101,
+        "reserved_repository_bucket": 96,
+        "vendor_or_generated": 46
+      },
+      "language": "rust",
+      "pool_sha256": "676cc14204029bff85a9c692e52ca7dc99504fc0389472cd879e5ebb9c388735",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 3780,
+      "retained_pool_tokens": 7277814
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 687,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.01967933529713115,
+          "packed_tokens": 249856,
+          "parser": {
+            "pass": 687
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 3,
+            "repository_token_cap": 4,
+            "syntax_invalid": 15
+          },
+          "repository_count": 685,
+          "source_token_quantiles": [
+            16.0,
+            78.0,
+            159.0,
+            424.5,
+            4916.0
+          ],
+          "source_tokens": 250039,
+          "test_file_share": 0.10334788937409024
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 1,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 477,
+          "generated_marker_files": 1,
+          "largest_repository_fraction": 0.12303887038934426,
+          "packed_tokens": 249856,
+          "parser": {
+            "fail": 10,
+            "pass": 467
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 476,
+          "source_token_quantiles": [
+            16.0,
+            85.0,
+            169.0,
+            463.0,
+            30741.0
+          ],
+          "source_tokens": 250273,
+          "test_file_share": 0.10482180293501048
+        }
+      },
+      "candidate_files": 827,
+      "common_rejections": {
+        "known_repository": 9,
+        "metadata_average_line": 1,
+        "metadata_size": 52,
+        "reserved_repository_bucket": 17,
+        "vendor_or_generated": 18
+      },
+      "language": "shell",
+      "pool_sha256": "22bdf2829291776318cf972fef6049f7560f30dac712b6838e085475496aa5d6",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 730,
+      "retained_pool_tokens": 352349
+    },
+    {
+      "arms": {
+        "R2_FILTERED": {
+          "content_marker_files": 0,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 1413,
+          "generated_marker_files": 0,
+          "largest_repository_fraction": 0.017954647053814714,
+          "packed_tokens": 751616,
+          "parser": {
+            "pass": 1413
+          },
+          "path_marker_files": 0,
+          "rejections": {
+            "generated_content_marker": 18,
+            "repository_token_cap": 4,
+            "syntax_invalid": 321
+          },
+          "repository_count": 1399,
+          "source_token_quantiles": [
+            14.0,
+            112.0,
+            242.0,
+            574.0,
+            13494.0
+          ],
+          "source_tokens": 750560,
+          "test_file_share": 0.08917197452229299
+        },
+        "R2_STANDARD": {
+          "content_marker_files": 9,
+          "exact_duplicate_file_fraction": 0.0,
+          "exact_duplicate_files": 0,
+          "files": 1113,
+          "generated_marker_files": 9,
+          "largest_repository_fraction": 0.07282042958106268,
+          "packed_tokens": 751616,
+          "parser": {
+            "fail": 210,
+            "pass": 903
+          },
+          "path_marker_files": 0,
+          "rejections": {},
+          "repository_count": 1106,
+          "source_token_quantiles": [
+            14.0,
+            127.0,
+            278.0,
+            628.0,
+            54732.0
+          ],
+          "source_tokens": 750692,
+          "test_file_share": 0.0862533692722372
+        }
+      },
+      "candidate_files": 4081,
+      "common_rejections": {
+        "known_repository": 77,
+        "long_line": 2,
+        "metadata_average_line": 5,
+        "metadata_size": 113,
+        "reserved_repository_bucket": 107,
+        "vendor_or_generated": 136
+      },
+      "language": "typescript",
+      "pool_sha256": "f54d113d17c40d0997da6567e95ac18204a3ac7c443f3b390a0f28d45a63a16a",
+      "raw_candidate_tokens": null,
+      "raw_candidate_tokens_note": "Rejected source was not tokenized or retained",
+      "retained_pool_files": 3641,
+      "retained_pool_tokens": 3024626
+    }
+  ],
+  "observed_at": "2026-09-23T01:19:11.142185+00:00",
+  "overlap_caveat": "Known project identities excluded; original foundation pretraining is unknown",
+  "sample_files_verified": 200,
+  "samples": [
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "4c7b0418f97e6b49b5945804d5b6e710c9760082af96e2e2e3b603c3fc7a4c4e",
+      "language": "c",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "PrivateFrameworks/iWorkImport.framework/TSUZipFileWriter.h",
+      "repository": "shaojiankui/iOS10-Runtime-Headers",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 117
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "68ddc8d425bfcc1af2062a9364e9576ef308c20a97febee2a88686a09da1c50e",
+      "language": "c",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "include/FileStreamJS.h",
+      "repository": "ciliz-co-ltd/w4-sdk-updater",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 219
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "31a434298ff3b5fed2a5868f8a656deab817946c5df97673343775eaf1b97998",
+      "language": "c",
+      "licenses": [
+        "BSD-2-Clause"
+      ],
+      "parser": "fail",
+      "path": "AppleEventsDock/EVTDockIconView.h",
+      "repository": "insidegui/AppleEvents",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 101
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "2e3a708172d1242e60ec8aab7bc40dbd003576d7cb25cae74b133e752947e413",
+      "language": "c",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "fail",
+      "path": "gen/src/model/TaskSpecContainerSpecFile1.h",
+      "repository": "cpp-openapi/dockerctl",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 227
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "eac3b059db736c54dd4c57ce557df6a960046e30af3aea9217cc21fd3b128b6d",
+      "language": "c",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "include/IR/Module.h",
+      "repository": "linvs/llvm-bindings",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 421
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "2fca8571882bb051a362e21b2aa4656ab521c6a2ff5cbd22a933afda0f7629ec",
+      "language": "c",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "PlatformIO/src/bt_tank.h",
+      "repository": "dsringari/BluetoothTank",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 150
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "f68dc571b104fe2c97c303d01ff6c0adb98bc77e088a26ef3fdb6fd8ce3bb18e",
+      "language": "c",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/commands/mac/rmaker/hexa.c",
+      "repository": "macminix/MacMinix",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 283
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "af17b2b0890539d9e7a98a77c5a4f3fd64ac356c5430e4fd0b93c7eb4113f428",
+      "language": "c",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "fail",
+      "path": "cctbxForMaud/cctbx/crystal/direct_space_asu.h",
+      "repository": "damianosky/Maud-X",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 9321
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9967d877740d7012f598ce39b317b0a31e6c99ca1d662e151100fc02a66ddb73",
+      "language": "c",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "fail",
+      "path": "source/extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h",
+      "repository": "adesaegher/envoy-gloo",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 291
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "ae5ea39a4c06ee460e39453aa45b5a15def21bde3885997efccbac48d392c67c",
+      "language": "c",
+      "licenses": [
+        "BSD-2-Clause"
+      ],
+      "parser": "fail",
+      "path": "src/response.h",
+      "repository": "cloose/qoembed",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 872
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "1c2288858aa87dff6252d91b378dbc35e4e86cdb24223cb26e99b0e0fcf3ddf5",
+      "language": "c",
+      "licenses": [
+        "Ruby"
+      ],
+      "parser": "pass",
+      "path": "pango/ext/pango/rbpangologattr.c",
+      "repository": "cosmo0920/ruby-gnome2",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 978
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "3122d8ccf42b4afa5f2982472ed60b24640b598ee0b2b42e7631defe86e44427",
+      "language": "c",
+      "licenses": [
+        "FSFAP"
+      ],
+      "parser": "pass",
+      "path": "lsp_shiloh/oem/shiloh/pinetree/paper/config/paper_config.c",
+      "repository": "internaru/Pinetree_P",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 2930
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "967d8b8ee06e6aa809f2955e578b73fd01a69c70156450f4177110d6ec8c21e4",
+      "language": "c",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "text-chat-acc-pack/ios/TextChatAccPackKit/Documentation/Documentation/TextChatKit.h",
+      "repository": "marinaserranomontes/misc-opentok-accelerators",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 71
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "756e65d4595d996ae71b91d1a6de7457561740c159d3a0ab91273cb632c2f4a9",
+      "language": "c",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "qemu_mode/qemu-2.10.0/roms/ipxe/src/tests/cipher_test.h",
+      "repository": "braymar/afl",
+      "sample_index": 3,
+      "test_path": true,
+      "tokens": 842
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "31cdb1494f4fd8a14245f91e166a8850166f149c7cf5fa5ebd6131b069ab12e1",
+      "language": "c",
+      "licenses": [
+        "X11"
+      ],
+      "parser": "pass",
+      "path": "AtCoder/ABC172/B.c",
+      "repository": "jthvai/competitive-programming",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 168
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b0620a695b1c7fbd16f3dd38d4d4b418d2eeb9c8e971cfe6be7066387b649ce1",
+      "language": "c",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "core/source/pif_step_motor_speed.c",
+      "repository": "SlowlyBarefoot/pif",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 2485
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "1b8c783d13188dcd514afeecba7e531fa122c0e6aaf50d0fbe1d558deb0e0a90",
+      "language": "c",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "Bwl.Hardware.MotorControllerTwo.Fw/pwm.h",
+      "repository": "Lifemotion/Bwl.Hardware.MotorControllers",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 143
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "cf16ae4b96f3cc46834c0c921c1b8613a9f443b927b1300132ae1a13c5a9e893",
+      "language": "c",
+      "licenses": [
+        "BSD-2-Clause"
+      ],
+      "parser": "pass",
+      "path": "books/dataStructureUsingC/cp1_introduction/pointer.c",
+      "repository": "Bingwen-Hu/hackaway",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 75
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "a4314805279b8c6f9fa416ec6bd161f2faaef2b71774aba6c56ab14e6339062e",
+      "language": "c",
+      "licenses": [
+        "Unlicense"
+      ],
+      "parser": "pass",
+      "path": "parser.c",
+      "repository": "echambon/bibgerhtm",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 1774
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "a1055e8cfe33d066ec9536e0a9837525a1a1dd8f1408829c348fc47e0b482f70",
+      "language": "c",
+      "licenses": [
+        "Unlicense"
+      ],
+      "parser": "pass",
+      "path": "ledaps/ledapsSrc/src/lndsr/sr.h",
+      "repository": "BeamIO-Inc/espa-surface-reflectance",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 180
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "3d568cbd22ffb0f899cbc0179b55a1c45b793aed364d70bc5ec24f3ecab49381",
+      "language": "cpp",
+      "licenses": [
+        "PostgreSQL",
+        "Zlib",
+        "OpenSSL"
+      ],
+      "parser": "pass",
+      "path": "src/modules/SD3/scripts/northrend/nexus/eye_of_eternity/instance_eye_of_eternity.cpp",
+      "repository": "buttlerkid/avalon",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 1587
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9b7d5890350dbd9ae350112d59bde4d34dbe20ba227537deb88e25ebba3bd979",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "channel/Patch/PatchList.cpp",
+      "repository": "StarMKWii/saoirse",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 755
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "ccd8b55e91e97dae1d38d21493edfc44f1e9525ea482c7924d9c6296a2fc7a15",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "pr1/video/Primjer14/Source.cpp",
+      "repository": "jasarsoft/fit-src",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 548
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "cbe6b20b642cf90edca18ce523f44dc7973c80663a0861b85faf385e0cec67aa",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "scip/src/cppad/local/for_hes_sweep.hpp",
+      "repository": "avrech/scipoptsuite-6.0.2-avrech",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 4935
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "cc8292ebafa3dc32c68d7599d289e58e3e3120aff9613c818c83abdb001daa17",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "test/data/175.cpp",
+      "repository": "suliveevil/vista.vim",
+      "sample_index": 4,
+      "test_path": true,
+      "tokens": 102
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "bc94abe1e7f26bc9b6a031e346a99c072efcf7d10c3ec6b0742ee33ea5938a6b",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "C++/Algoritm/String/caesarChiper.cpp",
+      "repository": "nielchevo/HackerRank",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 361
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "819bcf1d297ee9a0620264f8f919fde70749fa533effe7888c6ccd55650ff706",
+      "language": "cpp",
+      "licenses": [
+        "Unlicense"
+      ],
+      "parser": "fail",
+      "path": "source/pkgsrc/inputmethod/fcitx5-mozc/patches/patch-base_run__level.cc",
+      "repository": "Scottx86-64/dotfiles-1",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 213
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "97314b3c5336afecbb909250f5f9d0cfff15dbdc3a49919e579b750ed0957011",
+      "language": "cpp",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "cpp/example_code/sqs/long_polling_on_message_receipt.cpp",
+      "repository": "JimGAWS/aws-doc-sdk-examples",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 1058
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "494dd97ecc9fcaa941f3cfb6da9c78d38439dfb48d8ada0cd6d6d9870b5b9be3",
+      "language": "cpp",
+      "licenses": [
+        "0BSD"
+      ],
+      "parser": "pass",
+      "path": "src/il/processing/passes/misc/il-clean-pass.hpp",
+      "repository": "noct-lang/noct-bootstrap",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 176
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "7910fb6d4864bca332fe78a19e84447733c4810362395a69aa3678ecb848f392",
+      "language": "cpp",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/lua_xml.cc",
+      "repository": "VjKlepikov/sdl_atf",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 4098
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "16bd6fcaaae5e0132de857b1a1d7d425b3eea44c2bdf862d11a22b4e5ecc1db8",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "gaussian.cc",
+      "repository": "reisub/SemiGlobal-Matching",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 947
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "edf3b8d9bd158d772dd63a39e6fb423055184fb3397703c0cf0a42e4477a384e",
+      "language": "cpp",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "algorithms/src/Perception/vision_lidar_fusion/src/euclidean_cluster_extraction.cpp",
+      "repository": "mfkiwl/GAAS",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 2179
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "53991b77a20c0b5244e263ac636cc62b5d6a80871c71145b2b4f3c1de5c525d6",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/blinkit/blink/renderer/core/editing/Position.cpp",
+      "repository": "titilima/blink",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 4652
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "0fc5a65b908099e581cd715279fd9e40ca444e0f227e80d81a8f1781467499ce",
+      "language": "cpp",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/fdb5/tools/fdb-hide.cc",
+      "repository": "dvuckovic/fdb",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 963
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "3d568cbd22ffb0f899cbc0179b55a1c45b793aed364d70bc5ec24f3ecab49381",
+      "language": "cpp",
+      "licenses": [
+        "PostgreSQL",
+        "Zlib",
+        "OpenSSL"
+      ],
+      "parser": "pass",
+      "path": "src/modules/SD3/scripts/northrend/nexus/eye_of_eternity/instance_eye_of_eternity.cpp",
+      "repository": "buttlerkid/avalon",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 1587
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "125bb894490330aba57ea9d86e9d5e563636babce81bb4aa77a9721c91b71d9a",
+      "language": "cpp",
+      "licenses": [
+        "Artistic-1.0"
+      ],
+      "parser": "pass",
+      "path": "src/Common/fasta.cc",
+      "repository": "davek44/Glimmer-MG",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 1966
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "fd5ab1e1874cbc804bb907f82ab39effb1b9191492fdff4cd4da121a6e41e4d8",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "CppPrograms/Exp08/Exp08_1.cpp",
+      "repository": "LovelyCatHyt/C-Programs",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 87
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "35ad5ac8e51ccfed4095b45b03d214c30e59b4aeae3d89254be65ca05462f338",
+      "language": "cpp",
+      "licenses": [
+        "WTFPL"
+      ],
+      "parser": "pass",
+      "path": "UVA/392/12867109_AC_200ms_0kB.cpp",
+      "repository": "BakaErii/ACM_Collection",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 521
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "d33cb4cf2eb2d7efe7cc08d0591ecd07bdc11c44587e441384e7b4400a9293d1",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/corrvwn.cpp",
+      "repository": "romz-pl/kohn-sham-atom",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 580
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "582627070c398a41920b8c921c62819d32ca61412d3bb8c4e295c0603dcc1f8c",
+      "language": "cpp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "include/Map.hpp",
+      "repository": "ajeetwankhede/Midterm",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 614
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "8294ff3267e95a2c4309cd91b802a33c16cd560e2f84d886988d12938649f274",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "MTMIntegration/MTMInteraction.cs",
+      "repository": "Bhaskers-Blu-Org2/MTMBuddy",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 6277
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9287649193efdde982c9bf813d2fe8c746399fccd66e51ea35b10d9486b37659",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "MimeKit/Tnef/TnefPart.cs",
+      "repository": "Muraad/MimeKit",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 2964
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "4e9891ac3dbaec573f94bcf38f80fe40c9a0c97f1e5f4c1efe280e64583b36a4",
+      "language": "csharp",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/Orchard.Web/Modules/Orchard.Layouts/Drivers/GridElementDriver.cs",
+      "repository": "Lombiq/Open-Source-Orchard-Extensions",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 45
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "cfd4a620af441914fe8e2d6fff860af648772e3558805b0c7f8c284e54c625b6",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "SnippetsApp/Views/Shared/_Layout.cshtml",
+      "repository": "christophwille/aspnet-snippets-sample",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 1114
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "eea3a0d8f3214771c7459136e450b76a7dcadac2f9f2d510753b34d99f0989aa",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "Codebase/Editor/Systems/State/Editor/Fields/GroupLabelField.cs",
+      "repository": "z3nth10n/unity-themes",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 976
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "ed8ad67e273ad6ccf5c979ccdef24a995080f3a2d6848e75596e1f50c5ac4f63",
+      "language": "csharp",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "tests/resources/ObjectModelTest/sources/StaticPropertyGetSet.stab.cs",
+      "repository": "monoman/cnatural-language",
+      "sample_index": 5,
+      "test_path": true,
+      "tokens": 85
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "590efa224062e364a62bb45cf36781edc983a7b0dc7e86a36d268f2aeba58830",
+      "language": "csharp",
+      "licenses": [
+        "Zlib"
+      ],
+      "parser": "pass",
+      "path": "WispSurvivor/RogueWispPlugin/PartialMain/RogueWisp/Effects/LeechOrbEffects.cs",
+      "repository": "Reinms/RoR2Modding",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 438
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9bcc43d8470c466dd72f45bb675b96fce27f16b618deb6388b23f9470228a32e",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "Inboxy.Web/Views/Shared/_Layout.cshtml",
+      "repository": "niaher/inboxy",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 88
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "6df80b2f8f92f1a852631894bcdb275ff1d8ed4c2ebe0ebf9f057c59f401210a",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/AttributeRouting.Tests.Web/Areas/Api/Controllers/VersionedController.cs",
+      "repository": "PrintFleet/AttributeRouting",
+      "sample_index": 8,
+      "test_path": true,
+      "tokens": 405
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "7f70a9af5675e42a31d7e0ba4ed3028adbfc853fe49392e24ab891f8bc8831c7",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/tests/UnitTests/Logging/LogServiceFactoryTests.cs",
+      "repository": "UltimateCodeMonkeys/CodeMonkeys",
+      "sample_index": 9,
+      "test_path": true,
+      "tokens": 250
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "9287649193efdde982c9bf813d2fe8c746399fccd66e51ea35b10d9486b37659",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "MimeKit/Tnef/TnefPart.cs",
+      "repository": "Muraad/MimeKit",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 2964
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "4e9891ac3dbaec573f94bcf38f80fe40c9a0c97f1e5f4c1efe280e64583b36a4",
+      "language": "csharp",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/Orchard.Web/Modules/Orchard.Layouts/Drivers/GridElementDriver.cs",
+      "repository": "Lombiq/Open-Source-Orchard-Extensions",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 45
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "25b869a0605a84fd4dbc67c07e15ba37e3c4111488e81d0f2af4d410278522bc",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "bookbox/bookbox/Controllers/BookController.cs",
+      "repository": "Planche95/bookbox",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 1175
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "f408ef1e382eca61e4a14ad8752dfdd47756277bc0bf1a5ece96ce216536007e",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "Web/SFB.Web.UI/Models/CustomSelectionListViewModel.cs",
+      "repository": "DFEAGILEDEVOPS/Schools.Financial.Benchmarking",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 61
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "eea3a0d8f3214771c7459136e450b76a7dcadac2f9f2d510753b34d99f0989aa",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "Codebase/Editor/Systems/State/Editor/Fields/GroupLabelField.cs",
+      "repository": "z3nth10n/unity-themes",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 976
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "ed8ad67e273ad6ccf5c979ccdef24a995080f3a2d6848e75596e1f50c5ac4f63",
+      "language": "csharp",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "tests/resources/ObjectModelTest/sources/StaticPropertyGetSet.stab.cs",
+      "repository": "monoman/cnatural-language",
+      "sample_index": 5,
+      "test_path": true,
+      "tokens": 85
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "590efa224062e364a62bb45cf36781edc983a7b0dc7e86a36d268f2aeba58830",
+      "language": "csharp",
+      "licenses": [
+        "Zlib"
+      ],
+      "parser": "pass",
+      "path": "WispSurvivor/RogueWispPlugin/PartialMain/RogueWisp/Effects/LeechOrbEffects.cs",
+      "repository": "Reinms/RoR2Modding",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 438
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "6df80b2f8f92f1a852631894bcdb275ff1d8ed4c2ebe0ebf9f057c59f401210a",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/AttributeRouting.Tests.Web/Areas/Api/Controllers/VersionedController.cs",
+      "repository": "PrintFleet/AttributeRouting",
+      "sample_index": 7,
+      "test_path": true,
+      "tokens": 405
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "7f70a9af5675e42a31d7e0ba4ed3028adbfc853fe49392e24ab891f8bc8831c7",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/tests/UnitTests/Logging/LogServiceFactoryTests.cs",
+      "repository": "UltimateCodeMonkeys/CodeMonkeys",
+      "sample_index": 8,
+      "test_path": true,
+      "tokens": 250
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "3cc1697ffe6739c06ed5d9871d4e470c556340c29009f899d4aece250383a4bb",
+      "language": "csharp",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/SimpleBuild/ISimpleClassToBeTested.cs",
+      "repository": "jlamch/SimpleBuildWithTest",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 36
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "e63fb0d7512b7be2078f612fd7c28b9c608e077c5318171d6b6e06e7d752b122",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "user.go",
+      "repository": "rajatparida86/readgit",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 606
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "060441d6af52861a6384a2af1948b468420819899131bd51bc3184ba8fa11817",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "lib/nas/nasType/NAS_SNSSAI.go",
+      "repository": "tf-enya/free5gc",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 870
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "14c8122b0b3e756f9288ea3e09583112dc5ba2f0dfe61dd84f692ce90251dbf4",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "util/util.go",
+      "repository": "kmilodenisglez/chaincode-analyzer",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 290
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "5509bbd306d211ba104267f8dedd9dc93803a3f2300d497d8b95896334f123bd",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "services/cps/models/ReinstallInstanceSpec.go",
+      "repository": "waytai/jdcloud-sdk-go",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 427
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "f6d698ab3455af9a87f8c01a6698a2669f41b270c6b884732d925a442de128bf",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "pkg/utils/common/common.go",
+      "repository": "qunqiang/kubevela",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 1284
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "ca9d82898550b56b53d38d26101fd60ae2a9f326d9a8624e3365580df4f83e0b",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "codegen/go/xr/62x/cisco_ios_xr_ipv4_ospf_oper/ospf/processes/process/default_vrf/statistics/raw_io_stats/ospf_sh_raw_stats.pb.go",
+      "repository": "cisco-ie/cisco-proto",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 5589
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "f080d4f5957d16d9e1af6100020d3664dfa9f5e5c7bf5ba313fa9b73ad18ec33",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "app/interface/main/web/dao/reply.go",
+      "repository": "78182648/blibli-go",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 324
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "0643eba7237fa060a64104ad3d30355c44e243605942d6eaa18ba165a84e47ea",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "parser/lexer/lexer.go",
+      "repository": "wangjuelong/expr",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 1392
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "ea0f4a4d4d12f9117c64a42bc5602b4bfe70b405624df154ce44997567d1a87c",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "clone/internal/verify/verify_test.go",
+      "repository": "andrejro/trillian-examples",
+      "sample_index": 8,
+      "test_path": true,
+      "tokens": 800
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "7ccee8a193b7cb87f721126e6cf262b3228bf6d5aa708729d3439f697ed0649e",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "commands/help.go",
+      "repository": "Tch1b0/MoGo",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 219
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "902756a9ce10036fd6865d989ecaa53809eb73722d09efa239f3599dd4d3dc17",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "internal/sql/parser/select.go",
+      "repository": "gillesfabio/genji",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 1220
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "e63fb0d7512b7be2078f612fd7c28b9c608e077c5318171d6b6e06e7d752b122",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "user.go",
+      "repository": "rajatparida86/readgit",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 606
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "171fa3d871f45609cd259a226c9cf9ba4c555750f3c8c3f8f3ee9a5657ead5e7",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "client/inventory/player.go",
+      "repository": "linminglu/Fgame",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 927
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "0bc49f991abc0f39f6b60643a6825cede6410bc3f4a5e8186591f69c0cc64c8c",
+      "language": "go",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "input/move/player.go",
+      "repository": "roeldev/go-sdl2-kit",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 437
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "060441d6af52861a6384a2af1948b468420819899131bd51bc3184ba8fa11817",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "lib/nas/nasType/NAS_SNSSAI.go",
+      "repository": "tf-enya/free5gc",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 870
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "14c8122b0b3e756f9288ea3e09583112dc5ba2f0dfe61dd84f692ce90251dbf4",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "util/util.go",
+      "repository": "kmilodenisglez/chaincode-analyzer",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 290
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "0ac1fca3aecd103c4992b7a013d85fdc6b004521004cd5d310d9cf2e5fa7d938",
+      "language": "go",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "pkg/operator/update.go",
+      "repository": "jinghzhu/KubernetesPodController",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 252
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "5509bbd306d211ba104267f8dedd9dc93803a3f2300d497d8b95896334f123bd",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "services/cps/models/ReinstallInstanceSpec.go",
+      "repository": "waytai/jdcloud-sdk-go",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 427
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "f6d698ab3455af9a87f8c01a6698a2669f41b270c6b884732d925a442de128bf",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "pkg/utils/common/common.go",
+      "repository": "qunqiang/kubevela",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 1284
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "6e424842bef9fab7c4aa42408bdbca8ecafad78550667a441b5b79f60138ea96",
+      "language": "go",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "mcorpc/ddl/agent/action.go",
+      "repository": "ExalDraen/mcorpc-agent-provider",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 3738
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9cda6548d411e540723bb67caa3182c7da5914541e2dabc938d7ca83bb815c52",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "sms-service/src/test/java/com/github/tingstad/weather/sms/SmsServiceIntegrationTest.java",
+      "repository": "tingstad/weather",
+      "sample_index": 0,
+      "test_path": true,
+      "tokens": 72
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "c8f230fededcc8a76c900bc1e2158544aa4f5b7a6df38895e2a3a12e69ed652e",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/main/java/com/booknara/problem/dp/ClassicKnapSack.java",
+      "repository": "booknara/playground",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 958
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "3831661b2bfe3c991150aeb3a8329133aafb0d9d34eedcfcad645dbbe668dc6b",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/java/nxt/http/SendMoneyEscrow.java",
+      "repository": "samroth1/caret-2.0",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 1033
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "e82adae7e2099c70f9a109f41c272d72ad2edd426c82bc29477e59ffc77abe8b",
+      "language": "java",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/com/learnCode/orient/OrientIterateAndDelete.java",
+      "repository": "Mangy007/CodingPractices",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 499
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "6809b75975a4014120d30c9aae2733844781e57b6a6e1b8ab84f1310d0184e86",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/ConvertSortedListtoBinarySearchTree.java",
+      "repository": "yi-juchung/codingPractice",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 293
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "2380074d7e9b21307486b16308c5a7f33ad49c0564683816e1745f760af8e266",
+      "language": "java",
+      "licenses": [
+        "Zlib"
+      ],
+      "parser": "pass",
+      "path": "ardor3d-effects/src/main/java/com/ardor3d/extension/effect/particle/TexAnimation.java",
+      "repository": "lihak/Ardor3D",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 668
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9e20a7ceb159fccb1832560629ff68c78ac772e2b885880717f21440b10f2810",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "taskling-core/src/main/java/com/siiconcatel/taskling/core/infrastructurecontracts/blocks/BlockRepository.java",
+      "repository": "Vanlightly/java-taskling",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 732
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "339a4785abd0b7cae1fb226d305070c9be0d26a190eaf3d763d6ec4faed0db82",
+      "language": "java",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "sm-core/src/test/java/com/salesmanager/test/catalog/BrandTest.java",
+      "repository": "YoungmanIndia/shopizer",
+      "sample_index": 7,
+      "test_path": true,
+      "tokens": 503
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "8dfed83571705202fdd7e35f6538e183062df402126da61cc3cc304b765f0e9b",
+      "language": "java",
+      "licenses": [
+        "MIT-0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "elnetw-core/src/main/java/jp/mydns/turenar/twclient/internal/LoggingConfigurator.java",
+      "repository": "turenar/elnetw",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 2013
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "e2136d23f59c6e9461aca9ae4732f7e85774d01a627cbfb6bbfc207d3d5a6d33",
+      "language": "java",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "jwx/src/main/java/weixin/safetyRules/service/SafetyRulesRecordsServiceI.java",
+      "repository": "wolfchinaliu/gameCenter",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 81
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "62211923181bbc26588ab07afaca84eee2412f8ba4554e805268ca78542d3344",
+      "language": "java",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "kotlin/kotlin-feature/src/main/kotlin/top/spencercjh/chapter2/singleton/type3/SingletonThreeInJava.java",
+      "repository": "spencercjh/codeLife",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 122
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "9cda6548d411e540723bb67caa3182c7da5914541e2dabc938d7ca83bb815c52",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "sms-service/src/test/java/com/github/tingstad/weather/sms/SmsServiceIntegrationTest.java",
+      "repository": "tingstad/weather",
+      "sample_index": 1,
+      "test_path": true,
+      "tokens": 72
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "c8f230fededcc8a76c900bc1e2158544aa4f5b7a6df38895e2a3a12e69ed652e",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/main/java/com/booknara/problem/dp/ClassicKnapSack.java",
+      "repository": "booknara/playground",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 958
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "3831661b2bfe3c991150aeb3a8329133aafb0d9d34eedcfcad645dbbe668dc6b",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/java/nxt/http/SendMoneyEscrow.java",
+      "repository": "samroth1/caret-2.0",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 1033
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "e82adae7e2099c70f9a109f41c272d72ad2edd426c82bc29477e59ffc77abe8b",
+      "language": "java",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/com/learnCode/orient/OrientIterateAndDelete.java",
+      "repository": "Mangy007/CodingPractices",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 499
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "6809b75975a4014120d30c9aae2733844781e57b6a6e1b8ab84f1310d0184e86",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/ConvertSortedListtoBinarySearchTree.java",
+      "repository": "yi-juchung/codingPractice",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 293
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "2380074d7e9b21307486b16308c5a7f33ad49c0564683816e1745f760af8e266",
+      "language": "java",
+      "licenses": [
+        "Zlib"
+      ],
+      "parser": "pass",
+      "path": "ardor3d-effects/src/main/java/com/ardor3d/extension/effect/particle/TexAnimation.java",
+      "repository": "lihak/Ardor3D",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 668
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "9e20a7ceb159fccb1832560629ff68c78ac772e2b885880717f21440b10f2810",
+      "language": "java",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "taskling-core/src/main/java/com/siiconcatel/taskling/core/infrastructurecontracts/blocks/BlockRepository.java",
+      "repository": "Vanlightly/java-taskling",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 732
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "339a4785abd0b7cae1fb226d305070c9be0d26a190eaf3d763d6ec4faed0db82",
+      "language": "java",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "sm-core/src/test/java/com/salesmanager/test/catalog/BrandTest.java",
+      "repository": "YoungmanIndia/shopizer",
+      "sample_index": 8,
+      "test_path": true,
+      "tokens": 503
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "8dfed83571705202fdd7e35f6538e183062df402126da61cc3cc304b765f0e9b",
+      "language": "java",
+      "licenses": [
+        "MIT-0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "elnetw-core/src/main/java/jp/mydns/turenar/twclient/internal/LoggingConfigurator.java",
+      "repository": "turenar/elnetw",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 2013
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "f7f3e8c5d6a5e2a6cd50a1d60bc9059f019847539297f878ce658bb082d12e9b",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/api/table.js",
+      "repository": "sunjiesama/vuetemplate",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 369
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "258a140f37b2fbc0e271a50ba888540dfccd74475bc8e95caca9b1c7e48f4a4e",
+      "language": "javascript",
+      "licenses": [
+        "CC0-1.0"
+      ],
+      "parser": "pass",
+      "path": "common/Collections.js",
+      "repository": "boormat/kts",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 423
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "db26f2556e8b3258422f981d623e3b9f5e98ed232dbc768af1db305fcc613f65",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/wallets/hardware/bcvault/errorHandler.js",
+      "repository": "jdufff/MyEtherWallet",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 415
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "562d735004885061a61fccf124a4ea1710b34221bb2079164e9005a61100f972",
+      "language": "javascript",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "symphony/app/fbcnms-projects/inventory/app/components/site_survey/__generated__/SiteSurveyQuestionReplyCellData_data.graphql.js",
+      "repository": "MeganWheeler1997/magma",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 843
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "762856e67bb411c29643fd5766bd636b37c043bd2943d403c01c2883454ab65c",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "demo/file-header.js",
+      "repository": "KilianKilmister/standardmark",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 22
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "d1677a7f28a36e918098945bca8633b1e01b71032dabd6200013227663c51f7d",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "scripts/binary/upload-build-artifact.js",
+      "repository": "mm73628486283/cypress",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 1165
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "b4e71d2e43ba4af1b6e12d5ab4546d055c8cb0112b06e94ec5b8635af63ccb75",
+      "language": "javascript",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/components/Sort/Sort.stories.js",
+      "repository": "leoluk/patternfly-react",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 367
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "b68d62e99f33fca4e0167c0aca40a57019601be8025db8ec0818d02297e6ac8d",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "html/Test__EconomicsToolbox__mod_8f90.js",
+      "repository": "cdslaborg/paramonte-api-kernel",
+      "sample_index": 7,
+      "test_path": true,
+      "tokens": 448
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "345583cfacaff1ed888d4fe670ecfdf3393f6064cfa4a85b4653a0ba6d0590f5",
+      "language": "javascript",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "tests/ui/specs/VirtualList/VirtualList/Wrap/VirtualList-GT-28463-specs.js",
+      "repository": "sjro/sandstone",
+      "sample_index": 8,
+      "test_path": true,
+      "tokens": 381
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "e66566d864df3fd4bad431ddda1dd392eb9b4d5703241ca1cf7f30822bd70f96",
+      "language": "javascript",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "offline/3.38/dijit/nls/lv/common.js",
+      "repository": "shreepaulnsg/MociPortal_staging_final",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 56
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "f7f3e8c5d6a5e2a6cd50a1d60bc9059f019847539297f878ce658bb082d12e9b",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/api/table.js",
+      "repository": "sunjiesama/vuetemplate",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 369
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "258a140f37b2fbc0e271a50ba888540dfccd74475bc8e95caca9b1c7e48f4a4e",
+      "language": "javascript",
+      "licenses": [
+        "CC0-1.0"
+      ],
+      "parser": "pass",
+      "path": "common/Collections.js",
+      "repository": "boormat/kts",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 423
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "db26f2556e8b3258422f981d623e3b9f5e98ed232dbc768af1db305fcc613f65",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/wallets/hardware/bcvault/errorHandler.js",
+      "repository": "jdufff/MyEtherWallet",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 415
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "562d735004885061a61fccf124a4ea1710b34221bb2079164e9005a61100f972",
+      "language": "javascript",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "symphony/app/fbcnms-projects/inventory/app/components/site_survey/__generated__/SiteSurveyQuestionReplyCellData_data.graphql.js",
+      "repository": "MeganWheeler1997/magma",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 843
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "762856e67bb411c29643fd5766bd636b37c043bd2943d403c01c2883454ab65c",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "demo/file-header.js",
+      "repository": "KilianKilmister/standardmark",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 22
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "5694cafb6823e0d3c561fcd7f9eb42ec1d7768dba903fe6b3b8bef64b9e99dba",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "sketch.js",
+      "repository": "jessica97caroline/angry-birds-main",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 487
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "d1677a7f28a36e918098945bca8633b1e01b71032dabd6200013227663c51f7d",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "scripts/binary/upload-build-artifact.js",
+      "repository": "mm73628486283/cypress",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 1165
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "ebf624e8b59e2f1b62751ae8ce1121b1454c81afc55c708c0729e53afbca39b2",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "packages/generators/lib/game/templates/config/game.js",
+      "repository": "fugufish/chimera",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 67
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b4e71d2e43ba4af1b6e12d5ab4546d055c8cb0112b06e94ec5b8635af63ccb75",
+      "language": "javascript",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/components/Sort/Sort.stories.js",
+      "repository": "leoluk/patternfly-react",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 367
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b68d62e99f33fca4e0167c0aca40a57019601be8025db8ec0818d02297e6ac8d",
+      "language": "javascript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "html/Test__EconomicsToolbox__mod_8f90.js",
+      "repository": "cdslaborg/paramonte-api-kernel",
+      "sample_index": 9,
+      "test_path": true,
+      "tokens": 448
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "142e879423735937429ffc290d0cebc919f29949b89f084d6f725f8dbbf0954a",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "cubify/cubify.py",
+      "repository": "rtansf/cubify",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 1029
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "68dae67ccddc50af1f373cbdb01454d8a2d657fb779d72e845b3ef6d324f1a01",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "converter/font_test.py",
+      "repository": "irori/wpfont",
+      "sample_index": 1,
+      "test_path": true,
+      "tokens": 148
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "fdcc8da931ee49aa0ac917cfc9169b4ee457222699c3df93d21ed10e4fe09f5a",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "12gensim/doc2v.py",
+      "repository": "KEVINYZY/python-tutorial",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 544
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "8719c0227aeeb4a9c679230dae560b1f4db023f78b1fdc566946df7454a3abcd",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "hammers/query.py",
+      "repository": "ChameleonCloud/bag-o-hammers",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 4146
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "b796cbae155f3b31d7bbf73ef7eb417e02a4e6e8caee4bd1f741cb8f3ab3360e",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "ecmwf_data.py",
+      "repository": "grandey/ecmwf-data",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 1562
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "bf85dab0331b22f132c86038457d613bf15b15410df3bdc6fbd66d0dc9df2a09",
+      "language": "python",
+      "licenses": [
+        "FTL"
+      ],
+      "parser": "pass",
+      "path": "src/models/train_model.py",
+      "repository": "immerkjaer/my_mlops",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 1028
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "f10e8c63a60a36b1b80f2e444b5e3791d1475f250346dde1a0fcf94f1a707fcf",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "lista_valores_ordenados_semSort.py",
+      "repository": "undersonrs/PYTHON_Projetos",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 171
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "d5410b9d5869a2a3cbf61ae82e248868821370140c668c0ec7a1522cfd11c54b",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "tools/u_model_inception.py",
+      "repository": "smg478/Kaggle---Carvana-Image-Masking-Challange",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 7786
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "001064626e6c84aff20295a4a83d1a3814ab4434fa0072f0375f15535e18f32f",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "widgets/textbox.py",
+      "repository": "peterhinch/micropython_ra8875",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 1196
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "75a143093fddcb92e34005426a3781a0450bfd3031628e29c5379f3943cbb39e",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "tests/unit/test_sftp.py",
+      "repository": "vidma/kensu-py",
+      "sample_index": 9,
+      "test_path": true,
+      "tokens": 448
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "142e879423735937429ffc290d0cebc919f29949b89f084d6f725f8dbbf0954a",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "cubify/cubify.py",
+      "repository": "rtansf/cubify",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 1029
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "68dae67ccddc50af1f373cbdb01454d8a2d657fb779d72e845b3ef6d324f1a01",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "converter/font_test.py",
+      "repository": "irori/wpfont",
+      "sample_index": 1,
+      "test_path": true,
+      "tokens": 148
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "fdcc8da931ee49aa0ac917cfc9169b4ee457222699c3df93d21ed10e4fe09f5a",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "12gensim/doc2v.py",
+      "repository": "KEVINYZY/python-tutorial",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 544
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "8719c0227aeeb4a9c679230dae560b1f4db023f78b1fdc566946df7454a3abcd",
+      "language": "python",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "hammers/query.py",
+      "repository": "ChameleonCloud/bag-o-hammers",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 4146
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b796cbae155f3b31d7bbf73ef7eb417e02a4e6e8caee4bd1f741cb8f3ab3360e",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "ecmwf_data.py",
+      "repository": "grandey/ecmwf-data",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 1562
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "bf85dab0331b22f132c86038457d613bf15b15410df3bdc6fbd66d0dc9df2a09",
+      "language": "python",
+      "licenses": [
+        "FTL"
+      ],
+      "parser": "pass",
+      "path": "src/models/train_model.py",
+      "repository": "immerkjaer/my_mlops",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 1028
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "f10e8c63a60a36b1b80f2e444b5e3791d1475f250346dde1a0fcf94f1a707fcf",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "lista_valores_ordenados_semSort.py",
+      "repository": "undersonrs/PYTHON_Projetos",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 171
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "d5410b9d5869a2a3cbf61ae82e248868821370140c668c0ec7a1522cfd11c54b",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "tools/u_model_inception.py",
+      "repository": "smg478/Kaggle---Carvana-Image-Masking-Challange",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 7786
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "001064626e6c84aff20295a4a83d1a3814ab4434fa0072f0375f15535e18f32f",
+      "language": "python",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "widgets/textbox.py",
+      "repository": "peterhinch/micropython_ra8875",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 1196
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b1623ef6f8c3385c486d822ce6c5df1fa77a7ab62fc4115d5ad382f5af6c03e3",
+      "language": "python",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "bamboo_crawler/parser.py",
+      "repository": "kitsuyui/bamboo-crawler",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 264
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "c52c382fa8addc08d485bac27615ed9eb339c7776f9058228c0a0c5c2ff8c41f",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "benches/dsp-chain-alternative.rs",
+      "repository": "bennetthardwick/audio-graph",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 1257
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "dc94ea34fceebe6cdb9f1bffc456e2228e5f5a34c5d7b1bc9e86819843c67448",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/bin/maguro/commands/stats.rs",
+      "repository": "mosmeh/maguro",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 686
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "8d389bba0417ee88f2a955afd9b98b4ecb4863a6ac9110b188ecb82f18e460c7",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/lib.rs",
+      "repository": "e-matteson/stm32f1xx-hal",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 553
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "7fd7780ebe964c46b13e678aa09faa9aced7f66308ecad0dfe3aa5eae709ec30",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/instruction.rs",
+      "repository": "StefanStegmueller/rust-machine",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 342
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "3eb86ec014ea6629113a6cb39d1506280d9573500fa71a39acdca252ca98b60e",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/openvr_adaptor.rs",
+      "repository": "dmweis/hamilton_controller",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 2447
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "4567bcc0919edf8ce36a3fd36073c5df5a571c4b4c01ff9b90bac5eeccc742e2",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "components/raft_log_engine/src/engine.rs",
+      "repository": "dcalvin/tikv",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 3927
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "3475d0b41303151edf0544d711270397f880f6218a8e2dcfc3ac337ed4f046e9",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/extension.rs",
+      "repository": "figsoda/ouch",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 1458
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "b89fef9eb0a4e4b58d1ead1d7c49ab76a1eaecbeb025b2f0c7eb356fa4923c4a",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/day10.rs",
+      "repository": "micxjo/rust-advent",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 639
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "7813899ce59384b431818ea0ee3597c8f3343ce27847421c33468ff8ee95dcd4",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "benches/command_get.rs",
+      "repository": "svartalf/tokio-memcache",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 203
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "9560f6a1314d156bb55b4f3cf3421d985a7128f6d963c86abde3ac5ec6382227",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/main.rs",
+      "repository": "bltzxsd/QuickDash",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 1043
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "c52c382fa8addc08d485bac27615ed9eb339c7776f9058228c0a0c5c2ff8c41f",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "benches/dsp-chain-alternative.rs",
+      "repository": "bennetthardwick/audio-graph",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 1257
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "01fe213167c0793f26d81471dd0157ff78a7901aaa72bb3bda02db84954f7f1f",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/wasm/src/lib.rs",
+      "repository": "iceprosurface/vue-code-runner",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 133
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "dc94ea34fceebe6cdb9f1bffc456e2228e5f5a34c5d7b1bc9e86819843c67448",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/bin/maguro/commands/stats.rs",
+      "repository": "mosmeh/maguro",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 686
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "2fa1952e8514879d4405eebf48df9848646ebb37afbdf82e2d57742141f75063",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/language/rust.rs",
+      "repository": "johnstonskj/rust-code_writer",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 3729
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "4ce06cdd20bbfec960176128251ecd539bb8a070a7e57c85524109b73f838ab5",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "src/apis/market_data_api.rs",
+      "repository": "spearsandshields/ib_client",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 2327
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "8d389bba0417ee88f2a955afd9b98b4ecb4863a6ac9110b188ecb82f18e460c7",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/lib.rs",
+      "repository": "e-matteson/stm32f1xx-hal",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 553
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "f61b5e0f163d8e9cbcb388948634c3bab2aac2abb54ad06a355b768f6fb8a930",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "dom/examples/todo/src/header.rs",
+      "repository": "tiffany352/moxie",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 193
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "7fd7780ebe964c46b13e678aa09faa9aced7f66308ecad0dfe3aa5eae709ec30",
+      "language": "rust",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/instruction.rs",
+      "repository": "StefanStegmueller/rust-machine",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 342
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "5480425d4719ceef4391423de8ef0dc8363730345c32e5e26b89ef1ad55619d6",
+      "language": "rust",
+      "licenses": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "core/src/path_state.rs",
+      "repository": "emilio/lyon",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 1898
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "026805b409988072153c54ab58f4dc2215393519cc24b11656f2c08a92a55bcb",
+      "language": "rust",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "libllama/src/cpu/instructions_arm/media.rs",
+      "repository": "HIDE810/llama",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 452
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "b7c6a6a5d6dcf81f149b5a1a504ff261d922f1d027fb092f894b58fc6ca0888d",
+      "language": "shell",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "ASM/minimum/build.sh",
+      "repository": "dr-ecker/HandmadeOS",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 95
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "ad836471c41349f46e19c203357585cc0de62f90bdb46772bb2a2c763ba5ec17",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "format.sh",
+      "repository": "mamachanko/website-monitor",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 35
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "50d50feb1812352a8aac238d9dc0d294e26850c0abdf4350c40ab7d0da9a6009",
+      "language": "shell",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "tools/manylinux/build-wheels.sh",
+      "repository": "stweil/lxml",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 599
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "5d49dfd7e4787210cebd299e8bdc8b89fe7d5075c7c22a4fe52b6fc38d1ccde6",
+      "language": "shell",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/run_valgrind.sh",
+      "repository": "TREX-CoE/trexio_tools",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 76
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "00599f86eee9a62b61fbd3dcb709e4c06e024a30e9bd447a2758c5a9d42e1e74",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "scripts/dtree.sh",
+      "repository": "pliang279/Competitive-Emergent-Communication",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 50
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "852de59194ec56da84e6ac544ac6dfa8fe8ada8596ad81bacad6022dbf13e92c",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "duorec.sh",
+      "repository": "RuihongQiu/DuoRec",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 57
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "6faffe92780af3dc5499bc0ef7813be24832d3957870e08c81596603cc433d2a",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "docker/entrypoint.sh",
+      "repository": "indece-official/s3-cdn",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 344
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "dd91c1dc2d6f2e0c58b205c984c2849305120d1696edd56280707dd1504772bd",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": ".travis/scripts/install_hadoop.sh",
+      "repository": "kgururaj/TileDB",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 783
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "336fadd427c3d421e04a6b3b6c8fdb4123d6b26331720f5a876258b3e285c46a",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "scripts/ffmpeg/build.sh",
+      "repository": "cuishaobin/ffmpeg-android-maker",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 1280
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "410722302b758bbf058e0c765a1f42951c18f256952b2b5161189473baa6a18b",
+      "language": "shell",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "tools/install-nvhpc.sh",
+      "repository": "wdeconinck/atlas",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 1064
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b7c6a6a5d6dcf81f149b5a1a504ff261d922f1d027fb092f894b58fc6ca0888d",
+      "language": "shell",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "ASM/minimum/build.sh",
+      "repository": "dr-ecker/HandmadeOS",
+      "sample_index": 0,
+      "test_path": false,
+      "tokens": 95
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "ad836471c41349f46e19c203357585cc0de62f90bdb46772bb2a2c763ba5ec17",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "format.sh",
+      "repository": "mamachanko/website-monitor",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 35
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "b6623282fa034e1d8a092bc438e8d9e6cb1d9b675eb93cc32c782d2cdd3dcf5e",
+      "language": "shell",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "parser": "pass",
+      "path": "build.sh",
+      "repository": "daniel4wong/container-nodejs-smtp-api",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 143
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "50d50feb1812352a8aac238d9dc0d294e26850c0abdf4350c40ab7d0da9a6009",
+      "language": "shell",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "tools/manylinux/build-wheels.sh",
+      "repository": "stweil/lxml",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 599
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "5d49dfd7e4787210cebd299e8bdc8b89fe7d5075c7c22a4fe52b6fc38d1ccde6",
+      "language": "shell",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/run_valgrind.sh",
+      "repository": "TREX-CoE/trexio_tools",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 76
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "00599f86eee9a62b61fbd3dcb709e4c06e024a30e9bd447a2758c5a9d42e1e74",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "scripts/dtree.sh",
+      "repository": "pliang279/Competitive-Emergent-Communication",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 50
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "852de59194ec56da84e6ac544ac6dfa8fe8ada8596ad81bacad6022dbf13e92c",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "duorec.sh",
+      "repository": "RuihongQiu/DuoRec",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 57
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "6faffe92780af3dc5499bc0ef7813be24832d3957870e08c81596603cc433d2a",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "docker/entrypoint.sh",
+      "repository": "indece-official/s3-cdn",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 344
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "dd91c1dc2d6f2e0c58b205c984c2849305120d1696edd56280707dd1504772bd",
+      "language": "shell",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": ".travis/scripts/install_hadoop.sh",
+      "repository": "kgururaj/TileDB",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 783
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "d7f06290372b5c3f45ecc84e973b12b9d6eb1b90f5ede8fed3377097c1627134",
+      "language": "shell",
+      "licenses": [
+        "PHP-3.01"
+      ],
+      "parser": "pass",
+      "path": "debian/dfsg-repack.sh",
+      "repository": "steveathon/Debian-PHP5",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 252
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "7c5670e746a6c22de50ab259285e5be72c2acd11db7532e3a08001830e33e3e0",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/reducers/account/__test__/account.test.ts",
+      "repository": "uruha/next-with-ts",
+      "sample_index": 0,
+      "test_path": true,
+      "tokens": 139
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "4cdf942d20146d0761f792e5f526a5a717f38a8edd35de1befeca4a70e1e228e",
+      "language": "typescript",
+      "licenses": [
+        "Unlicense"
+      ],
+      "parser": "pass",
+      "path": "src/components/pages/authorized/maintenance-calibration/shared/interfaces/calibration.interfaces.ts",
+      "repository": "Prisma-Laster-Management-Tools/qc-platform-frontend-v1",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 243
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "6ba31e9de61d2efc336aa9140dfef33b389fa381265bb97dce68b37867c9ccaa",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "app/api/enums/mav-odid-category-eu.ts",
+      "repository": "Chrisaxell/radio-sheep-gcs",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 159
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "a42afe188c30c7e73ff4d899ad536ab38ccba4298513f79d3cd3bdb76d14af36",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/todo/todo.service.ts",
+      "repository": "Wisbell/todo-api-nestjs",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 169
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "591b90841f39ee49131a237c33b56dcd52ea8968118ba5687e24f37a9aaea1da",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "src/components/PasswordEntry.tsx",
+      "repository": "danielkim107/simplewebrtc-talky-sample-app",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 726
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "90101cb736625658f286464554df1f05181fc7156feb422bc61f6c156b1f34e0",
+      "language": "typescript",
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "parser": "pass",
+      "path": "src/lib/menu/index.ts",
+      "repository": "marekfeikus/react-useanimations",
+      "sample_index": 5,
+      "test_path": false,
+      "tokens": 39
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "d82c8df5f838b75097ad515d82e040c6e87885660789c239b2e6ef73a4211e4c",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "fail",
+      "path": "screens/preferences/index.tsx",
+      "repository": "jaredLunde/react-native-hacker-news",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 2686
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "5c1e80666dd1e925fb1cb2757c3e202d4cb211e0821623bd914d47266461069e",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "proxy/index.ts",
+      "repository": "mooyoul/lambdaless",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 402
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "df075c20d9c6ee75000e99a02e23691962f48be130d982c63ca99e6dc54da98d",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/modules/auth/dto/signup-request.dto.ts",
+      "repository": "narxeba/mf-exam",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 147
+    },
+    {
+      "arm": "R2_STANDARD",
+      "content_bytes_verified": true,
+      "content_sha256": "38bb65ecaf3074228ea8b25e5beb4d91abbb629ddd1a83dc3345bcc740bea033",
+      "language": "typescript",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "parser": "pass",
+      "path": "src/siteSettings/types/SiteSettings.ts",
+      "repository": "nlkhagva/ushop-dashboard",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 708
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "7c5670e746a6c22de50ab259285e5be72c2acd11db7532e3a08001830e33e3e0",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/reducers/account/__test__/account.test.ts",
+      "repository": "uruha/next-with-ts",
+      "sample_index": 0,
+      "test_path": true,
+      "tokens": 139
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "4cdf942d20146d0761f792e5f526a5a717f38a8edd35de1befeca4a70e1e228e",
+      "language": "typescript",
+      "licenses": [
+        "Unlicense"
+      ],
+      "parser": "pass",
+      "path": "src/components/pages/authorized/maintenance-calibration/shared/interfaces/calibration.interfaces.ts",
+      "repository": "Prisma-Laster-Management-Tools/qc-platform-frontend-v1",
+      "sample_index": 1,
+      "test_path": false,
+      "tokens": 243
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "6ba31e9de61d2efc336aa9140dfef33b389fa381265bb97dce68b37867c9ccaa",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "app/api/enums/mav-odid-category-eu.ts",
+      "repository": "Chrisaxell/radio-sheep-gcs",
+      "sample_index": 2,
+      "test_path": false,
+      "tokens": 159
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "a42afe188c30c7e73ff4d899ad536ab38ccba4298513f79d3cd3bdb76d14af36",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/todo/todo.service.ts",
+      "repository": "Wisbell/todo-api-nestjs",
+      "sample_index": 3,
+      "test_path": false,
+      "tokens": 169
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "90101cb736625658f286464554df1f05181fc7156feb422bc61f6c156b1f34e0",
+      "language": "typescript",
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "parser": "pass",
+      "path": "src/lib/menu/index.ts",
+      "repository": "marekfeikus/react-useanimations",
+      "sample_index": 4,
+      "test_path": false,
+      "tokens": 39
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "8ac0a4f6609a7dd75b06a53c8ce5a26028a0dfbed78c05d591db378e000f997b",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "__tests__/regexpShorthand.test.ts",
+      "repository": "YouCruit/lits",
+      "sample_index": 5,
+      "test_path": true,
+      "tokens": 212
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "5c1e80666dd1e925fb1cb2757c3e202d4cb211e0821623bd914d47266461069e",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "proxy/index.ts",
+      "repository": "mooyoul/lambdaless",
+      "sample_index": 6,
+      "test_path": false,
+      "tokens": 402
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "df075c20d9c6ee75000e99a02e23691962f48be130d982c63ca99e6dc54da98d",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/modules/auth/dto/signup-request.dto.ts",
+      "repository": "narxeba/mf-exam",
+      "sample_index": 7,
+      "test_path": false,
+      "tokens": 147
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "cc1482d1b66534e7e0469a0c01fdf8fe75cb38fd1e4d4bb3e01a66e108416342",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "src/utilities/get-unique-id.ts",
+      "repository": "JasonCubic/boss-components",
+      "sample_index": 8,
+      "test_path": false,
+      "tokens": 54
+    },
+    {
+      "arm": "R2_FILTERED",
+      "content_bytes_verified": true,
+      "content_sha256": "d2459897c93dc5eb62074ee37487b0515f89765c0da1f83c0f4b71d1ad8facd7",
+      "language": "typescript",
+      "licenses": [
+        "MIT"
+      ],
+      "parser": "pass",
+      "path": "front-end/src/main/web/src/app/model/application.model.ts",
+      "repository": "evioncane/Annual-Leave",
+      "sample_index": 9,
+      "test_path": false,
+      "tokens": 116
+    }
+  ],
+  "syntax_caveat": "Tree-sitter acceptance is a syntax control, not compilation or code quality"
+}

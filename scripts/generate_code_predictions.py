@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from tinycomplete.eval.code_generation import (
     GenerationProvider,
     OpenAICompatibleGenerationProvider,
     TransformersGenerationProvider,
+    build_causal_prompt,
     build_prediction_run_metadata,
     file_sha256,
     generate_predictions,
@@ -92,6 +94,38 @@ def main() -> None:
         workers=args.workers,
         run_metadata=metadata,
     )
+    if args.model_path and isinstance(provider, TransformersGenerationProvider):
+        inventory = {
+            "class": type(provider.model).__name__,
+            "parameters": sum(parameter.numel() for parameter in provider.model.parameters()),
+            "tokenizer_class": type(provider.tokenizer).__name__,
+            "tokenizer_length": len(provider.tokenizer),
+            "config_vocabulary": provider.model.config.vocab_size,
+            "precision": str(next(provider.model.parameters()).dtype),
+            "device": str(provider.device),
+            "torch": provider.torch.__version__,
+        }
+        lengths = [
+            {
+                "case_id": case.id,
+                "input_tokens": len(provider.tokenizer.encode(build_causal_prompt(case))),
+                "output_tokens": prediction.generated_tokens,
+                "output_characters": len(prediction.completion),
+                "output_bytes": len(prediction.completion.encode()),
+                "hit_cap": prediction.hit_token_cap,
+            }
+            for case, prediction in zip(cases, predictions, strict=True)
+        ]
+        args.output.with_suffix(".measurements.json").write_text(
+            json.dumps(
+                {
+                    "model_inventory": inventory,
+                    "cases": lengths,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     print(f"predictions ready: {len(predictions)} at {args.output}")
 
 

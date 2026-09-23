@@ -7,7 +7,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from tinycomplete.eval.long_context_diagnostic import (
     LongContextDiagnosticCase,
@@ -131,7 +131,7 @@ def main() -> None:
                     )
                 continuation = generated[0, len(prompt_ids) :]
                 generated_tokens = int(continuation.numel())
-                text = tokenizer.decode(continuation, skip_special_tokens=True)
+                text = cast(str, tokenizer.decode(continuation, skip_special_tokens=True))
                 model_span.set_attribute(
                     "tabcomplete.timing.total_ms", (time.perf_counter() - started) * 1000
                 )

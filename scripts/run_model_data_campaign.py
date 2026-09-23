@@ -418,6 +418,13 @@ def submit_pilot(arm, attempt=1):
     if state_path.exists():
         print(command(["kaggle", "kernels", "status", reference]).strip())
         return
+    ledger_path = REPORT / "quota/training_token_ledger.json"
+    ledger = json.loads(ledger_path.read_text())
+    reservation = 5_013_504 + (16 if arm == "R2_STANDARD" else 3) * 32768
+    if sum(job["input_tokens"] for job in ledger["jobs"].values()) + reservation > 12_000_000:
+        raise RuntimeError(
+            "training token reservations exceed 12 million; reconcile actual evidence"
+        )
     quota = observe_quota()
     if quota["active_jobs"]:
         raise RuntimeError("another notebook allocation is active")
@@ -483,6 +490,12 @@ def submit_pilot(arm, attempt=1):
         "status": "submission_pending",
     }
     write_json(state_path, state)
+    ledger["jobs"][reference] = {
+        "input_tokens": reservation,
+        "status": "reserved_upper_bound",
+        "evidence": "Bounded worker absolute update limits, including smoke and restart work",
+    }
+    write_json(ledger_path, ledger)
     response = command(
         [
             "kaggle",
@@ -502,18 +515,190 @@ def submit_pilot(arm, attempt=1):
     print(json.dumps({"reference": reference, "deadline_seconds": seconds}))
 
 
+def retrieve_pilot(arm, reference):
+    """Verify bytes and complete restart state before declaring an arm finished."""
+    status = command(["kaggle", "kernels", "status", reference])
+    if "COMPLETE" not in status and "ERROR" not in status:
+        raise RuntimeError("pilot is not terminal; leave its allocation undisturbed")
+    destination = ARTIFACTS / "collected" / reference.split("/")[-1]
+    destination.mkdir(parents=True, exist_ok=True)
+    if shutil.disk_usage(destination).free < 18 * 2**30:
+        raise RuntimeError("18 GiB free required before collecting complete pilot state")
+    command(
+        [
+            "kaggle",
+            "kernels",
+            "output",
+            reference,
+            "-p",
+            str(destination),
+            "--file-pattern",
+            "^model_data_r2_pilot/",
+            "--page-size",
+            "200",
+            "-q",
+        ],
+        timeout=1800,
+    )
+    directory = destination / "model_data_r2_pilot"
+    progress = json.loads((directory / "progress.json").read_text())
+    if progress["status"] != "complete":
+        raise RuntimeError("pilot artifacts retained but scientific completion gate did not pass")
+    import runpy
+
+    worker = runpy.run_path(str(ROOT / "kaggle/model_data_r2/run_pilot.py"), run_name="verify")
+    summary = worker["verify_state"](directory / arm, 153, persist=False)
+    assert summary["additional_input_tokens"] == 5_013_504
+    actual_hash = digest(directory / arm / "final/model.safetensors")
+    assert actual_hash == progress["final_model_sha256"]
+    ledger_path = REPORT / "quota/training_token_ledger.json"
+    ledger = json.loads(ledger_path.read_text())
+    consumed = sum(
+        json.loads(path.read_text())["additional_input_tokens"]
+        for path in directory.glob("*/summary.json")
+    )
+    assert consumed == progress["training_input_tokens"]
+    assert consumed <= ledger["jobs"][reference]["input_tokens"]
+    ledger["jobs"][reference] = {
+        "input_tokens": consumed,
+        "status": "verified",
+        "evidence": "Summed per-process additional input tokens; verified complete checkpoints",
+    }
+    write_json(ledger_path, ledger)
+    report = REPORT / "pilots" / arm
+    for name in ("summary.json", "verified-checkpoint-manifest.json", "run_config.json"):
+        write_json(report / name, json.loads((directory / arm / name).read_text()))
+    if arm == "R2_STANDARD":
+        verification = json.loads((directory / "restart-verification.json").read_text())
+        assert verification["numerical_gate_passed"]
+        write_json(report / "restart-verification.json", verification)
+    write_json(
+        report / "completion.json",
+        {
+            "reference": reference,
+            "verified_at": now(),
+            "model_sha256": actual_hash,
+            "corpus_fingerprint": progress["corpus"]["corpus_fingerprint"],
+            "additional_input_tokens_including_checks": consumed,
+            "pilot_input_tokens": summary["additional_input_tokens"],
+            "checkpoint_complete_and_hash_verified": True,
+            "artifact_directory": str(directory.relative_to(ROOT)),
+            "source_git_sha": progress["git_sha"],
+        },
+    )
+    print(json.dumps({"arm": arm, "verified": True, "input_tokens": consumed}))
+
+
+def submit_evaluation():
+    # Use a job.json name so the common accounting collector cannot omit this session.
+    path = REPORT / "baseline_evaluations/additional/job.json"
+    if path.exists():
+        state = json.loads(path.read_text())
+        print(command(["kaggle", "kernels", "status", state["reference"]]).strip())
+        return
+    pilots = [
+        json.loads((REPORT / "pilots" / arm / "completion.json").read_text())
+        for arm in ("R2_STANDARD", "R2_FILTERED")
+    ]
+    assert all(p["checkpoint_complete_and_hash_verified"] for p in pilots)
+    quota = observe_quota()
+    seconds = 9000
+    if quota["active_jobs"] or quota["remaining_account_hours"] is None:
+        raise RuntimeError("fresh quota and no other active allocation required")
+    if quota["remaining_account_hours"] < seconds / 3600:
+        raise RuntimeError("insufficient verified quota")
+    first = json.loads((REPORT / "baseline_evaluations/job.json").read_text())
+    if quota["renewal"] != first["quota_before"]["renewal"]:
+        raise RuntimeError("renewed allocation consumption forbidden")
+    prior = [json.loads(p.read_text()) for p in REPORT.rglob("job.json")]
+    reserved = sum(p.get("observed_wall_upper_bound_seconds", p["deadline_seconds"]) for p in prior)
+    if reserved + seconds > 36000:
+        raise RuntimeError("ten-hour aggregate session budget exceeded")
+    revision = command(["git", "rev-parse", "HEAD"]).strip()
+    if command(["git", "status", "--porcelain", "--untracked-files=no"]).strip():
+        raise RuntimeError("commit and push scientific code before submission")
+    folder = ARTIFACTS / "submissions/evaluation"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "run.py").write_text(
+        (ROOT / "kaggle/model_data_r2/run_evaluation.py")
+        .read_text()
+        .replace("__CHECKOUT_COMMIT__", revision)
+    )
+    reference = "shlokbhakta/tabcomplete-model-data-r2-evaluation"
+    write_json(
+        folder / "kernel-metadata.json",
+        {
+            "id": reference,
+            "title": reference.split("/")[1],
+            "code_file": "run.py",
+            "language": "python",
+            "kernel_type": "script",
+            "is_private": True,
+            "enable_gpu": True,
+            "enable_internet": True,
+            "machine_shape": "NvidiaTeslaT4",
+            "dataset_sources": [
+                "shlokbhakta/tabcomplete-code-cpt-parents-r1",
+                "shlokbhakta/tabcomplete-model-data-r2-inputs",
+            ],
+            "kernel_sources": [p["reference"] for p in pilots]
+            + ["shlokbhakta/tabcomplete-code-cpt-campaign-r1"],
+            "competition_sources": [],
+        },
+    )
+    state = {
+        "reference": reference,
+        "submitted_at": now(),
+        "deadline_seconds": seconds,
+        "git_sha": revision,
+        "plan_sha256": digest(REPORT / "preregistered_plan.json"),
+        "quota_before": quota,
+        "status": "submission_pending",
+        "training_input_tokens": 0,
+    }
+    write_json(path, state)
+    response = command(
+        [
+            "kaggle",
+            "kernels",
+            "push",
+            "-p",
+            str(folder),
+            "--timeout",
+            str(seconds),
+            "--accelerator",
+            "NvidiaTeslaT4",
+        ],
+        timeout=180,
+    )
+    state.update(status="submitted", response=response.strip())
+    write_json(path, state)
+    print(json.dumps({"reference": reference, "deadline_seconds": seconds}))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/research/model_data_r2.yaml")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument(
         "--stage",
-        choices=["freeze", "baseline", "amend", "package", "package-baseline", "pilot", "collect"],
+        choices=[
+            "freeze",
+            "baseline",
+            "amend",
+            "package",
+            "package-baseline",
+            "pilot",
+            "collect",
+            "retrieve-pilot",
+            "evaluation",
+        ],
         default="baseline",
     )
     parser.add_argument("--reason")
     parser.add_argument("--arm", choices=["R2_STANDARD", "R2_FILTERED"])
     parser.add_argument("--attempt", type=int, default=1)
+    parser.add_argument("--reference")
     args = parser.parse_args()
     if args.stage == "amend":
         if not args.execute:
@@ -521,6 +706,14 @@ def main():
         amend(args.config, args.reason)
         return
     plan = freeze(args.config)
+    if args.execute and args.stage == "retrieve-pilot":
+        if not args.arm or not args.reference:
+            raise ValueError("retrieve-pilot requires --arm and --reference")
+        retrieve_pilot(args.arm, args.reference)
+        return
+    if args.execute and args.stage == "evaluation":
+        submit_evaluation()
+        return
     if args.execute and args.stage == "package-baseline":
         package_baseline()
         return

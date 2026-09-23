@@ -1,0 +1,219 @@
+{
+  "actual_language_mix": {
+    "percentages": {
+      "c": 5.46875,
+      "cpp": 10.15625,
+      "csharp": 6.25,
+      "go": 6.25,
+      "java": 10.15625,
+      "javascript": 17.96875,
+      "python": 14.84375,
+      "rust": 13.28125,
+      "shell": 3.90625,
+      "typescript": 11.71875
+    },
+    "token_counts": {
+      "c": 14336,
+      "cpp": 26624,
+      "csharp": 16384,
+      "go": 16384,
+      "java": 26624,
+      "javascript": 47104,
+      "python": 38912,
+      "rust": 34816,
+      "shell": 10240,
+      "typescript": 30720
+    }
+  },
+  "additional_input_tokens": 163840,
+  "additional_scored_target_tokens": 163760,
+  "attempted_optimizer_updates": 8,
+  "attempted_optimizer_updates_this_run": 5,
+  "baseline_path": "/kaggle/working/model_data_r2_pilot/baseline.json",
+  "corpus_dir": "/kaggle/input/datasets/shlokbhakta/tabcomplete-model-data-r2-inputs/R2_STANDARD",
+  "corpus_position": {
+    "next_block": 128,
+    "start_block": 48
+  },
+  "credential_source": "anonymous_public_model",
+  "data_wait_percent": 3.508401569435854,
+  "data_wait_seconds": 4.289180084997838,
+  "deadline_seconds": 6482.846915960312,
+  "decay_end_update": 153,
+  "distributed_mode": "fsdp",
+  "eval_final": false,
+  "evaluation_milestones": [],
+  "expected_initial_sha256": null,
+  "fsdp_forward_prefetch": true,
+  "gradient_accumulation": 8,
+  "gradient_checkpointing": false,
+  "gradient_norm_history": [
+    2.51631498336792,
+    2.362400770187378,
+    2.55729079246521,
+    2.7767574787139893,
+    2.7618963718414307
+  ],
+  "init_from": null,
+  "initial_checkpoint": null,
+  "initial_model_diagnostic": {
+    "inventory_sha256": "c26b831d3ebdf458da68629ffbf0218d55180f3a1b5e8beaadc195b6cc6c7c7f",
+    "parameter_count": 752393024,
+    "parameter_tensor_count": 320,
+    "selected_tensors": {
+      "model.embed_tokens.weight": {
+        "first_values": [
+          0.01251220703125,
+          0.01416015625,
+          -0.0166015625,
+          -0.01123046875
+        ],
+        "sample_sha256": "dc21604da830ff66f356f3866fe89c8f4c81c1bdd2ab15ce6cf9ca876f7c7b62",
+        "shape": [
+          248320,
+          1024
+        ]
+      },
+      "model.layers.0.input_layernorm.weight": {
+        "first_values": [
+          1.0,
+          0.294921875,
+          0.53515625,
+          0.74609375
+        ],
+        "sample_sha256": "defcd0cf11320f39b7983cab0dd5d0fca8665b5a67d67eb7416ab9109fd89222",
+        "shape": [
+          1024
+        ]
+      },
+      "model.norm.weight": {
+        "first_values": [
+          -0.77734375,
+          2.75,
+          2.640625,
+          3.0625
+        ],
+        "sample_sha256": "fbc04741f9419a1d57b13c0ecde435fb3020f82c0a4089b86bd98bb35256185d",
+        "shape": [
+          1024
+        ]
+      }
+    },
+    "weight_tying": {
+      "config_tie_word_embeddings": true,
+      "same_storage": true,
+      "shapes_equal": true
+    }
+  },
+  "initialization_mode": "resume",
+  "learning_rate": 3e-06,
+  "lineage_tokens_after_run": 12255232,
+  "loss_history": [
+    {
+      "gradient_norm": 2.51631498336792,
+      "learning_rate": 3e-06,
+      "loss": 1.087725043296814,
+      "microsteps": 32,
+      "optimizer_step": 4,
+      "training_tokens": 131072
+    },
+    {
+      "gradient_norm": 2.362400770187378,
+      "learning_rate": 3e-06,
+      "loss": 1.0145138502120972,
+      "microsteps": 40,
+      "optimizer_step": 5,
+      "training_tokens": 163840
+    },
+    {
+      "gradient_norm": 2.55729079246521,
+      "learning_rate": 2.9996917150534156e-06,
+      "loss": 0.8771626353263855,
+      "microsteps": 48,
+      "optimizer_step": 6,
+      "training_tokens": 196608
+    },
+    {
+      "gradient_norm": 2.7767574787139893,
+      "learning_rate": 2.9987670010130825e-06,
+      "loss": 1.1994173526763916,
+      "microsteps": 56,
+      "optimizer_step": 7,
+      "training_tokens": 229376
+    },
+    {
+      "gradient_norm": 2.7618963718414307,
+      "learning_rate": 2.997226280212954e-06,
+      "loss": 1.0279196500778198,
+      "microsteps": 64,
+      "optimizer_step": 8,
+      "training_tokens": 262144
+    }
+  ],
+  "loss_scale_overflows": 0,
+  "lr_floor": 3e-07,
+  "lr_schedule": "cosine",
+  "master_parameter_dtype": "float32",
+  "max_grad_norm": 1.0,
+  "max_tokens": 262144,
+  "microbatch": 1,
+  "microsteps": 64,
+  "milestones": [],
+  "model_id": "Qwen/Qwen3.5-0.8B-Base",
+  "model_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+  "nan_or_inf": false,
+  "non_training_checkpoint_eval_seconds": 0.0,
+  "optimizer": "adamw_8bit",
+  "optimizer_steps": 8,
+  "output_dir": "/kaggle/working/model_data_r2_pilot/resumed",
+  "parent_training_tokens": 11993088,
+  "peak_vram_by_gpu_gb": [
+    12.350687503814697,
+    12.350050449371338
+  ],
+  "peak_vram_gb": 12.350687503814697,
+  "precision": "fp16 autocast with dynamic loss scaling",
+  "prefetch_factor": 2,
+  "prepared_blocks_initial": 80,
+  "prepared_seconds_ahead_at_measured_rate": 109.33106486199995,
+  "resume_from": "/kaggle/working/model_data_r2_pilot/smoke/resume-latest",
+  "resume_state_saved": false,
+  "resume_state_skip_reason": "only 7.20 GiB free; required 8 GiB",
+  "runtime": {
+    "attention": "sdpa",
+    "backward_prefetch": "BACKWARD_PRE",
+    "compile_dynamic": false,
+    "compile_mode": "default",
+    "forward_prefetch": true,
+    "fp16_compute": true,
+    "fp32_master_parameters": true,
+    "fsdp": "FULL_SHARD",
+    "gradient_checkpointing": false,
+    "initial_loss_scale": 256.0,
+    "torch_compile": true
+  },
+  "save_final": false,
+  "save_resume": true,
+  "seed": 928173,
+  "session_training_tokens": 163840,
+  "skipped_optimizer_updates": 0,
+  "skipped_optimizer_updates_this_run": 0,
+  "start_block": 0,
+  "steady_state_tokens_per_second": 1680.5984557936138,
+  "stop_reason": "max_tokens",
+  "successful_optimizer_updates": 5,
+  "tokens_per_second": 1498.5676779678531,
+  "tokens_per_update": 32768,
+  "training_tokens": 262144,
+  "training_wall_seconds": 109.33106486199995,
+  "validation_guard": {
+    "code_consecutive": 0,
+    "general_consecutive": 0
+  },
+  "validation_history": [],
+  "wall_seconds": 109.33106486199995,
+  "warmup_steps": 5,
+  "weight_decay": 0.01,
+  "workers": 1,
+  "world_size": 2
+}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import resource
 import shutil
@@ -11,6 +12,7 @@ import signal
 import statistics
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
@@ -275,20 +277,38 @@ def _run_container(
     if inspect.returncode:
         return CheckResult(status="unavailable", stderr=f"container image not installed: {image}")
     container_timeout = max(30.0, timeout_seconds)
-    return _run_trusted(
-        container_command(
-            runtime=runtime,
-            image=image,
-            work_root=cwd,
-            fixture_command=command,
-            timeout_seconds=container_timeout,
-        ),
-        cwd,
-        container_timeout + 2,
-        limit_address_space=False,
-        apply_resource_limits=False,
-        preserve_environment=True,
+    name = "tabcomplete-case-" + uuid.uuid4().hex
+    isolated = container_command(
+        runtime=runtime,
+        image=image,
+        work_root=cwd,
+        fixture_command=command,
+        timeout_seconds=container_timeout,
     )
+    isolated[2:2] = ["--name", name, "--label", "tabcomplete.disposable-evaluation=true"]
+    try:
+        return _run_trusted(
+            isolated,
+            cwd,
+            container_timeout + 2,
+            limit_address_space=False,
+            apply_resource_limits=False,
+            preserve_environment=True,
+        )
+    finally:
+        # Killing the OCI CLI does not necessarily kill its detached monitor or
+        # container. Scope cleanup to this invocation's unique disposable name.
+        try:
+            subprocess.run(
+                [runtime, "rm", "--force", name],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            logging.getLogger(__name__).warning("Disposable fixture cleanup failed: %s", name)
 
 
 def _tree_hash(root: Path) -> str:
