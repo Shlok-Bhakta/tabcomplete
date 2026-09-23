@@ -19,7 +19,7 @@ were executed on Crabcake in the existing network-disabled containers.
 | P12, Transformers FP16 / T4 | 9/200 | 20/180 | 0.548 s median T4 line call | Not measured as host RSS | 2k parity gate failed; no R2 long-context score | Executed strict/line; context blocked |
 | Qwen2.5-Coder, Transformers FP16 / T4 | 11/200 | 16/180 | 0.182 s median T4 line call | Not measured as host RSS | 25 scored 32k-family cases, including five genuine far dependencies; later OOM | Executed strict/line; partial context |
 | D12, Transformers FP16 / T4 | 5/200 | 20/180 | 0.583 s median T4 line call | Not measured as host RSS | 25 scored 32k-family cases, including five genuine far dependencies; later OOM | Verified historical strict reuse; partial context |
-| Qwen2.5-Coder, native Q4_K_M / Kiwi CPU | 7/200 | 18/180 | 2.641 s median across 180 line cases, Kiwi two-thread CPU | 1.405 GiB in separate Crabcake 2k grid | Line/strict fixtures; not a long-context intelligence claim | Strict and corrected line executed |
+| Qwen2.5-Coder, native Q4_K_M / Kiwi CPU | 7/200 | 18/180 | 2.641 s median across 180 line cases, Kiwi two-thread CPU | 8,761,196,544-byte peak in separate Crabcake 32k grid | Crabcake 2k, 8k and 32k timing grids executed; not a long-context intelligence claim | Strict, corrected line and local timing executed |
 | P12, native Q4_K_M / Kiwi CPU | 8/200 | 19/180 | 3.694 s median across 180 line cases, Kiwi two-thread CPU | 8,096,616,448-byte peak in separate Crabcake 32k grid | Crabcake 2k, 8k and 32k timing grids executed | Strict, line and local timing executed |
 | Base Qwen3.5, Transformers FP16 / T4 | 4/200 | 18/180 | 0.410 s median T4 line call | Unknown | Efficient attention kernel unavailable on T4 | Executed strict/line; context blocked |
 | R2_STANDARD, Transformers FP16 / T4 | 4/200 | 19/180 | 0.580 s median T4 line call | Unknown | No registered long-context score | Executed; not promoted |
@@ -127,6 +127,14 @@ construction target rather than the model's actual token count. All paired
 outputs match, no request truncated, and server prompt-cache reuse is zero.
 The pauses between complete pairs are excluded from request timing. These
 longer timings do not establish that the model used distant context correctly.
+
+Qwen2.5's completed 32k Crabcake grid has 40 requests, a median total time of
+819.701 seconds, p95 of 834.691 seconds, and peak server RSS of 8,761,196,544
+bytes. Each prompt has 32,704 actual Qwen2.5 tokens. All 20 repeated outputs
+match, no request truncated, and server prompt-cache reuse is zero. On the
+same fixed source prompts, Qwen2.5 took longer than P12 in this CPU runtime,
+despite fewer actual input tokens. These numbers do not identify the cause of
+the runtime difference or measure long-context reasoning.
 
 The Qwen2.5 8k grid has 40 completed requests with a median total time of
 114.217 seconds, peak server RSS of 2,858,635,264 bytes, and 8,128 actual
@@ -481,8 +489,8 @@ referenced reconciliation file.
 After the plot filter change, repository verification passed 227/227 tests in
 24.76 seconds, Ruff, and mypy across 106 source files. The commands and logs
 are in `model_data_r2/environment/verification-window.json`. The registered
-GPU jobs are terminal. The 50-file `model_data_r2/artifact_manifest.json` passed
-hash verification; the local 32k runtime grid remains in progress.
+GPU jobs are terminal. The 52-file `model_data_r2/artifact_manifest.json` passed
+hash verification; Granite's local 32k runtime grid remains in progress.
 
 The research recommendation is to investigate Qwen2.5-Coder as the smaller
 local-code candidate, using a future matched next-edit evaluation before any

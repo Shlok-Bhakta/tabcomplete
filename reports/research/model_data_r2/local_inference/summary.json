@@ -523,5 +523,80 @@
     },
     "verified_uncached": true,
     "paired_outputs_identical": true
+  },
+  {
+    "model": "q25-coder",
+    "host": "crabcake",
+    "precision": "Q4_K_M",
+    "threads": 4,
+    "bucket": 32768,
+    "n": 40,
+    "prompts": 20,
+    "total_median_seconds": 819.7011040245125,
+    "total_p95_seconds": 834.6910126240779,
+    "returned_line_median_seconds": 812.838901247509,
+    "returned_line_observed_n": 32,
+    "peak_resident_bytes": 8761196544,
+    "source": "artifacts/research/model_data_r2/local-inference/q25-q4-clean/measurements.jsonl",
+    "warm_context": false,
+    "actual_input_token_range": [
+      32704,
+      32704
+    ],
+    "token_arrival_seconds": {
+      "1": {
+        "n": 40,
+        "median": 811.9201307090116,
+        "p95": 827.1339619536593
+      },
+      "8": {
+        "n": 40,
+        "median": 813.5985169445339,
+        "p95": 828.847766100426
+      },
+      "16": {
+        "n": 40,
+        "median": 815.6064821605105,
+        "p95": 830.8884155360545
+      },
+      "32": {
+        "n": 40,
+        "median": 819.6973053605179,
+        "p95": 834.687698492076
+      }
+    },
+    "complete_line_arrival_seconds": {
+      "n": 32,
+      "median": 812.838901247509,
+      "p95": 829.8083064594539
+    },
+    "complete_line_definition": "Observed first newline/EOS during the fixed 32-token request; not a line-stopping latency experiment. Missing values stay unknown.",
+    "warm_resident_uncached_seconds": {
+      "n": 39,
+      "median": 819.6937478360487,
+      "p95": 834.8054734171776
+    },
+    "cold_process_first_seconds": {
+      "n": 1,
+      "median": 821.9135470989859,
+      "p95": 821.9135470989859
+    },
+    "model_load_to_health_seconds": {
+      "n": 1,
+      "median": 1.3654711310518906,
+      "p95": 1.3654711310518906
+    },
+    "prompt_processing_seconds": {
+      "n": 40,
+      "median": 811.6655900000001,
+      "p95": 827.02128525
+    },
+    "decode_seconds": {
+      "n": 40,
+      "median": 7.610882500000001,
+      "p95": 8.0336676
+    },
+    "verified_uncached": true,
+    "paired_outputs_identical": true
   }
 ]

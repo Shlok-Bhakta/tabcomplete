@@ -1,6 +1,6 @@
 # Model/data R2 campaign handoff
 
-## Continuation update, 2026-09-23 13:32 UTC
+## Continuation update, 2026-09-23 22:10 UTC
 
 The snapshot below is historical. The registered baseline, both pilots,
 evaluation and context Kaggle jobs are now terminal. No further GPU job is
@@ -23,19 +23,20 @@ The GPU campaign controller has exited after terminal status. The local grid
 controller remains PID 2508891. P12's 32k bucket finished all 40 requests and
 passed the pair identity, no-truncation and zero-cache checks. Its median total
 request was 623.769 seconds, with 34,965–35,295 actual prompt tokens and
-8,096,616,448-byte peak server RSS. Qwen2.5's 32k child is PID 2939362 as of
-this update. Its first pair has finished, and the cooperative pause has been
-released. Preserve
-the active grid and its 20 prompts with two repetitions per model/bucket. The
-remaining 32k grids will take many more hours. Check current PIDs and files
-before signalling any process.
+8,096,616,448-byte peak server RSS. Qwen2.5's 32k bucket also finished all 40
+requests with the same protocol checks. Its median total request was 819.701
+seconds, with 32,704 actual prompt tokens and 8,761,196,544-byte peak server
+RSS. Granite's 32k child is PID 3180670 as of this update. A cooperative pause
+between pairs allowed the completed Qwen2.5 analysis; the pause was then
+released. Preserve Granite's 20 prompts and two repetitions. Check current
+PIDs and files before signalling any process.
 
 Telemetry bundles are imported and reconciled; 1,492 evaluation and 164 context
 captured payloads synced, with a remote byte/hash check from each. The
-50-file `artifact_manifest.json` passed hash verification. Full Python
+52-file `artifact_manifest.json` passed hash verification. Full Python
 verification after the only source edit passed 227 tests, Ruff and mypy. The
-remaining independent work is the local 32k runtime grid, then refresh its
-summary and plots and report the actual final counts. The report is a verified
+remaining independent work is Granite's local 32k runtime grid, then refresh
+its summary, plots and report the actual final counts. The report is a verified
 research snapshot while that grid runs.
 
 Snapshot: 2026-09-23 04:16 UTC. This packet was requested while work was running. The campaign is incomplete. No checkpoint has been promoted and the sealed test slice remains closed.
