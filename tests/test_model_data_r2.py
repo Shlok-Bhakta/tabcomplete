@@ -4,6 +4,30 @@ from pathlib import Path
 import yaml
 
 
+def test_local_pause_acknowledges_only_outside_request_pairs(tmp_path):
+    import concurrent.futures
+    import json
+    import runpy
+    import time
+
+    helper = runpy.run_path(str(Path(__file__).parents[1] / "scripts/measure_r2_local.py"))
+    request, acknowledgement = tmp_path / "pause-requested", tmp_path / "paused.json"
+    assert helper["wait_between_pairs"](request, acknowledgement) == 0
+    request.touch()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(
+            helper["wait_between_pairs"], request, acknowledgement, poll_seconds=0.01
+        )
+        deadline = time.monotonic() + 5
+        while not acknowledgement.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert json.loads(acknowledgement.read_text())["state"] == "paused_between_request_pairs"
+        assert not future.done()
+        request.unlink()
+        assert future.result(timeout=5) > 0
+    assert not acknowledgement.exists()
+
+
 def test_line_comparisons_require_identical_fixture_hashes(tmp_path):
     import json
     import runpy

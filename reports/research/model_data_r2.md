@@ -98,6 +98,28 @@ selects 4,642 files; filtered selects 6,306. All source identities, known-exclus
 checks, packed fingerprints, rejection counts, parser coverage, repository
 concentrations, and deterministic samples are under `model_data_r2/data_audit/`.
 
+| Language | Candidate files / retained pool | Selected files standard / filtered | Packed input tokens per arm | Largest repository % standard / filtered |
+|---|---:|---:|---:|---:|
+| C | 12,544 / 11,721 | 94 / 371 | 301,056 | 35.54 / 1.90 |
+| C++ | 5,218 / 4,922 | 220 / 513 | 501,760 | 39.42 / 1.67 |
+| C# | 3,966 / 3,744 | 450 / 490 | 301,056 | 2.46 / 1.92 |
+| Go | 5,305 / 4,801 | 240 / 371 | 401,408 | 7.72 / 1.94 |
+| Java | 4,311 / 4,089 | 548 / 584 | 501,760 | 3.51 / 1.99 |
+| JavaScript | 4,784 / 4,028 | 414 / 555 | 501,760 | 8.76 / 1.84 |
+| Python | 2,690 / 2,534 | 821 / 954 | 1,001,472 | 7.43 / 1.82 |
+| Rust | 4,120 / 3,780 | 265 / 368 | 501,760 | 17.84 / 1.94 |
+| Shell | 827 / 730 | 477 / 687 | 249,856 | 12.30 / 1.97 |
+| TypeScript | 4,081 / 3,641 | 1,113 / 1,413 | 751,616 | 7.28 / 1.80 |
+
+All selected files received parser checks; 353 standard-arm files failed that
+syntax check, versus zero filtered-arm files by construction. This is not proof
+that all rejected files are invalid in their intended dialect. Rejected raw
+source was not tokenized or retained, so raw pre-filter candidate-token totals
+are explicitly unknown. Retained-pool token totals, source-length quantiles,
+test-file shares, reason counts, and known duplicate rates are in the reconciled
+audit. Packed counts include EOS boundaries and can differ from full selected
+file token totals when the last file is cut at the fixed budget.
+
 The largest standard-arm repository contributes about 39.4% of C++ tokens.
 Filtered keeps every language's largest canonical repository below 2%. Added
 syntax and repository-cap filtering do substantial work; added exact/near

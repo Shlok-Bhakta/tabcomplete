@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import socket
 import subprocess
@@ -42,6 +43,20 @@ def verify_unused_port(port):
         # this bind, so no process occupying the experiment port is replaced.
         check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         check.bind(("127.0.0.1", port))
+
+
+def wait_between_pairs(pause_file, acknowledgement, *, poll_seconds=0.2):
+    """Pause only outside measured requests so CPU judging cannot contaminate timings."""
+    if not pause_file.exists():
+        return 0.0
+    started = time.monotonic()
+    save(acknowledgement, {"pid": os.getpid(), "state": "paused_between_request_pairs"})
+    try:
+        while pause_file.exists():
+            time.sleep(poll_seconds)
+    finally:
+        acknowledgement.unlink(missing_ok=True)
+    return time.monotonic() - started
 
 
 def verify_context_budget(alias, input_tokens, output_tokens=32):
@@ -310,6 +325,15 @@ def measure(args):
                 if args.bucket and row["bucket"] != args.bucket:
                     continue
                 if any((row["case_id"], rep) not in completed for rep in range(2)):
+                    paused = wait_between_pairs(
+                        args.output.parent / "pause-requested",
+                        args.output.parent / "paused.json",
+                    )
+                    if paused:
+                        attempt.setdefault("between_pair_pauses", []).append(
+                            {"before_case": row["case_id"], "seconds": paused}
+                        )
+                        save(args.output / "metadata.json", metadata)
                     tokenized = httpx.post(
                         url + "/tokenize",
                         json={"content": row["prompt"], "add_special": True, "parse_special": True},
