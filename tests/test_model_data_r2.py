@@ -4,6 +4,27 @@ from pathlib import Path
 import yaml
 
 
+def test_line_comparisons_require_identical_fixture_hashes(tmp_path):
+    import json
+    import runpy
+
+    import pytest
+
+    helper = runpy.run_path(str(Path(__file__).parents[1] / "scripts/analyze_model_data_r2.py"))
+    baseline = tmp_path / "baseline"
+    for alias, digest in (("q35-p12", "a" * 64), ("challenger", "b" * 64)):
+        folder = baseline / alias / "line"
+        folder.mkdir(parents=True)
+        (folder / "summary.json").write_text(
+            json.dumps({"total": 180, "suite_sha256": digest, "metadata": {}})
+        )
+        (folder / "results.jsonl").write_text(
+            "".join(json.dumps({"case_id": str(i), "exact": True}) + "\n" for i in range(180))
+        )
+    with pytest.raises(ValueError, match="different line fixtures"):
+        helper["compare_lines"](baseline, tmp_path)
+
+
 def test_rendered_kaggle_workers_are_valid_python():
     import ast
     import json

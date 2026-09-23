@@ -58,6 +58,40 @@ def paired(left, right, *, line=False):
     }
 
 
+def compare_lines(baseline, report):
+    """Compare only complete, identity-matched versions of the line diagnostic."""
+    available = {}
+    for path in sorted(baseline.glob("*/line/summary.json")):
+        metadata = json.loads(path.read_text())
+        records = rows(path.with_name("results.jsonl"))
+        if len(records) != 180 or metadata["total"] != 180:
+            raise ValueError("incomplete line evaluation")
+        available[path.parent.parent.name] = (records, metadata)
+    for alias, (records, metadata) in available.items():
+        controls = ["q35-p12"]
+        if alias.endswith("-q4"):
+            controls.append(alias.removesuffix("-q4"))
+        if alias == "q25-coder-q4":
+            controls.append("q35-p12-q4")
+        for control in dict.fromkeys(controls):
+            if control not in available or control == alias:
+                continue
+            before, control_metadata = available[control]
+            if metadata["suite_sha256"] != control_metadata["suite_sha256"]:
+                raise ValueError("cannot compare different line fixtures")
+            comparison = paired(before, records, line=True)
+            comparison.update(
+                first=control,
+                second=alias,
+                suite_sha256=metadata["suite_sha256"],
+                protocol="causal_line_v1",
+                precision_and_hardware_first=control_metadata["metadata"],
+                precision_and_hardware_second=metadata["metadata"],
+                caveat="Exact continuation is diagnostic, not functional correctness",
+            )
+            save(report / "paired_comparisons" / f"line-{alias}-vs-{control}.json", comparison)
+
+
 def historical_failure_audit(predictions, root):
     results = root / "reports/code_cpt/research_r1/causal_functional"
     before, after = rows(results / "P12/results.jsonl"), rows(results / "D12/results.jsonl")
@@ -272,6 +306,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     report = root / "reports/research/model_data_r2"
     baseline = report / "baseline_evaluations"
+    compare_lines(baseline, report)
     if args.audit_line_sample:
         audit_line_sample(root)
     compare_development(

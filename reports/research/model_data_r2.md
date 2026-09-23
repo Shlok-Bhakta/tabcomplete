@@ -1,8 +1,8 @@
 # Model and data research R2
 
 Status: **in progress**. This is an evidence ledger, not a completed campaign or
-promotion decision. The bounded standard-policy notebook is executing; the
-filtered pilot and remaining GPU evaluations have not yet run. The active
+promotion decision. The standard-policy pilot is complete and verified; the
+filtered pilot is executing, with remaining GPU evaluations still ahead. The active
 playground checkpoint has not changed. The sealed research test remains closed.
 
 ## Evidence available so far
@@ -18,7 +18,7 @@ were executed on Crabcake in the existing network-disabled containers.
 | Qwen2.5-Coder, Transformers FP16 / T4 | 11/200 | Pending | Not measured by non-streaming baseline | Not measured as host RSS | Short causal fixtures | Executed |
 | D12, Transformers FP16 / T4 | 5/200 | Pending | Unknown | Unknown | Historical short controls only | Verified historical strict-suite reuse |
 | Qwen2.5-Coder, native Q4_K_M / Kiwi CPU | 7/200 | Corrected fixture pending | Saved per case; awaiting paired model analysis | 1.405 GiB in separate Crabcake 2k grid | Line/strict fixtures; not a long-context intelligence claim | Strict executed; old line fixture superseded |
-| P12, native Q4_K_M | 200 predictions saved; judging pending | Corrected fixture running | 30/40 line-ready observations in Crabcake 2k grid | 3.033 GiB peak server RSS in that grid | 1,990–2,187 actual input tokens | Deployment grid partly executed |
+| P12, native Q4_K_M | 200 predictions saved; judging pending | 19/180 on corrected fixture | 30/40 line-ready observations in Crabcake 2k grid | 3.033 GiB peak server RSS in that grid | 1,990–2,187 actual input tokens | Deployment grid partly executed |
 | Base Qwen3.5 | Pending | Pending | Unknown | Unknown | Pending bounded context run | Not yet executed in R2 |
 | Granite H-350M, native Q4_K_M / Crabcake CPU | Pending | Pending | Saved in 2k grid; quality pending | 1.981 GiB peak server RSS in 2k grid | 1,171–2,005 actual input tokens | Native runtime executed; capability evaluation pending |
 
@@ -103,8 +103,8 @@ revision, not grounds to relabel this experiment's data after training began.
 
 | Candidate | Parent | Data policy | Added pilot tokens | Dev NLL change | Functional wins/losses | Line-result change | Decision |
 |---|---|---|---:|---|---|---|---|
-| R2_STANDARD | Verified P12 | Existing Stage-1 policy on fresh pool | Full pilot not yet completed | Pending | Pending | Pending | No decision |
-| R2_FILTERED | Verified P12 | Frozen extra filters and repository balancing | Not started | Pending | Pending | Pending | No decision |
+| R2_STANDARD | Verified P12 | Existing Stage-1 policy on fresh pool | 5,013,504 | −0.005340 (1.034572 → 1.029232), aggregate fresh dev | Pending | Pending | Research candidate; quality gates pending |
+| R2_FILTERED | Verified P12 | Frozen extra filters and repository balancing | Running | Pending | Pending | Pending | No decision |
 
 Both schedules remain 153 successful updates, 32,768 input tokens/update,
 five-update warmup to 3e-6 and cosine decay to 3e-7 at update 153. There is no
@@ -121,13 +121,21 @@ save the resumed checkpoint with 7.20 GiB free against an unchanged 8 GiB guard.
 The retry preserved its verified smoke restart checkpoint and removed only the
 redundant disposable smoke inference export before holding three optimizer
 states. Its repeated numerical restart gate passed, and the full standard pilot
-then started. Final pilot and filtered-arm outcomes are still pending.
+completed all 153 successful updates with no skipped updates or nonfinite values.
+The final inference export and both ranks' complete restart states were downloaded
+and hash-verified, including preservation of the original MTP sidecar. The final
+model SHA-256 is `4e7a1d50ee34b7aef85abb8f054fa807e9a1fed1eb7396f81631c06f241e8810`.
+Restart matched the declared numerical tolerance, not bit identity: the largest
+observed compared loss difference was 0.0000177622, and both branches reached
+consumed block 128 with matching scheduler/scaler state. Full comparison evidence
+is retained. The filtered arm started at 2026-09-23 03:17:32 UTC.
 
 The planned total, including completed failed-session work and all repeated
 checks, is 11,173,888 input tokens, below the 12 million cap. Reservations remain
 in the ledger until reconciled with scientific summaries. Before attempt 4,
 authenticated Kaggle quota showed 23.16 account hours remaining at
-2026-09-23 01:37:23 UTC, renewing 2026-09-26 00:00 UTC. The separate ten-hour
+2026-09-23 01:37:23 UTC; before the filtered arm it showed 21.64 hours at
+03:17:31 UTC, renewing 2026-09-26 00:00 UTC. The separate ten-hour
 aggregate session limit includes setup, failures, evaluation and finalization.
 
 Additional corrections are recorded in `model_data_r2/environment/runtime_corrections.json`:
