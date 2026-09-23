@@ -1,0 +1,24 @@
+{
+  "comparison": "P12 native Q4_K_M versus its own Transformers FP16 checkpoint",
+  "caveat": "Runtime and precision both change. These labels explain observed failed stages, not all possible semantic defects.",
+  "failed_result_sources": {
+    "loss": "baseline_evaluations/q35-p12-q4/results.jsonl",
+    "gain": "baseline_evaluations/q35-p12/results.jsonl"
+  },
+  "raw_predictions": {
+    "fp16": "artifacts/research/model_data_r2/baseline/model_data_r2_baseline/q35-p12.jsonl",
+    "q4": "artifacts/research/model_data_r2/quantized-quality/p12-q4/causal-context-v1/predictions.jsonl"
+  },
+  "official_scores_repaired": false,
+  "cases": [
+    {"case_id": "go/stable_526", "change": "loss", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Q4 inserts Add, then unrelated Remove/Clear methods, and ends at an unfinished Size declaration. Go reports unexpected }, expected (."},
+    {"case_id": "python/100", "change": "loss", "primary": "protocol mismatch", "secondary": ["overgeneration", "syntax error"], "evidence": "Q4 emits </file> and a new <target> header into the Python insertion; compilation rejects </file>. FP16's empty completion passes this fixture, so that pass is not evidence of a useful nonempty suggestion."},
+    {"case_id": "python/stable_9", "change": "loss", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Q4 completes gcd, adds lcm and main, then reaches the ceiling in assert lcm(12, 1. The compiler reports an unclosed parenthesis."},
+    {"case_id": "rust/2", "change": "loss", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Q4 completes gcd and adds a test plus an unfinished #[test attribute. Rust reports mismatched and unexpected closing delimiters against the unchanged suffix."},
+    {"case_id": "typescript/0", "change": "loss", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "Q4 completes classifyNumber then adds classifyString, ending inside else if (. TypeScript reports TS1109 and TS1128."},
+    {"case_id": "javascript/12_lru_cache", "change": "gain", "primary": "overgeneration", "secondary": ["wrong symbol/API/type", "syntax error"], "evidence": "The FP16 control adds a duplicate LRUCache declaration after closing the class. Node rejects Identifier 'LRUCache' has already been declared. Q4 passes the unchanged tests; its extra code is not removed."},
+    {"case_id": "javascript/509", "change": "gain", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "FP16 completes factorial then adds factorialOfN variants, ending inside return factorial(n. Node reports a missing closing parenthesis. Q4 passes the existing tests."},
+    {"case_id": "python/stable_1", "change": "gain", "primary": "overgeneration", "secondary": ["length truncation", "syntax error"], "evidence": "FP16 completes the frequency dictionary then adds unrelated functions, ending in an unterminated triple-quoted docstring. Python compilation fails. Q4's complete extra docstring parses with the original suffix and passes."},
+    {"case_id": "rust/4", "change": "gain", "primary": "length truncation", "secondary": ["syntax error"], "evidence": "FP16 reaches the ceiling at if result > 1000 before completing safe_div. Rust reports an if expression missing its block. Q4 returns Ok(result), includes extra test code, and passes the existing checks."}
+  ]
+}

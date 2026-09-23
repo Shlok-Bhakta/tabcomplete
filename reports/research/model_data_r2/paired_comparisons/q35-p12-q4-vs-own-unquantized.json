@@ -1,0 +1,35 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 928173,
+  "cases": 200,
+  "caveat": "Own checkpoint comparison changes runtime and precision together",
+  "difference_second_minus_first": -0.005,
+  "exact_paired_binomial_two_sided_p": 1,
+  "first": "q35-p12",
+  "first_passes": 9,
+  "losses": [
+    "go/stable_526",
+    "python/100",
+    "python/stable_9",
+    "rust/2",
+    "typescript/0"
+  ],
+  "paired_bootstrap_95ci": [
+    -0.035,
+    0.025
+  ],
+  "second": "q35-p12-q4",
+  "second_passes": 8,
+  "shared_passes": [
+    "javascript/501",
+    "python/stable_0",
+    "python/stable_18",
+    "python/stable_19"
+  ],
+  "wins": [
+    "javascript/12_lru_cache",
+    "javascript/509",
+    "python/stable_1",
+    "rust/4"
+  ]
+}

@@ -18,7 +18,7 @@ were executed on Crabcake in the existing network-disabled containers.
 | Qwen2.5-Coder, Transformers FP16 / T4 | 11/200 | Pending | Not measured by non-streaming baseline | Not measured as host RSS | Short causal fixtures | Executed |
 | D12, Transformers FP16 / T4 | 5/200 | Pending | Unknown | Unknown | Historical short controls only | Verified historical strict-suite reuse |
 | Qwen2.5-Coder, native Q4_K_M / Kiwi CPU | 7/200 | 18/180 | 2.641 s median across 180 line cases, Kiwi two-thread CPU | 1.405 GiB in separate Crabcake 2k grid | Line/strict fixtures; not a long-context intelligence claim | Strict and corrected line executed |
-| P12, native Q4_K_M / Kiwi CPU | 200 predictions saved; judging pending | 19/180 | 3.694 s median across 180 line cases, Kiwi two-thread CPU | 3.033 GiB in separate Crabcake 2k grid | Crabcake 2k and 8k timing grids executed | Quality partly judged |
+| P12, native Q4_K_M / Kiwi CPU | 8/200 | 19/180 | 3.694 s median across 180 line cases, Kiwi two-thread CPU | 3.033 GiB in separate Crabcake 2k grid | Crabcake 2k and 8k timing grids executed | Strict and corrected line executed |
 | Base Qwen3.5 | Pending | Pending | Unknown | Unknown | Pending bounded context run | Not yet executed in R2 |
 | Granite H-350M, native Q4_K_M / Crabcake CPU | Pending | Pending | Saved in 2k grid; quality pending | 1.981 GiB peak server RSS in 2k grid | 1,171–2,005 actual input tokens | Native runtime executed; capability evaluation pending |
 
@@ -50,6 +50,15 @@ ablation. Five lost cases involve extra generated code that breaks compilation;
 the remaining loss is a negative-input GCD logic error. See
 `model_data_r2/failure_audit/q25_quantized_changes.json` for actual assertions and
 compiler diagnostics. No official output was repaired or gold-truncated.
+
+P12 Q4 versus its own FP16 control has four gains, five losses and four shared
+passes, a −0.5-point difference with paired-bootstrap 95% interval [−3.5, +2.5]
+points. Its five losses fail compilation after extra methods/functions or emitted
+file markup. The gain/loss audit is saved in
+`model_data_r2/failure_audit/p12_quantized_changes.json`. One control case,
+`python/100`, passes with an empty FP16 completion: strict functional success in
+this fixture does not prove a useful nonempty suggestion. The original fixture,
+suffix and tests remain unchanged, and no oracle stopping or repair is applied.
 
 All 200 newly generated P12 completions exactly reproduced their R1 counterparts.
 D12 reuse additionally verifies its weight fingerprint, tokenizer, suite hash,
