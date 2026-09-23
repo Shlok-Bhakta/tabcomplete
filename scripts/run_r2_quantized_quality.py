@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--line-suite", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--hardware", required=True)
+    parser.add_argument("--precision", choices=("Q4_K_M", "F16"), default="Q4_K_M")
     parser.add_argument("--line-only", action="store_true")
     args = parser.parse_args()
     httpx.get(args.url + "/health", timeout=10).raise_for_status()
@@ -52,7 +53,7 @@ def main():
         )
         metadata.update(
             campaign_id="tabcomplete-model-data-r2",
-            precision="Q4_K_M",
+            precision=args.precision,
             runtime_revision="f072b103714dfa1eee531f80b24512faf38e3dd2",
             hardware=args.hardware,
             threads=2,

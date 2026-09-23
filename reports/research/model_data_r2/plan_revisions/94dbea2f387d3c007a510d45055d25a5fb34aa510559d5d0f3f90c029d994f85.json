@@ -1,9 +1,9 @@
 {
   "amendment": {
     "new_line_or_training_outcomes_inspected": true,
-    "outcomes_inspected": "All initial strict P12/Qwen2.5 and Q4 strict P12/Qwen2.5 results; corrected Q4 line results for all three native candidates; standard pilot aggregate NLL. Filtered pilot and additional GPU evaluation outcomes remain unavailable.",
-    "previous_plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
-    "reason": "Add a bounded exploratory native F16 precision control after repetitive Granite Q4 outputs; same previously fixed 20-case audit sample, no official fixture, training, decoding or selection changes and no GPU use."
+    "outcomes_inspected": "Same outcomes as revision 10. Partial P12 revision-2 predictions were generated but their quality was not inspected before this source-only correction; the partial run was cancelled. No pilot outcome or revision-3 prediction inspected.",
+    "previous_plan_sha256": "c5c8872ec5678107710767fc8e25f92cc817bfd281194f789f73659c18e26a61",
+    "reason": "Complete the generated-source fixture audit: ANTLR, gRPC, JNAerator, AutoRust, and Swagger signatures were not covered by the first correction. Exclude documented generated-tool signatures/suffixes before deterministic reselection. Training data/policies and strict causal outcomes remain unchanged. Preserve both prior fixture revisions and their predictions."
   },
   "configuration": {
     "campaign_id": "tabcomplete-model-data-r2",
@@ -183,20 +183,6 @@
       "architecture_surgery",
       "active_playground_changes"
     ],
-    "exploratory_diagnostics": {
-      "granite_native_f16": {
-        "additional_training_tokens": 0,
-        "cases": "existing_fixed_20_case_line_audit_sample",
-        "gpu_hours": 0,
-        "hardware": "kiwi_cpu_two_threads",
-        "known_outcomes": "granite_Q4_6_of_180_exact_lines_80_syntax_passes",
-        "plan": "reports/research/model_data_r2/models/granite-native-f16-diagnostic-plan.json",
-        "precision": "F16_from_verified_immutable_source",
-        "purpose": "investigate_repetitive_Q4_outputs_without_changing_official_comparison",
-        "runtime": "same_pinned_llama_cpp",
-        "wall_seconds_ceiling": 1800
-      }
-    },
     "limits": {
       "additional_training_input_tokens": 12000000,
       "aggregate_t4x2_wall_hours": 10,
@@ -264,7 +250,7 @@
         "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
       }
     },
-    "plan_revision": 12,
+    "plan_revision": 11,
     "schema_version": 1,
     "seed": 928173,
     "selection": {
@@ -341,9 +327,9 @@
       "warmup_updates": 5
     }
   },
-  "configuration_sha256": "529d4edef845365bd904adb7ab4c5f22685057497c2ef0727f0ed47016e736c1",
+  "configuration_sha256": "bedc35655700d123e9f6be14b2c948a2f2436fb96ab092534c1f908cf6606e0e",
   "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
-  "frozen_at": "2026-09-23T03:56:17.850879+00:00",
+  "frozen_at": "2026-09-23T02:30:20.314128+00:00",
   "integration": {
     "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
     "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"

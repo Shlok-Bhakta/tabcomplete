@@ -114,7 +114,7 @@ def compare_lines(baseline, report):
         controls = ["q35-p12"]
         if alias.endswith("-q4"):
             controls.append(alias.removesuffix("-q4"))
-        if alias == "q25-coder-q4":
+        if alias.endswith("-q4"):
             controls.append("q35-p12-q4")
         for control in dict.fromkeys(controls):
             if control not in available or control == alias:

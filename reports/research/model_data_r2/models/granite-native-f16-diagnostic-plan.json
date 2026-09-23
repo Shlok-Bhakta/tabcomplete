@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-09-23T03:55:48Z",
+  "kind": "exploratory runtime/precision diagnostic, not a replacement official comparison",
+  "reason": "Granite Q4's fixed audit sample includes repetitive output. The matched unquantized GPU evaluation is still pending; this control isolates native Q4 versus native F16 without adding GPU work.",
+  "known_outcomes": {"granite_q4_line_exact": 6, "granite_q4_line_syntax_pass": 80, "cases": 180},
+  "case_selection": "The same 20 IDs already frozen in failure_audit/line-sample-definition.json; no selection on Granite outcomes",
+  "model_revision": "dc555b6939c863bb96034d1eae7601da36bd42e4",
+  "native_f16_sha256": "33951afab5e45e9e42874b3de6729211b46f8c47d6b31d7d973a96244ef1fbbb",
+  "native_runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "hardware": "Kiwi AMD Ryzen 3 PRO 2200GE CPU, 2 threads",
+  "decoding": "Same raw left context, greedy first newline or EOS, 96-token fallback",
+  "wall_seconds_ceiling": 1800,
+  "gpu_hours": 0,
+  "additional_training_tokens": 0,
+  "official_training_or_selection_changes": false,
+  "interpretation": "A difference implicates precision/runtime sensitivity; no difference does not exclude a shared conversion/runtime problem. Await the independent Transformers checkpoint comparison before making an architecture claim."
+}

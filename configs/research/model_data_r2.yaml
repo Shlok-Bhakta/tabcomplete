@@ -1,6 +1,6 @@
 schema_version: 1
 campaign_id: tabcomplete-model-data-r2
-plan_revision: 11
+plan_revision: 12
 seed: 928173
 models:
   q35-base:
@@ -162,3 +162,15 @@ limits:
   renewal_consumption: forbidden
   paid_compute: false
 exclusions: [FIM, next_edit_SFT, RL, DPO, reward_models, paid_teachers, QAT, vocabulary_pruning, architecture_surgery, active_playground_changes]
+exploratory_diagnostics:
+  granite_native_f16:
+    purpose: investigate_repetitive_Q4_outputs_without_changing_official_comparison
+    cases: existing_fixed_20_case_line_audit_sample
+    hardware: kiwi_cpu_two_threads
+    runtime: same_pinned_llama_cpp
+    precision: F16_from_verified_immutable_source
+    wall_seconds_ceiling: 1800
+    additional_training_tokens: 0
+    gpu_hours: 0
+    known_outcomes: granite_Q4_6_of_180_exact_lines_80_syntax_passes
+    plan: reports/research/model_data_r2/models/granite-native-f16-diagnostic-plan.json
