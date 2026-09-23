@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-09-23T04:16:00Z",
+  "timestamp_precision": "minute",
+  "source": "authenticated uv run --no-sync kaggle quota --format json",
+  "resource": "GPU",
+  "units": "account quota-hours, not campaign session wall-hours",
+  "used": 24.34,
+  "remaining": 20.66,
+  "total": 45.0,
+  "refresh_at_reported": "2026-09-26T00:00:00",
+  "known_campaign_active_job": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+  "job_status_source": "authenticated kaggle kernels status",
+  "job_status": "KernelWorkerStatus.RUNNING",
+  "not_a_full_account_active_job_inventory": true
+}
