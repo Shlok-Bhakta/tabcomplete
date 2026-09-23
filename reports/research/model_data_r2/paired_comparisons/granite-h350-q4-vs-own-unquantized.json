@@ -1,0 +1,23 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 928173,
+  "cases": 200,
+  "caveat": "Own checkpoint comparison changes runtime and precision together",
+  "difference_second_minus_first": -0.015,
+  "exact_paired_binomial_two_sided_p": 0.25,
+  "first": "granite-h350",
+  "first_passes": 3,
+  "losses": [
+    "javascript/17_validate_email",
+    "javascript/508",
+    "typescript/0"
+  ],
+  "paired_bootstrap_95ci": [
+    -0.035,
+    0.0
+  ],
+  "second": "granite-h350-q4",
+  "second_passes": 0,
+  "shared_passes": [],
+  "wins": []
+}

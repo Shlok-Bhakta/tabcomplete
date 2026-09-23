@@ -1,0 +1,42 @@
+{
+  "total": 180,
+  "exact": 16,
+  "syntax_pass": 146,
+  "predictions_sha256": "5e3130af3a11a9c529b7a2783b44b0e2f9c9fd12a989ab5ca33476cd6d05b7f3",
+  "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+  "metadata": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "case_count": 180,
+    "decoding": {
+      "do_sample": false,
+      "temperature": 0
+    },
+    "max_new_tokens": 96,
+    "model_inventory": {
+      "class": "Qwen2ForCausalLM",
+      "config_vocabulary": 151936,
+      "device": "cuda:0",
+      "parameters": 494032768,
+      "precision": "torch.float16",
+      "tokenizer_class": "Qwen2Tokenizer",
+      "tokenizer_length": 151665,
+      "torch": "2.10.0+cu128"
+    },
+    "model_revision": "d58d103feb3d4c4bbfb86cfbe5620053a78c437a5469cefa44d8bf7dccb4e363",
+    "model_source": "q25-coder",
+    "observability": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "run_id": "run-23dcc9bf-522c-433d-8b5a-b66dacd61b98"
+    },
+    "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+    "protocol": "causal_line_v1",
+    "provider": "transformers-first-newline",
+    "schema_version": 1,
+    "stopping": "incremental first token containing newline or EOS; ceiling 96",
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "workers": 1
+  },
+  "scoring_rule": "Registered LF/CRLF removal only; code whitespace preserved",
+  "scoring_code_sha256": "41bf65fbbd2bc12bee5958a045be3e79bea19836c7019a481322e6b707e860c2"
+}

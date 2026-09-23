@@ -62,5 +62,47 @@
     "exit_code": 0,
     "wall_seconds": 129.825923204422,
     "log": "artifacts/research/model_data_r2/evaluate-p12-q4.log"
+  },
+  {
+    "name": "tests-continuation",
+    "command": ["uv", "run", "--no-sync", "pytest", "-q"],
+    "exit_code": 0,
+    "pytest_result": "227 passed in 24.44s",
+    "log": "artifacts/research/model_data_r2/tests-continuation.log"
+  },
+  {
+    "name": "lint-continuation",
+    "command": ["uv", "run", "--no-sync", "ruff", "check", "."],
+    "exit_code": 0,
+    "result": "All checks passed!",
+    "log": "artifacts/research/model_data_r2/lint-continuation.log"
+  },
+  {
+    "name": "mypy-continuation",
+    "command": ["uv", "run", "--no-sync", "mypy", "src", "scripts"],
+    "exit_code": 0,
+    "result": "Success: no issues found in 106 source files",
+    "log": "artifacts/research/model_data_r2/mypy-continuation.log"
+  },
+  {
+    "name": "tests-final-continuation",
+    "command": ["uv", "run", "--no-sync", "pytest", "-q"],
+    "exit_code": 0,
+    "pytest_result": "227 passed in 24.76s",
+    "log": "artifacts/research/model_data_r2/tests-final-continuation.log"
+  },
+  {
+    "name": "ruff-final-continuation",
+    "command": ["uv", "run", "--no-sync", "ruff", "check", "."],
+    "exit_code": 0,
+    "result": "All checks passed!",
+    "log": "artifacts/research/model_data_r2/ruff-final-continuation.log"
+  },
+  {
+    "name": "mypy-final-continuation",
+    "command": ["uv", "run", "--no-sync", "mypy", "src", "scripts"],
+    "exit_code": 0,
+    "result": "Success: no issues found in 106 source files",
+    "log": "artifacts/research/model_data_r2/mypy-final-continuation.log"
   }
 ]

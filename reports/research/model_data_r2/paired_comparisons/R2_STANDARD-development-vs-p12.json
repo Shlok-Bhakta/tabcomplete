@@ -1,0 +1,22 @@
+{
+  "balanced_language_95ci": [
+    -0.006167165135502013,
+    -0.003918468101433651
+  ],
+  "balanced_language_difference": -0.005318979406894495,
+  "candidate_repository_sha256": "36c359dbb2eb09972c47bed55b3e80b5283bd326cf454ff80bdf7de5f2c901b4",
+  "difference_definition": "second minus first",
+  "first": "q35-p12",
+  "parent_repository_sha256": "08392f0b9bfaf8daa3c4a0e06d9a30b03c8d357eecf562391a7b53e49f59f208",
+  "repository_count": 629,
+  "samples": 2000,
+  "scored_boundaries": "Provenance-attributed target tokens; no missing repos dropped",
+  "second": "R2_STANDARD",
+  "seed": 271828,
+  "token_weighted_95ci": [
+    -0.006843534556099207,
+    -0.0038922936656021635
+  ],
+  "token_weighted_difference": -0.005319016152414591,
+  "tokenizer_comparison": "same pinned Qwen3.5 tokenizer only"
+}

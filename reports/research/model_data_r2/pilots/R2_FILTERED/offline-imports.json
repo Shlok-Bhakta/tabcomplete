@@ -1,0 +1,30 @@
+[
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-filtered/model_data_r2_pilot/smoke/telemetry-rank-0.jsonl",
+    "bundle_sha256": "f08af7831ef4c23e291161bfa88454dfe6a9f8aec1f31d63d4056941d7e7da16",
+    "duplicate": false,
+    "imported_spans": 58,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-filtered/model_data_r2_pilot/smoke/telemetry-rank-1.jsonl",
+    "bundle_sha256": "08f5b13eb00f747425e1f61623f39474a9a6fe19058bc201316c9bf1c02e601f",
+    "duplicate": false,
+    "imported_spans": 4,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-filtered/model_data_r2_pilot/R2_FILTERED/telemetry-rank-0.jsonl",
+    "bundle_sha256": "db33f1fa44910a841b82ef8c82bee74899be82e902f91dc9c75c85a5da3be12d",
+    "duplicate": false,
+    "imported_spans": 421,
+    "schema_version": 1
+  },
+  {
+    "source": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-filtered/model_data_r2_pilot/R2_FILTERED/telemetry-rank-1.jsonl",
+    "bundle_sha256": "fed0caefc32300277f38d7d03b2319d6d2143d580cd65bb0b54c0a8c87a63fbe",
+    "duplicate": false,
+    "imported_spans": 4,
+    "schema_version": 1
+  }
+]

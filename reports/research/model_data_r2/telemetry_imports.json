@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "bundles": [
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_FILTERED-causal-telemetry.jsonl",
+      "sha256": "7fd509a74a07e08017d84b73582f1b974dd7ab2a42beb2f1e138878febd24bbf",
+      "spans": 651,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_FILTERED-fresh-telemetry.jsonl",
+      "sha256": "6c29393fe05a77fb768e7a3b04a8984b7e84732bfa0d1796b6719fd1cf9e9afc",
+      "spans": 1,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_FILTERED-historical-telemetry.jsonl",
+      "sha256": "3dde279eaa7800aeb2ca6958bc5968c8943a332f97ce2938df0572aa096f5830",
+      "spans": 2,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_FILTERED-line-telemetry.jsonl",
+      "sha256": "412cef24940dacff8ed9eca075dcf58391cd889d869561ce70e2413c469841b1",
+      "spans": 550,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_STANDARD-causal-telemetry.jsonl",
+      "sha256": "7bc3bd567982b6788c7bbe2c29c012c3c101debac3883c37713fe73e0907a5f1",
+      "spans": 651,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_STANDARD-fresh-telemetry.jsonl",
+      "sha256": "07213d5c4239e38b718b565456f0ef9a9fe606a0b0d846d12e599b187aeb7046",
+      "spans": 1,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_STANDARD-historical-telemetry.jsonl",
+      "sha256": "0b5af308aba04a7f643279023a41de2946f26039154362fe729775dc8a1cc41b",
+      "spans": 2,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/R2_STANDARD-line-telemetry.jsonl",
+      "sha256": "07f6385ffd2a62edc9455736bfb9611307eaa44312fb84abfc8b0ba258d81372",
+      "spans": 551,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/granite-h350-causal-telemetry.jsonl",
+      "sha256": "2a937013581596f0d4c533f820f8847634d45371f2a1fe8547b64da4335d7219",
+      "spans": 663,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/granite-h350-line-telemetry.jsonl",
+      "sha256": "8c5e74ef7470a6197da35585364afb54613ef194f65f93d5950e1dfad6dd0150",
+      "spans": 0,
+      "duplicate": true
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q25-coder-line-telemetry.jsonl",
+      "sha256": "0ef7d808debd857100b2433cea82276f959cc435dd806801c284d2e4c706cf66",
+      "spans": 546,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q35-base-causal-telemetry.jsonl",
+      "sha256": "79ea7d7c11ea8ff066e2a231dfe8a27ade792f17e6dee02c6e799e4be85fe4b8",
+      "spans": 657,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q35-base-fresh-telemetry.jsonl",
+      "sha256": "08b4b5d31b27cef23985aaeca08be0d9b545cf33501da2df4a7651a8f5c3fe30",
+      "spans": 2,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q35-base-historical-telemetry.jsonl",
+      "sha256": "e161ae9938f5eb85212eb069016d2127f4154f974ed95b31553804bfd01590fd",
+      "spans": 2,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q35-base-line-telemetry.jsonl",
+      "sha256": "52265942825bad0b6496cd0991b70d324df19c0e03478a4d10ca0ea8184c675b",
+      "spans": 550,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q35-d12-line-telemetry.jsonl",
+      "sha256": "5061eec58d8cad9ea1dae9a4035c7bf444c5e6e1055a7a3d4cd19d731b24eae5",
+      "spans": 551,
+      "duplicate": false
+    },
+    {
+      "bundle": "evaluation/model_data_r2_evaluation/q35-p12-line-telemetry.jsonl",
+      "sha256": "cdb422b5574a42522865aa8eccb78295d65e7b52072093d602abb602ad5caa2d",
+      "spans": 557,
+      "duplicate": false
+    },
+    {
+      "bundle": "context/model_data_r2_context/q25-coder-telemetry.jsonl",
+      "sha256": "1669f7ff27d7468b605d87502367bd300adc4780346d69fc9e99f6c0ed282262",
+      "spans": 253,
+      "duplicate": false
+    },
+    {
+      "bundle": "context/model_data_r2_context/q35-base-telemetry.jsonl",
+      "sha256": "c4275b94c87d2c5daeee36416ac43935c5ac6878ab8d6b5b36189b77426d6975",
+      "spans": 7,
+      "duplicate": false
+    },
+    {
+      "bundle": "context/model_data_r2_context/q35-d12-telemetry.jsonl",
+      "sha256": "3112d445c5d76e8381a937c95d26441d80cd0f4c52912934db16cc6ba64fbbac",
+      "spans": 275,
+      "duplicate": false
+    },
+    {
+      "bundle": "context/model_data_r2_context/q35-p12-telemetry.jsonl",
+      "sha256": "5bf8366ae9f43915bb91e86f62627c579d2f82ab86e638f3ca5608a25bb17e6d",
+      "spans": 7,
+      "duplicate": false
+    }
+  ],
+  "total_spans": 6479
+}

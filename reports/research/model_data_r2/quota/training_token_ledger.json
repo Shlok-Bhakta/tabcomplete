@@ -7,9 +7,9 @@
       "status": "verified"
     },
     "shlokbhakta/tabcomplete-model-data-r2-filtered": {
-      "evidence": "Bounded worker absolute update limits, including smoke and restart work",
+      "evidence": "Summed per-process additional input tokens; verified complete checkpoints",
       "input_tokens": 5111808,
-      "status": "reserved_upper_bound"
+      "status": "verified"
     },
     "shlokbhakta/tabcomplete-model-data-r2-standard": {
       "evidence": "Saved smoke.log: baseline metrics KeyError at train.py:899 before entering the batch loop; no training checkpoint or summary",

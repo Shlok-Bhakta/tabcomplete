@@ -75,6 +75,81 @@
     "paired_outputs_identical": true
   },
   {
+    "model": "granite-h350",
+    "host": "crabcake",
+    "precision": "Q4_K_M",
+    "threads": 4,
+    "bucket": 8192,
+    "n": 40,
+    "prompts": 20,
+    "total_median_seconds": 36.927365823998116,
+    "total_p95_seconds": 44.9858526731201,
+    "returned_line_median_seconds": 35.61248524300754,
+    "returned_line_observed_n": 24,
+    "peak_resident_bytes": 2550587392,
+    "source": "artifacts/research/model_data_r2/local-inference/granite-q4-clean/measurements.jsonl",
+    "warm_context": false,
+    "actual_input_token_range": [
+      6592,
+      8076
+    ],
+    "token_arrival_seconds": {
+      "1": {
+        "n": 40,
+        "median": 35.988444026501384,
+        "p95": 43.720268999261314
+      },
+      "8": {
+        "n": 40,
+        "median": 36.19983980047982,
+        "p95": 44.01782218682638
+      },
+      "16": {
+        "n": 40,
+        "median": 36.43897404297604,
+        "p95": 44.368939154810505
+      },
+      "32": {
+        "n": 40,
+        "median": 36.92635224497644,
+        "p95": 44.9847749140492
+      }
+    },
+    "complete_line_arrival_seconds": {
+      "n": 24,
+      "median": 35.61248524300754,
+      "p95": 43.85563443019637
+    },
+    "complete_line_definition": "Observed first newline/EOS during the fixed 32-token request; not a line-stopping latency experiment. Missing values stay unknown.",
+    "warm_resident_uncached_seconds": {
+      "n": 39,
+      "median": 36.840552422974724,
+      "p95": 44.431226317223626
+    },
+    "cold_process_first_seconds": {
+      "n": 1,
+      "median": 45.219266554981004,
+      "p95": 45.219266554981004
+    },
+    "model_load_to_health_seconds": {
+      "n": 1,
+      "median": 1.1271479629795067,
+      "p95": 1.1271479629795067
+    },
+    "prompt_processing_seconds": {
+      "n": 40,
+      "median": 35.924389,
+      "p95": 43.60600805
+    },
+    "decode_seconds": {
+      "n": 40,
+      "median": 1.0893715,
+      "p95": 1.2777598999999997
+    },
+    "verified_uncached": true,
+    "paired_outputs_identical": true
+  },
+  {
     "model": "q35-p12",
     "host": "crabcake",
     "precision": "Q4_K_M",
@@ -295,6 +370,81 @@
       "n": 40,
       "median": 0.9872695,
       "p95": 1.2739907
+    },
+    "verified_uncached": true,
+    "paired_outputs_identical": true
+  },
+  {
+    "model": "q25-coder",
+    "host": "crabcake",
+    "precision": "Q4_K_M",
+    "threads": 4,
+    "bucket": 8192,
+    "n": 40,
+    "prompts": 20,
+    "total_median_seconds": 114.2166985560325,
+    "total_p95_seconds": 122.69526504642563,
+    "returned_line_median_seconds": 112.53069922301802,
+    "returned_line_observed_n": 36,
+    "peak_resident_bytes": 2858635264,
+    "source": "artifacts/research/model_data_r2/local-inference/q25-q4-clean/measurements.jsonl",
+    "warm_context": false,
+    "actual_input_token_range": [
+      8128,
+      8128
+    ],
+    "token_arrival_seconds": {
+      "1": {
+        "n": 40,
+        "median": 112.0858777994872,
+        "p95": 120.15164811149006
+      },
+      "8": {
+        "n": 38,
+        "median": 112.60007016049349,
+        "p95": 120.73060636441805
+      },
+      "16": {
+        "n": 38,
+        "median": 113.19170297501842,
+        "p95": 121.3462776466622
+      },
+      "32": {
+        "n": 38,
+        "median": 114.24579273798736,
+        "p95": 122.61765430032392
+      }
+    },
+    "complete_line_arrival_seconds": {
+      "n": 36,
+      "median": 112.53069922301802,
+      "p95": 120.38325004224316
+    },
+    "complete_line_definition": "Observed first newline/EOS during the fixed 32-token request; not a line-stopping latency experiment. Missing values stay unknown.",
+    "warm_resident_uncached_seconds": {
+      "n": 39,
+      "median": 114.24347074201796,
+      "p95": 122.69918839782477
+    },
+    "cold_process_first_seconds": {
+      "n": 1,
+      "median": 100.02111450198572,
+      "p95": 100.02111450198572
+    },
+    "model_load_to_health_seconds": {
+      "n": 1,
+      "median": 1.348859601013828,
+      "p95": 1.348859601013828
+    },
+    "prompt_processing_seconds": {
+      "n": 40,
+      "median": 112.006677,
+      "p95": 120.1115855
+    },
+    "decode_seconds": {
+      "n": 40,
+      "median": 2.132472,
+      "p95": 2.825328849999999
     },
     "verified_uncached": true,
     "paired_outputs_identical": true

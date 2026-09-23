@@ -1,4 +1,230 @@
 {
+  "R2_FILTERED": {
+    "cases": 180,
+    "exact": 19,
+    "exact_character_prefix": {
+      "mean": 2.7777777777777777,
+      "median": 0.0,
+      "n": 180,
+      "p95": 19.0
+    },
+    "fallback_cap_count": 3,
+    "finish_reasons": {
+      "length": 3,
+      "newline": 177
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "max_new_tokens": 96,
+      "model_inventory": {
+        "class": "Qwen3_5ForCausalLM",
+        "config_vocabulary": 248320,
+        "device": "cuda:0",
+        "parameters": 752393024,
+        "precision": "torch.float16",
+        "tokenizer_class": "TokenizersBackend",
+        "tokenizer_length": 248077,
+        "torch": "2.10.0+cu128"
+      },
+      "model_revision": "866d637407241e217fde99a8c42af6cd5710a69c099804d34574b6d9049b668f",
+      "model_source": "R2_FILTERED",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-3fa5a2fe-4236-4ed2-a37d-d4fb8f0333da"
+      },
+      "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+      "protocol": "causal_line_v1",
+      "provider": "transformers-first-newline",
+      "schema_version": 1,
+      "stopping": "incremental first token containing newline or EOS; ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 8.188888888888888,
+      "median": 6.0,
+      "n": 180,
+      "p95": 16.0
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 4
+      },
+      "java": {
+        "cases": 20,
+        "exact": 3
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 3
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 20.194444444444443,
+      "median": 14.5,
+      "n": 180,
+      "p95": 48.099999999999966
+    },
+    "returned_characters": {
+      "mean": 20.194444444444443,
+      "median": 14.5,
+      "n": 180,
+      "p95": 48.099999999999966
+    },
+    "returned_line_seconds": {
+      "mean": 0.6544410769555485,
+      "median": 0.5482493684999099,
+      "n": 180,
+      "p95": 1.3219863238499783
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 158
+  },
+  "R2_STANDARD": {
+    "cases": 180,
+    "exact": 19,
+    "exact_character_prefix": {
+      "mean": 2.8055555555555554,
+      "median": 0.0,
+      "n": 180,
+      "p95": 19.0
+    },
+    "fallback_cap_count": 4,
+    "finish_reasons": {
+      "length": 4,
+      "newline": 176
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "max_new_tokens": 96,
+      "model_inventory": {
+        "class": "Qwen3_5ForCausalLM",
+        "config_vocabulary": 248320,
+        "device": "cuda:0",
+        "parameters": 752393024,
+        "precision": "torch.float16",
+        "tokenizer_class": "TokenizersBackend",
+        "tokenizer_length": 248077,
+        "torch": "2.10.0+cu128"
+      },
+      "model_revision": "cce84692ea779cca3712940813edb0d0b48e76b3dd1cbb3f001f2ff9b0ca21f3",
+      "model_source": "R2_STANDARD",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-4bb60e14-256b-4271-b184-cd4fbaefa8a7"
+      },
+      "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+      "protocol": "causal_line_v1",
+      "provider": "transformers-first-newline",
+      "schema_version": 1,
+      "stopping": "incremental first token containing newline or EOS; ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 8.477777777777778,
+      "median": 6.0,
+      "n": 180,
+      "p95": 16.049999999999983
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 4
+      },
+      "java": {
+        "cases": 20,
+        "exact": 3
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 3
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 21.43888888888889,
+      "median": 15.0,
+      "n": 180,
+      "p95": 51.04999999999998
+    },
+    "returned_characters": {
+      "mean": 21.43888888888889,
+      "median": 15.0,
+      "n": 180,
+      "p95": 51.04999999999998
+    },
+    "returned_line_seconds": {
+      "mean": 0.6984851672666814,
+      "median": 0.5800759104999997,
+      "n": 180,
+      "p95": 1.3023277818999057
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 157
+  },
   "granite-h350-q4": {
     "cases": 180,
     "exact": 6,
@@ -106,6 +332,120 @@
     },
     "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
     "syntax_pass": 80
+  },
+  "q25-coder": {
+    "cases": 180,
+    "exact": 16,
+    "exact_character_prefix": {
+      "mean": 2.6277777777777778,
+      "median": 0.0,
+      "n": 180,
+      "p95": 17.0
+    },
+    "fallback_cap_count": 2,
+    "finish_reasons": {
+      "eos_or_stop": 5,
+      "length": 2,
+      "newline": 173
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "max_new_tokens": 96,
+      "model_inventory": {
+        "class": "Qwen2ForCausalLM",
+        "config_vocabulary": 151936,
+        "device": "cuda:0",
+        "parameters": 494032768,
+        "precision": "torch.float16",
+        "tokenizer_class": "Qwen2Tokenizer",
+        "tokenizer_length": 151665,
+        "torch": "2.10.0+cu128"
+      },
+      "model_revision": "d58d103feb3d4c4bbfb86cfbe5620053a78c437a5469cefa44d8bf7dccb4e363",
+      "model_source": "q25-coder",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-23dcc9bf-522c-433d-8b5a-b66dacd61b98"
+      },
+      "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+      "protocol": "causal_line_v1",
+      "provider": "transformers-first-newline",
+      "schema_version": 1,
+      "stopping": "incremental first token containing newline or EOS; ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 6.794444444444444,
+      "median": 5.0,
+      "n": 180,
+      "p95": 16.0
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 3
+      },
+      "java": {
+        "cases": 20,
+        "exact": 2
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 2
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 19.694444444444443,
+      "median": 15.0,
+      "n": 180,
+      "p95": 43.099999999999966
+    },
+    "returned_characters": {
+      "mean": 19.694444444444443,
+      "median": 15.0,
+      "n": 180,
+      "p95": 43.099999999999966
+    },
+    "returned_line_seconds": {
+      "mean": 0.2783717452388828,
+      "median": 0.18177830299998732,
+      "n": 180,
+      "p95": 0.6311400499000327
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 146
   },
   "q25-coder-q4": {
     "cases": 180,
@@ -215,6 +555,346 @@
     },
     "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
     "syntax_pass": 136
+  },
+  "q35-base": {
+    "cases": 180,
+    "exact": 18,
+    "exact_character_prefix": {
+      "mean": 2.75,
+      "median": 0.0,
+      "n": 180,
+      "p95": 19.0
+    },
+    "fallback_cap_count": 2,
+    "finish_reasons": {
+      "eos_or_stop": 3,
+      "length": 2,
+      "newline": 175
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "max_new_tokens": 96,
+      "model_inventory": {
+        "class": "Qwen3_5ForCausalLM",
+        "config_vocabulary": 248320,
+        "device": "cuda:0",
+        "parameters": 752393024,
+        "precision": "torch.bfloat16",
+        "tokenizer_class": "TokenizersBackend",
+        "tokenizer_length": 248077,
+        "torch": "2.10.0+cu128"
+      },
+      "model_revision": "29a313948ec841ddee52f6b522a608836b35d4b538b3317c7586e57e87058578",
+      "model_source": "q35-base",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-97d79a51-1182-4386-9346-7b3133bd2d6a"
+      },
+      "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+      "protocol": "causal_line_v1",
+      "provider": "transformers-first-newline",
+      "schema_version": 1,
+      "stopping": "incremental first token containing newline or EOS; ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "tokenizer_sha256": "fe000e3ed39ed12b8d2481d527d44f93c65d37e87645d2dcc80d1bf9d50d2927",
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 7.716666666666667,
+      "median": 6.0,
+      "n": 180,
+      "p95": 13.0
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 4
+      },
+      "java": {
+        "cases": 20,
+        "exact": 3
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 2
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 20.11111111111111,
+      "median": 15.0,
+      "n": 180,
+      "p95": 43.099999999999966
+    },
+    "returned_characters": {
+      "mean": 20.11111111111111,
+      "median": 15.0,
+      "n": 180,
+      "p95": 43.099999999999966
+    },
+    "returned_line_seconds": {
+      "mean": 0.6492863696888763,
+      "median": 0.40989219599987337,
+      "n": 180,
+      "p95": 1.9128565037998213
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 157
+  },
+  "q35-d12": {
+    "cases": 180,
+    "exact": 20,
+    "exact_character_prefix": {
+      "mean": 2.827777777777778,
+      "median": 0.0,
+      "n": 180,
+      "p95": 19.0
+    },
+    "fallback_cap_count": 4,
+    "finish_reasons": {
+      "length": 4,
+      "newline": 176
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "max_new_tokens": 96,
+      "model_inventory": {
+        "class": "Qwen3_5ForCausalLM",
+        "config_vocabulary": 248320,
+        "device": "cuda:0",
+        "parameters": 752393024,
+        "precision": "torch.float16",
+        "tokenizer_class": "TokenizersBackend",
+        "tokenizer_length": 248077,
+        "torch": "2.10.0+cu128"
+      },
+      "model_revision": "682b5e3cbdb5af85488a28fc016d5b3bb19a49a5441d3c6283672091f4f6d046",
+      "model_source": "q35-d12",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-0ce57429-c6b6-4a1c-ae9f-843c0e964f71"
+      },
+      "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+      "protocol": "causal_line_v1",
+      "provider": "transformers-first-newline",
+      "schema_version": 1,
+      "stopping": "incremental first token containing newline or EOS; ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 8.705555555555556,
+      "median": 6.0,
+      "n": 180,
+      "p95": 17.0
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 5
+      },
+      "java": {
+        "cases": 20,
+        "exact": 3
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 3
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 22.477777777777778,
+      "median": 15.0,
+      "n": 180,
+      "p95": 46.2999999999999
+    },
+    "returned_characters": {
+      "mean": 22.477777777777778,
+      "median": 15.0,
+      "n": 180,
+      "p95": 46.2999999999999
+    },
+    "returned_line_seconds": {
+      "mean": 0.700607125838888,
+      "median": 0.5826093009998203,
+      "n": 180,
+      "p95": 1.3571528095497785
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 160
+  },
+  "q35-p12": {
+    "cases": 180,
+    "exact": 20,
+    "exact_character_prefix": {
+      "mean": 2.827777777777778,
+      "median": 0.0,
+      "n": 180,
+      "p95": 19.0
+    },
+    "fallback_cap_count": 2,
+    "finish_reasons": {
+      "length": 2,
+      "newline": 178
+    },
+    "measurement_caveat": "One quality request per source case, not paired timing repetitions. See source metadata for device, runtime, precision and stopping.",
+    "metadata": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "case_count": 180,
+      "decoding": {
+        "do_sample": false,
+        "temperature": 0
+      },
+      "max_new_tokens": 96,
+      "model_inventory": {
+        "class": "Qwen3_5ForCausalLM",
+        "config_vocabulary": 248320,
+        "device": "cuda:0",
+        "parameters": 752393024,
+        "precision": "torch.float16",
+        "tokenizer_class": "TokenizersBackend",
+        "tokenizer_length": 248077,
+        "torch": "2.10.0+cu128"
+      },
+      "model_revision": "d0e2919589836aa83cc51d9510cfda192e67a94fa709d44ad41705bda4d9cb6a",
+      "model_source": "q35-p12",
+      "observability": {
+        "campaign_id": "tabcomplete-model-data-r2",
+        "run_id": "run-c4316830-52f0-470b-ac90-53ca41b61ba4"
+      },
+      "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+      "protocol": "causal_line_v1",
+      "provider": "transformers-first-newline",
+      "schema_version": 1,
+      "stopping": "incremental first token containing newline or EOS; ceiling 96",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+      "workers": 1
+    },
+    "output_tokens": {
+      "mean": 7.711111111111111,
+      "median": 6.0,
+      "n": 180,
+      "p95": 16.0
+    },
+    "per_language": {
+      "c": {
+        "cases": 20,
+        "exact": 2
+      },
+      "cpp": {
+        "cases": 20,
+        "exact": 2
+      },
+      "csharp": {
+        "cases": 20,
+        "exact": 0
+      },
+      "go": {
+        "cases": 20,
+        "exact": 5
+      },
+      "java": {
+        "cases": 20,
+        "exact": 3
+      },
+      "javascript": {
+        "cases": 20,
+        "exact": 1
+      },
+      "python": {
+        "cases": 20,
+        "exact": 1
+      },
+      "rust": {
+        "cases": 20,
+        "exact": 3
+      },
+      "typescript": {
+        "cases": 20,
+        "exact": 3
+      }
+    },
+    "returned_bytes": {
+      "mean": 20.31111111111111,
+      "median": 14.5,
+      "n": 180,
+      "p95": 45.099999999999966
+    },
+    "returned_characters": {
+      "mean": 20.31111111111111,
+      "median": 14.5,
+      "n": 180,
+      "p95": 45.099999999999966
+    },
+    "returned_line_seconds": {
+      "mean": 1.2066902726000017,
+      "median": 0.547545153499982,
+      "n": 180,
+      "p95": 1.2214727128497977
+    },
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "syntax_pass": 157
   },
   "q35-p12-q4": {
     "cases": 180,

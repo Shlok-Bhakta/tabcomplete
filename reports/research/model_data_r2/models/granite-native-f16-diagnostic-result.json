@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "complete_exploratory",
+  "sample_suite_sha256": "b8198711cadb43d7f3412297e06a28a6fc3d39ebd9d748365e4fc22cf8047ea0",
+  "sample_definition": "reports/research/model_data_r2/failure_audit/line-sample-definition.json",
+  "case_identity_verified": true,
+  "cases": 20,
+  "q4": {
+    "source": "artifacts/research/model_data_r2/quantized-quality/granite-q4/causal_line_v1/results.jsonl",
+    "sample_exact": 0,
+    "sample_syntax_pass": 13,
+    "limit_finishes": 3
+  },
+  "f16": {
+    "source": "artifacts/research/model_data_r2/quantized-quality/granite-native-f16-diagnostic/causal_line_v1/results.jsonl",
+    "model_sha256": "33951afab5e45e9e42874b3de6729211b46f8c47d6b31d7d973a96244ef1fbbb",
+    "sample_exact": 3,
+    "sample_syntax_pass": 19,
+    "provider_errors": 0,
+    "limit_finishes": 0,
+    "observability_run_id": "run-ea0c2701-739d-41cf-8087-c3bcd377a5bd",
+    "observability_span_count": 74,
+    "observability_model_generate_spans": 20,
+    "capture_artifacts_synced": 40,
+    "remote_payloads_hash_and_bytes_verified": 40
+  },
+  "exact_gains_f16": [
+    "go/7ad7ab02594b4e6f3b25",
+    "rust/17e1721c54d09cda016e",
+    "go/85466ab541f399193a73"
+  ],
+  "exact_losses_f16": [],
+  "syntax_gains_f16": [
+    "python/6b6a7626c9ae5e5e6410",
+    "csharp/12a75121628a07c32bd7",
+    "javascript/37bbf184a149daf8c70b",
+    "javascript/0d8b4fe5d3cf0065096f",
+    "java/fa521db8cc2410585f28",
+    "cpp/ba04039c1bee0b257976"
+  ],
+  "syntax_losses_f16": [],
+  "interpretation": "The same native runtime and host give better exact and syntax outcomes at F16 on this fixed 20-case post-outcome diagnostic. This implicates precision or conversion sensitivity. It does not establish full-suite quality or a pure architecture effect; the independent Transformers FP16 control remains pending."
+}

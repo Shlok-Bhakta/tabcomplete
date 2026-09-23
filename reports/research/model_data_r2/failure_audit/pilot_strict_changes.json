@@ -1,0 +1,996 @@
+{
+  "case_records": [
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.4663157309987582,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 1.1671580509864725,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "\nrunning 1 test\n.\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\n.\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "rust/11",
+        "completion": " let mut sum = 0;\n     for num in nums {\n         if num % 2 == 0 {\n             sum += num;\n         }\n     }\n     sum\n}\n\n#[test]\nfn test_sum_even() {\n    assert_eq!(sum_even(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 30);",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.386609776999876
+      },
+      "case_id": "rust/11",
+      "change": "gain",
+      "evidence": "P12 stops inside assert_eq!(sum and fails Rust parsing. Both pilots finish a valid sum_even assertion; the unchanged test passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.4160101979796309,
+          "status": "fail",
+          "stderr": "error: mismatched closing delimiter: `}`\n  --> src/lib.rs:14:15\n   |\n12 | fn test_sum_even() {\n   |                    - closing delimiter possibly meant for this\n13 |     let nums = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];\n14 |     assert_eq!(sum\n   |               ^ unclosed delimiter\n15 | }\n   | ^ mismatched closing delimiter\n\nerror: aborting due to 1 previous error\n\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "parent_prediction": {
+        "case_id": "rust/11",
+        "completion": " let mut sum = 0;\n     for num in nums {\n         if num % 2 == 0 {\n             sum += num;\n         }\n     }\n     sum\n}\n\n#[test]\nfn test_sum_even() {\n    let nums = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];\n    assert_eq!(sum",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.260524775000022
+      },
+      "primary": "length truncation",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.31547431397484615,
+          "status": "fail",
+          "stderr": "# bench/safe/set\nsafe/set/set.go:31:5: syntax error: unexpected }, expected name or (\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "go/stable_526",
+        "completion": "\ts.m[v] = struct{}{}\n}\n\n// Remove removes v from the set.\nfunc (s *IntSet) Remove(v int) bool {\n\t_, ok := s.m[v]\n\treturn ok\n}\n\n// Contains returns true if v is in the set.\nfunc (s *IntSet) Contains(v int) bool {\n\t_, ok := s.m[v]\n\treturn ok\n}\n\n// Clear clears the set.\nfunc",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.001426262999985
+      },
+      "case_id": "go/stable_526",
+      "change": "loss",
+      "evidence": "Only standard loses this case. Its added Clear declaration stops at func before the frozen suffix, which yields an unexpected closing brace. P12 compiles and passes tests.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.31611380298272707,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 31.174038828001358,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "ok  \tbench/safe/set\t0.002s\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "go/stable_526",
+        "completion": "\ts.m[v] = struct{}{}\n}\n\n// Remove removes v from the set.\nfunc (s *IntSet) Remove(v int) bool {\n\t_, ok := s.m[v]\n\treturn ok\n}\n\n// Contains returns true if v is in the set.\nfunc (s *IntSet) Contains(v int) bool {\n\t_, ok := s.m[v]\n\treturn ok\n}\n\n// Size returns the number of elements in",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.028948221000064
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.41688945499481633,
+          "status": "fail",
+          "stderr": "/workspace/src/data_structures.js:26\nconsole.log(stack.pop\n                  ^^^\n\nSyntaxError: missing ) after argument list\n    at wrapSafe (node:internal/modules/cjs/loader:1713:18)\n    at checkSyntax (node:internal/main/check_syntax:78:3)\n\nNode.js v22.23.2\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "javascript/501",
+        "completion": " return this.items.pop();\n  }\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n}\n\nconst stack = new Stack();\nstack.push(1);\nstack.push(2);\nstack.push(3);\nconsole.log(stack.pop());\nconsole.log(stack.pop());\nconsole.log(stack.pop());\nconsole.log(stack.pop",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.098881320999908
+      },
+      "case_id": "javascript/501",
+      "change": "loss",
+      "evidence": "Both pilots replace P12's passing Queue continuation with example Stack calls and stop inside console.log(stack.pop. Node reports a missing closing parenthesis.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.5167663429747336,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.8162438420113176,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "ok\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "javascript/501",
+        "completion": " return this.items.pop();\n  }\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n}\n\nclass Queue {\n  constructor() {\n    this.items = [];\n  }\n  push(item) {\n    this.items.push(item);\n  }\n  pop() {\n    return this.items.pop();\n ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.023662272999957
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.6660393149941228,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 1,
+          "seconds": 0.31523497600574046,
+          "status": "fail",
+          "stderr": "Traceback (most recent call last):\n  File \"/workspace/src/control_flow.py\", line 18, in <module>\n    main()\n  File \"/workspace/src/control_flow.py\", line 13, in main\n    n = int(input('Enter a number: '))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^\nEOFError: EOF when reading a line\n",
+          "stdout": "Enter a number: "
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "python/stable_0",
+        "completion": "    if n < 0:\n        return 'negative'\n    elif n == 0:\n        return 'zero'\n    else:\n        return 'positive'\n\n\ndef main():\n    \"\"\"Main function.\"\"\"\n    n = int(input('Enter a number: '))\n    print(classify_number(n))\n\n\nif __name__ == '__main__':\n    main()",
+        "finish_reason": "eos_or_stop",
+        "generated_tokens": 83,
+        "hit_token_cap": false,
+        "latency_seconds": 5.785363725000025
+      },
+      "case_id": "python/stable_0",
+      "change": "loss",
+      "evidence": "Both pilots add a main entry point that calls input(). The frozen execution has no stdin and raises EOFError; P12 passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.8760919799969997,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.5279118969920091,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "parent_prediction": {
+        "case_id": "python/stable_0",
+        "completion": "    if n < 0:\n        return 'negative'\n    elif n == 0:\n        return 'zero'\n    else:\n        return 'positive'\n\n\ndef classify_number_range(n: int, min: int, max: int) -> str:\n    \"\"\"Return 'negative', 'zero', 'positive', 'negative', 'zero', or 'positive'.\"\"\"\n    if n < min:\n        return 'negative'\n   ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 5.6579499620000036
+      },
+      "primary": "unwanted side effect",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.6164464229950681,
+          "status": "fail",
+          "stderr": "  File \"src/data_structures_stack.py\", line 27\n    return f\"\n           ^\nSyntaxError: unterminated f-string literal (detected at line 27)\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "python/stable_18",
+        "completion": " return self._items.pop()\n\n    def peek(self):\n        return self._items[-1]\n\n    def is_empty(self):\n        return len(self._items) == 0\n\n    def size(self):\n        return len(self._items)\n\n    def __len__(self):\n        return self.size()\n\n    def __iter__(self):\n        return iter(self._items)\n\n    def __repr__(self):\n        return f\"",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.308091918999935
+      },
+      "case_id": "python/stable_18",
+      "change": "loss",
+      "evidence": "Both pilots add an __repr__ method but stop at return f\". Python reports an unterminated f-string; P12 passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.7849655259924475,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.5251707219867967,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "ok\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "python/stable_18",
+        "completion": " return self._items.pop()\n\n    def peek(self):\n        return self._items[-1]\n\n    def size(self):\n        return len(self._items)\n\n    def is_empty(self):\n        return len(self._items) == 0\n\n    def __len__(self):\n        return len(self._items)\n\n    def __iter__(self):\n        return iter(self._items)\n\n    def __repr__(self):\n        return",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.244017368000016
+      },
+      "primary": "length truncation",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.5657548250164837,
+          "status": "fail",
+          "stderr": "  File \"src/algorithms_binary_search.py\", line 16\n    print(binary_search(arr,\n                       ^\nSyntaxError: '(' was never closed\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "python/stable_19",
+        "completion": " # print(mid)\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n\narr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\ntarget = 5\nprint(binary_search(arr,",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.25679974600007
+      },
+      "case_id": "python/stable_19",
+      "change": "loss",
+      "evidence": "Only standard loses this case. It adds top-level binary-search example code and stops inside print(binary_search(arr,. Python reports an unclosed parenthesis; P12 passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.7787773730233312,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.4230387990246527,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "ok\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "python/stable_19",
+        "completion": " # print(mid)\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n\n# print(binary_search([1, 2, 3, 4, 5], 3))\n# print(binary_search([1, 2, 3, 4, 5], 6",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.308167847999982
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_STANDARD",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 101,
+          "seconds": 0.41552855900954455,
+          "status": "fail",
+          "stderr": "error: unexpected closing delimiter: `}`\n  --> src/lib.rs:20:5\n   |\n10 | pub fn gcd_iter(mut a: u64, mut b: u64) -> u64 {\n   |                                                - this opening brace...\n...\n17 | }\n   | - ...matches this closing brace\n...\n20 |     }\n   |     ^ unexpected closing delimiter\n\nerror: could not compile `bench_crate` (lib) due to 1 previous error\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "rust/2",
+        "completion": " let mut r = a % b;\n         a = b;\n         b = r;\n    }\n    a\n}\n\npub fn gcd_iter(mut a: u64, mut b: u64) -> u64 {\n    while b != 0 {\n        let mut r = a % b;\n        a = b;\n        b = r;\n    }\n    a\n}\n\npub fn gcd_iter2",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.104369519000102
+      },
+      "case_id": "rust/2",
+      "change": "loss",
+      "evidence": "Both pilots add further GCD functions and stop at pub fn gcd_iter2. The unchanged suffix then contains an unexpected closing brace. P12 compiles and passes tests.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.5172243939887267,
+          "status": "pass",
+          "stderr": "warning: variable does not need to be mutable\n --> src/lib.rs:3:14\n  |\n3 |          let mut c = a % b;\n  |              ----^\n  |              |\n  |              help: remove this `mut`\n  |\n  = note: `#[warn(unused_mut)]` on by default\n\nwarning: unused variable: `e`\n  --> src/lib.rs:14:17\n   |\n14 |         let mut e = c % d;\n   |                 ^ help: if this is intentional, prefix it with an underscore: `_e`\n   |\n   = note: `#[warn(unused_variables)]` on by default\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:13\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:25\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |                         ----^\n   |                         |\n   |                         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:12:9\n   |\n12 |     let mut d = b;\n   |         ----^\n   |         |\n   |         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:14:13\n   |\n14 |         let mut e = c % d;\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 1.2684832369850483,
+          "status": "pass",
+          "stderr": "warning: variable does not need to be mutable\n --> src/lib.rs:3:14\n  |\n3 |          let mut c = a % b;\n  |              ----^\n  |              |\n  |              help: remove this `mut`\n  |\n  = note: `#[warn(unused_mut)]` on by default\n\nwarning: unused variable: `e`\n  --> src/lib.rs:14:17\n   |\n14 |         let mut e = c % d;\n   |                 ^ help: if this is intentional, prefix it with an underscore: `_e`\n   |\n   = note: `#[warn(unused_variables)]` on by default\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:13\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:25\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |                         ----^\n   |                         |\n   |                         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:12:9\n   |\n12 |     let mut d = b;\n   |         ----^\n   |         |\n   |         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:14:13\n   |\n14 |         let mut e = c % d;\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\n",
+          "stdout": "\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\n.\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "rust/2",
+        "completion": " let mut c = a % b;\n         a = b;\n         b = c;\n    }\n    a\n}\n\npub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n    let mut c = a % b;\n    let mut d = b;\n    while c != 0 {\n        let mut e = c % d;\n        c = d;\n       ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.019106748999889
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "b65a1a450ed621d83b5599ca3dbe1f6c756b5e8769380497c72d8a7f24c66118",
+        "candidate_results": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_FILTERED",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.6158601259812713,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 1.4175853700144216,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "\nrunning 1 test\n.\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\n.\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "rust/11",
+        "completion": " let mut sum = 0;\n     for num in nums {\n         if num % 2 == 0 {\n             sum += num;\n         }\n     }\n     sum\n}\n\n#[test]\nfn test_sum_even() {\n    assert_eq!(sum_even(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), 30);",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.157321177999847
+      },
+      "case_id": "rust/11",
+      "change": "gain",
+      "evidence": "P12 stops inside assert_eq!(sum and fails Rust parsing. Both pilots finish a valid sum_even assertion; the unchanged test passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.4160101979796309,
+          "status": "fail",
+          "stderr": "error: mismatched closing delimiter: `}`\n  --> src/lib.rs:14:15\n   |\n12 | fn test_sum_even() {\n   |                    - closing delimiter possibly meant for this\n13 |     let nums = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];\n14 |     assert_eq!(sum\n   |               ^ unclosed delimiter\n15 | }\n   | ^ mismatched closing delimiter\n\nerror: aborting due to 1 previous error\n\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "parent_prediction": {
+        "case_id": "rust/11",
+        "completion": " let mut sum = 0;\n     for num in nums {\n         if num % 2 == 0 {\n             sum += num;\n         }\n     }\n     sum\n}\n\n#[test]\nfn test_sum_even() {\n    let nums = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];\n    assert_eq!(sum",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.260524775000022
+      },
+      "primary": "length truncation",
+      "source_sha256": {
+        "candidate_predictions": "fe5b2b53248e1f1e7aacdc471acf96665258ce53089b8b5ea634c0413fe0729c",
+        "candidate_results": "250ef535e47aaec5c2b016fd3c2d7ac66a804f8d2c95f02217ce7fb3c76667a6",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_FILTERED",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.3153324070153758,
+          "status": "fail",
+          "stderr": "/workspace/src/data_structures.js:26\nconsole.log(stack.pop\n                  ^^^\n\nSyntaxError: missing ) after argument list\n    at wrapSafe (node:internal/modules/cjs/loader:1713:18)\n    at checkSyntax (node:internal/main/check_syntax:78:3)\n\nNode.js v22.23.2\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "javascript/501",
+        "completion": " return this.items.pop();\n  }\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n}\n\nconst stack = new Stack();\nstack.push(1);\nstack.push(2);\nstack.push(3);\nconsole.log(stack.pop());\nconsole.log(stack.pop());\nconsole.log(stack.pop());\nconsole.log(stack.pop",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.01828013699992
+      },
+      "case_id": "javascript/501",
+      "change": "loss",
+      "evidence": "Both pilots replace P12's passing Queue continuation with example Stack calls and stop inside console.log(stack.pop. Node reports a missing closing parenthesis.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.5167663429747336,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.8162438420113176,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "ok\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "javascript/501",
+        "completion": " return this.items.pop();\n  }\n  peek() {\n    return this.items[this.items.length - 1];\n  }\n  isEmpty() {\n    return this.items.length === 0;\n  }\n}\n\nclass Queue {\n  constructor() {\n    this.items = [];\n  }\n  push(item) {\n    this.items.push(item);\n  }\n  pop() {\n    return this.items.pop();\n ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.023662272999957
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "fe5b2b53248e1f1e7aacdc471acf96665258ce53089b8b5ea634c0413fe0729c",
+        "candidate_results": "250ef535e47aaec5c2b016fd3c2d7ac66a804f8d2c95f02217ce7fb3c76667a6",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_FILTERED",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.6165349999791943,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 1,
+          "seconds": 0.36556820396799594,
+          "status": "fail",
+          "stderr": "Traceback (most recent call last):\n  File \"/workspace/src/control_flow.py\", line 18, in <module>\n    main()\n  File \"/workspace/src/control_flow.py\", line 13, in main\n    n = int(input('Enter a number: '))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^\nEOFError: EOF when reading a line\n",
+          "stdout": "Enter a number: "
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "python/stable_0",
+        "completion": "    if n < 0:\n        return 'negative'\n    elif n == 0:\n        return 'zero'\n    else:\n        return 'positive'\n\n\ndef main():\n    \"\"\"Main function.\"\"\"\n    n = int(input('Enter a number: '))\n    print(classify_number(n))\n\n\nif __name__ == '__main__':\n    main()",
+        "finish_reason": "eos_or_stop",
+        "generated_tokens": 83,
+        "hit_token_cap": false,
+        "latency_seconds": 38.86802675500007
+      },
+      "case_id": "python/stable_0",
+      "change": "loss",
+      "evidence": "Both pilots add a main entry point that calls input(). The frozen execution has no stdin and raises EOFError; P12 passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.8760919799969997,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.5279118969920091,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "parent_prediction": {
+        "case_id": "python/stable_0",
+        "completion": "    if n < 0:\n        return 'negative'\n    elif n == 0:\n        return 'zero'\n    else:\n        return 'positive'\n\n\ndef classify_number_range(n: int, min: int, max: int) -> str:\n    \"\"\"Return 'negative', 'zero', 'positive', 'negative', 'zero', or 'positive'.\"\"\"\n    if n < min:\n        return 'negative'\n   ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 5.6579499620000036
+      },
+      "primary": "unwanted side effect",
+      "source_sha256": {
+        "candidate_predictions": "fe5b2b53248e1f1e7aacdc471acf96665258ce53089b8b5ea634c0413fe0729c",
+        "candidate_results": "250ef535e47aaec5c2b016fd3c2d7ac66a804f8d2c95f02217ce7fb3c76667a6",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_FILTERED",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.46564247901551425,
+          "status": "fail",
+          "stderr": "  File \"src/data_structures_stack.py\", line 27\n    return f\"\n           ^\nSyntaxError: unterminated f-string literal (detected at line 27)\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "python/stable_18",
+        "completion": " return self._items.pop()\n\n    def peek(self):\n        return self._items[-1]\n\n    def is_empty(self):\n        return len(self._items) == 0\n\n    def size(self):\n        return len(self._items)\n\n    def __len__(self):\n        return self.size()\n\n    def __iter__(self):\n        return iter(self._items)\n\n    def __repr__(self):\n        return f\"",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.18958742399991
+      },
+      "case_id": "python/stable_18",
+      "change": "loss",
+      "evidence": "Both pilots add an __repr__ method but stop at return f\". Python reports an unterminated f-string; P12 passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.7849655259924475,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.5251707219867967,
+          "status": "pass",
+          "stderr": "",
+          "stdout": "ok\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "python/stable_18",
+        "completion": " return self._items.pop()\n\n    def peek(self):\n        return self._items[-1]\n\n    def size(self):\n        return len(self._items)\n\n    def is_empty(self):\n        return len(self._items) == 0\n\n    def __len__(self):\n        return len(self._items)\n\n    def __iter__(self):\n        return iter(self._items)\n\n    def __repr__(self):\n        return",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.244017368000016
+      },
+      "primary": "length truncation",
+      "source_sha256": {
+        "candidate_predictions": "fe5b2b53248e1f1e7aacdc471acf96665258ce53089b8b5ea634c0413fe0729c",
+        "candidate_results": "250ef535e47aaec5c2b016fd3c2d7ac66a804f8d2c95f02217ce7fb3c76667a6",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_FILTERED",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 1,
+          "seconds": 0.5156043689930812,
+          "status": "fail",
+          "stderr": "  File \"src/algorithms_2.py\", line 16\n    \"\"\"Return the greatest common\n    ^\nSyntaxError: unterminated triple-quoted string literal (detected at line 21)\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "python/stable_9",
+        "completion": "    while b != 0:\n        a, b = b, a % b\n    return a\n\n\ndef gcd_iter(a: int, b: int) -> int:\n    \"\"\"Return the greatest common divisor of a and b.\"\"\"\n    while b != 0:\n        a, b = b, a % b\n    return a\n\n\ndef gcd_iter2(a: int, b: int) -> int:\n    \"\"\"Return the greatest common",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.256498571000066
+      },
+      "case_id": "python/stable_9",
+      "change": "loss",
+      "evidence": "Only filtered loses this case. It adds further GCD helpers and stops inside a triple-quoted docstring. Python reports an unterminated string; P12 passes.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.8742976009962149,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 0.5200050290150102,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "parent_prediction": {
+        "case_id": "python/stable_9",
+        "completion": "    while b:\n        a, b = b, a % b\n    return a\n\n\ndef lcm(a: int, b: int) -> int:\n    \"\"\"Return the least common multiple of a and b.\"\"\"\n    return a * b // gcd(a, b)\n\n\ndef lcm_of_two(a: int, b: int) -> int:\n    \"\"\"Return the least common multiple of a and b.\"\"\"\n    return lcm(a, b)\n\n\n",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.249083622000001
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "fe5b2b53248e1f1e7aacdc471acf96665258ce53089b8b5ea634c0413fe0729c",
+        "candidate_results": "250ef535e47aaec5c2b016fd3c2d7ac66a804f8d2c95f02217ce7fb3c76667a6",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    },
+    {
+      "candidate": "R2_FILTERED",
+      "candidate_checks": {
+        "compile": {
+          "returncode": 101,
+          "seconds": 0.41567522700643167,
+          "status": "fail",
+          "stderr": "error: unexpected closing delimiter: `}`\n  --> src/lib.rs:20:5\n   |\n10 | pub fn gcd_iter(mut a: u64, mut b: u64) -> u64 {\n   |                                                - this opening brace...\n...\n17 | }\n   | - ...matches this closing brace\n...\n20 |     }\n   |     ^ unexpected closing delimiter\n\nerror: could not compile `bench_crate` (lib) due to 1 previous error\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "fail",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": null,
+          "seconds": null,
+          "status": "not_run",
+          "stderr": "",
+          "stdout": ""
+        }
+      },
+      "candidate_prediction": {
+        "case_id": "rust/2",
+        "completion": " let mut r = a % b;\n         a = b;\n         b = r;\n    }\n    a\n}\n\npub fn gcd_iter(mut a: u64, mut b: u64) -> u64 {\n    while b != 0 {\n        let mut r = a % b;\n        a = b;\n        b = r;\n    }\n    a\n}\n\npub fn gcd_iter2",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 3.8598518969999986
+      },
+      "case_id": "rust/2",
+      "change": "loss",
+      "evidence": "Both pilots add further GCD functions and stop at pub fn gcd_iter2. The unchanged suffix then contains an unexpected closing brace. P12 compiles and passes tests.",
+      "official_score_repaired": false,
+      "parent_checks": {
+        "compile": {
+          "returncode": 0,
+          "seconds": 0.5172243939887267,
+          "status": "pass",
+          "stderr": "warning: variable does not need to be mutable\n --> src/lib.rs:3:14\n  |\n3 |          let mut c = a % b;\n  |              ----^\n  |              |\n  |              help: remove this `mut`\n  |\n  = note: `#[warn(unused_mut)]` on by default\n\nwarning: unused variable: `e`\n  --> src/lib.rs:14:17\n   |\n14 |         let mut e = c % d;\n   |                 ^ help: if this is intentional, prefix it with an underscore: `_e`\n   |\n   = note: `#[warn(unused_variables)]` on by default\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:13\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:25\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |                         ----^\n   |                         |\n   |                         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:12:9\n   |\n12 |     let mut d = b;\n   |         ----^\n   |         |\n   |         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:14:13\n   |\n14 |         let mut e = c % d;\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\n",
+          "stdout": ""
+        },
+        "parse": {
+          "returncode": null,
+          "seconds": null,
+          "status": "pass",
+          "stderr": "",
+          "stdout": ""
+        },
+        "test": {
+          "returncode": 0,
+          "seconds": 1.2684832369850483,
+          "status": "pass",
+          "stderr": "warning: variable does not need to be mutable\n --> src/lib.rs:3:14\n  |\n3 |          let mut c = a % b;\n  |              ----^\n  |              |\n  |              help: remove this `mut`\n  |\n  = note: `#[warn(unused_mut)]` on by default\n\nwarning: unused variable: `e`\n  --> src/lib.rs:14:17\n   |\n14 |         let mut e = c % d;\n   |                 ^ help: if this is intentional, prefix it with an underscore: `_e`\n   |\n   = note: `#[warn(unused_variables)]` on by default\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:13\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:10:25\n   |\n10 | pub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n   |                         ----^\n   |                         |\n   |                         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:12:9\n   |\n12 |     let mut d = b;\n   |         ----^\n   |         |\n   |         help: remove this `mut`\n\nwarning: variable does not need to be mutable\n  --> src/lib.rs:14:13\n   |\n14 |         let mut e = c % d;\n   |             ----^\n   |             |\n   |             help: remove this `mut`\n\n",
+          "stdout": "\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\n.\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+        }
+      },
+      "parent_prediction": {
+        "case_id": "rust/2",
+        "completion": " let mut c = a % b;\n         a = b;\n         b = c;\n    }\n    a\n}\n\npub fn gcd2(mut a: u64, mut b: u64) -> u64 {\n    let mut c = a % b;\n    let mut d = b;\n    while c != 0 {\n        let mut e = c % d;\n        c = d;\n       ",
+        "finish_reason": "length",
+        "generated_tokens": 96,
+        "hit_token_cap": true,
+        "latency_seconds": 4.019106748999889
+      },
+      "primary": "overgeneration",
+      "source_sha256": {
+        "candidate_predictions": "fe5b2b53248e1f1e7aacdc471acf96665258ce53089b8b5ea634c0413fe0729c",
+        "candidate_results": "250ef535e47aaec5c2b016fd3c2d7ac66a804f8d2c95f02217ce7fb3c76667a6",
+        "parent_predictions": "5eff45a17bb275190ab30b224a4e2b6bee8995b607dc837c752184a79332193c",
+        "parent_results": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57"
+      }
+    }
+  ],
+  "comparison": "Each pilot versus P12, same frozen 200-case suite and 96-token strict protocol",
+  "manual_reviewed_unique_cases": 8,
+  "record_count": 13,
+  "schema_version": 1
+}

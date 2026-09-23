@@ -1,0 +1,12 @@
+{
+  "additional_input_tokens_including_checks": 5111808,
+  "artifact_directory": "artifacts/research/model_data_r2/collected/tabcomplete-model-data-r2-filtered/model_data_r2_pilot",
+  "checkpoint_complete_and_hash_verified": true,
+  "corpus_fingerprint": "504775fa359354b427d3ed6a17c357f5d7320770ba6f0b477d2e21282e3da7b6",
+  "model_sha256": "8f09c13c841594b1721b6f263e0f4aafa3e70c1bf27f2d3c6de39cb50881735f",
+  "original_mtp_sha256": "94a8afbe3c204a6e82669193a1cd5107277a30529deb2b54d4d63720f8f2097c",
+  "pilot_input_tokens": 5013504,
+  "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+  "source_git_sha": "b812f8fba10f1b65c8f9d9db3d7c5704d3d1be49",
+  "verified_at": "2026-09-23T05:01:03.457783+00:00"
+}

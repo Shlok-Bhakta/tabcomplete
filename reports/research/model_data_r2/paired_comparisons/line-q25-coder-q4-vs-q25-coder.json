@@ -1,0 +1,102 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 928173,
+  "cases": 180,
+  "caveat": "Exact continuation is diagnostic, not functional correctness",
+  "difference_second_minus_first": 0.011111111111111112,
+  "exact_paired_binomial_two_sided_p": 0.5,
+  "first": "q25-coder",
+  "first_passes": 16,
+  "losses": [],
+  "paired_bootstrap_95ci": [
+    0.0,
+    0.027777777777777776
+  ],
+  "precision_and_hardware_first": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "case_count": 180,
+    "decoding": {
+      "do_sample": false,
+      "temperature": 0
+    },
+    "max_new_tokens": 96,
+    "model_inventory": {
+      "class": "Qwen2ForCausalLM",
+      "config_vocabulary": 151936,
+      "device": "cuda:0",
+      "parameters": 494032768,
+      "precision": "torch.float16",
+      "tokenizer_class": "Qwen2Tokenizer",
+      "tokenizer_length": 151665,
+      "torch": "2.10.0+cu128"
+    },
+    "model_revision": "d58d103feb3d4c4bbfb86cfbe5620053a78c437a5469cefa44d8bf7dccb4e363",
+    "model_source": "q25-coder",
+    "observability": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "run_id": "run-23dcc9bf-522c-433d-8b5a-b66dacd61b98"
+    },
+    "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+    "protocol": "causal_line_v1",
+    "provider": "transformers-first-newline",
+    "schema_version": 1,
+    "stopping": "incremental first token containing newline or EOS; ceiling 96",
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "workers": 1
+  },
+  "precision_and_hardware_second": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "case_count": 180,
+    "concurrency": 1,
+    "decoding": {
+      "do_sample": false,
+      "temperature": 0
+    },
+    "hardware": "Kiwi AMD Ryzen 3 PRO 2200GE CPU, 2 threads, Q4_K_M",
+    "max_new_tokens": 96,
+    "model_revision": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30",
+    "model_source": "q25-coder-q4",
+    "observability": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "run_id": "run-c4421d33-9ff4-4b41-bf75-3da5f15916f2"
+    },
+    "plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
+    "precision": "Q4_K_M",
+    "protocol": "causal_line_v1",
+    "provider": "llama.cpp-native",
+    "raw_response_definition": "exact native API text; native stop string is omitted",
+    "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "schema_version": 1,
+    "stopping": "native first newline or EOS, ceiling 96",
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "threads": 2,
+    "workers": 1
+  },
+  "protocol": "causal_line_v1",
+  "second": "q25-coder-q4",
+  "second_passes": 18,
+  "shared_passes": [
+    "c/ab0177cbd0285c6749df",
+    "c/e29a7176086cfde174b5",
+    "cpp/57ae23e5a81c5aa08e7a",
+    "cpp/fbc732f5592c0de5e8b0",
+    "go/073c6356f85dcee54cc8",
+    "go/2ca3a75e4fab0730b855",
+    "go/6d387c18cd99cb22d69b",
+    "java/6d54390e06489b7a19eb",
+    "java/84c275646a1268104cfc",
+    "javascript/afd26998795019c287e9",
+    "python/727deb017cfd3e7e9d2b",
+    "rust/4008fdd71a64341a63f8",
+    "rust/af541fc7d7054c4f6dc5",
+    "typescript/9b6d11c40fb92aa44007",
+    "typescript/a068ae366453a7ad8e9a",
+    "typescript/f2314ee349c584744105"
+  ],
+  "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+  "wins": [
+    "java/5f87090f05fb3c1f5946",
+    "rust/cd0471c594794f4011f9"
+  ]
+}

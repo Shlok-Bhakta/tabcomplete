@@ -1,0 +1,34 @@
+{
+  "rust/11": {
+    "primary": "length truncation",
+    "evidence": "P12 stops inside assert_eq!(sum and fails Rust parsing. Both pilots finish a valid sum_even assertion; the unchanged test passes."
+  },
+  "go/stable_526": {
+    "primary": "overgeneration",
+    "evidence": "Only standard loses this case. Its added Clear declaration stops at func before the frozen suffix, which yields an unexpected closing brace. P12 compiles and passes tests."
+  },
+  "javascript/501": {
+    "primary": "overgeneration",
+    "evidence": "Both pilots replace P12's passing Queue continuation with example Stack calls and stop inside console.log(stack.pop. Node reports a missing closing parenthesis."
+  },
+  "python/stable_0": {
+    "primary": "unwanted side effect",
+    "evidence": "Both pilots add a main entry point that calls input(). The frozen execution has no stdin and raises EOFError; P12 passes."
+  },
+  "python/stable_18": {
+    "primary": "length truncation",
+    "evidence": "Both pilots add an __repr__ method but stop at return f\". Python reports an unterminated f-string; P12 passes."
+  },
+  "python/stable_19": {
+    "primary": "overgeneration",
+    "evidence": "Only standard loses this case. It adds top-level binary-search example code and stops inside print(binary_search(arr,. Python reports an unclosed parenthesis; P12 passes."
+  },
+  "python/stable_9": {
+    "primary": "overgeneration",
+    "evidence": "Only filtered loses this case. It adds further GCD helpers and stops inside a triple-quoted docstring. Python reports an unterminated string; P12 passes."
+  },
+  "rust/2": {
+    "primary": "overgeneration",
+    "evidence": "Both pilots add further GCD functions and stop at pub fn gcd_iter2. The unchanged suffix then contains an unexpected closing brace. P12 compiles and passes tests."
+  }
+}

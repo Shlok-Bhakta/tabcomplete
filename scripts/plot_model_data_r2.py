@@ -131,6 +131,8 @@ def main():
     comparisons = []
     for path in sorted((REPORT / "paired_comparisons").glob("*-vs-p12.json")):
         record = json.loads(path.read_text())
+        if record.get("protocol") != "causal-context-v1":
+            continue
         comparisons.append((record["second"], len(record["wins"]), len(record["losses"])))
     if comparisons:
         fig, ax = plt.subplots(figsize=(8, 4))

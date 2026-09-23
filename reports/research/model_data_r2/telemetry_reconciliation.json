@@ -1,0 +1,462 @@
+{
+  "runs": [
+    {
+      "alias": "R2_STANDARD",
+      "distinct_eval_case_ids": 200,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "causal",
+      "queried_pages": 4,
+      "run_id": "run-132427f7-5583-4197-bc53-f5c092d1f0e5",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 200,
+          "tabcomplete.cases.planned": 200,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 200,
+      "span_count": 650,
+      "span_names": {
+        "eval.case": 200,
+        "model.generate": 200,
+        "request.start": 200,
+        "run.heartbeat": 48,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "R2_FILTERED",
+      "distinct_eval_case_ids": 200,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "causal",
+      "queried_pages": 4,
+      "run_id": "run-85b6cabb-c161-4f17-9bc2-b61bd9f80eac",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 200,
+          "tabcomplete.cases.planned": 200,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 200,
+      "span_count": 650,
+      "span_names": {
+        "eval.case": 200,
+        "model.generate": 200,
+        "request.start": 200,
+        "run.heartbeat": 48,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "q35-base",
+      "distinct_eval_case_ids": 200,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "causal",
+      "queried_pages": 4,
+      "run_id": "run-30095bcd-cb52-49db-8f04-fd07751bb969",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 200,
+          "tabcomplete.cases.planned": 200,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 200,
+      "span_count": 656,
+      "span_names": {
+        "eval.case": 200,
+        "model.generate": 200,
+        "request.start": 200,
+        "run.heartbeat": 54,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "granite-h350",
+      "distinct_eval_case_ids": 200,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "causal",
+      "queried_pages": 4,
+      "run_id": "run-0a9fd736-7eac-4326-8277-3af5b329de34",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 200,
+          "tabcomplete.cases.planned": 200,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 200,
+      "span_count": 662,
+      "span_names": {
+        "eval.case": 200,
+        "model.generate": 200,
+        "request.start": 200,
+        "run.heartbeat": 60,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "q35-p12",
+      "distinct_eval_case_ids": 180,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "line",
+      "queried_pages": 3,
+      "run_id": "run-c4316830-52f0-470b-ac90-53ca41b61ba4",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 180,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 180,
+      "span_count": 556,
+      "span_names": {
+        "eval.case": 180,
+        "model.generate": 180,
+        "request.start": 180,
+        "run.heartbeat": 14,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "q25-coder",
+      "distinct_eval_case_ids": 180,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "line",
+      "queried_pages": 3,
+      "run_id": "run-23dcc9bf-522c-433d-8b5a-b66dacd61b98",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 180,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 180,
+      "span_count": 545,
+      "span_names": {
+        "eval.case": 180,
+        "model.generate": 180,
+        "request.start": 180,
+        "run.heartbeat": 3,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "R2_STANDARD",
+      "distinct_eval_case_ids": 180,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "line",
+      "queried_pages": 3,
+      "run_id": "run-4bb60e14-256b-4271-b184-cd4fbaefa8a7",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 180,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 180,
+      "span_count": 550,
+      "span_names": {
+        "eval.case": 180,
+        "model.generate": 180,
+        "request.start": 180,
+        "run.heartbeat": 8,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "R2_FILTERED",
+      "distinct_eval_case_ids": 180,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "line",
+      "queried_pages": 3,
+      "run_id": "run-3fa5a2fe-4236-4ed2-a37d-d4fb8f0333da",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 180,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 180,
+      "span_count": 549,
+      "span_names": {
+        "eval.case": 180,
+        "model.generate": 180,
+        "request.start": 180,
+        "run.heartbeat": 7,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "q35-base",
+      "distinct_eval_case_ids": 180,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "line",
+      "queried_pages": 3,
+      "run_id": "run-97d79a51-1182-4386-9346-7b3133bd2d6a",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 180,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 180,
+      "span_count": 549,
+      "span_names": {
+        "eval.case": 180,
+        "model.generate": 180,
+        "request.start": 180,
+        "run.heartbeat": 7,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "q35-d12",
+      "distinct_eval_case_ids": 180,
+      "failure_count": 0,
+      "failure_pages": 1,
+      "failure_span_names": [],
+      "failure_states": [
+        "no_runs"
+      ],
+      "phase": "line",
+      "queried_pages": 3,
+      "run_id": "run-0ce57429-c6b6-4a1c-ae9f-843c0e964f71",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 180,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "completed"
+        }
+      ],
+      "scientific_count": 180,
+      "span_count": 550,
+      "span_names": {
+        "eval.case": 180,
+        "model.generate": 180,
+        "request.start": 180,
+        "run.heartbeat": 8,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "granite-h350",
+      "distinct_eval_case_ids": 2,
+      "failure_count": 2,
+      "failure_pages": 1,
+      "failure_span_names": [
+        "model.generate",
+        "eval.case"
+      ],
+      "failure_states": [
+        "ok"
+      ],
+      "phase": "line",
+      "queried_pages": 1,
+      "run_id": "run-41175ccc-4129-4b05-bc6f-688c430faee6",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": 1,
+          "tabcomplete.cases.planned": 180,
+          "tabcomplete.run.state": "failed"
+        }
+      ],
+      "scientific_count": 1,
+      "span_count": 8,
+      "span_names": {
+        "eval.case": 2,
+        "model.generate": 2,
+        "request.start": 2,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok"
+      ]
+    },
+    {
+      "alias": "q25-coder",
+      "distinct_eval_case_ids": 0,
+      "failure_count": 1,
+      "failure_pages": 1,
+      "failure_span_names": [
+        "model.score"
+      ],
+      "failure_states": [
+        "ok"
+      ],
+      "phase": "context",
+      "queried_pages": 2,
+      "run_id": "run-fe510e93acb5ae5d2680b6f924d3634d",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": null,
+          "tabcomplete.cases.planned": null,
+          "tabcomplete.run.state": "failed"
+        }
+      ],
+      "scientific_count": 111,
+      "span_count": 246,
+      "span_names": {
+        "model.score": 223,
+        "run.heartbeat": 21,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok"
+      ]
+    },
+    {
+      "alias": "q35-d12",
+      "distinct_eval_case_ids": 0,
+      "failure_count": 1,
+      "failure_pages": 1,
+      "failure_span_names": [
+        "model.score"
+      ],
+      "failure_states": [
+        "ok"
+      ],
+      "phase": "context",
+      "queried_pages": 2,
+      "run_id": "run-435b0ea304876efe38e9c4c3841508fa",
+      "run_summaries": [
+        {
+          "tabcomplete.cases.completed": null,
+          "tabcomplete.cases.planned": null,
+          "tabcomplete.run.state": "failed"
+        }
+      ],
+      "scientific_count": 102,
+      "span_count": 268,
+      "span_names": {
+        "model.score": 205,
+        "run.heartbeat": 61,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "states": [
+        "ok",
+        "ok"
+      ]
+    }
+  ],
+  "schema_version": 1
+}

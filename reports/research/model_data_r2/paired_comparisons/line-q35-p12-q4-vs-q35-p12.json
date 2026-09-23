@@ -1,0 +1,104 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 928173,
+  "cases": 180,
+  "caveat": "Exact continuation is diagnostic, not functional correctness",
+  "difference_second_minus_first": -0.005555555555555556,
+  "exact_paired_binomial_two_sided_p": 1,
+  "first": "q35-p12",
+  "first_passes": 20,
+  "losses": [
+    "java/5f87090f05fb3c1f5946"
+  ],
+  "paired_bootstrap_95ci": [
+    -0.016666666666666666,
+    0.0
+  ],
+  "precision_and_hardware_first": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "case_count": 180,
+    "decoding": {
+      "do_sample": false,
+      "temperature": 0
+    },
+    "max_new_tokens": 96,
+    "model_inventory": {
+      "class": "Qwen3_5ForCausalLM",
+      "config_vocabulary": 248320,
+      "device": "cuda:0",
+      "parameters": 752393024,
+      "precision": "torch.float16",
+      "tokenizer_class": "TokenizersBackend",
+      "tokenizer_length": 248077,
+      "torch": "2.10.0+cu128"
+    },
+    "model_revision": "d0e2919589836aa83cc51d9510cfda192e67a94fa709d44ad41705bda4d9cb6a",
+    "model_source": "q35-p12",
+    "observability": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "run_id": "run-c4316830-52f0-470b-ac90-53ca41b61ba4"
+    },
+    "plan_sha256": "21a3018b2cb60ba80fcc3f7d80bbd2468a96e7c7dffac9c29aa336d8cf127288",
+    "protocol": "causal_line_v1",
+    "provider": "transformers-first-newline",
+    "schema_version": 1,
+    "stopping": "incremental first token containing newline or EOS; ceiling 96",
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4",
+    "workers": 1
+  },
+  "precision_and_hardware_second": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "case_count": 180,
+    "concurrency": 1,
+    "decoding": {
+      "do_sample": false,
+      "temperature": 0
+    },
+    "hardware": "Kiwi AMD Ryzen 3 PRO 2200GE CPU, 2 threads, Q4_K_M",
+    "max_new_tokens": 96,
+    "model_revision": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24",
+    "model_source": "q35-p12-q4",
+    "observability": {
+      "campaign_id": "tabcomplete-model-data-r2",
+      "run_id": "run-e8a1e2de-5158-4333-8c54-92d65a212918"
+    },
+    "plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
+    "precision": "Q4_K_M",
+    "protocol": "causal_line_v1",
+    "provider": "llama.cpp-native",
+    "raw_response_definition": "exact native API text; native stop string is omitted",
+    "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "schema_version": 1,
+    "stopping": "native first newline or EOS, ceiling 96",
+    "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "threads": 2,
+    "workers": 1
+  },
+  "protocol": "causal_line_v1",
+  "second": "q35-p12-q4",
+  "second_passes": 19,
+  "shared_passes": [
+    "c/ab0177cbd0285c6749df",
+    "c/e29a7176086cfde174b5",
+    "cpp/57ae23e5a81c5aa08e7a",
+    "cpp/fbc732f5592c0de5e8b0",
+    "go/0450b7530994492d6379",
+    "go/073c6356f85dcee54cc8",
+    "go/2ca3a75e4fab0730b855",
+    "go/48542afc055be1702d88",
+    "go/6d387c18cd99cb22d69b",
+    "java/6d54390e06489b7a19eb",
+    "java/ce852759758627e56337",
+    "javascript/afd26998795019c287e9",
+    "python/727deb017cfd3e7e9d2b",
+    "rust/4008fdd71a64341a63f8",
+    "rust/af541fc7d7054c4f6dc5",
+    "rust/e4b42759e6354dead212",
+    "typescript/9b6d11c40fb92aa44007",
+    "typescript/a068ae366453a7ad8e9a",
+    "typescript/f2314ee349c584744105"
+  ],
+  "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+  "wins": []
+}

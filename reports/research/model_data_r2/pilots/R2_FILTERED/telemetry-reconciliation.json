@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "run_id": "r2-r2_filtered-R2_FILTERED",
+  "campaign_id": "tabcomplete-model-data-r2",
+  "historical_offline_import": true,
+  "query": "scripts/observability.py run r2-r2_filtered-R2_FILTERED --json --limit 200, then --cursor 200 and --cursor 400",
+  "pages": [200, 200, 25],
+  "distinct_spans": 425,
+  "rank_zero_imported_spans": 421,
+  "rank_one_imported_spans": 4,
+  "training_progress_records": 153,
+  "training_validation_records": 3,
+  "run_summary_records": 1,
+  "last_progress_successful_updates": 153,
+  "last_progress_input_tokens": 5013504,
+  "scientific_summary_successful_updates": 153,
+  "scientific_summary_input_tokens": 5013504,
+  "scientific_files_authoritative": true,
+  "failures_query": "scripts/observability.py failures --run r2-r2_filtered-R2_FILTERED --json --limit 500",
+  "failure_records": 0,
+  "smoke_run_id": "r2-r2_filtered-smoke",
+  "smoke_imported_spans": 62
+}

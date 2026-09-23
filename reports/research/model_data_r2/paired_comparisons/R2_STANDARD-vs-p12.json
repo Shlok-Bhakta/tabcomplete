@@ -1,0 +1,35 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 928173,
+  "cases": 200,
+  "difference_second_minus_first": -0.025,
+  "exact_paired_binomial_two_sided_p": 0.125,
+  "first": "q35-p12",
+  "first_passes": 9,
+  "first_results_sha256": "a43bc756a712d2d976e8717ec2d2cc47614ea89cf61c4185bfd5fb7b30ed9f57",
+  "losses": [
+    "go/stable_526",
+    "javascript/501",
+    "python/stable_0",
+    "python/stable_18",
+    "python/stable_19",
+    "rust/2"
+  ],
+  "output_ceiling_tokens": 96,
+  "paired_bootstrap_95ci": [
+    -0.05,
+    0.0
+  ],
+  "protocol": "causal-context-v1",
+  "second": "R2_STANDARD",
+  "second_passes": 4,
+  "second_results_sha256": "fd2da8c1f394b198a414063649f7d1ea2aa1345b58859a2a45425969a800a480",
+  "shared_passes": [
+    "python/100",
+    "python/stable_9",
+    "typescript/0"
+  ],
+  "wins": [
+    "rust/11"
+  ]
+}

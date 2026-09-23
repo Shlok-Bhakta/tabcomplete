@@ -2,7 +2,8 @@
   "deadline_seconds": 9900,
   "git_sha": "b812f8fba10f1b65c8f9d9db3d7c5704d3d1be49",
   "inputs_sha256": "acb8287fa42ead18a4eec5f86de7e2e15c8bffc18ac028069e19b2133372c9c9",
-  "last_status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.RUNNING\"",
+  "last_status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.COMPLETE\"",
+  "observed_wall_upper_bound_seconds": 5036.591699,
   "plan_sha256": "94dbea2f387d3c007a510d45055d25a5fb34aa510559d5d0f3f90c029d994f85",
   "quota_before": {
     "active_jobs": [],
@@ -113,5 +114,7 @@
   "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
   "response": "Kernel version 1 successfully pushed.  Please check progress at https://www.kaggle.com/code/shlokbhakta/tabcomplete-model-data-r2-filtered",
   "status": "submitted",
-  "submitted_at": "2026-09-23T03:17:32.276095+00:00"
+  "submitted_at": "2026-09-23T03:17:32.276095+00:00",
+  "terminal": true,
+  "terminal_observed_at": "2026-09-23T04:41:28.867794+00:00"
 }

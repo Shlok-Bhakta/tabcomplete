@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "implemented_not_gpu_verified",
+  "status": "partially_measured_runtime_blocked",
   "implementation_window_utc": ["2026-09-23T00:33:00Z", "2026-09-23T00:44:00Z"],
   "bounded_minutes_reserved": 90,
   "gpu_seconds_reserved": 3600,
@@ -13,5 +13,45 @@
   ],
   "scientific_invariants": ["unchanged positional encoding", "unchanged mask and visibility", "full prompt retained", "existing target-only scorer"],
   "old_streamed_scorer_used": false,
-  "verified_long_context_claim": false
+  "verified_long_context_claim": false,
+  "registered_job_status": "terminal_with_four_runtime_blocks",
+  "suite_sha256": "76825fa15d5b7c914739c81e14dd4ece1cfc9442d1278bb2861db7fd9f07cbbd",
+  "source_progress": "artifacts/research/model_data_r2/context/model_data_r2_context/progress.json",
+  "models": {
+    "q35-p12": {
+      "parity_mean_absolute_nll_difference": 0.0031344413757324885,
+      "greedy_identical": true,
+      "efficient_attention_operator_observed": true,
+      "scored_cases": 0,
+      "block": "Declared 0.002 short-input parity limit exceeded"
+    },
+    "q35-d12": {
+      "parity_mean_absolute_nll_difference": 0.0018275260925293413,
+      "greedy_identical": true,
+      "efficient_attention_operator_observed": true,
+      "scored_cases": 102,
+      "complete_32000_family_cases": 25,
+      "genuine_far_dependency_cases": 5,
+      "genuine_far_dependency_preferred": 3,
+      "actual_far_dependency_distance_tokens": [31932, 32054],
+      "block": "CUDA out of memory while scoring later 16k cases"
+    },
+    "q35-base": {
+      "scored_cases": 0,
+      "block": "No available efficient attention kernel on T4 at the short parity gate"
+    },
+    "q25-coder": {
+      "parity_mean_absolute_nll_difference": 2.3031234741233142e-05,
+      "greedy_identical": true,
+      "efficient_attention_operator_observed": true,
+      "scored_cases": 111,
+      "complete_32000_family_cases": 25,
+      "genuine_far_dependency_cases": 5,
+      "genuine_far_dependency_preferred": 4,
+      "actual_far_dependency_distance_tokens": [30820, 30939],
+      "block": "CUDA out of memory while scoring later 16k cases"
+    }
+  },
+  "generation_cases": 0,
+  "interpretation": "Saved target-versus-distractor NLL preferences are partial diagnostics. No model completed the registered context run, and no 96-token generation record was produced."
 }

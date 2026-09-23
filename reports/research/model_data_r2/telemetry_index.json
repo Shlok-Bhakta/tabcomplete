@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "scientific_files_authoritative": true,
+  "offline_imports": "reports/research/model_data_r2/telemetry_imports.json",
+  "run_reconciliation": "reports/research/model_data_r2/telemetry_reconciliation.json",
+  "evaluation_bundles": 17,
+  "context_bundles": 4,
+  "total_imported_spans_excluding_deduplicated_failure_bundle": 6479,
+  "queried_runs_with_paginated_results_and_failure_queries": 13,
+  "evaluation_scientific_progress": "artifacts/research/model_data_r2/evaluation/model_data_r2_evaluation/progress.json",
+  "context_scientific_progress": "artifacts/research/model_data_r2/context/model_data_r2_context/progress.json",
+  "captured_payload_sync": {
+    "evaluation": {"accepted": 1492, "failed": 0},
+    "context": {"accepted": 164, "failed": 0},
+    "remote_get_check": "One evaluation payload and one context payload were fetched from the configured gateway and matched local decompressed bytes and SHA256."
+  },
+  "known_infrastructure_failures": [
+    "Granite FP16 line: second case exhausted T4 memory; one of 180 scientific predictions is saved, two error spans were queried.",
+    "Context: P12 short parity exceeded 0.002; base Qwen3.5 efficient kernel unavailable; D12 and Qwen2.5 later exhausted T4 memory."
+  ],
+  "interpretation": "Historical imported spans reconcile completed prediction case counts and runtime failures. Span counts are not quality scores or a replacement for scientific JSONL files."
+}

@@ -1,5 +1,40 @@
 # Model/data R2 campaign handoff
 
+## Continuation update, 2026-09-23 07:04 UTC
+
+The snapshot below is historical. The registered baseline, both pilots,
+evaluation and context Kaggle jobs are now terminal. No further GPU job is
+planned. The additional evaluation completed 16 of 17 phases; Granite FP16
+line failed from CUDA memory exhaustion after one saved prediction. All other
+complete strict and line sets were identity/hash checked, scored and paired.
+The context job ended with four runtime blocks. D12 and Qwen2.5 have verified
+short parity and partial 32k-family likelihood scores, but no model completed
+the context suite or generation phase. See `reports/research/model_data_r2.md`
+and `long_context/implementation_record.json` for exact measurements.
+
+The registered promotion gate fails for both pilots: P12 passes 9/200 strict and
+20/180 exact lines; standard passes 4/200 and 19/180, filtered 5/200 and
+19/180. Both improve paired fresh development NLL, and filtered improves more,
+but strict and line quality regress. No checkpoint was promoted and the sealed
+test slice remains closed. The research direction is Qwen2.5-Coder as a smaller
+candidate for a future matched next-edit study, not a deployed replacement.
+
+The GPU campaign controller has exited after terminal status. The local grid
+controller remains PID 2508891 and its current P12 32k child is PID 2682550 as
+of this update. The cooperative pause request was removed after judging and
+verification; the child is running. Preserve the active grid and its 20 prompts
+with two repetitions per model/bucket. The 32k grids will take many more hours.
+The first P12 32k pair and one following request have completed. Check current
+PIDs and files before signalling any process.
+
+Telemetry bundles are imported and reconciled; 1,492 evaluation and 164 context
+captured payloads synced, with a remote byte/hash check from each. The
+47-file `artifact_manifest.json` passed hash verification. Full Python
+verification after the only source edit passed 227 tests, Ruff and mypy. The
+remaining independent work is the local 32k runtime grid, then refresh its
+summary and plots and report the actual final counts. The report is a verified
+research snapshot while that grid runs.
+
 Snapshot: 2026-09-23 04:16 UTC. This packet was requested while work was running. The campaign is incomplete. No checkpoint has been promoted and the sealed test slice remains closed.
 
 ## Start here

@@ -38,5 +38,13 @@
     "cause": "OTel default ID generator uses global Python random state restored by trainer",
     "fix": "Supported SDK IdGenerator using OS entropy, independent of scientific RNG",
     "historical_ids_rewritten": false
+  },
+  "filtered_artifact_collection": {
+    "job": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+    "scientific_job_status": "COMPLETE",
+    "first_download": "Kaggle output command exited 1 after a partial 3.9 GiB transfer; the controller stopped before scientific verification or further GPU submission",
+    "read_only_retry": "The same Kaggle output command completed into the existing artifact directory",
+    "controller_retry": "The controller independently re-collected and verified the complete model, both rank states, MTP sidecar, corpus fingerprint, and token totals",
+    "new_training_or_evaluation_job_due_to_failure": false
   }
 }

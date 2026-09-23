@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "event": "Campaign-owned file transfers, hashing, and Kaggle collection overlapped three pairs in the Qwen2.5 8k local timing grid.",
+  "conservative_overlap_window_utc": [
+    "2026-09-23T03:56:00Z",
+    "2026-09-23T03:58:00Z"
+  ],
+  "overlapping_requests": [
+    {
+      "case_id": "runtime-8192-07",
+      "repetition": 0,
+      "inferred_start_utc": "2026-09-23T03:54:37.203686Z",
+      "observed_finish_utc": "2026-09-23T03:56:39.518318Z"
+    },
+    {
+      "case_id": "runtime-8192-07",
+      "repetition": 1,
+      "inferred_start_utc": "2026-09-23T03:56:42.701930Z",
+      "observed_finish_utc": "2026-09-23T03:58:41.862052Z"
+    }
+  ],
+  "additional_model_hash_read": {
+    "event": "The Granite F16 diagnostic hashed its 685 MB local GGUF before making native requests to Kiwi.",
+    "conservative_overlap_window_utc": [
+      "2026-09-23T04:27:00Z",
+      "2026-09-23T04:28:30Z"
+    ],
+    "metadata_file_mtime_utc": "2026-09-23T04:28:26.622872Z",
+    "overlapping_requests": [
+      {
+        "case_id": "runtime-8192-15",
+        "repetition": 0,
+        "observed_finish_utc": "2026-09-23T04:27:45.686723Z"
+      },
+      {
+        "case_id": "runtime-8192-15",
+        "repetition": 1,
+        "observed_finish_utc": "2026-09-23T04:29:39.777501Z"
+      }
+    ],
+    "note": "The hash read's exact start was not instrumented. Both repetitions are conservatively flagged."
+  },
+  "filtered_checkpoint_collection": {
+    "event": "The existing campaign controller downloaded the completed filtered pilot from Kaggle. Its first collection attempt stopped with Kaggle CLI exit 1 after 3.9 GiB had arrived.",
+    "conservative_overlap_window_utc": [
+      "2026-09-23T04:41:19Z",
+      "2026-09-23T04:44:47Z"
+    ],
+    "overlapping_requests": [
+      {
+        "case_id": "runtime-8192-19",
+        "repetition": 0,
+        "inferred_start_utc": "2026-09-23T04:41:19.512579Z",
+        "observed_finish_utc": "2026-09-23T04:43:03.634092Z"
+      },
+      {
+        "case_id": "runtime-8192-19",
+        "repetition": 1,
+        "inferred_start_utc": "2026-09-23T04:43:04.175031Z",
+        "observed_finish_utc": "2026-09-23T04:44:47.805330Z"
+      }
+    ],
+    "note": "The exact download transfer start was not instrumented. The pair is conservatively flagged."
+  },
+  "source": "artifacts/research/model_data_r2/local-inference/q25-q4-clean/measurements.jsonl",
+  "start_derivation": "observed_at minus total_seconds, rounded here to microseconds",
+  "descriptive_sensitivity": {
+    "all_40_median_seconds": 114.2166985560325,
+    "unflagged_34_median_seconds": 114.24683108052704,
+    "excluded_only_for_this_diagnostic_pairs": ["runtime-8192-07", "runtime-8192-15", "runtime-8192-19"],
+    "official_summary_uses_all_40": true
+  },
+  "policy": "Retain all original observations in the 40-request summary. Flag pairs 07, 15, and 19 and do not claim an idle host for the Qwen2.5 8k bucket. No replacement measurements have been made."
+}

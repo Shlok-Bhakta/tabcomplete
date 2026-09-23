@@ -1,0 +1,17 @@
+{
+  "first": "R2_STANDARD",
+  "second": "R2_FILTERED",
+  "difference_definition": "second minus first",
+  "repository_count": 629,
+  "repository_language_rows_per_arm": 633,
+  "identical_repository_language_token_counts": true,
+  "first_repository_sha256": "36c359dbb2eb09972c47bed55b3e80b5283bd326cf454ff80bdf7de5f2c901b4",
+  "second_repository_sha256": "301aedf855fc5cf0649ced77fe03eaaed656b067171ec95a5143f16375a0392b",
+  "samples": 2000,
+  "seed": 271828,
+  "token_weighted_difference": -0.0013467995122076193,
+  "token_weighted_95ci": [-0.0024745000319625955, -0.0003333368421023056],
+  "balanced_language_difference": -0.0013465215235953416,
+  "balanced_language_95ci": [-0.0022425639924914527, -0.0006625694134617206],
+  "tokenizer_comparison": "Same pinned Qwen3.5 tokenizer and matched scored token boundaries"
+}
