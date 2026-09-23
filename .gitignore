@@ -38,3 +38,4 @@ infra/observability/.tools/
 infra/observability/.bootstrap-state.json
 infra/observability/.provision-state.json
 .tabcomplete-observability/
+artifacts/research/model_data_r2/

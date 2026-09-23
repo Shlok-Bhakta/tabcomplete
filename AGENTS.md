@@ -5,6 +5,10 @@ Local development is CPU-only. Never assume local CUDA.
 Use Python 3.11 and uv.
 Never provision Google Cloud, Vertex, Compute Engine, Cloud Build, TPU VM, or other persistent cloud resources.
 GPU training belongs only in an explicitly launched Google Colab runtime.
+Exception: the explicitly authorized `research/model-data-r2` campaign may use Kaggle
+T4x2 jobs, capped at 10 aggregate session wall-hours and 12 million additional
+training input tokens, with one GPU allocation at a time. This does not authorize
+paid compute, persistent cloud resources, or any automatic quota renewal use.
 Never expose secrets in:
 - stdout;
 - stderr;

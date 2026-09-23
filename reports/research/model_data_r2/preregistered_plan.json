@@ -1,0 +1,624 @@
+{
+  "configuration": {
+    "campaign_id": "tabcomplete-model-data-r2",
+    "data": {
+      "common": [
+        "existing_SourceFilter",
+        "metadata_filters",
+        "licensing_policy",
+        "repository_exclusion",
+        "known_content_exclusion",
+        "old_packed_block_exclusion"
+      ],
+      "filtered": {
+        "comments_tests_docstrings": "preserve",
+        "exact_dedup": "sha256_utf8_content",
+        "markers": [
+          "generated_code",
+          "do_not_edit",
+          "automatically_generated",
+          "sourceMappingURL"
+        ],
+        "near_dedup": "normalized_line_5gram_minhash_32_components_LSH_8_bands_Jaccard_at_least_0.85",
+        "near_dedup_max_candidates": 128,
+        "paths": [
+          "vendor",
+          "third_party",
+          "node_modules",
+          "dist",
+          "generated",
+          "minified",
+          "bindings_generated"
+        ],
+        "repository_max_language_token_fraction": 0.02,
+        "syntax": "reject_only_when_language_parser_is_working_otherwise_unchecked"
+      },
+      "frozen_pool_seed": 928173,
+      "insufficient_data": "expand_frozen_candidate_pool_before_training_never_relax_rules",
+      "languages": {
+        "c": 0.06,
+        "cpp": 0.1,
+        "csharp": 0.06,
+        "go": 0.08,
+        "java": 0.1,
+        "javascript": 0.1,
+        "python": 0.2,
+        "rust": 0.1,
+        "shell": 0.05,
+        "typescript": 0.15
+      },
+      "residual_overlap": "stage1_repository_provenance_incomplete_original_pretraining_unknown",
+      "revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+      "source": "bigcode/the-stack-dedup",
+      "source_boundaries": "existing_EOS_file_boundary_not_repository_coherent_packing",
+      "standard": "existing_stage1_stream_order_and_block_packing",
+      "stream_shuffle_buffer": 10000,
+      "training_repository_buckets": [
+        40,
+        999
+      ]
+    },
+    "deployment": {
+      "buckets": [
+        2048,
+        8192,
+        32768
+      ],
+      "candidates": [
+        "q35-p12",
+        "q25-coder",
+        "granite-h350_if_supported"
+      ],
+      "cold_disk_claim": false,
+      "concurrency": 1,
+      "measures": [
+        "load",
+        "cold_process_first_request",
+        "warm_resident",
+        "actual_first_token",
+        "token_8",
+        "token_16",
+        "token_32",
+        "returned_line",
+        "peak_RSS",
+        "prompt_time",
+        "decode_time",
+        "total"
+      ],
+      "output_tokens": 32,
+      "prompt_identity": "identical_source_text_actual_tokens_reported_output_space_reserved",
+      "quantization": "Q4_K_M_from_verified_own_checkpoint",
+      "repetitions": 2,
+      "revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "runtime": "llama.cpp",
+      "source_prompts_per_bucket": 20,
+      "threads": 4,
+      "warm_context_claim": "only_if_cache_reuse_observed"
+    },
+    "evaluation": {
+      "additional": [
+        "q35-base",
+        "q35-d12",
+        "granite-h350"
+      ],
+      "causal": {
+        "cases": 200,
+        "execution": "network_disabled_containers",
+        "greedy": true,
+        "max_new_tokens": 96,
+        "path": "data/benchmarks/code_completion_v2.jsonl",
+        "protocol": "causal-context-v1",
+        "repair": false,
+        "report": [
+          "input_tokens",
+          "output_tokens",
+          "output_characters",
+          "output_bytes",
+          "cap_hits"
+        ],
+        "sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+        "tokenizers": "each_model_own"
+      },
+      "causal_line_v1": {
+        "cases_per_core_language": 20,
+        "control": "exact_file_restoration_and_working_tree_sitter_parser",
+        "decoding": "greedy_first_newline_or_eos_96_token_fallback",
+        "exclude": [
+          "known_training_content",
+          "known_evaluation_repositories",
+          "sealed_test_slice"
+        ],
+        "ordering": "sha256_seed_repository_path_content",
+        "preserve": [
+          "raw_response",
+          "returned_text",
+          "meaningful_whitespace"
+        ],
+        "prompt": "left_context_only_last_8192_characters",
+        "reference": "exact_remaining_characters_before_original_line_ending",
+        "seed": 928173,
+        "source": "pinned_stack_dedup_repository_buckets_30_through_39",
+        "split_rule": "midpoint_of_nonindent_line_clamped_inside_line",
+        "target_rules": "nonblank_noncomment_line_at_least_12_characters_and_6_alphanumeric",
+        "unavailable_incremental_stop": "labeled_postprocess_full_96_token_cost"
+      },
+      "initial": [
+        "q35-p12",
+        "q25-coder"
+      ],
+      "likelihood": {
+        "cross_tokenizer_nll_comparison": "forbidden",
+        "qwen_only": [
+          "fresh_r1_development_per_repository",
+          "historical_MICRO",
+          "general_text"
+        ],
+        "sealed_test": "closed_until_provisional_selection_is_recorded"
+      }
+    },
+    "exclusions": [
+      "FIM",
+      "next_edit_SFT",
+      "RL",
+      "DPO",
+      "reward_models",
+      "paid_teachers",
+      "QAT",
+      "vocabulary_pruning",
+      "architecture_surgery",
+      "active_playground_changes"
+    ],
+    "limits": {
+      "additional_training_input_tokens": 12000000,
+      "aggregate_t4x2_wall_hours": 10,
+      "challenger_bringup_minutes": 45,
+      "finalization_reserve_seconds": 900,
+      "initial_baseline_session_seconds": 7200,
+      "paid_compute": false,
+      "pilot_session_seconds": 16200,
+      "renewal_consumption": "forbidden",
+      "simultaneous_gpu_allocations": 1,
+      "telemetry_diagnosis_minutes": 30,
+      "unknown_quota": "one_initial_2h_session_then_reassess"
+    },
+    "long_context": {
+      "fallback": "existing_verified_exact_query_tiling_only",
+      "gpu_wall_seconds": 3600,
+      "implementation_minutes": 90,
+      "models": [
+        "q35-base",
+        "q35-p12",
+        "q35-d12",
+        "q25-coder"
+      ],
+      "parity": {
+        "greedy_output_short": "identical",
+        "target_nll_absolute": 0.002
+      },
+      "path": "explicit_KV_repeat_native_GQA_false_efficient_SDPA",
+      "priority": [
+        "short_parity",
+        "2048_controls",
+        "genuine_32768",
+        "intermediate"
+      ],
+      "rejected": "prior_numerically_failed_streamed_scorer",
+      "save_scores_before_generation": true
+    },
+    "models": {
+      "granite-h350": {
+        "hub": "ibm-granite/granite-4.0-h-350m-base",
+        "model_class": "GraniteMoeHybridForCausalLM",
+        "revision": "dc555b6939c863bb96034d1eae7601da36bd42e4"
+      },
+      "q25-coder": {
+        "hub": "Qwen/Qwen2.5-Coder-0.5B",
+        "model_class": "Qwen2ForCausalLM",
+        "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301"
+      },
+      "q35-base": {
+        "hub": "Qwen/Qwen3.5-0.8B-Base",
+        "model_class": "Qwen3_5ForCausalLM",
+        "revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+        "text_only": true
+      },
+      "q35-d12": {
+        "inherited_input_tokens": 17006592,
+        "model_sha256": "ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e",
+        "parent": "q35-p12"
+      },
+      "q35-p12": {
+        "inherited_input_tokens": 11993088,
+        "model_sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43",
+        "parent": "Qwen/Qwen3.5-0.8B-Base",
+        "revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+        "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
+      }
+    },
+    "plan_revision": 1,
+    "schema_version": 1,
+    "seed": 928173,
+    "selection": {
+      "ambiguous": "retain_research_candidates_do_not_promote",
+      "deployed_model_replacement": "forbidden",
+      "promotion": "lower_development_NLL_with_interval_below_zero_and_no_functional_or_line_regression_and_general_guard_pass",
+      "research": "same_task_quality_latency_memory_runtime_context_training_practicality_no_next_edit_ceiling_claim",
+      "test_slice": "one_confirmation_after_locked_provisional_selection_against_parent"
+    },
+    "statistics": {
+      "dev": "existing_paired_repository_resampling_2000_replicates_balanced_language_and_token_weighted",
+      "functional": "paired_case_wins_losses_shared_exact_McNemar_binomial_and_95pct_paired_bootstrap",
+      "line": "paired_exact_match_and_character_prefix_95pct_bootstrap",
+      "multiple_comparisons": "exploratory_no_confirmatory_claim_from_isolated_p_value"
+    },
+    "training": {
+      "arms": [
+        "R2_STANDARD",
+        "R2_FILTERED"
+      ],
+      "compile": "post_fsdp_default_dynamic_false",
+      "cosine_end_update": 153,
+      "evaluation_updates": [
+        31,
+        77,
+        153
+      ],
+      "floor_lr": 3e-07,
+      "fresh_optimizer": true,
+      "fsdp": "verified_FSDP1_FULL_SHARD",
+      "gradient_accumulation": 8,
+      "input_tokens_per_arm": 5013504,
+      "microbatch_per_gpu": 1,
+      "optimizer": "existing_adamw8bit_weight_decay_0.01_clip_1.0",
+      "parent": "q35-p12",
+      "peak_lr": 3e-06,
+      "precision": "fp32_masters_fp16_compute_dynamic_scaling_256",
+      "prefetch": "backward_pre_forward_true",
+      "restart_test_updates": 8,
+      "save": [
+        "final_inference",
+        "optimizer",
+        "scheduler",
+        "scaler",
+        "random_state",
+        "next_consumed_block",
+        "original_mtp_sidecar"
+      ],
+      "seed": 928173,
+      "sequence_length": 2048,
+      "smoke_updates_per_arm": 3,
+      "stops": [
+        "nonfinite",
+        "persistent_scaler_overflow",
+        "accounting_mismatch",
+        "corrupt_artifact",
+        "existing_sustained_development_guard",
+        "finalization_reserve"
+      ],
+      "successful_updates": 153,
+      "tokens_per_update": 32768,
+      "warmup_updates": 5
+    }
+  },
+  "configuration_sha256": "4fb3fc2774ec662ffddbfc2210fc35ea7d371de4944062238c1358b062158d23",
+  "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
+  "frozen_at": "2026-09-23T00:03:42.062547+00:00",
+  "integration": {
+    "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
+    "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"
+  },
+  "outcomes_inspected_before_freeze": "historical R1 only, no R2 generation or training",
+  "parent_bytes_verified": true,
+  "quota_at_freeze": {
+    "active_jobs": [],
+    "jobs": [
+      {
+        "last_run": "2026-09-22 06:08:59.157000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-22 03:33:04.810000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-22 03:05:32.417000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-21 22:20:53.867000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-21 21:59:38.827000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-21 19:30:41.243000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-21 22:34:04.600000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-20 18:45:10.880000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-19 16:15:49.720000",
+        "ref": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "unknown: status request failed"
+      },
+      {
+        "last_run": "2026-09-19 16:13:53.953000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "last_run": "2026-09-19 15:43:31.243000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-19 15:41:42.413000",
+        "ref": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2026-09-17 03:23:22.020000",
+        "ref": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "last_run": "2023-11-14 02:30:34.240000",
+        "ref": "shlokbhakta/notebookd2edcfa65c",
+        "status": "unknown: status request failed"
+      }
+    ],
+    "observed_at": "2026-09-23T00:03:39.036563+00:00",
+    "remaining_account_hours": 24.27,
+    "renewal": "2026-09-26T00:00:00",
+    "source": "authenticated kaggle CLI quota and kernel status",
+    "units": "account quota-hours",
+    "used_account_hours": 20.73
+  },
+  "resolved_models": {
+    "granite-h350": {
+      "config": {
+        "architectures": [
+          "GraniteMoeHybridForCausalLM"
+        ],
+        "attention_bias": false,
+        "attention_dropout": 0.0,
+        "attention_multiplier": 0.015625,
+        "bos_token_id": 100257,
+        "embedding_multiplier": 12,
+        "eos_token_id": 100257,
+        "hidden_act": "silu",
+        "hidden_size": 768,
+        "init_method": "mup",
+        "initializer_range": 0.1,
+        "intermediate_size": 2048,
+        "layer_types": [
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "attention",
+          "mamba",
+          "mamba",
+          "attention",
+          "mamba",
+          "mamba",
+          "mamba",
+          "attention",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba",
+          "attention",
+          "mamba",
+          "mamba",
+          "mamba",
+          "mamba"
+        ],
+        "logits_scaling": 3,
+        "mamba_chunk_size": 256,
+        "mamba_conv_bias": true,
+        "mamba_d_conv": 4,
+        "mamba_d_head": 32,
+        "mamba_d_state": 128,
+        "mamba_expand": 2,
+        "mamba_n_groups": 1,
+        "mamba_n_heads": 48,
+        "mamba_proj_bias": false,
+        "max_position_embeddings": 32768,
+        "model_type": "granitemoehybrid",
+        "normalization_function": "rmsnorm",
+        "num_attention_heads": 12,
+        "num_experts_per_tok": 0,
+        "num_hidden_layers": 32,
+        "num_key_value_heads": 4,
+        "num_local_experts": 0,
+        "output_router_logits": false,
+        "pad_token_id": 100256,
+        "position_embedding_type": "nope",
+        "residual_multiplier": 0.246,
+        "rms_norm_eps": 1e-05,
+        "rope_scaling": null,
+        "rope_theta": 10000,
+        "router_aux_loss_coef": 0.01,
+        "shared_intermediate_size": 2048,
+        "tie_word_embeddings": true,
+        "torch_dtype": "bfloat16",
+        "transformers_version": "4.56.0",
+        "use_cache": true,
+        "vocab_size": 100352
+      },
+      "hub_total_parameters_including_unused_components": 340332224,
+      "id": "ibm-granite/granite-4.0-h-350m-base",
+      "license": "apache-2.0",
+      "revision": "dc555b6939c863bb96034d1eae7601da36bd42e4",
+      "text_vocabulary_size": 100352
+    },
+    "q25-coder": {
+      "config": {
+        "architectures": [
+          "Qwen2ForCausalLM"
+        ],
+        "attention_dropout": 0.0,
+        "bos_token_id": 151643,
+        "eos_token_id": 151643,
+        "hidden_act": "silu",
+        "hidden_size": 896,
+        "initializer_range": 0.02,
+        "intermediate_size": 4864,
+        "max_position_embeddings": 32768,
+        "max_window_layers": 24,
+        "model_type": "qwen2",
+        "num_attention_heads": 14,
+        "num_hidden_layers": 24,
+        "num_key_value_heads": 2,
+        "rms_norm_eps": 1e-06,
+        "rope_theta": 1000000.0,
+        "sliding_window": 32768,
+        "tie_word_embeddings": true,
+        "torch_dtype": "bfloat16",
+        "transformers_version": "4.43.1",
+        "use_cache": true,
+        "use_sliding_window": false,
+        "vocab_size": 151936
+      },
+      "hub_total_parameters_including_unused_components": 494032768,
+      "id": "Qwen/Qwen2.5-Coder-0.5B",
+      "license": "apache-2.0",
+      "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+      "text_vocabulary_size": 151936
+    },
+    "q35-base": {
+      "config": {
+        "architectures": [
+          "Qwen3_5ForConditionalGeneration"
+        ],
+        "image_token_id": 248056,
+        "model_type": "qwen3_5",
+        "text_config": {
+          "attention_bias": false,
+          "attention_dropout": 0.0,
+          "attn_output_gate": true,
+          "dtype": "bfloat16",
+          "eos_token_id": 248044,
+          "full_attention_interval": 4,
+          "head_dim": 256,
+          "hidden_act": "silu",
+          "hidden_size": 1024,
+          "initializer_range": 0.02,
+          "intermediate_size": 3584,
+          "layer_types": [
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention",
+            "linear_attention",
+            "linear_attention",
+            "linear_attention",
+            "full_attention"
+          ],
+          "linear_conv_kernel_dim": 4,
+          "linear_key_head_dim": 128,
+          "linear_num_key_heads": 16,
+          "linear_num_value_heads": 16,
+          "linear_value_head_dim": 128,
+          "mamba_ssm_dtype": "float32",
+          "max_position_embeddings": 262144,
+          "mlp_only_layers": [],
+          "model_type": "qwen3_5_text",
+          "mtp_num_hidden_layers": 1,
+          "mtp_use_dedicated_embeddings": false,
+          "num_attention_heads": 8,
+          "num_hidden_layers": 24,
+          "num_key_value_heads": 2,
+          "rms_norm_eps": 1e-06,
+          "rope_parameters": {
+            "mrope_interleaved": true,
+            "mrope_section": [
+              11,
+              11,
+              10
+            ],
+            "partial_rotary_factor": 0.25,
+            "rope_theta": 10000000,
+            "rope_type": "default"
+          },
+          "tie_word_embeddings": true,
+          "use_cache": true,
+          "vocab_size": 248320
+        },
+        "tie_word_embeddings": true,
+        "transformers_version": "4.57.0.dev0",
+        "video_token_id": 248057,
+        "vision_config": {
+          "deepstack_visual_indexes": [],
+          "depth": 12,
+          "hidden_act": "gelu_pytorch_tanh",
+          "hidden_size": 768,
+          "in_channels": 3,
+          "initializer_range": 0.02,
+          "intermediate_size": 3072,
+          "model_type": "qwen3_5",
+          "num_heads": 12,
+          "num_position_embeddings": 2304,
+          "out_hidden_size": 1024,
+          "patch_size": 16,
+          "spatial_merge_size": 2,
+          "temporal_patch_size": 2
+        },
+        "vision_end_token_id": 248054,
+        "vision_start_token_id": 248053
+      },
+      "hub_total_parameters_including_unused_components": 873438784,
+      "id": "Qwen/Qwen3.5-0.8B-Base",
+      "license": "apache-2.0",
+      "revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+      "text_vocabulary_size": 248320
+    }
+  },
+  "schema_version": 1,
+  "sealed_test_opened": false,
+  "thinkpad": "authorized existing alias timed out, not measured"
+}

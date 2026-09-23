@@ -1,0 +1,155 @@
+schema_version: 1
+campaign_id: tabcomplete-model-data-r2
+plan_revision: 1
+seed: 928173
+models:
+  q35-base:
+    hub: Qwen/Qwen3.5-0.8B-Base
+    revision: dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68
+    model_class: Qwen3_5ForCausalLM
+    text_only: true
+  q35-p12:
+    parent: Qwen/Qwen3.5-0.8B-Base
+    revision: dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68
+    model_sha256: d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43
+    inherited_input_tokens: 11993088
+    tokenizer_sha256: 87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4
+  q35-d12:
+    parent: q35-p12
+    model_sha256: ce0705a6ca265ee40eb7c65b4831b938d6af37c1b508d68cdace2b02ec6bdd8e
+    inherited_input_tokens: 17006592
+  q25-coder:
+    hub: Qwen/Qwen2.5-Coder-0.5B
+    revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+    model_class: Qwen2ForCausalLM
+  granite-h350:
+    hub: ibm-granite/granite-4.0-h-350m-base
+    revision: dc555b6939c863bb96034d1eae7601da36bd42e4
+    model_class: GraniteMoeHybridForCausalLM
+evaluation:
+  initial: [q35-p12, q25-coder]
+  additional: [q35-base, q35-d12, granite-h350]
+  causal:
+    path: data/benchmarks/code_completion_v2.jsonl
+    sha256: ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4
+    cases: 200
+    protocol: causal-context-v1
+    max_new_tokens: 96
+    greedy: true
+    repair: false
+    execution: network_disabled_containers
+    tokenizers: each_model_own
+    report: [input_tokens, output_tokens, output_characters, output_bytes, cap_hits]
+  causal_line_v1:
+    seed: 928173
+    cases_per_core_language: 20
+    source: pinned_stack_dedup_repository_buckets_30_through_39
+    exclude: [known_training_content, known_evaluation_repositories, sealed_test_slice]
+    ordering: sha256_seed_repository_path_content
+    target_rules: nonblank_noncomment_line_at_least_12_characters_and_6_alphanumeric
+    split_rule: midpoint_of_nonindent_line_clamped_inside_line
+    prompt: left_context_only_last_8192_characters
+    reference: exact_remaining_characters_before_original_line_ending
+    control: exact_file_restoration_and_working_tree_sitter_parser
+    decoding: greedy_first_newline_or_eos_96_token_fallback
+    unavailable_incremental_stop: labeled_postprocess_full_96_token_cost
+    preserve: [raw_response, returned_text, meaningful_whitespace]
+  likelihood:
+    qwen_only: [fresh_r1_development_per_repository, historical_MICRO, general_text]
+    cross_tokenizer_nll_comparison: forbidden
+    sealed_test: closed_until_provisional_selection_is_recorded
+data:
+  source: bigcode/the-stack-dedup
+  revision: 17cad72c886a2858e08d4c349a00d6466f54df63
+  frozen_pool_seed: 928173
+  stream_shuffle_buffer: 10000
+  training_repository_buckets: [40, 999]
+  languages: {python: 0.20, typescript: 0.15, javascript: 0.10, java: 0.10, cpp: 0.10, rust: 0.10, go: 0.08, c: 0.06, csharp: 0.06, shell: 0.05}
+  common: [existing_SourceFilter, metadata_filters, licensing_policy, repository_exclusion, known_content_exclusion, old_packed_block_exclusion]
+  standard: existing_stage1_stream_order_and_block_packing
+  filtered:
+    paths: [vendor, third_party, node_modules, dist, generated, minified, bindings_generated]
+    markers: [generated_code, do_not_edit, automatically_generated, sourceMappingURL]
+    exact_dedup: sha256_utf8_content
+    near_dedup: normalized_line_5gram_minhash_32_components_LSH_8_bands_Jaccard_at_least_0.85
+    near_dedup_max_candidates: 128
+    syntax: reject_only_when_language_parser_is_working_otherwise_unchecked
+    repository_max_language_token_fraction: 0.02
+    comments_tests_docstrings: preserve
+  source_boundaries: existing_EOS_file_boundary_not_repository_coherent_packing
+  insufficient_data: expand_frozen_candidate_pool_before_training_never_relax_rules
+  residual_overlap: stage1_repository_provenance_incomplete_original_pretraining_unknown
+training:
+  arms: [R2_STANDARD, R2_FILTERED]
+  parent: q35-p12
+  fresh_optimizer: true
+  seed: 928173
+  sequence_length: 2048
+  tokens_per_update: 32768
+  successful_updates: 153
+  input_tokens_per_arm: 5013504
+  precision: fp32_masters_fp16_compute_dynamic_scaling_256
+  fsdp: verified_FSDP1_FULL_SHARD
+  microbatch_per_gpu: 1
+  gradient_accumulation: 8
+  optimizer: existing_adamw8bit_weight_decay_0.01_clip_1.0
+  compile: post_fsdp_default_dynamic_false
+  prefetch: backward_pre_forward_true
+  warmup_updates: 5
+  peak_lr: 3.0e-6
+  floor_lr: 3.0e-7
+  cosine_end_update: 153
+  evaluation_updates: [31, 77, 153]
+  smoke_updates_per_arm: 3
+  restart_test_updates: 8
+  save: [final_inference, optimizer, scheduler, scaler, random_state, next_consumed_block, original_mtp_sidecar]
+  stops: [nonfinite, persistent_scaler_overflow, accounting_mismatch, corrupt_artifact, existing_sustained_development_guard, finalization_reserve]
+deployment:
+  runtime: llama.cpp
+  revision: f072b103714dfa1eee531f80b24512faf38e3dd2
+  quantization: Q4_K_M_from_verified_own_checkpoint
+  candidates: [q35-p12, q25-coder, granite-h350_if_supported]
+  source_prompts_per_bucket: 20
+  buckets: [2048, 8192, 32768]
+  repetitions: 2
+  output_tokens: 32
+  threads: 4
+  concurrency: 1
+  prompt_identity: identical_source_text_actual_tokens_reported_output_space_reserved
+  measures: [load, cold_process_first_request, warm_resident, actual_first_token, token_8, token_16, token_32, returned_line, peak_RSS, prompt_time, decode_time, total]
+  cold_disk_claim: false
+  warm_context_claim: only_if_cache_reuse_observed
+long_context:
+  implementation_minutes: 90
+  gpu_wall_seconds: 3600
+  models: [q35-base, q35-p12, q35-d12, q25-coder]
+  priority: [short_parity, 2048_controls, genuine_32768, intermediate]
+  path: explicit_KV_repeat_native_GQA_false_efficient_SDPA
+  fallback: existing_verified_exact_query_tiling_only
+  rejected: prior_numerically_failed_streamed_scorer
+  save_scores_before_generation: true
+  parity: {target_nll_absolute: 0.002, greedy_output_short: identical}
+statistics:
+  functional: paired_case_wins_losses_shared_exact_McNemar_binomial_and_95pct_paired_bootstrap
+  line: paired_exact_match_and_character_prefix_95pct_bootstrap
+  dev: existing_paired_repository_resampling_2000_replicates_balanced_language_and_token_weighted
+  multiple_comparisons: exploratory_no_confirmatory_claim_from_isolated_p_value
+selection:
+  research: same_task_quality_latency_memory_runtime_context_training_practicality_no_next_edit_ceiling_claim
+  promotion: lower_development_NLL_with_interval_below_zero_and_no_functional_or_line_regression_and_general_guard_pass
+  ambiguous: retain_research_candidates_do_not_promote
+  test_slice: one_confirmation_after_locked_provisional_selection_against_parent
+  deployed_model_replacement: forbidden
+limits:
+  aggregate_t4x2_wall_hours: 10
+  additional_training_input_tokens: 12000000
+  simultaneous_gpu_allocations: 1
+  finalization_reserve_seconds: 900
+  initial_baseline_session_seconds: 7200
+  pilot_session_seconds: 16200
+  challenger_bringup_minutes: 45
+  telemetry_diagnosis_minutes: 30
+  unknown_quota: one_initial_2h_session_then_reassess
+  renewal_consumption: forbidden
+  paid_compute: false
+exclusions: [FIM, next_edit_SFT, RL, DPO, reward_models, paid_teachers, QAT, vocabulary_pruning, architecture_surgery, active_playground_changes]
