@@ -103,7 +103,7 @@ def ensure_persistent_run_identity(
         campaign_id = str(observed["campaign_id"])
         run_id = str(observed["run_id"])
     else:
-        campaign_id = _identifier("campaign")
+        campaign_id = str(scientific.get("campaign_id") or _identifier("campaign"))
         run_id = _identifier("run")
     enriched: dict[str, object] = {
         **scientific,

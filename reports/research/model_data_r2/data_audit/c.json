@@ -1,0 +1,62 @@
+{
+  "arms": {
+    "R2_FILTERED": {
+      "files": 371,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.01904296875,
+      "packed_tokens": 301056,
+      "parser": {
+        "pass": 371
+      },
+      "rejections": {
+        "generated_content_marker": 19,
+        "repository_token_cap": 18,
+        "syntax_invalid": 623
+      },
+      "repository_count": 361,
+      "source_token_quantiles": [
+        18.0,
+        156.5,
+        382.0,
+        938.0,
+        5732.0
+      ],
+      "source_tokens": 300983,
+      "test_file_share": 0.07816711590296496
+    },
+    "R2_STANDARD": {
+      "files": 94,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.3554189253826531,
+      "packed_tokens": 301056,
+      "parser": {
+        "fail": 61,
+        "pass": 33
+      },
+      "rejections": {},
+      "repository_count": 92,
+      "source_token_quantiles": [
+        35.0,
+        184.5,
+        426.5,
+        1268.25,
+        166577.0
+      ],
+      "source_tokens": 360540,
+      "test_file_share": 0.010638297872340425
+    }
+  },
+  "candidate_files": 12544,
+  "common_rejections": {
+    "binary": 2,
+    "known_repository": 204,
+    "long_line": 1,
+    "metadata_alphanumeric": 2,
+    "metadata_average_line": 17,
+    "metadata_size": 104,
+    "reserved_repository_bucket": 293,
+    "vendor_or_generated": 200
+  },
+  "language": "c",
+  "pool_sha256": "b1cacb3c96afd7ef16bca1b2499339c3a33a9f306ed73304db51926c3faa3be7"
+}

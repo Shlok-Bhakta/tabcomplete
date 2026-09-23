@@ -1,0 +1,173 @@
+[
+  {
+    "bucket": 133,
+    "content_sha256": "e63fb0d7512b7be2078f612fd7c28b9c608e077c5318171d6b6e06e7d752b122",
+    "hexsha": "4c752adf10ef24ac002d467fbbd9d345ddfab800",
+    "language": "go",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "user.go",
+    "repository": "rajatparida86/readgit",
+    "repository_aliases": [
+      "rajatparida86/readgit"
+    ],
+    "selected_tokens": 606,
+    "source_tokens": 605
+  },
+  {
+    "bucket": 127,
+    "content_sha256": "060441d6af52861a6384a2af1948b468420819899131bd51bc3184ba8fa11817",
+    "hexsha": "59e5021648c92ff2cd5a4fca834a6423a3b124e2",
+    "language": "go",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "lib/nas/nasType/NAS_SNSSAI.go",
+    "repository": "tf-enya/free5gc",
+    "repository_aliases": [
+      "tf-enya/free5gc"
+    ],
+    "selected_tokens": 870,
+    "source_tokens": 869
+  },
+  {
+    "bucket": 186,
+    "content_sha256": "14c8122b0b3e756f9288ea3e09583112dc5ba2f0dfe61dd84f692ce90251dbf4",
+    "hexsha": "40a8b38ecacea98b6bfdd0c926ad7ee7dd3e89a4",
+    "language": "go",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "util/util.go",
+    "repository": "kmilodenisglez/chaincode-analyzer",
+    "repository_aliases": [
+      "kmilodenisglez/chaincode-analyzer"
+    ],
+    "selected_tokens": 290,
+    "source_tokens": 289
+  },
+  {
+    "bucket": 663,
+    "content_sha256": "5509bbd306d211ba104267f8dedd9dc93803a3f2300d497d8b95896334f123bd",
+    "hexsha": "9c12c8bcf6fb889c0453c847f54a2aec2adeee47",
+    "language": "go",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "services/cps/models/ReinstallInstanceSpec.go",
+    "repository": "waytai/jdcloud-sdk-go",
+    "repository_aliases": [
+      "waytai/jdcloud-sdk-go"
+    ],
+    "selected_tokens": 427,
+    "source_tokens": 426
+  },
+  {
+    "bucket": 773,
+    "content_sha256": "f6d698ab3455af9a87f8c01a6698a2669f41b270c6b884732d925a442de128bf",
+    "hexsha": "39fa5859487612cb9e1f9bebd879a8d198f1f476",
+    "language": "go",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "pkg/utils/common/common.go",
+    "repository": "qunqiang/kubevela",
+    "repository_aliases": [
+      "qunqiang/kubevela"
+    ],
+    "selected_tokens": 1284,
+    "source_tokens": 1283
+  },
+  {
+    "bucket": 364,
+    "content_sha256": "ca9d82898550b56b53d38d26101fd60ae2a9f326d9a8624e3365580df4f83e0b",
+    "hexsha": "cc57661ec414afe59697c72cd9c544bc1fcde4dc",
+    "language": "go",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "codegen/go/xr/62x/cisco_ios_xr_ipv4_ospf_oper/ospf/processes/process/default_vrf/statistics/raw_io_stats/ospf_sh_raw_stats.pb.go",
+    "repository": "cisco-ie/cisco-proto",
+    "repository_aliases": [
+      "cisco-ie/cisco-proto"
+    ],
+    "selected_tokens": 5589,
+    "source_tokens": 5588
+  },
+  {
+    "bucket": 538,
+    "content_sha256": "f080d4f5957d16d9e1af6100020d3664dfa9f5e5c7bf5ba313fa9b73ad18ec33",
+    "hexsha": "9ade8f38b832d80a19eff65002b1db518d1bb2e5",
+    "language": "go",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "app/interface/main/web/dao/reply.go",
+    "repository": "78182648/blibli-go",
+    "repository_aliases": [
+      "78182648/blibli-go",
+      "YouthAge/blibli-go"
+    ],
+    "selected_tokens": 324,
+    "source_tokens": 323
+  },
+  {
+    "bucket": 795,
+    "content_sha256": "0643eba7237fa060a64104ad3d30355c44e243605942d6eaa18ba165a84e47ea",
+    "hexsha": "ba22f6ed85e25e9d98e9f92946a65c5e6bc052b0",
+    "language": "go",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "parser/lexer/lexer.go",
+    "repository": "wangjuelong/expr",
+    "repository_aliases": [
+      "wangjuelong/expr"
+    ],
+    "selected_tokens": 1392,
+    "source_tokens": 1391
+  },
+  {
+    "bucket": 693,
+    "content_sha256": "ea0f4a4d4d12f9117c64a42bc5602b4bfe70b405624df154ce44997567d1a87c",
+    "hexsha": "99d5f27df92ae7bd1e745089f87bf1ee100ba881",
+    "language": "go",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "clone/internal/verify/verify_test.go",
+    "repository": "andrejro/trillian-examples",
+    "repository_aliases": [
+      "andrejro/trillian-examples"
+    ],
+    "selected_tokens": 800,
+    "source_tokens": 799
+  },
+  {
+    "bucket": 218,
+    "content_sha256": "7ccee8a193b7cb87f721126e6cf262b3228bf6d5aa708729d3439f697ed0649e",
+    "hexsha": "6680f1fe38bc3b9eb0530c2a63f99edce56b317f",
+    "language": "go",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "commands/help.go",
+    "repository": "Tch1b0/MoGo",
+    "repository_aliases": [
+      "Tch1b0/MoGo"
+    ],
+    "selected_tokens": 219,
+    "source_tokens": 218
+  }
+]

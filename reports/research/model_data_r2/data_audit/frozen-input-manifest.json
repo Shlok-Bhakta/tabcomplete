@@ -1,0 +1,479 @@
+{
+  "completion": {
+    "corpora": {
+      "R2_FILTERED": {
+        "actual_train_tokens": 5013504,
+        "block_size": 2048,
+        "campaign": "model_data_r2",
+        "corpus_fingerprint": "504775fa359354b427d3ed6a17c357f5d7320770ba6f0b477d2e21282e3da7b6",
+        "language_block_allocations": {
+          "c": 147,
+          "cpp": 245,
+          "csharp": 147,
+          "go": 196,
+          "java": 245,
+          "javascript": 245,
+          "python": 489,
+          "rust": 245,
+          "shell": 122,
+          "typescript": 367
+        },
+        "language_order": [
+          "python",
+          "typescript",
+          "javascript",
+          "java",
+          "cpp",
+          "rust",
+          "go",
+          "c",
+          "csharp",
+          "shell"
+        ],
+        "overlap_uncertainty": "incomplete Stage-1 provenance and unknown original pretraining",
+        "packing": "EOS-separated files; not repository-coherent",
+        "packing_seed": 928173,
+        "policy": "R2_FILTERED",
+        "prior_block_hashes_excluded": 8307,
+        "prior_content_hashes_excluded": 8181,
+        "prior_repositories_excluded": 5770,
+        "sealed_test_evaluated": false,
+        "source_revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+        "tokenizer_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+        "training_blocks": 2448
+      },
+      "R2_STANDARD": {
+        "actual_train_tokens": 5013504,
+        "block_size": 2048,
+        "campaign": "model_data_r2",
+        "corpus_fingerprint": "8b33423a36a03eda74a759d56861bd5f4d60581f0dc445977f800ea59b4c32db",
+        "language_block_allocations": {
+          "c": 147,
+          "cpp": 245,
+          "csharp": 147,
+          "go": 196,
+          "java": 245,
+          "javascript": 245,
+          "python": 489,
+          "rust": 245,
+          "shell": 122,
+          "typescript": 367
+        },
+        "language_order": [
+          "python",
+          "typescript",
+          "javascript",
+          "java",
+          "cpp",
+          "rust",
+          "go",
+          "c",
+          "csharp",
+          "shell"
+        ],
+        "overlap_uncertainty": "incomplete Stage-1 provenance and unknown original pretraining",
+        "packing": "EOS-separated files; not repository-coherent",
+        "packing_seed": 928173,
+        "policy": "R2_STANDARD",
+        "prior_block_hashes_excluded": 8307,
+        "prior_content_hashes_excluded": 8181,
+        "prior_repositories_excluded": 5770,
+        "sealed_test_evaluated": false,
+        "source_revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+        "tokenizer_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+        "training_blocks": 2448
+      }
+    },
+    "line_cases": 180,
+    "line_sha256": "d614a7354d3341f0cc3667828c970d47f5646ec046029241d6c91a34411f17dd",
+    "revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+    "source": "bigcode/the-stack-dedup",
+    "status": "complete"
+  },
+  "files": [
+    {
+      "bytes": 1076,
+      "path": "R2_FILTERED/corpus_metadata.json",
+      "sha256": "42cc3582c03661e8db5b53e3b24878667be303da237e559576a1d8d50a1e89d5"
+    },
+    {
+      "bytes": 150408,
+      "path": "R2_FILTERED/manifests/c.jsonl",
+      "sha256": "d7125ab7c815803634999954538c339f041731f980542e9e8c6368389d548e6d"
+    },
+    {
+      "bytes": 209912,
+      "path": "R2_FILTERED/manifests/cpp.jsonl",
+      "sha256": "14d93dae586f5d5c64e375b80299209b166968b814834bcf1f83c2b9d53b3aef"
+    },
+    {
+      "bytes": 211800,
+      "path": "R2_FILTERED/manifests/csharp.jsonl",
+      "sha256": "dc65722164e9a3c2376c6313ec73a1c767e5f9238a6a98c1b82be71f41310f24"
+    },
+    {
+      "bytes": 147333,
+      "path": "R2_FILTERED/manifests/go.jsonl",
+      "sha256": "ccef59567feec68666a9c099fe8c604824ae8d4b5672cf8776c5e5f30b5bbd77"
+    },
+    {
+      "bytes": 264197,
+      "path": "R2_FILTERED/manifests/java.jsonl",
+      "sha256": "d19dfdcc1783fa0fe1bbe12d0b30f4bcd4d272b98037537786315ac5a6b41014"
+    },
+    {
+      "bytes": 230771,
+      "path": "R2_FILTERED/manifests/javascript.jsonl",
+      "sha256": "f314d682a58c1e85b662b91322ca616fc1909b9ba63863ed583d5e2e7c899026"
+    },
+    {
+      "bytes": 390400,
+      "path": "R2_FILTERED/manifests/python.jsonl",
+      "sha256": "46f3920ed1fb8b0cf74b3f999ef8b8dc1b81a81b1856f249e65b6c6bfe03928e"
+    },
+    {
+      "bytes": 147463,
+      "path": "R2_FILTERED/manifests/rust.jsonl",
+      "sha256": "255aaa25b38109fe4ed567a0bfc5d65dc3ee47ef3f40e02bb3f232d04a552544"
+    },
+    {
+      "bytes": 276591,
+      "path": "R2_FILTERED/manifests/shell.jsonl",
+      "sha256": "03b878c004cdaa375216feed7ef511951704585f33e56f6d22d9434eda32d51c"
+    },
+    {
+      "bytes": 594265,
+      "path": "R2_FILTERED/manifests/typescript.jsonl",
+      "sha256": "031932bfafe593ca5815abe007827adbe689d61963a83c86b0305e5c8e0672b7"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/c.npy",
+      "sha256": "05d910039fa3ad52522513f5e4fb730690dd2231964f94fb5e3673dc24b2f674"
+    },
+    {
+      "bytes": 21866,
+      "path": "R2_FILTERED/micro/c_provenance.jsonl",
+      "sha256": "8efa7da443d44f26551f7db0cd01e33e523ea0524e5efa95d4108eefd37d1a66"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/cpp.npy",
+      "sha256": "991792e0b0042ea4340d56c970a5cdec9f4268ed830ce446217ea42f489016af"
+    },
+    {
+      "bytes": 9066,
+      "path": "R2_FILTERED/micro/cpp_provenance.jsonl",
+      "sha256": "297d3c7154df95a093c287bdde8a2d676702a5f7501187ad1eea81275666f974"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/csharp.npy",
+      "sha256": "5f665ebe03f83581f6952fbe947aa2a0295f9b3232bafad0ba324aa1676faa56"
+    },
+    {
+      "bytes": 26334,
+      "path": "R2_FILTERED/micro/csharp_provenance.jsonl",
+      "sha256": "d512fb52f229af52a2ce1a4c202379e257b21147606d50a525708fd780e2c1ae"
+    },
+    {
+      "bytes": 65664,
+      "path": "R2_FILTERED/micro/general.npy",
+      "sha256": "b3f18e2f148a1555928ddfdfc15489e886aaf40d04f1be664c75435606cb3aa2"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/go.npy",
+      "sha256": "4337c757a2232a7973512655f26bce38e9d6b9ecfc8a8a233af5cb83082af4aa"
+    },
+    {
+      "bytes": 11558,
+      "path": "R2_FILTERED/micro/go_provenance.jsonl",
+      "sha256": "154ac8fe5bcf9ee4eae1bba4aa9c2c96b299b11c39c049ef909e3ea9c5b7ffa8"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/java.npy",
+      "sha256": "182e251719887f36e7bc19692c57640a51df0e46027fc7de4d7b94201e4de2f9"
+    },
+    {
+      "bytes": 25070,
+      "path": "R2_FILTERED/micro/java_provenance.jsonl",
+      "sha256": "ca404ffc31739073a0bee15f9ddfeb4ab842aae0636062a4379e076d7b782654"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/javascript.npy",
+      "sha256": "9d81fe5f1050efb612797308084a5c34b2f6ae4e5bd2a49118cfe9d5f791e58f"
+    },
+    {
+      "bytes": 25130,
+      "path": "R2_FILTERED/micro/javascript_provenance.jsonl",
+      "sha256": "33de28b360081704272b7130880b8e44161db5306789304f16f83da516a8e5ed"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/python.npy",
+      "sha256": "151b3575293f1ee612e51f148b4231e45bdb70d0f0d9e71b2fef16c4a37f8f97"
+    },
+    {
+      "bytes": 25012,
+      "path": "R2_FILTERED/micro/python_provenance.jsonl",
+      "sha256": "bdbc19dba5ac130c4bed23ef43dac12db25d75afb0c42cc1bfd17c80260e64f1"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/rust.npy",
+      "sha256": "beea865f8b1556485be3daa452fa2646fc812751d1cc4ddeb17866bd7f3ccbc6"
+    },
+    {
+      "bytes": 21858,
+      "path": "R2_FILTERED/micro/rust_provenance.jsonl",
+      "sha256": "f03ed43ea74945bf7847d7bcaec9dbc93b933ad7f9569231cd638263c11f7ef7"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_FILTERED/micro/typescript.npy",
+      "sha256": "00cc2d7505e888dcd3a84eb09205c6b0c007a223555ed291b8f4a898ab91e8ee"
+    },
+    {
+      "bytes": 28696,
+      "path": "R2_FILTERED/micro/typescript_provenance.jsonl",
+      "sha256": "69a551af9da946565c3aff11cd50db8423335d639d7321ae1e6e6fb9806e6bd3"
+    },
+    {
+      "bytes": 20054144,
+      "path": "R2_FILTERED/train_blocks.npy",
+      "sha256": "eac7d97eb8ee53c6c93dcbe5217be19e669a2f08d9a1f6f3de0a39f970885abc"
+    },
+    {
+      "bytes": 2576,
+      "path": "R2_FILTERED/train_languages.npy",
+      "sha256": "73d36e83a175a4c77653913e620659020742b530f10db8890793732c8c75bd42"
+    },
+    {
+      "bytes": 1076,
+      "path": "R2_STANDARD/corpus_metadata.json",
+      "sha256": "9fa19252a122e7ad8cab35d332e95b9ca3566e3fa94cb58955efc924a512234d"
+    },
+    {
+      "bytes": 38521,
+      "path": "R2_STANDARD/manifests/c.jsonl",
+      "sha256": "923bbdc85cba6bb0b0b41d79c4ebe36ddfa5f96702ee996e7035a506abbe3922"
+    },
+    {
+      "bytes": 90612,
+      "path": "R2_STANDARD/manifests/cpp.jsonl",
+      "sha256": "7b38c29e7df8ccd8163c40ff9db8c8a2237172a64e811018f824c0f11c1eeadb"
+    },
+    {
+      "bytes": 194297,
+      "path": "R2_STANDARD/manifests/csharp.jsonl",
+      "sha256": "035624b8fdec3e58115d9bd4142e78b52b5529dfce2ccb8364a2bfa617291ad8"
+    },
+    {
+      "bytes": 95813,
+      "path": "R2_STANDARD/manifests/go.jsonl",
+      "sha256": "ee9661e983adaf3586014690e23ed819813283104388a551d32ae904972a46eb"
+    },
+    {
+      "bytes": 247567,
+      "path": "R2_STANDARD/manifests/java.jsonl",
+      "sha256": "60a0d46f712a04954b3dcf1435fa6a037adc9032569320e05a04d95a8a80e5e0"
+    },
+    {
+      "bytes": 172579,
+      "path": "R2_STANDARD/manifests/javascript.jsonl",
+      "sha256": "9cb474b3455adb8d61926ae004722db92c1cd81480469279be761ade1bc65035"
+    },
+    {
+      "bytes": 335889,
+      "path": "R2_STANDARD/manifests/python.jsonl",
+      "sha256": "2ea5180737edcec72b5dbe55f6499b584356974f1477b781bea8adbd98b803ae"
+    },
+    {
+      "bytes": 106199,
+      "path": "R2_STANDARD/manifests/rust.jsonl",
+      "sha256": "33fbddee21bdf36f652c188841e8c27877783ae40c9e474babda470d1287dd43"
+    },
+    {
+      "bytes": 192216,
+      "path": "R2_STANDARD/manifests/shell.jsonl",
+      "sha256": "40165c35d8ca4e5a493f9f14f87a234a30a5cb7e19cd4ac44f2ee5b234d97ef6"
+    },
+    {
+      "bytes": 469022,
+      "path": "R2_STANDARD/manifests/typescript.jsonl",
+      "sha256": "ce0a0c36a5014f6c0c5d1dd58b45987e2ed7f197431749e333fffa4d2f5114fb"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/c.npy",
+      "sha256": "05d910039fa3ad52522513f5e4fb730690dd2231964f94fb5e3673dc24b2f674"
+    },
+    {
+      "bytes": 21866,
+      "path": "R2_STANDARD/micro/c_provenance.jsonl",
+      "sha256": "8efa7da443d44f26551f7db0cd01e33e523ea0524e5efa95d4108eefd37d1a66"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/cpp.npy",
+      "sha256": "991792e0b0042ea4340d56c970a5cdec9f4268ed830ce446217ea42f489016af"
+    },
+    {
+      "bytes": 9066,
+      "path": "R2_STANDARD/micro/cpp_provenance.jsonl",
+      "sha256": "297d3c7154df95a093c287bdde8a2d676702a5f7501187ad1eea81275666f974"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/csharp.npy",
+      "sha256": "5f665ebe03f83581f6952fbe947aa2a0295f9b3232bafad0ba324aa1676faa56"
+    },
+    {
+      "bytes": 26334,
+      "path": "R2_STANDARD/micro/csharp_provenance.jsonl",
+      "sha256": "d512fb52f229af52a2ce1a4c202379e257b21147606d50a525708fd780e2c1ae"
+    },
+    {
+      "bytes": 65664,
+      "path": "R2_STANDARD/micro/general.npy",
+      "sha256": "b3f18e2f148a1555928ddfdfc15489e886aaf40d04f1be664c75435606cb3aa2"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/go.npy",
+      "sha256": "4337c757a2232a7973512655f26bce38e9d6b9ecfc8a8a233af5cb83082af4aa"
+    },
+    {
+      "bytes": 11558,
+      "path": "R2_STANDARD/micro/go_provenance.jsonl",
+      "sha256": "154ac8fe5bcf9ee4eae1bba4aa9c2c96b299b11c39c049ef909e3ea9c5b7ffa8"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/java.npy",
+      "sha256": "182e251719887f36e7bc19692c57640a51df0e46027fc7de4d7b94201e4de2f9"
+    },
+    {
+      "bytes": 25070,
+      "path": "R2_STANDARD/micro/java_provenance.jsonl",
+      "sha256": "ca404ffc31739073a0bee15f9ddfeb4ab842aae0636062a4379e076d7b782654"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/javascript.npy",
+      "sha256": "9d81fe5f1050efb612797308084a5c34b2f6ae4e5bd2a49118cfe9d5f791e58f"
+    },
+    {
+      "bytes": 25130,
+      "path": "R2_STANDARD/micro/javascript_provenance.jsonl",
+      "sha256": "33de28b360081704272b7130880b8e44161db5306789304f16f83da516a8e5ed"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/python.npy",
+      "sha256": "151b3575293f1ee612e51f148b4231e45bdb70d0f0d9e71b2fef16c4a37f8f97"
+    },
+    {
+      "bytes": 25012,
+      "path": "R2_STANDARD/micro/python_provenance.jsonl",
+      "sha256": "bdbc19dba5ac130c4bed23ef43dac12db25d75afb0c42cc1bfd17c80260e64f1"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/rust.npy",
+      "sha256": "beea865f8b1556485be3daa452fa2646fc812751d1cc4ddeb17866bd7f3ccbc6"
+    },
+    {
+      "bytes": 21858,
+      "path": "R2_STANDARD/micro/rust_provenance.jsonl",
+      "sha256": "f03ed43ea74945bf7847d7bcaec9dbc93b933ad7f9569231cd638263c11f7ef7"
+    },
+    {
+      "bytes": 458880,
+      "path": "R2_STANDARD/micro/typescript.npy",
+      "sha256": "00cc2d7505e888dcd3a84eb09205c6b0c007a223555ed291b8f4a898ab91e8ee"
+    },
+    {
+      "bytes": 28696,
+      "path": "R2_STANDARD/micro/typescript_provenance.jsonl",
+      "sha256": "69a551af9da946565c3aff11cd50db8423335d639d7321ae1e6e6fb9806e6bd3"
+    },
+    {
+      "bytes": 20054144,
+      "path": "R2_STANDARD/train_blocks.npy",
+      "sha256": "2079fee5bdc9476218ee376b840c04774bbd78f5f876a31e3603737de3682407"
+    },
+    {
+      "bytes": 2576,
+      "path": "R2_STANDARD/train_languages.npy",
+      "sha256": "73d36e83a175a4c77653913e620659020742b530f10db8890793732c8c75bd42"
+    },
+    {
+      "bytes": 1393925,
+      "path": "causal_line_v1.jsonl",
+      "sha256": "d614a7354d3341f0cc3667828c970d47f5646ec046029241d6c91a34411f17dd"
+    },
+    {
+      "bytes": 10262,
+      "path": "historical/corpus_metadata.json",
+      "sha256": "ac8daaf22dcd5405da174fb6ba129ef5d14da42973fdeddbbd1c68fc1e09da67"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/c.npy",
+      "sha256": "9943ce76190b7d673792d3e1698ee3544ced5480a4ce14bcdc83c9b4df35a889"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/cpp.npy",
+      "sha256": "945487af69605155ba36d530a539f1ba2e0f84b030968460581e5ec259e7c2dd"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/csharp.npy",
+      "sha256": "a61fbdf3b6e42c3544d039b34b4cf177cdb2b6348fa142eb4e196991c4c0740d"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/general.npy",
+      "sha256": "b3f18e2f148a1555928ddfdfc15489e886aaf40d04f1be664c75435606cb3aa2"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/go.npy",
+      "sha256": "7c63596454b138a7d001da33c12ef4963694f4c52ad90a44096e584002d35ac9"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/java.npy",
+      "sha256": "e65158a1dd24c45d78fb7ab5b783ec2e4bfde3bf0e4beeac84052efe9e7cfcd7"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/javascript.npy",
+      "sha256": "452b2fc04348ca7d602906cceaf6023f620da217d4aa655e40dfb28b23bfe9fa"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/python.npy",
+      "sha256": "0c991d8fe56f08c2da4b551475c827c18a56b69be95b37dd0b0d978f5bedc253"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/rust.npy",
+      "sha256": "fcc6c1b9dceaf6e8acfc822fae1fe5dc19d5633edbdc288339a338244fff86f3"
+    },
+    {
+      "bytes": 65664,
+      "path": "historical/micro/typescript.npy",
+      "sha256": "fa8256be18d523154c3b6b55883c521f6813fe77a92100d1ceb66658c372e891"
+    }
+  ],
+  "frozen_at": "2026-09-23T00:23:44.960591+00:00",
+  "plan_sha256": "d3c1f379a4c502d33cf82006fa62c3b3bb64f8b755f944cc11a7298e97c31fb4",
+  "preparation_code_sha256": "a69991d8cb0516899a050473eaaa263a46a37ac70681baedb9f7bcda158ae29f",
+  "schema_version": 1
+}

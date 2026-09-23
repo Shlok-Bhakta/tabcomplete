@@ -1347,6 +1347,7 @@ def main() -> None:
         "--gradient-checkpointing", action=argparse.BooleanOptionalAction, default=True
     )
     train.add_argument("--max-tokens", type=int, default=524_288)
+    train.add_argument("--seed", type=int, default=271828)
     train.add_argument("--start-block", type=int, default=0)
     train.add_argument("--workers", type=int, default=1)
     train.add_argument("--prefetch-factor", type=int, default=2)
@@ -1406,6 +1407,7 @@ def main() -> None:
         resume_from=args.resume_from,
         expected_initial_sha256=args.expected_initial_sha256,
         parent_training_tokens=args.parent_training_tokens,
+        seed=args.seed,
         lr_schedule=args.lr_schedule,
         lr_floor=args.lr_floor,
         decay_end_update=args.decay_end_update,

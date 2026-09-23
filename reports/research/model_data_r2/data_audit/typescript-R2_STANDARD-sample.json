@@ -1,0 +1,172 @@
+[
+  {
+    "bucket": 155,
+    "content_sha256": "7c5670e746a6c22de50ab259285e5be72c2acd11db7532e3a08001830e33e3e0",
+    "hexsha": "f2c43ae89d2a222d007cd1a628b0bdde92bc9a7a",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/reducers/account/__test__/account.test.ts",
+    "repository": "uruha/next-with-ts",
+    "repository_aliases": [
+      "uruha/next-with-ts"
+    ],
+    "selected_tokens": 139,
+    "source_tokens": 138
+  },
+  {
+    "bucket": 712,
+    "content_sha256": "4cdf942d20146d0761f792e5f526a5a717f38a8edd35de1befeca4a70e1e228e",
+    "hexsha": "84677fa46bb1f15b87818273fec80b669b341de5",
+    "language": "typescript",
+    "licenses": [
+      "Unlicense"
+    ],
+    "parse_status": "pass",
+    "path": "src/components/pages/authorized/maintenance-calibration/shared/interfaces/calibration.interfaces.ts",
+    "repository": "Prisma-Laster-Management-Tools/qc-platform-frontend-v1",
+    "repository_aliases": [
+      "Prisma-Laster-Management-Tools/qc-platform-frontend-v1"
+    ],
+    "selected_tokens": 243,
+    "source_tokens": 242
+  },
+  {
+    "bucket": 880,
+    "content_sha256": "6ba31e9de61d2efc336aa9140dfef33b389fa381265bb97dce68b37867c9ccaa",
+    "hexsha": "9651390ef1f97adde5a46614ac304f4bf525bdb2",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "app/api/enums/mav-odid-category-eu.ts",
+    "repository": "Chrisaxell/radio-sheep-gcs",
+    "repository_aliases": [
+      "Chrisaxell/radio-sheep-gcs"
+    ],
+    "selected_tokens": 159,
+    "source_tokens": 158
+  },
+  {
+    "bucket": 816,
+    "content_sha256": "a42afe188c30c7e73ff4d899ad536ab38ccba4298513f79d3cd3bdb76d14af36",
+    "hexsha": "78c1d25c53909f882a4b8cd61e01f9e2afd732c8",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/todo/todo.service.ts",
+    "repository": "Wisbell/todo-api-nestjs",
+    "repository_aliases": [
+      "Wisbell/todo-api-nestjs"
+    ],
+    "selected_tokens": 169,
+    "source_tokens": 168
+  },
+  {
+    "bucket": 266,
+    "content_sha256": "591b90841f39ee49131a237c33b56dcd52ea8968118ba5687e24f37a9aaea1da",
+    "hexsha": "c37e3afd7c0c26bc4e1d0020cb6d1c3c0605828c",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "fail",
+    "path": "src/components/PasswordEntry.tsx",
+    "repository": "danielkim107/simplewebrtc-talky-sample-app",
+    "repository_aliases": [
+      "danielkim107/simplewebrtc-talky-sample-app"
+    ],
+    "selected_tokens": 726,
+    "source_tokens": 725
+  },
+  {
+    "bucket": 284,
+    "content_sha256": "90101cb736625658f286464554df1f05181fc7156feb422bc61f6c156b1f34e0",
+    "hexsha": "d2c63fe4d13731fddd99da76d02145dba1b71060",
+    "language": "typescript",
+    "licenses": [
+      "CC-BY-4.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/lib/menu/index.ts",
+    "repository": "marekfeikus/react-useanimations",
+    "repository_aliases": [
+      "marekfeikus/react-useanimations"
+    ],
+    "selected_tokens": 39,
+    "source_tokens": 38
+  },
+  {
+    "bucket": 535,
+    "content_sha256": "d82c8df5f838b75097ad515d82e040c6e87885660789c239b2e6ef73a4211e4c",
+    "hexsha": "451e8f803a841cd6fa73c1c24c5872f2731f752f",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "fail",
+    "path": "screens/preferences/index.tsx",
+    "repository": "jaredLunde/react-native-hacker-news",
+    "repository_aliases": [
+      "jaredLunde/react-native-hacker-news"
+    ],
+    "selected_tokens": 2686,
+    "source_tokens": 2685
+  },
+  {
+    "bucket": 249,
+    "content_sha256": "5c1e80666dd1e925fb1cb2757c3e202d4cb211e0821623bd914d47266461069e",
+    "hexsha": "3ece1b6d4d89c83a949e3c5cd2f3d79aea3eb7e5",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "proxy/index.ts",
+    "repository": "mooyoul/lambdaless",
+    "repository_aliases": [
+      "mooyoul/lambdaless"
+    ],
+    "selected_tokens": 402,
+    "source_tokens": 401
+  },
+  {
+    "bucket": 583,
+    "content_sha256": "df075c20d9c6ee75000e99a02e23691962f48be130d982c63ca99e6dc54da98d",
+    "hexsha": "c3d10f6ee5a24ab8f935bf483d11eebc5bacc787",
+    "language": "typescript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/modules/auth/dto/signup-request.dto.ts",
+    "repository": "narxeba/mf-exam",
+    "repository_aliases": [
+      "narxeba/mf-exam"
+    ],
+    "selected_tokens": 147,
+    "source_tokens": 146
+  },
+  {
+    "bucket": 59,
+    "content_sha256": "38bb65ecaf3074228ea8b25e5beb4d91abbb629ddd1a83dc3345bcc740bea033",
+    "hexsha": "042a658143d9eb9b3500e2fa3d888f2f31f86afa",
+    "language": "typescript",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "src/siteSettings/types/SiteSettings.ts",
+    "repository": "nlkhagva/ushop-dashboard",
+    "repository_aliases": [
+      "nlkhagva/ushop-dashboard"
+    ],
+    "selected_tokens": 708,
+    "source_tokens": 707
+  }
+]

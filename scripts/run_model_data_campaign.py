@@ -144,7 +144,7 @@ def freeze(config_path):
             "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
         },
         "outcomes_inspected_before_freeze": "historical R1 only, no R2 generation or training",
-        "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
+        "context_runtime_inventory": "No separate context-runtime worktree or verified tiling",
         "thinkpad": "authorized existing alias timed out, not measured",
         "parent_bytes_verified": True,
         "sealed_test_opened": False,
@@ -249,13 +249,223 @@ def submit_baseline(plan):
     print(json.dumps({"reference": reference, "status": "submitted", "deadline_seconds": seconds}))
 
 
+def amend(config_path, reason):
+    if not reason:
+        raise ValueError("a recorded reason is required")
+    path = REPORT / "preregistered_plan.json"
+    old = json.loads(path.read_text())
+    config = yaml.safe_load(config_path.read_text())
+    if config["plan_revision"] != old["configuration"]["plan_revision"] + 1:
+        raise ValueError("increment the plan revision exactly once")
+    old_hash = digest(path)
+    archive = REPORT / "plan_revisions" / (old_hash + ".json")
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, archive)
+    revised = {
+        **old,
+        "frozen_at": now(),
+        "configuration": config,
+        "configuration_sha256": digest(config_path),
+        "amendment": {
+            "previous_plan_sha256": old_hash,
+            "reason": reason,
+            "new_line_or_training_outcomes_inspected": False,
+        },
+    }
+    write_json(path, revised)
+    print(json.dumps({"revision": config["plan_revision"], "sha256": digest(path)}))
+
+
+def package_corpora():
+    """Publish only the private, verified experiment inputs, never credentials or test arrays."""
+    from tinycomplete.code_cpt.prepare import CORE_LANGUAGES, corpus_fingerprint
+    from tinycomplete.eval.code_benchmark import _parse
+
+    source = ARTIFACTS / "frozen-corpora"
+    completion = json.loads((source / "completion.json").read_text())
+    if digest(source / "causal_line_v1.jsonl") != completion["line_sha256"]:
+        raise ValueError("line suite fingerprint mismatch")
+    rows = [json.loads(line) for line in (source / "causal_line_v1.jsonl").read_text().splitlines()]
+    assert len(rows) == len({r["id"] for r in rows}) == 180
+    for language in CORE_LANGUAGES:
+        assert sum(r["language"] == language for r in rows) == 20
+    for row in rows:
+        original = row["source_before"] + row["reference"] + row["source_after"]
+        assert hashlib.sha256(original.encode()).hexdigest() == row["source_sha256"]
+        assert _parse(original, row["language"]).status == "pass"
+    target = ARTIFACTS / "private-dataset"
+    if (target / "dataset-metadata.json").exists():
+        raise ValueError("dataset already packaged; validate its manifest instead of overwriting")
+    target.mkdir(parents=True, exist_ok=True)
+    for arm in ("R2_STANDARD", "R2_FILTERED"):
+        origin = source / arm
+        metadata = json.loads((origin / "corpus_metadata.json").read_text())
+        assert (
+            corpus_fingerprint(
+                [
+                    origin / "train_blocks.npy",
+                    origin / "train_languages.npy",
+                    *list((origin / "manifests").glob("*.jsonl")),
+                ]
+            )
+            == (metadata["corpus_fingerprint"])
+        )
+        destination = target / arm
+        destination.mkdir()
+        for name in ("train_blocks.npy", "train_languages.npy", "corpus_metadata.json"):
+            shutil.copy2(origin / name, destination / name)
+        for name in ("micro", "manifests"):
+            shutil.copytree(origin / name, destination / name)
+    shutil.copytree(ARTIFACTS / "stage1-corpus/code_cpt_corpus/micro", target / "historical/micro")
+    shutil.copy2(
+        ARTIFACTS / "stage1-corpus/code_cpt_corpus/corpus_metadata.json",
+        target / "historical/corpus_metadata.json",
+    )
+    shutil.copy2(source / "causal_line_v1.jsonl", target / "causal_line_v1.jsonl")
+    shutil.copytree(source / "audit", REPORT / "data_audit", dirs_exist_ok=True)
+    manifest = {
+        "schema_version": 1,
+        "frozen_at": now(),
+        "plan_sha256": digest(REPORT / "preregistered_plan.json"),
+        "preparation_code_sha256": digest(ROOT / "src/tinycomplete/code_cpt/model_data_r2.py"),
+        "completion": completion,
+        "files": [
+            {"path": str(p.relative_to(target)), "bytes": p.stat().st_size, "sha256": digest(p)}
+            for p in sorted(target.rglob("*"))
+            if p.is_file()
+        ],
+    }
+    write_json(target / "input-manifest.json", manifest)
+    write_json(REPORT / "data_audit/frozen-input-manifest.json", manifest)
+    write_json(
+        target / "dataset-metadata.json",
+        {
+            "id": "shlokbhakta/tabcomplete-model-data-r2-inputs",
+            "title": "TabComplete R2 private inputs",
+            "licenses": [{"name": "other"}],
+            "description": (
+                "Private controlled causal research inputs. Public Stack-dedup source retains its "
+                "original per-file licenses; source identities are preserved in manifests. "
+                "No sealed test token arrays, credentials, or personal editor data included."
+            ),
+        },
+    )
+    print(
+        json.dumps(
+            {
+                "packaged": True,
+                "line_controls": len(rows),
+                "manifest_sha256": digest(target / "input-manifest.json"),
+            }
+        )
+    )
+
+
+def submit_pilot(arm):
+    reference = "shlokbhakta/tabcomplete-model-data-r2-" + arm.lower().replace("r2_", "")
+    state_path = REPORT / "pilots" / arm / "job.json"
+    if state_path.exists():
+        print(command(["kaggle", "kernels", "status", reference]).strip())
+        return
+    quota = observe_quota()
+    if quota["active_jobs"]:
+        raise RuntimeError("another notebook allocation is active")
+    seconds = 9900
+    if quota["remaining_account_hours"] is None:
+        raise RuntimeError("quota must be refreshed before a subsequent session")
+    if quota["remaining_account_hours"] < seconds / 3600:
+        raise RuntimeError("insufficient observed account quota")
+    first = json.loads((REPORT / "baseline_evaluations/job.json").read_text())
+    if quota["renewal"] != first["quota_before"]["renewal"]:
+        raise RuntimeError("automatic consumption of a renewed allocation is forbidden")
+    prior = [json.loads(p.read_text()) for p in REPORT.rglob("job.json")]
+    if sum(p["deadline_seconds"] for p in prior) + seconds > 36000:
+        raise RuntimeError("aggregate conservative session reservations exceed ten hours")
+    revision = command(["git", "rev-parse", "HEAD"]).strip()
+    if command(["git", "status", "--porcelain", "--untracked-files=no"]).strip():
+        raise RuntimeError("commit scientific code before submission")
+    folder = ARTIFACTS / "submissions" / arm
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "run.py").write_text(
+        (ROOT / "kaggle/model_data_r2/run_pilot.py")
+        .read_text()
+        .replace("__CHECKOUT_COMMIT__", revision)
+        .replace("__ARM__", arm)
+    )
+    write_json(
+        folder / "kernel-metadata.json",
+        {
+            "id": reference,
+            "title": reference.split("/")[1],
+            "code_file": "run.py",
+            "language": "python",
+            "kernel_type": "script",
+            "is_private": True,
+            "enable_gpu": True,
+            "enable_internet": True,
+            "machine_shape": "NvidiaTeslaT4",
+            "dataset_sources": [
+                "shlokbhakta/tabcomplete-code-cpt-parents-r1",
+                "shlokbhakta/tabcomplete-model-data-r2-inputs",
+            ],
+            "kernel_sources": [],
+            "competition_sources": [],
+        },
+    )
+    state = {
+        "reference": reference,
+        "submitted_at": now(),
+        "deadline_seconds": seconds,
+        "plan_sha256": digest(REPORT / "preregistered_plan.json"),
+        "git_sha": revision,
+        "inputs_sha256": digest(ARTIFACTS / "private-dataset/input-manifest.json"),
+        "quota_before": quota,
+        "status": "submission_pending",
+    }
+    write_json(state_path, state)
+    response = command(
+        [
+            "kaggle",
+            "kernels",
+            "push",
+            "-p",
+            str(folder),
+            "--timeout",
+            str(seconds),
+            "--accelerator",
+            "NvidiaTeslaT4",
+        ],
+        timeout=180,
+    )
+    state.update(status="submitted", response=response.strip())
+    write_json(state_path, state)
+    print(json.dumps({"reference": reference, "deadline_seconds": seconds}))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/research/model_data_r2.yaml")
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--stage", choices=["freeze", "baseline"], default="baseline")
+    parser.add_argument(
+        "--stage", choices=["freeze", "baseline", "amend", "package", "pilot"], default="baseline"
+    )
+    parser.add_argument("--reason")
+    parser.add_argument("--arm", choices=["R2_STANDARD", "R2_FILTERED"])
     args = parser.parse_args()
+    if args.stage == "amend":
+        if not args.execute:
+            raise ValueError("amend requires explicit --execute")
+        amend(args.config, args.reason)
+        return
     plan = freeze(args.config)
+    if args.execute and args.stage == "package":
+        package_corpora()
+        return
+    if args.execute and args.stage == "pilot":
+        if not args.arm:
+            raise ValueError("pilot requires --arm")
+        submit_pilot(args.arm)
+        return
     if args.execute and args.stage == "baseline":
         submit_baseline(plan)
     else:

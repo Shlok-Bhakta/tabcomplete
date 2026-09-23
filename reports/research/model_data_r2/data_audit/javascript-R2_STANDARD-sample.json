@@ -1,0 +1,174 @@
+[
+  {
+    "bucket": 213,
+    "content_sha256": "f7f3e8c5d6a5e2a6cd50a1d60bc9059f019847539297f878ce658bb082d12e9b",
+    "hexsha": "636345e6cec32f467b94d1c09db59cd5ccc08ed7",
+    "language": "javascript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/api/table.js",
+    "repository": "sunjiesama/vuetemplate",
+    "repository_aliases": [
+      "sunjiesama/vuetemplate"
+    ],
+    "selected_tokens": 369,
+    "source_tokens": 368
+  },
+  {
+    "bucket": 270,
+    "content_sha256": "258a140f37b2fbc0e271a50ba888540dfccd74475bc8e95caca9b1c7e48f4a4e",
+    "hexsha": "a2729a4b6f5869a419640c44d9b86536b8d5f620",
+    "language": "javascript",
+    "licenses": [
+      "CC0-1.0"
+    ],
+    "parse_status": "pass",
+    "path": "common/Collections.js",
+    "repository": "boormat/kts",
+    "repository_aliases": [
+      "boormat/kts"
+    ],
+    "selected_tokens": 423,
+    "source_tokens": 422
+  },
+  {
+    "bucket": 875,
+    "content_sha256": "db26f2556e8b3258422f981d623e3b9f5e98ed232dbc768af1db305fcc613f65",
+    "hexsha": "26b344cecfd5093255e837c48382839f6e77056c",
+    "language": "javascript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/wallets/hardware/bcvault/errorHandler.js",
+    "repository": "jdufff/MyEtherWallet",
+    "repository_aliases": [
+      "jdufff/MyEtherWallet"
+    ],
+    "selected_tokens": 415,
+    "source_tokens": 414
+  },
+  {
+    "bucket": 974,
+    "content_sha256": "562d735004885061a61fccf124a4ea1710b34221bb2079164e9005a61100f972",
+    "hexsha": "6d984954692e7732b4f54eed5854e5b339c6575b",
+    "language": "javascript",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "symphony/app/fbcnms-projects/inventory/app/components/site_survey/__generated__/SiteSurveyQuestionReplyCellData_data.graphql.js",
+    "repository": "MeganWheeler1997/magma",
+    "repository_aliases": [
+      "MeganWheeler1997/magma"
+    ],
+    "selected_tokens": 843,
+    "source_tokens": 842
+  },
+  {
+    "bucket": 594,
+    "content_sha256": "762856e67bb411c29643fd5766bd636b37c043bd2943d403c01c2883454ab65c",
+    "hexsha": "ef99c832c23be2de0e48b8118885f223399b88a4",
+    "language": "javascript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "demo/file-header.js",
+    "repository": "KilianKilmister/standardmark",
+    "repository_aliases": [
+      "KilianKilmister/standardmark"
+    ],
+    "selected_tokens": 22,
+    "source_tokens": 21
+  },
+  {
+    "bucket": 830,
+    "content_sha256": "d1677a7f28a36e918098945bca8633b1e01b71032dabd6200013227663c51f7d",
+    "hexsha": "c0aa28909e5e3ec0db5829d0892f3764774c82ae",
+    "language": "javascript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "scripts/binary/upload-build-artifact.js",
+    "repository": "mm73628486283/cypress",
+    "repository_aliases": [
+      "lubaozhen/cypress",
+      "mm73628486283/cypress"
+    ],
+    "selected_tokens": 1165,
+    "source_tokens": 1164
+  },
+  {
+    "bucket": 618,
+    "content_sha256": "b4e71d2e43ba4af1b6e12d5ab4546d055c8cb0112b06e94ec5b8635af63ccb75",
+    "hexsha": "d689f47ee6b38822f6a58a23b8fcfc144308b35a",
+    "language": "javascript",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/components/Sort/Sort.stories.js",
+    "repository": "leoluk/patternfly-react",
+    "repository_aliases": [
+      "leoluk/patternfly-react"
+    ],
+    "selected_tokens": 367,
+    "source_tokens": 366
+  },
+  {
+    "bucket": 591,
+    "content_sha256": "b68d62e99f33fca4e0167c0aca40a57019601be8025db8ec0818d02297e6ac8d",
+    "hexsha": "eda2737950a73b5c9f87215756d161378f0b8a1f",
+    "language": "javascript",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "html/Test__EconomicsToolbox__mod_8f90.js",
+    "repository": "cdslaborg/paramonte-api-kernel",
+    "repository_aliases": [
+      "cdslaborg/paramonte-api-kernel"
+    ],
+    "selected_tokens": 448,
+    "source_tokens": 447
+  },
+  {
+    "bucket": 302,
+    "content_sha256": "345583cfacaff1ed888d4fe670ecfdf3393f6064cfa4a85b4653a0ba6d0590f5",
+    "hexsha": "bac279848632ac4b809359557a0a23e038f2559e",
+    "language": "javascript",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "tests/ui/specs/VirtualList/VirtualList/Wrap/VirtualList-GT-28463-specs.js",
+    "repository": "sjro/sandstone",
+    "repository_aliases": [
+      "sjro/sandstone"
+    ],
+    "selected_tokens": 381,
+    "source_tokens": 380
+  },
+  {
+    "bucket": 415,
+    "content_sha256": "e66566d864df3fd4bad431ddda1dd392eb9b4d5703241ca1cf7f30822bd70f96",
+    "hexsha": "bad27496bea1c460e56dcb7ddd15329cdc97907c",
+    "language": "javascript",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "offline/3.38/dijit/nls/lv/common.js",
+    "repository": "shreepaulnsg/MociPortal_staging_final",
+    "repository_aliases": [
+      "darklilium/Factigis",
+      "shreepaulnsg/MociPortal_staging_final"
+    ],
+    "selected_tokens": 56,
+    "source_tokens": 55
+  }
+]

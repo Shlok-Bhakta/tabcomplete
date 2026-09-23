@@ -1,0 +1,172 @@
+[
+  {
+    "bucket": 601,
+    "content_sha256": "b7c6a6a5d6dcf81f149b5a1a504ff261d922f1d027fb092f894b58fc6ca0888d",
+    "hexsha": "bf92173cc2fcdae093b0f23572b96082f4bb00cd",
+    "language": "shell",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "ASM/minimum/build.sh",
+    "repository": "dr-ecker/HandmadeOS",
+    "repository_aliases": [
+      "dr-ecker/HandmadeOS"
+    ],
+    "selected_tokens": 95,
+    "source_tokens": 94
+  },
+  {
+    "bucket": 226,
+    "content_sha256": "ad836471c41349f46e19c203357585cc0de62f90bdb46772bb2a2c763ba5ec17",
+    "hexsha": "a873d0846c45899f43832e754810c53e854dd973",
+    "language": "shell",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "format.sh",
+    "repository": "mamachanko/website-monitor",
+    "repository_aliases": [
+      "mamachanko/website-monitor"
+    ],
+    "selected_tokens": 35,
+    "source_tokens": 34
+  },
+  {
+    "bucket": 446,
+    "content_sha256": "b6623282fa034e1d8a092bc438e8d9e6cb1d9b675eb93cc32c782d2cdd3dcf5e",
+    "hexsha": "ddd71659236b0e52d6f2e5c81bbdc86ae7e4d574",
+    "language": "shell",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "build.sh",
+    "repository": "daniel4wong/container-nodejs-smtp-api",
+    "repository_aliases": [
+      "daniel4wong/container-nodejs-smtp-api"
+    ],
+    "selected_tokens": 143,
+    "source_tokens": 142
+  },
+  {
+    "bucket": 870,
+    "content_sha256": "50d50feb1812352a8aac238d9dc0d294e26850c0abdf4350c40ab7d0da9a6009",
+    "hexsha": "bbb6a40e1aa2f72d8afac032b3bdb246a5c1954f",
+    "language": "shell",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "tools/manylinux/build-wheels.sh",
+    "repository": "stweil/lxml",
+    "repository_aliases": [
+      "stweil/lxml"
+    ],
+    "selected_tokens": 599,
+    "source_tokens": 598
+  },
+  {
+    "bucket": 225,
+    "content_sha256": "5d49dfd7e4787210cebd299e8bdc8b89fe7d5075c7c22a4fe52b6fc38d1ccde6",
+    "hexsha": "17cabbe8b091355b403be8cede286f0cac884a69",
+    "language": "shell",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "src/run_valgrind.sh",
+    "repository": "TREX-CoE/trexio_tools",
+    "repository_aliases": [
+      "TREX-CoE/trexio_tools"
+    ],
+    "selected_tokens": 76,
+    "source_tokens": 75
+  },
+  {
+    "bucket": 226,
+    "content_sha256": "00599f86eee9a62b61fbd3dcb709e4c06e024a30e9bd447a2758c5a9d42e1e74",
+    "hexsha": "9529e7103eca7d945e25c5f5ef14226f0333d846",
+    "language": "shell",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "scripts/dtree.sh",
+    "repository": "pliang279/Competitive-Emergent-Communication",
+    "repository_aliases": [
+      "pliang279/Competitive-Emergent-Communication"
+    ],
+    "selected_tokens": 50,
+    "source_tokens": 49
+  },
+  {
+    "bucket": 766,
+    "content_sha256": "852de59194ec56da84e6ac544ac6dfa8fe8ada8596ad81bacad6022dbf13e92c",
+    "hexsha": "1ea5b8291c99356cd4b48580c9d489f4e7db016a",
+    "language": "shell",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "duorec.sh",
+    "repository": "RuihongQiu/DuoRec",
+    "repository_aliases": [
+      "RuihongQiu/DuoRec"
+    ],
+    "selected_tokens": 57,
+    "source_tokens": 56
+  },
+  {
+    "bucket": 615,
+    "content_sha256": "6faffe92780af3dc5499bc0ef7813be24832d3957870e08c81596603cc433d2a",
+    "hexsha": "cda6e1a14928a034ce5c31a1c68fa23bd0308d4e",
+    "language": "shell",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "docker/entrypoint.sh",
+    "repository": "indece-official/s3-cdn",
+    "repository_aliases": [
+      "indece-official/s3-cdn"
+    ],
+    "selected_tokens": 344,
+    "source_tokens": 343
+  },
+  {
+    "bucket": 329,
+    "content_sha256": "dd91c1dc2d6f2e0c58b205c984c2849305120d1696edd56280707dd1504772bd",
+    "hexsha": "7b9085c20b58b511c245dcace1a9c58481aff2e0",
+    "language": "shell",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": ".travis/scripts/install_hadoop.sh",
+    "repository": "kgururaj/TileDB",
+    "repository_aliases": [
+      "kgururaj/TileDB"
+    ],
+    "selected_tokens": 783,
+    "source_tokens": 782
+  },
+  {
+    "bucket": 154,
+    "content_sha256": "d7f06290372b5c3f45ecc84e973b12b9d6eb1b90f5ede8fed3377097c1627134",
+    "hexsha": "8b9f760f6b3b322dd6957368f741904bf7308487",
+    "language": "shell",
+    "licenses": [
+      "PHP-3.01"
+    ],
+    "parse_status": "pass",
+    "path": "debian/dfsg-repack.sh",
+    "repository": "steveathon/Debian-PHP5",
+    "repository_aliases": [
+      "steveathon/Debian-PHP5"
+    ],
+    "selected_tokens": 252,
+    "source_tokens": 251
+  }
+]

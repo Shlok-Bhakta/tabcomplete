@@ -1,0 +1,58 @@
+{
+  "arms": {
+    "R2_FILTERED": {
+      "files": 371,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.0194091796875,
+      "packed_tokens": 401408,
+      "parser": {
+        "pass": 371
+      },
+      "rejections": {
+        "generated_content_marker": 42,
+        "repository_token_cap": 5
+      },
+      "repository_count": 369,
+      "source_token_quantiles": [
+        18.0,
+        255.5,
+        581.0,
+        1272.5,
+        7790.0
+      ],
+      "source_tokens": 401214,
+      "test_file_share": 0.18328840970350405
+    },
+    "R2_STANDARD": {
+      "files": 240,
+      "generated_marker_files": 24,
+      "largest_repository_fraction": 0.07724061304209184,
+      "packed_tokens": 401408,
+      "parser": {
+        "pass": 240
+      },
+      "rejections": {},
+      "repository_count": 240,
+      "source_token_quantiles": [
+        18.0,
+        290.75,
+        605.0,
+        1418.5,
+        31004.0
+      ],
+      "source_tokens": 403387,
+      "test_file_share": 0.14166666666666666
+    }
+  },
+  "candidate_files": 5305,
+  "common_rejections": {
+    "known_repository": 53,
+    "metadata_average_line": 4,
+    "metadata_max_line": 2,
+    "metadata_size": 22,
+    "reserved_repository_bucket": 133,
+    "vendor_or_generated": 290
+  },
+  "language": "go",
+  "pool_sha256": "1dbca27bf3cf40513e19aa88180955f40e79ed51f72676d3c20605b360310ba2"
+}

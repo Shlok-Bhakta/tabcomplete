@@ -1,0 +1,174 @@
+[
+  {
+    "bucket": 560,
+    "content_sha256": "c52c382fa8addc08d485bac27615ed9eb339c7776f9058228c0a0c5c2ff8c41f",
+    "hexsha": "de2b34faa00fcd229e721807854cefbca5e29af5",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "benches/dsp-chain-alternative.rs",
+    "repository": "bennetthardwick/audio-graph",
+    "repository_aliases": [
+      "bennetthardwick/audio-graph"
+    ],
+    "selected_tokens": 1257,
+    "source_tokens": 1256
+  },
+  {
+    "bucket": 168,
+    "content_sha256": "dc94ea34fceebe6cdb9f1bffc456e2228e5f5a34c5d7b1bc9e86819843c67448",
+    "hexsha": "373e8cc7a74f3a5ca25d13918d82294f069d2546",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/bin/maguro/commands/stats.rs",
+    "repository": "mosmeh/maguro",
+    "repository_aliases": [
+      "mosmeh/maguro"
+    ],
+    "selected_tokens": 686,
+    "source_tokens": 685
+  },
+  {
+    "bucket": 999,
+    "content_sha256": "8d389bba0417ee88f2a955afd9b98b4ecb4863a6ac9110b188ecb82f18e460c7",
+    "hexsha": "0ed6eb27173bdd4503eab36359a32ef4ea4e9a0e",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0",
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/lib.rs",
+    "repository": "e-matteson/stm32f1xx-hal",
+    "repository_aliases": [
+      "e-matteson/stm32f1xx-hal"
+    ],
+    "selected_tokens": 553,
+    "source_tokens": 552
+  },
+  {
+    "bucket": 852,
+    "content_sha256": "7fd7780ebe964c46b13e678aa09faa9aced7f66308ecad0dfe3aa5eae709ec30",
+    "hexsha": "f82724c48e2435447cca2ac370e2cf738cfe1c41",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/instruction.rs",
+    "repository": "StefanStegmueller/rust-machine",
+    "repository_aliases": [
+      "StefanStegmueller/rust-machine"
+    ],
+    "selected_tokens": 342,
+    "source_tokens": 341
+  },
+  {
+    "bucket": 840,
+    "content_sha256": "3eb86ec014ea6629113a6cb39d1506280d9573500fa71a39acdca252ca98b60e",
+    "hexsha": "0760c45b244b8f66ef63c16937c39c691de6c5bb",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0",
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/openvr_adaptor.rs",
+    "repository": "dmweis/hamilton_controller",
+    "repository_aliases": [
+      "dmweis/hamilton_controller"
+    ],
+    "selected_tokens": 2447,
+    "source_tokens": 2446
+  },
+  {
+    "bucket": 149,
+    "content_sha256": "4567bcc0919edf8ce36a3fd36073c5df5a571c4b4c01ff9b90bac5eeccc742e2",
+    "hexsha": "145a122802d083239ee6eb52f8af3ae93ee52896",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "components/raft_log_engine/src/engine.rs",
+    "repository": "dcalvin/tikv",
+    "repository_aliases": [
+      "dcalvin/tikv"
+    ],
+    "selected_tokens": 3927,
+    "source_tokens": 3926
+  },
+  {
+    "bucket": 69,
+    "content_sha256": "3475d0b41303151edf0544d711270397f880f6218a8e2dcfc3ac337ed4f046e9",
+    "hexsha": "d027876bc5e84a2438acab3e68876cd22b8ccb68",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/extension.rs",
+    "repository": "figsoda/ouch",
+    "repository_aliases": [
+      "figsoda/ouch"
+    ],
+    "selected_tokens": 1458,
+    "source_tokens": 1457
+  },
+  {
+    "bucket": 253,
+    "content_sha256": "b89fef9eb0a4e4b58d1ead1d7c49ab76a1eaecbeb025b2f0c7eb356fa4923c4a",
+    "hexsha": "99c34fb3cfc3686c548360b40ead5fa68896ca71",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/day10.rs",
+    "repository": "micxjo/rust-advent",
+    "repository_aliases": [
+      "micxjo/rust-advent"
+    ],
+    "selected_tokens": 639,
+    "source_tokens": 638
+  },
+  {
+    "bucket": 532,
+    "content_sha256": "7813899ce59384b431818ea0ee3597c8f3343ce27847421c33468ff8ee95dcd4",
+    "hexsha": "cad16d32c01fcb368501430404fa4694d7b44a0e",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "benches/command_get.rs",
+    "repository": "svartalf/tokio-memcache",
+    "repository_aliases": [
+      "svartalf/tokio-memcache"
+    ],
+    "selected_tokens": 203,
+    "source_tokens": 202
+  },
+  {
+    "bucket": 387,
+    "content_sha256": "9560f6a1314d156bb55b4f3cf3421d985a7128f6d963c86abde3ac5ec6382227",
+    "hexsha": "2ed4648eee34de2fd195f611144fb7b659f6d9a9",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/main.rs",
+    "repository": "bltzxsd/QuickDash",
+    "repository_aliases": [
+      "bltzxsd/QuickDash"
+    ],
+    "selected_tokens": 1043,
+    "source_tokens": 1042
+  }
+]

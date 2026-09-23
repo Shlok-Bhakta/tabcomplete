@@ -1,9 +1,4 @@
 {
-  "amendment": {
-    "new_line_or_training_outcomes_inspected": false,
-    "previous_plan_sha256": "17dd2b868689a3aea071ef50fa07c717d7db5aed8e92faf46e767ab1ff6bd5b2",
-    "reason": "Before R2 line predictions or training: fix multiline-comment exclusion to implement the registered noncomment rule; deduplicate held-out source identities; record numerical restart tolerances because verified R1 restart was not bitwise identical; use the three-update smoke as the first segment of the eight-update restart check. Causal comparison protocol, data treatment, pilot schedules, selection rules and budgets are unchanged."
-  },
   "configuration": {
     "campaign_id": "tabcomplete-model-data-r2",
     "data": {
@@ -240,7 +235,7 @@
         "tokenizer_sha256": "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"
       }
     },
-    "plan_revision": 2,
+    "plan_revision": 1,
     "schema_version": 1,
     "seed": 928173,
     "selection": {
@@ -279,17 +274,7 @@
       "peak_lr": 3e-06,
       "precision": "fp32_masters_fp16_compute_dynamic_scaling_256",
       "prefetch": "backward_pre_forward_true",
-      "restart_split_updates": [
-        3,
-        5
-      ],
       "restart_test_updates": 8,
-      "restart_tolerances": {
-        "loss_absolute": 0.0001,
-        "optimizer_absolute": 0.0005,
-        "parameter_absolute": 0.0005,
-        "parameter_mean": 1e-07
-      },
       "save": [
         "final_inference",
         "optimizer",
@@ -315,9 +300,9 @@
       "warmup_updates": 5
     }
   },
-  "configuration_sha256": "5d6c31a81941073719784be58fdcb1cee4264919d83c4762fea3c9c6a5ddf5ed",
+  "configuration_sha256": "4fb3fc2774ec662ffddbfc2210fc35ea7d371de4944062238c1358b062158d23",
   "context_runtime_inventory": "No separate context-runtime worktree or verified tiling found",
-  "frozen_at": "2026-09-23T00:21:50.929708+00:00",
+  "frozen_at": "2026-09-23T00:03:42.062547+00:00",
   "integration": {
     "observability": "5513296edfb77d4ab2763a293e93969e6a769557",
     "research": "9ab49df73a2cff9c8ba340f93f96f4ec1dc58271"

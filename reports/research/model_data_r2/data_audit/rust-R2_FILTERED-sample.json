@@ -1,0 +1,175 @@
+[
+  {
+    "bucket": 560,
+    "content_sha256": "c52c382fa8addc08d485bac27615ed9eb339c7776f9058228c0a0c5c2ff8c41f",
+    "hexsha": "de2b34faa00fcd229e721807854cefbca5e29af5",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "benches/dsp-chain-alternative.rs",
+    "repository": "bennetthardwick/audio-graph",
+    "repository_aliases": [
+      "bennetthardwick/audio-graph"
+    ],
+    "selected_tokens": 1257,
+    "source_tokens": 1256
+  },
+  {
+    "bucket": 292,
+    "content_sha256": "01fe213167c0793f26d81471dd0157ff78a7901aaa72bb3bda02db84954f7f1f",
+    "hexsha": "c2949689e76612fb9e342bc2fcf92a4463cdcf29",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/wasm/src/lib.rs",
+    "repository": "iceprosurface/vue-code-runner",
+    "repository_aliases": [
+      "iceprosurface/vue-code-runner"
+    ],
+    "selected_tokens": 133,
+    "source_tokens": 473
+  },
+  {
+    "bucket": 168,
+    "content_sha256": "dc94ea34fceebe6cdb9f1bffc456e2228e5f5a34c5d7b1bc9e86819843c67448",
+    "hexsha": "373e8cc7a74f3a5ca25d13918d82294f069d2546",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/bin/maguro/commands/stats.rs",
+    "repository": "mosmeh/maguro",
+    "repository_aliases": [
+      "mosmeh/maguro"
+    ],
+    "selected_tokens": 686,
+    "source_tokens": 685
+  },
+  {
+    "bucket": 391,
+    "content_sha256": "2fa1952e8514879d4405eebf48df9848646ebb37afbdf82e2d57742141f75063",
+    "hexsha": "72c91e1ce89c8500c199b248f848423ebb9ae2ed",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/language/rust.rs",
+    "repository": "johnstonskj/rust-code_writer",
+    "repository_aliases": [
+      "johnstonskj/rust-code_writer"
+    ],
+    "selected_tokens": 3729,
+    "source_tokens": 3728
+  },
+  {
+    "bucket": 56,
+    "content_sha256": "4ce06cdd20bbfec960176128251ecd539bb8a070a7e57c85524109b73f838ab5",
+    "hexsha": "69ea2f17b0999f67237b1e52ea71a4b66dc09ca3",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/apis/market_data_api.rs",
+    "repository": "spearsandshields/ib_client",
+    "repository_aliases": [
+      "spearsandshields/ib_client"
+    ],
+    "selected_tokens": 2327,
+    "source_tokens": 2326
+  },
+  {
+    "bucket": 999,
+    "content_sha256": "8d389bba0417ee88f2a955afd9b98b4ecb4863a6ac9110b188ecb82f18e460c7",
+    "hexsha": "0ed6eb27173bdd4503eab36359a32ef4ea4e9a0e",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0",
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/lib.rs",
+    "repository": "e-matteson/stm32f1xx-hal",
+    "repository_aliases": [
+      "e-matteson/stm32f1xx-hal"
+    ],
+    "selected_tokens": 553,
+    "source_tokens": 552
+  },
+  {
+    "bucket": 92,
+    "content_sha256": "f61b5e0f163d8e9cbcb388948634c3bab2aac2abb54ad06a355b768f6fb8a930",
+    "hexsha": "548a3363bb0d20627435073d6d8de34af9a57d34",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0",
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "dom/examples/todo/src/header.rs",
+    "repository": "tiffany352/moxie",
+    "repository_aliases": [
+      "tiffany352/moxie"
+    ],
+    "selected_tokens": 193,
+    "source_tokens": 192
+  },
+  {
+    "bucket": 852,
+    "content_sha256": "7fd7780ebe964c46b13e678aa09faa9aced7f66308ecad0dfe3aa5eae709ec30",
+    "hexsha": "f82724c48e2435447cca2ac370e2cf738cfe1c41",
+    "language": "rust",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/instruction.rs",
+    "repository": "StefanStegmueller/rust-machine",
+    "repository_aliases": [
+      "StefanStegmueller/rust-machine"
+    ],
+    "selected_tokens": 342,
+    "source_tokens": 341
+  },
+  {
+    "bucket": 468,
+    "content_sha256": "5480425d4719ceef4391423de8ef0dc8363730345c32e5e26b89ef1ad55619d6",
+    "hexsha": "8c7bbb9b8b9ecff71fa004273e8fd4e22efa1b33",
+    "language": "rust",
+    "licenses": [
+      "Apache-2.0",
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "core/src/path_state.rs",
+    "repository": "emilio/lyon",
+    "repository_aliases": [
+      "emilio/lyon"
+    ],
+    "selected_tokens": 1898,
+    "source_tokens": 1897
+  },
+  {
+    "bucket": 460,
+    "content_sha256": "026805b409988072153c54ab58f4dc2215393519cc24b11656f2c08a92a55bcb",
+    "hexsha": "024efc2381f364214ca75696fa036bef76de26c7",
+    "language": "rust",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "libllama/src/cpu/instructions_arm/media.rs",
+    "repository": "HIDE810/llama",
+    "repository_aliases": [
+      "HIDE810/llama"
+    ],
+    "selected_tokens": 452,
+    "source_tokens": 451
+  }
+]

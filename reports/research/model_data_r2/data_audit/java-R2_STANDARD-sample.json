@@ -1,0 +1,173 @@
+[
+  {
+    "bucket": 453,
+    "content_sha256": "9cda6548d411e540723bb67caa3182c7da5914541e2dabc938d7ca83bb815c52",
+    "hexsha": "caa3aaf0fb65bef67176532f531ebadf620dfc94",
+    "language": "java",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "sms-service/src/test/java/com/github/tingstad/weather/sms/SmsServiceIntegrationTest.java",
+    "repository": "tingstad/weather",
+    "repository_aliases": [
+      "tingstad/weather"
+    ],
+    "selected_tokens": 72,
+    "source_tokens": 71
+  },
+  {
+    "bucket": 734,
+    "content_sha256": "c8f230fededcc8a76c900bc1e2158544aa4f5b7a6df38895e2a3a12e69ed652e",
+    "hexsha": "c3b6e77ffb456ec8d7080d856d710420ba9a696d",
+    "language": "java",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/main/java/com/booknara/problem/dp/ClassicKnapSack.java",
+    "repository": "booknara/playground",
+    "repository_aliases": [
+      "booknara/playground"
+    ],
+    "selected_tokens": 958,
+    "source_tokens": 957
+  },
+  {
+    "bucket": 159,
+    "content_sha256": "3831661b2bfe3c991150aeb3a8329133aafb0d9d34eedcfcad645dbbe668dc6b",
+    "hexsha": "cae8680f41438717d75c7bb3ffeb033080256016",
+    "language": "java",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/java/nxt/http/SendMoneyEscrow.java",
+    "repository": "samroth1/caret-2.0",
+    "repository_aliases": [
+      "samroth1/caret-2.0"
+    ],
+    "selected_tokens": 1033,
+    "source_tokens": 1032
+  },
+  {
+    "bucket": 325,
+    "content_sha256": "e82adae7e2099c70f9a109f41c272d72ad2edd426c82bc29477e59ffc77abe8b",
+    "hexsha": "95a5c10a09365d052266cb67a13a9ce9f364f3b9",
+    "language": "java",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/com/learnCode/orient/OrientIterateAndDelete.java",
+    "repository": "Mangy007/CodingPractices",
+    "repository_aliases": [
+      "Mangy007/CodingPractices"
+    ],
+    "selected_tokens": 499,
+    "source_tokens": 498
+  },
+  {
+    "bucket": 704,
+    "content_sha256": "6809b75975a4014120d30c9aae2733844781e57b6a6e1b8ab84f1310d0184e86",
+    "hexsha": "8d2c1c26e3e9914b7aa3f42691e6ec2b585b2745",
+    "language": "java",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/ConvertSortedListtoBinarySearchTree.java",
+    "repository": "yi-juchung/codingPractice",
+    "repository_aliases": [
+      "yi-juchung/codingPractice"
+    ],
+    "selected_tokens": 293,
+    "source_tokens": 292
+  },
+  {
+    "bucket": 82,
+    "content_sha256": "2380074d7e9b21307486b16308c5a7f33ad49c0564683816e1745f760af8e266",
+    "hexsha": "c2b9ce06e3a7862062d13a565e5adffb903e0588",
+    "language": "java",
+    "licenses": [
+      "Zlib"
+    ],
+    "parse_status": "pass",
+    "path": "ardor3d-effects/src/main/java/com/ardor3d/extension/effect/particle/TexAnimation.java",
+    "repository": "lihak/Ardor3D",
+    "repository_aliases": [
+      "lihak/Ardor3D"
+    ],
+    "selected_tokens": 668,
+    "source_tokens": 667
+  },
+  {
+    "bucket": 802,
+    "content_sha256": "9e20a7ceb159fccb1832560629ff68c78ac772e2b885880717f21440b10f2810",
+    "hexsha": "7f5d867abed60771024c8101e28b78ce070f0298",
+    "language": "java",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "taskling-core/src/main/java/com/siiconcatel/taskling/core/infrastructurecontracts/blocks/BlockRepository.java",
+    "repository": "Vanlightly/java-taskling",
+    "repository_aliases": [
+      "Vanlightly/java-taskling"
+    ],
+    "selected_tokens": 732,
+    "source_tokens": 731
+  },
+  {
+    "bucket": 455,
+    "content_sha256": "339a4785abd0b7cae1fb226d305070c9be0d26a190eaf3d763d6ec4faed0db82",
+    "hexsha": "ca8740d8a568d68440954e43c4f5f17967f2ff5a",
+    "language": "java",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "sm-core/src/test/java/com/salesmanager/test/catalog/BrandTest.java",
+    "repository": "YoungmanIndia/shopizer",
+    "repository_aliases": [
+      "YoungmanIndia/shopizer"
+    ],
+    "selected_tokens": 503,
+    "source_tokens": 502
+  },
+  {
+    "bucket": 655,
+    "content_sha256": "8dfed83571705202fdd7e35f6538e183062df402126da61cc3cc304b765f0e9b",
+    "hexsha": "a6a21855d6ec8461a33881b30a2fc469f639394f",
+    "language": "java",
+    "licenses": [
+      "MIT-0",
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "elnetw-core/src/main/java/jp/mydns/turenar/twclient/internal/LoggingConfigurator.java",
+    "repository": "turenar/elnetw",
+    "repository_aliases": [
+      "turenar/elnetw"
+    ],
+    "selected_tokens": 2013,
+    "source_tokens": 2012
+  },
+  {
+    "bucket": 70,
+    "content_sha256": "e2136d23f59c6e9461aca9ae4732f7e85774d01a627cbfb6bbfc207d3d5a6d33",
+    "hexsha": "c0887edd0bffa75143b6852506b11a1c21d4e6cb",
+    "language": "java",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "jwx/src/main/java/weixin/safetyRules/service/SafetyRulesRecordsServiceI.java",
+    "repository": "wolfchinaliu/gameCenter",
+    "repository_aliases": [
+      "wolfchinaliu/gameCenter"
+    ],
+    "selected_tokens": 81,
+    "source_tokens": 80
+  }
+]

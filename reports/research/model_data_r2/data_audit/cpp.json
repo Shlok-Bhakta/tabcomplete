@@ -1,0 +1,59 @@
+{
+  "arms": {
+    "R2_FILTERED": {
+      "files": 513,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.016737085459183672,
+      "packed_tokens": 501760,
+      "parser": {
+        "pass": 513
+      },
+      "rejections": {
+        "generated_content_marker": 1,
+        "repository_token_cap": 7,
+        "syntax_invalid": 120
+      },
+      "repository_count": 511,
+      "source_token_quantiles": [
+        14.0,
+        226.0,
+        503.0,
+        1150.0,
+        8397.0
+      ],
+      "source_tokens": 501663,
+      "test_file_share": 0.10916179337231968
+    },
+    "R2_STANDARD": {
+      "files": 220,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.39418048469387756,
+      "packed_tokens": 501760,
+      "parser": {
+        "fail": 39,
+        "pass": 181
+      },
+      "rejections": {},
+      "repository_count": 218,
+      "source_token_quantiles": [
+        27.0,
+        214.75,
+        559.5,
+        1779.25,
+        197783.0
+      ],
+      "source_tokens": 501597,
+      "test_file_share": 0.09545454545454546
+    }
+  },
+  "candidate_files": 5218,
+  "common_rejections": {
+    "known_repository": 97,
+    "metadata_average_line": 1,
+    "metadata_size": 26,
+    "reserved_repository_bucket": 119,
+    "vendor_or_generated": 53
+  },
+  "language": "cpp",
+  "pool_sha256": "ac5afbb2e7675aca439c577f8a3064941bfb2836cfb27b837eff2d63ea5b528e"
+}

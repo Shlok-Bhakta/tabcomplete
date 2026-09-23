@@ -1,0 +1,64 @@
+{
+  "arms": {
+    "R2_FILTERED": {
+      "files": 555,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.018363360969387756,
+      "packed_tokens": 501760,
+      "parser": {
+        "pass": 555
+      },
+      "rejections": {
+        "additional_path": 1,
+        "generated_content_marker": 3,
+        "repository_token_cap": 10,
+        "syntax_invalid": 12
+      },
+      "repository_count": 554,
+      "source_token_quantiles": [
+        15.0,
+        166.5,
+        436.0,
+        1051.5,
+        9213.0
+      ],
+      "source_tokens": 501969,
+      "test_file_share": 0.08648648648648649
+    },
+    "R2_STANDARD": {
+      "files": 414,
+      "generated_marker_files": 3,
+      "largest_repository_fraction": 0.08764748086734694,
+      "packed_tokens": 501760,
+      "parser": {
+        "fail": 7,
+        "pass": 407
+      },
+      "rejections": {},
+      "repository_count": 413,
+      "source_token_quantiles": [
+        15.0,
+        168.5,
+        427.0,
+        964.25,
+        43977.0
+      ],
+      "source_tokens": 508667,
+      "test_file_share": 0.09420289855072464
+    }
+  },
+  "candidate_files": 4784,
+  "common_rejections": {
+    "known_repository": 33,
+    "metadata_alphanumeric": 2,
+    "metadata_average_line": 210,
+    "metadata_max_line": 10,
+    "metadata_size": 64,
+    "minified": 12,
+    "repetitive": 1,
+    "reserved_repository_bucket": 119,
+    "vendor_or_generated": 305
+  },
+  "language": "javascript",
+  "pool_sha256": "b0b636317aa9967d64d4e2d53e8baaff5e92c9830884e6ef25f593e3143a3898"
+}

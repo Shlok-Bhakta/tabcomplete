@@ -1,0 +1,174 @@
+[
+  {
+    "bucket": 873,
+    "content_sha256": "9287649193efdde982c9bf813d2fe8c746399fccd66e51ea35b10d9486b37659",
+    "hexsha": "9ede9d444be15e5a989ac6af3a663151985dc458",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "MimeKit/Tnef/TnefPart.cs",
+    "repository": "Muraad/MimeKit",
+    "repository_aliases": [
+      "Muraad/MimeKit"
+    ],
+    "selected_tokens": 2964,
+    "source_tokens": 2963
+  },
+  {
+    "bucket": 530,
+    "content_sha256": "4e9891ac3dbaec573f94bcf38f80fe40c9a0c97f1e5f4c1efe280e64583b36a4",
+    "hexsha": "c2bd070803a7c97190bb9066f55efea0382d7d3f",
+    "language": "csharp",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "src/Orchard.Web/Modules/Orchard.Layouts/Drivers/GridElementDriver.cs",
+    "repository": "Lombiq/Open-Source-Orchard-Extensions",
+    "repository_aliases": [
+      "Lombiq/Open-Source-Orchard-Extensions"
+    ],
+    "selected_tokens": 45,
+    "source_tokens": 44
+  },
+  {
+    "bucket": 77,
+    "content_sha256": "25b869a0605a84fd4dbc67c07e15ba37e3c4111488e81d0f2af4d410278522bc",
+    "hexsha": "3213d35d85b56992de84f8f7fca9590fc00131ac",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "bookbox/bookbox/Controllers/BookController.cs",
+    "repository": "Planche95/bookbox",
+    "repository_aliases": [
+      "Planche95/bookbox"
+    ],
+    "selected_tokens": 1175,
+    "source_tokens": 1174
+  },
+  {
+    "bucket": 482,
+    "content_sha256": "f408ef1e382eca61e4a14ad8752dfdd47756277bc0bf1a5ece96ce216536007e",
+    "hexsha": "9e56e2a28d13e863923c1e6ff99c98611b83f8d2",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "Web/SFB.Web.UI/Models/CustomSelectionListViewModel.cs",
+    "repository": "DFEAGILEDEVOPS/Schools.Financial.Benchmarking",
+    "repository_aliases": [
+      "DFEAGILEDEVOPS/Schools.Financial.Benchmarking",
+      "DFEAGILEDEVOPS/schools-financial-benchmarking"
+    ],
+    "selected_tokens": 61,
+    "source_tokens": 60
+  },
+  {
+    "bucket": 909,
+    "content_sha256": "eea3a0d8f3214771c7459136e450b76a7dcadac2f9f2d510753b34d99f0989aa",
+    "hexsha": "dd46aa401345550eb08e45304c1d29e4d02a29aa",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "Codebase/Editor/Systems/State/Editor/Fields/GroupLabelField.cs",
+    "repository": "z3nth10n/unity-themes",
+    "repository_aliases": [
+      "z3nth10n/unity-themes"
+    ],
+    "selected_tokens": 976,
+    "source_tokens": 975
+  },
+  {
+    "bucket": 956,
+    "content_sha256": "ed8ad67e273ad6ccf5c979ccdef24a995080f3a2d6848e75596e1f50c5ac4f63",
+    "hexsha": "f5c5415454d8424e261bbe2c5c2f11db857d13f0",
+    "language": "csharp",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "tests/resources/ObjectModelTest/sources/StaticPropertyGetSet.stab.cs",
+    "repository": "monoman/cnatural-language",
+    "repository_aliases": [
+      "monoman/cnatural-language"
+    ],
+    "selected_tokens": 85,
+    "source_tokens": 84
+  },
+  {
+    "bucket": 186,
+    "content_sha256": "590efa224062e364a62bb45cf36781edc983a7b0dc7e86a36d268f2aeba58830",
+    "hexsha": "01e28c90143483486d504c778531353765407b34",
+    "language": "csharp",
+    "licenses": [
+      "Zlib"
+    ],
+    "parse_status": "pass",
+    "path": "WispSurvivor/RogueWispPlugin/PartialMain/RogueWisp/Effects/LeechOrbEffects.cs",
+    "repository": "Reinms/RoR2Modding",
+    "repository_aliases": [
+      "Reinms/RoR2Modding"
+    ],
+    "selected_tokens": 438,
+    "source_tokens": 437
+  },
+  {
+    "bucket": 429,
+    "content_sha256": "6df80b2f8f92f1a852631894bcdb275ff1d8ed4c2ebe0ebf9f057c59f401210a",
+    "hexsha": "4425ecc75fe9d6af781176413289b78c90c2aab8",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/AttributeRouting.Tests.Web/Areas/Api/Controllers/VersionedController.cs",
+    "repository": "PrintFleet/AttributeRouting",
+    "repository_aliases": [
+      "PrintFleet/AttributeRouting"
+    ],
+    "selected_tokens": 405,
+    "source_tokens": 404
+  },
+  {
+    "bucket": 128,
+    "content_sha256": "7f70a9af5675e42a31d7e0ba4ed3028adbfc853fe49392e24ab891f8bc8831c7",
+    "hexsha": "3239f6322bff04a4a9bee87970980e7f27a5ea18",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/tests/UnitTests/Logging/LogServiceFactoryTests.cs",
+    "repository": "UltimateCodeMonkeys/CodeMonkeys",
+    "repository_aliases": [
+      "UltimateCodeMonkeys/CodeMonkeys",
+      "UltimateCodeMonkeys/CodeMonkeysMVVM"
+    ],
+    "selected_tokens": 250,
+    "source_tokens": 249
+  },
+  {
+    "bucket": 131,
+    "content_sha256": "3cc1697ffe6739c06ed5d9871d4e470c556340c29009f899d4aece250383a4bb",
+    "hexsha": "59c0a0eff04d85951b0c409a34cfb910204abb02",
+    "language": "csharp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/SimpleBuild/ISimpleClassToBeTested.cs",
+    "repository": "jlamch/SimpleBuildWithTest",
+    "repository_aliases": [
+      "jlamch/SimpleBuildWithTest"
+    ],
+    "selected_tokens": 36,
+    "source_tokens": 35
+  }
+]

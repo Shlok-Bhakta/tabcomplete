@@ -1,0 +1,173 @@
+[
+  {
+    "bucket": 413,
+    "content_sha256": "142e879423735937429ffc290d0cebc919f29949b89f084d6f725f8dbbf0954a",
+    "hexsha": "8559fc7e61115fb7bced4883ba2f09b1bd8b8100",
+    "language": "python",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "cubify/cubify.py",
+    "repository": "rtansf/cubify",
+    "repository_aliases": [
+      "rtansf/cubify"
+    ],
+    "selected_tokens": 1029,
+    "source_tokens": 1028
+  },
+  {
+    "bucket": 449,
+    "content_sha256": "68dae67ccddc50af1f373cbdb01454d8a2d657fb779d72e845b3ef6d324f1a01",
+    "hexsha": "306541411b3db7c2d33fc88f560f19a8b686131f",
+    "language": "python",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "converter/font_test.py",
+    "repository": "irori/wpfont",
+    "repository_aliases": [
+      "irori/wpfont"
+    ],
+    "selected_tokens": 148,
+    "source_tokens": 147
+  },
+  {
+    "bucket": 122,
+    "content_sha256": "fdcc8da931ee49aa0ac917cfc9169b4ee457222699c3df93d21ed10e4fe09f5a",
+    "hexsha": "cc55680e032ceaa2f8e4a0cda1358fc199760f60",
+    "language": "python",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "12gensim/doc2v.py",
+    "repository": "KEVINYZY/python-tutorial",
+    "repository_aliases": [
+      "KEVINYZY/python-tutorial",
+      "zm79287/python-tutorial"
+    ],
+    "selected_tokens": 544,
+    "source_tokens": 543
+  },
+  {
+    "bucket": 965,
+    "content_sha256": "8719c0227aeeb4a9c679230dae560b1f4db023f78b1fdc566946df7454a3abcd",
+    "hexsha": "8f175faa161ba81ca1ea17a950bdc12c38751507",
+    "language": "python",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "hammers/query.py",
+    "repository": "ChameleonCloud/bag-o-hammers",
+    "repository_aliases": [
+      "ChameleonCloud/bag-o-hammers"
+    ],
+    "selected_tokens": 4146,
+    "source_tokens": 4145
+  },
+  {
+    "bucket": 728,
+    "content_sha256": "b796cbae155f3b31d7bbf73ef7eb417e02a4e6e8caee4bd1f741cb8f3ab3360e",
+    "hexsha": "6dcb1ec4224d0959d707f2e888443ee22555ce9c",
+    "language": "python",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "ecmwf_data.py",
+    "repository": "grandey/ecmwf-data",
+    "repository_aliases": [
+      "grandey/ecmwf-data"
+    ],
+    "selected_tokens": 1562,
+    "source_tokens": 1561
+  },
+  {
+    "bucket": 373,
+    "content_sha256": "bf85dab0331b22f132c86038457d613bf15b15410df3bdc6fbd66d0dc9df2a09",
+    "hexsha": "3058e035ccd14b12c27e67531dfa78e93f2c85cc",
+    "language": "python",
+    "licenses": [
+      "FTL"
+    ],
+    "parse_status": "pass",
+    "path": "src/models/train_model.py",
+    "repository": "immerkjaer/my_mlops",
+    "repository_aliases": [
+      "immerkjaer/my_mlops"
+    ],
+    "selected_tokens": 1028,
+    "source_tokens": 1027
+  },
+  {
+    "bucket": 402,
+    "content_sha256": "f10e8c63a60a36b1b80f2e444b5e3791d1475f250346dde1a0fcf94f1a707fcf",
+    "hexsha": "51f61d4c037b77b457e63b57b452609f85c69d7b",
+    "language": "python",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "lista_valores_ordenados_semSort.py",
+    "repository": "undersonrs/PYTHON_Projetos",
+    "repository_aliases": [
+      "undersonrs/PYTHON_Projetos"
+    ],
+    "selected_tokens": 171,
+    "source_tokens": 170
+  },
+  {
+    "bucket": 44,
+    "content_sha256": "d5410b9d5869a2a3cbf61ae82e248868821370140c668c0ec7a1522cfd11c54b",
+    "hexsha": "568e64dbc872bf7252b99cd0ed61505d5301ce00",
+    "language": "python",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "tools/u_model_inception.py",
+    "repository": "smg478/Kaggle---Carvana-Image-Masking-Challange",
+    "repository_aliases": [
+      "smg478/Kaggle---Carvana-Image-Masking-Challange"
+    ],
+    "selected_tokens": 7786,
+    "source_tokens": 7785
+  },
+  {
+    "bucket": 668,
+    "content_sha256": "001064626e6c84aff20295a4a83d1a3814ab4434fa0072f0375f15535e18f32f",
+    "hexsha": "2d0928d32c66d35fcce5faa27b95e1cf06d988a4",
+    "language": "python",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "widgets/textbox.py",
+    "repository": "peterhinch/micropython_ra8875",
+    "repository_aliases": [
+      "peterhinch/micropython_ra8875"
+    ],
+    "selected_tokens": 1196,
+    "source_tokens": 1195
+  },
+  {
+    "bucket": 156,
+    "content_sha256": "b1623ef6f8c3385c486d822ce6c5df1fa77a7ab62fc4115d5ad382f5af6c03e3",
+    "hexsha": "d1f529dc3f8ce1552d6489ccea79430d8f84fc50",
+    "language": "python",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "bamboo_crawler/parser.py",
+    "repository": "kitsuyui/bamboo-crawler",
+    "repository_aliases": [
+      "kitsuyui/bamboo-crawler"
+    ],
+    "selected_tokens": 264,
+    "source_tokens": 263
+  }
+]

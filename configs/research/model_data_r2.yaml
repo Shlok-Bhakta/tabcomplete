@@ -1,6 +1,6 @@
 schema_version: 1
 campaign_id: tabcomplete-model-data-r2
-plan_revision: 1
+plan_revision: 2
 seed: 928173
 models:
   q35-base:
@@ -102,6 +102,8 @@ training:
   evaluation_updates: [31, 77, 153]
   smoke_updates_per_arm: 3
   restart_test_updates: 8
+  restart_split_updates: [3, 5]
+  restart_tolerances: {loss_absolute: 0.0001, parameter_absolute: 0.0005, parameter_mean: 0.0000001, optimizer_absolute: 0.0005}
   save: [final_inference, optimizer, scheduler, scaler, random_state, next_consumed_block, original_mtp_sidecar]
   stops: [nonfinite, persistent_scaler_overflow, accounting_mismatch, corrupt_artifact, existing_sustained_development_guard, finalization_reserve]
 deployment:

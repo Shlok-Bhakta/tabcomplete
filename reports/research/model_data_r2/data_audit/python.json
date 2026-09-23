@@ -1,0 +1,60 @@
+{
+  "arms": {
+    "R2_FILTERED": {
+      "files": 954,
+      "generated_marker_files": 0,
+      "largest_repository_fraction": 0.01815028278374233,
+      "packed_tokens": 1001472,
+      "parser": {
+        "pass": 954
+      },
+      "rejections": {
+        "generated_content_marker": 6,
+        "repository_token_cap": 3,
+        "syntax_invalid": 3
+      },
+      "repository_count": 950,
+      "source_token_quantiles": [
+        15.0,
+        176.0,
+        469.0,
+        1132.75,
+        18176.0
+      ],
+      "source_tokens": 1000552,
+      "test_file_share": 0.1310272536687631
+    },
+    "R2_STANDARD": {
+      "files": 821,
+      "generated_marker_files": 6,
+      "largest_repository_fraction": 0.07431161330521473,
+      "packed_tokens": 1001472,
+      "parser": {
+        "fail": 2,
+        "pass": 819
+      },
+      "rejections": {},
+      "repository_count": 817,
+      "source_token_quantiles": [
+        15.0,
+        181.0,
+        472.0,
+        1166.0,
+        74420.0
+      ],
+      "source_tokens": 1008973,
+      "test_file_share": 0.13398294762484775
+    }
+  },
+  "candidate_files": 2690,
+  "common_rejections": {
+    "known_repository": 24,
+    "metadata_average_line": 5,
+    "metadata_max_line": 1,
+    "metadata_size": 56,
+    "reserved_repository_bucket": 63,
+    "vendor_or_generated": 7
+  },
+  "language": "python",
+  "pool_sha256": "991ff59e26bba6191abd2d3017b0a7aaa6e089882d9cbb92c87563da846e0c37"
+}

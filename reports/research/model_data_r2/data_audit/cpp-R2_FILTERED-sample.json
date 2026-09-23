@@ -1,0 +1,175 @@
+[
+  {
+    "bucket": 253,
+    "content_sha256": "16bd6fcaaae5e0132de857b1a1d7d425b3eea44c2bdf862d11a22b4e5ecc1db8",
+    "hexsha": "4af445e477e0d2a2540cf24d5cd5f9d18ff2b8ec",
+    "language": "cpp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "gaussian.cc",
+    "repository": "reisub/SemiGlobal-Matching",
+    "repository_aliases": [
+      "reisub/SemiGlobal-Matching"
+    ],
+    "selected_tokens": 947,
+    "source_tokens": 946
+  },
+  {
+    "bucket": 385,
+    "content_sha256": "edf3b8d9bd158d772dd63a39e6fb423055184fb3397703c0cf0a42e4477a384e",
+    "hexsha": "79297695d12f15736f99990e5ea70c092e22e1b0",
+    "language": "cpp",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "algorithms/src/Perception/vision_lidar_fusion/src/euclidean_cluster_extraction.cpp",
+    "repository": "mfkiwl/GAAS",
+    "repository_aliases": [
+      "mfkiwl/GAAS"
+    ],
+    "selected_tokens": 2179,
+    "source_tokens": 2178
+  },
+  {
+    "bucket": 467,
+    "content_sha256": "53991b77a20c0b5244e263ac636cc62b5d6a80871c71145b2b4f3c1de5c525d6",
+    "hexsha": "5268054e3f9c3b6518930e97e70e5280836505ed",
+    "language": "cpp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/blinkit/blink/renderer/core/editing/Position.cpp",
+    "repository": "titilima/blink",
+    "repository_aliases": [
+      "titilima/blink"
+    ],
+    "selected_tokens": 4652,
+    "source_tokens": 4651
+  },
+  {
+    "bucket": 632,
+    "content_sha256": "0fc5a65b908099e581cd715279fd9e40ca444e0f227e80d81a8f1781467499ce",
+    "hexsha": "92b06a8b986cc7235019592f5f9db52eca3f66c1",
+    "language": "cpp",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/fdb5/tools/fdb-hide.cc",
+    "repository": "dvuckovic/fdb",
+    "repository_aliases": [
+      "dvuckovic/fdb"
+    ],
+    "selected_tokens": 963,
+    "source_tokens": 962
+  },
+  {
+    "bucket": 916,
+    "content_sha256": "3d568cbd22ffb0f899cbc0179b55a1c45b793aed364d70bc5ec24f3ecab49381",
+    "hexsha": "9819d850e3d3479028e52ee8c5180c212b23ebf1",
+    "language": "cpp",
+    "licenses": [
+      "PostgreSQL",
+      "Zlib",
+      "OpenSSL"
+    ],
+    "parse_status": "pass",
+    "path": "src/modules/SD3/scripts/northrend/nexus/eye_of_eternity/instance_eye_of_eternity.cpp",
+    "repository": "buttlerkid/avalon",
+    "repository_aliases": [
+      "buttlerkid/avalon"
+    ],
+    "selected_tokens": 1587,
+    "source_tokens": 1586
+  },
+  {
+    "bucket": 970,
+    "content_sha256": "125bb894490330aba57ea9d86e9d5e563636babce81bb4aa77a9721c91b71d9a",
+    "hexsha": "54cbef21d41a5f3a53d7aa66fbb37589db244cad",
+    "language": "cpp",
+    "licenses": [
+      "Artistic-1.0"
+    ],
+    "parse_status": "pass",
+    "path": "src/Common/fasta.cc",
+    "repository": "davek44/Glimmer-MG",
+    "repository_aliases": [
+      "davek44/Glimmer-MG"
+    ],
+    "selected_tokens": 1966,
+    "source_tokens": 1965
+  },
+  {
+    "bucket": 497,
+    "content_sha256": "fd5ab1e1874cbc804bb907f82ab39effb1b9191492fdff4cd4da121a6e41e4d8",
+    "hexsha": "c45c59ab01d7c81a881d1f898f75f5d228ccf2fa",
+    "language": "cpp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "CppPrograms/Exp08/Exp08_1.cpp",
+    "repository": "LovelyCatHyt/C-Programs",
+    "repository_aliases": [
+      "LovelyCatHyt/C-Programs",
+      "LovelyCatHyt/CppPrograms"
+    ],
+    "selected_tokens": 87,
+    "source_tokens": 86
+  },
+  {
+    "bucket": 606,
+    "content_sha256": "35ad5ac8e51ccfed4095b45b03d214c30e59b4aeae3d89254be65ca05462f338",
+    "hexsha": "511c5d1dde770f8a791ae775b265feda24fe0be4",
+    "language": "cpp",
+    "licenses": [
+      "WTFPL"
+    ],
+    "parse_status": "pass",
+    "path": "UVA/392/12867109_AC_200ms_0kB.cpp",
+    "repository": "BakaErii/ACM_Collection",
+    "repository_aliases": [
+      "BakaErii/ACM_Collection"
+    ],
+    "selected_tokens": 521,
+    "source_tokens": 520
+  },
+  {
+    "bucket": 699,
+    "content_sha256": "d33cb4cf2eb2d7efe7cc08d0591ecd07bdc11c44587e441384e7b4400a9293d1",
+    "hexsha": "b7937c1c23ea8a26049df975f53e988d49b7a5c0",
+    "language": "cpp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "src/corrvwn.cpp",
+    "repository": "romz-pl/kohn-sham-atom",
+    "repository_aliases": [
+      "romz-pl/kohn-sham-atom"
+    ],
+    "selected_tokens": 580,
+    "source_tokens": 579
+  },
+  {
+    "bucket": 313,
+    "content_sha256": "582627070c398a41920b8c921c62819d32ca61412d3bb8c4e295c0603dcc1f8c",
+    "hexsha": "d15ef563933a47c182df9bde6996fef4076339ba",
+    "language": "cpp",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "include/Map.hpp",
+    "repository": "ajeetwankhede/Midterm",
+    "repository_aliases": [
+      "ajeetwankhede/Midterm"
+    ],
+    "selected_tokens": 614,
+    "source_tokens": 613
+  }
+]

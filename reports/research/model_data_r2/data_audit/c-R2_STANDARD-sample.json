@@ -1,0 +1,172 @@
+[
+  {
+    "bucket": 521,
+    "content_sha256": "4c7b0418f97e6b49b5945804d5b6e710c9760082af96e2e2e3b603c3fc7a4c4e",
+    "hexsha": "716f2cb4dede939bd417214e78675f8d6c550748",
+    "language": "c",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "fail",
+    "path": "PrivateFrameworks/iWorkImport.framework/TSUZipFileWriter.h",
+    "repository": "shaojiankui/iOS10-Runtime-Headers",
+    "repository_aliases": [
+      "shaojiankui/iOS10-Runtime-Headers"
+    ],
+    "selected_tokens": 117,
+    "source_tokens": 116
+  },
+  {
+    "bucket": 510,
+    "content_sha256": "68ddc8d425bfcc1af2062a9364e9576ef308c20a97febee2a88686a09da1c50e",
+    "hexsha": "6b1e27d1aeb1c088ca85832bcfc209a0b65e4224",
+    "language": "c",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "fail",
+    "path": "include/FileStreamJS.h",
+    "repository": "ciliz-co-ltd/w4-sdk-updater",
+    "repository_aliases": [
+      "ciliz-co-ltd/w4-sdk-updater"
+    ],
+    "selected_tokens": 219,
+    "source_tokens": 218
+  },
+  {
+    "bucket": 552,
+    "content_sha256": "31a434298ff3b5fed2a5868f8a656deab817946c5df97673343775eaf1b97998",
+    "hexsha": "713fa573b9b1586b8552323d16e3b967e5bad559",
+    "language": "c",
+    "licenses": [
+      "BSD-2-Clause"
+    ],
+    "parse_status": "fail",
+    "path": "AppleEventsDock/EVTDockIconView.h",
+    "repository": "insidegui/AppleEvents",
+    "repository_aliases": [
+      "insidegui/AppleEvents"
+    ],
+    "selected_tokens": 101,
+    "source_tokens": 100
+  },
+  {
+    "bucket": 834,
+    "content_sha256": "2e3a708172d1242e60ec8aab7bc40dbd003576d7cb25cae74b133e752947e413",
+    "hexsha": "42690ff5738c4bb5a11b417656628af90c612342",
+    "language": "c",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "fail",
+    "path": "gen/src/model/TaskSpecContainerSpecFile1.h",
+    "repository": "cpp-openapi/dockerctl",
+    "repository_aliases": [
+      "cpp-openapi/dockerctl"
+    ],
+    "selected_tokens": 227,
+    "source_tokens": 226
+  },
+  {
+    "bucket": 764,
+    "content_sha256": "eac3b059db736c54dd4c57ce557df6a960046e30af3aea9217cc21fd3b128b6d",
+    "hexsha": "c3dae496e76a48e62ccb7fc25855ae03eea4f00c",
+    "language": "c",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "fail",
+    "path": "include/IR/Module.h",
+    "repository": "linvs/llvm-bindings",
+    "repository_aliases": [
+      "linvs/llvm-bindings"
+    ],
+    "selected_tokens": 421,
+    "source_tokens": 420
+  },
+  {
+    "bucket": 134,
+    "content_sha256": "2fca8571882bb051a362e21b2aa4656ab521c6a2ff5cbd22a933afda0f7629ec",
+    "hexsha": "572fd689487d05c0818b12872dc38b839422963e",
+    "language": "c",
+    "licenses": [
+      "MIT"
+    ],
+    "parse_status": "pass",
+    "path": "PlatformIO/src/bt_tank.h",
+    "repository": "dsringari/BluetoothTank",
+    "repository_aliases": [
+      "dsringari/BluetoothTank"
+    ],
+    "selected_tokens": 150,
+    "source_tokens": 149
+  },
+  {
+    "bucket": 693,
+    "content_sha256": "f68dc571b104fe2c97c303d01ff6c0adb98bc77e088a26ef3fdb6fd8ce3bb18e",
+    "hexsha": "19bc27a5473ba6a988c68153a512fab64b3175a1",
+    "language": "c",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "pass",
+    "path": "src/commands/mac/rmaker/hexa.c",
+    "repository": "macminix/MacMinix",
+    "repository_aliases": [
+      "macminix/MacMinix"
+    ],
+    "selected_tokens": 283,
+    "source_tokens": 282
+  },
+  {
+    "bucket": 335,
+    "content_sha256": "af17b2b0890539d9e7a98a77c5a4f3fd64ac356c5430e4fd0b93c7eb4113f428",
+    "hexsha": "51bf8ca242dc67472befaf1c0566e1ddfaf7ef2f",
+    "language": "c",
+    "licenses": [
+      "BSD-3-Clause"
+    ],
+    "parse_status": "fail",
+    "path": "cctbxForMaud/cctbx/crystal/direct_space_asu.h",
+    "repository": "damianosky/Maud-X",
+    "repository_aliases": [
+      "damianosky/Maud-X"
+    ],
+    "selected_tokens": 9321,
+    "source_tokens": 9320
+  },
+  {
+    "bucket": 163,
+    "content_sha256": "9967d877740d7012f598ce39b317b0a31e6c99ca1d662e151100fc02a66ddb73",
+    "hexsha": "a79f64e5adc0a64e157936ad2405fa85f9c2d52b",
+    "language": "c",
+    "licenses": [
+      "Apache-2.0"
+    ],
+    "parse_status": "fail",
+    "path": "source/extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h",
+    "repository": "adesaegher/envoy-gloo",
+    "repository_aliases": [
+      "adesaegher/envoy-gloo"
+    ],
+    "selected_tokens": 291,
+    "source_tokens": 290
+  },
+  {
+    "bucket": 729,
+    "content_sha256": "ae5ea39a4c06ee460e39453aa45b5a15def21bde3885997efccbac48d392c67c",
+    "hexsha": "99cb5647451ab0cd59cc1d2bd799b96e1b66d050",
+    "language": "c",
+    "licenses": [
+      "BSD-2-Clause"
+    ],
+    "parse_status": "fail",
+    "path": "src/response.h",
+    "repository": "cloose/qoembed",
+    "repository_aliases": [
+      "cloose/qoembed"
+    ],
+    "selected_tokens": 872,
+    "source_tokens": 871
+  }
+]
