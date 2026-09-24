@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "source": "Paginated live gateway run and failures queries after local grid completion",
+  "scientific_files_authoritative": true,
+  "models": {
+    "q35-p12": {
+      "run_id": "run-c3c5bf2b21116f5003a5bb021e3bd123",
+      "pages": 12,
+      "returned_spans": 2377,
+      "distinct_span_ids": 2377,
+      "run_start_spans": 3,
+      "run_summary_spans": 3,
+      "model_generate_spans": 120,
+      "request_start_spans": 120,
+      "distinct_generation_case_ids": 60,
+      "scientific_measurements": 120,
+      "failure_query_rows": 0
+    },
+    "q25-coder": {
+      "run_id": "run-29611c6dd9a1b5098c24cd4d143c3c5d",
+      "pages": 14,
+      "returned_spans": 2799,
+      "distinct_span_ids": 2798,
+      "run_start_spans": 3,
+      "run_summary_spans": 3,
+      "model_generate_spans": 120,
+      "request_start_spans": 120,
+      "distinct_generation_case_ids": 60,
+      "scientific_measurements": 120,
+      "failure_query_rows": 0,
+      "duplicate_gateway_row": {
+        "span_id": "b64faa32caaf9bb1",
+        "name": "run.heartbeat",
+        "identical_timestamp": "2026-09-23T20:13:52.710645137Z",
+        "returned_copies": 2
+      }
+    },
+    "granite-h350": {
+      "run_id": "run-33ca3beb848fbe8e4eff3019a49b339d",
+      "pages": 6,
+      "returned_spans": 1003,
+      "distinct_span_ids": 1003,
+      "run_start_spans": 3,
+      "run_summary_spans": 3,
+      "model_generate_spans": 120,
+      "request_start_spans": 120,
+      "distinct_generation_case_ids": 60,
+      "scientific_measurements": 120,
+      "failure_query_rows": 0
+    }
+  },
+  "interpretation": "Each model has one generation span per saved request and one logical case ID per source prompt and bucket. Run start and summary spans reflect the three bucket processes. Heartbeats are operational records; the repeated Qwen2.5 gateway heartbeat is deduplicated by span ID."
+}

@@ -150,6 +150,81 @@
     "paired_outputs_identical": true
   },
   {
+    "model": "granite-h350",
+    "host": "crabcake",
+    "precision": "Q4_K_M",
+    "threads": 4,
+    "bucket": 32768,
+    "n": 40,
+    "prompts": 20,
+    "total_median_seconds": 201.6945669405104,
+    "total_p95_seconds": 212.62449483413656,
+    "returned_line_median_seconds": 198.18466702397563,
+    "returned_line_observed_n": 22,
+    "peak_resident_bytes": 4274323456,
+    "source": "artifacts/research/model_data_r2/local-inference/granite-q4-clean/measurements.jsonl",
+    "warm_context": false,
+    "actual_input_token_range": [
+      29912,
+      30913
+    ],
+    "token_arrival_seconds": {
+      "1": {
+        "n": 40,
+        "median": 198.76555959749385,
+        "p95": 209.6369702287222
+      },
+      "8": {
+        "n": 40,
+        "median": 199.42534965398954,
+        "p95": 210.30125735727196
+      },
+      "16": {
+        "n": 40,
+        "median": 200.18094648048282,
+        "p95": 211.07057436355097
+      },
+      "32": {
+        "n": 40,
+        "median": 201.69105186901288,
+        "p95": 212.6205042182788
+      }
+    },
+    "complete_line_arrival_seconds": {
+      "n": 22,
+      "median": 198.18466702397563,
+      "p95": 208.43914039893716
+    },
+    "complete_line_definition": "Observed first newline/EOS during the fixed 32-token request; not a line-stopping latency experiment. Missing values stay unknown.",
+    "warm_resident_uncached_seconds": {
+      "n": 39,
+      "median": 201.66293035499984,
+      "p95": 212.5748436504975
+    },
+    "cold_process_first_seconds": {
+      "n": 1,
+      "median": 212.52221977803856,
+      "p95": 212.52221977803856
+    },
+    "model_load_to_health_seconds": {
+      "n": 1,
+      "median": 1.12454740999965,
+      "p95": 1.12454740999965
+    },
+    "prompt_processing_seconds": {
+      "n": 40,
+      "median": 198.67488050000003,
+      "p95": 209.5093668
+    },
+    "decode_seconds": {
+      "n": 40,
+      "median": 2.953861,
+      "p95": 3.0310316
+    },
+    "verified_uncached": true,
+    "paired_outputs_identical": true
+  },
+  {
     "model": "q35-p12",
     "host": "crabcake",
     "precision": "Q4_K_M",

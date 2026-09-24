@@ -104,5 +104,49 @@
     "exit_code": 0,
     "result": "Success: no issues found in 106 source files",
     "log": "artifacts/research/model_data_r2/mypy-final-continuation.log"
+  },
+  {
+    "name": "tests-grid-initial",
+    "command": ["uv", "run", "--no-sync", "pytest", "-q"],
+    "exit_code": 1,
+    "result": "226 passed, one pause acknowledgement JSON race; the test thread then waited on its uncleared test request",
+    "log": "artifacts/research/model_data_r2/tests-grid-final.log"
+  },
+  {
+    "name": "tests-grid-final",
+    "command": ["uv", "run", "--no-sync", "pytest", "-q"],
+    "exit_code": 0,
+    "result": "227 passed in 23.86s after atomic acknowledgement writes and test cleanup",
+    "log": "artifacts/research/model_data_r2/tests-grid-final2.log"
+  },
+  {
+    "name": "ruff-grid-final",
+    "command": ["uv", "run", "--no-sync", "ruff", "check", "."],
+    "exit_code": 0,
+    "result": "All checks passed!",
+    "log": "artifacts/research/model_data_r2/ruff-grid-final.log"
+  },
+  {
+    "name": "mypy-grid-final",
+    "command": ["uv", "run", "--no-sync", "mypy", "src", "scripts"],
+    "exit_code": 0,
+    "result": "Success: no issues found in 106 source files",
+    "log": "artifacts/research/model_data_r2/mypy-grid-final.log"
+  },
+  {
+    "name": "bun-grid-final",
+    "command": ["bun", "test"],
+    "directory": "infra/observability/gateway",
+    "exit_code": 0,
+    "result": "16 pass, 0 fail",
+    "log": "artifacts/research/model_data_r2/bun-grid-final.log"
+  },
+  {
+    "name": "tsc-grid-final",
+    "command": ["bunx", "tsc", "--noEmit", "--module", "preserve", "--target", "esnext", "--moduleResolution", "bundler", "--allowJs", "--skipLibCheck", "src/*.ts", "tests/*.ts"],
+    "directory": "infra/observability/gateway",
+    "exit_code": 0,
+    "result": "No TypeScript errors",
+    "log": "artifacts/research/model_data_r2/tsc-grid-final.log"
   }
 ]

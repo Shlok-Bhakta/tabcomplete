@@ -48,12 +48,17 @@ def test_local_pause_acknowledges_only_outside_request_pairs(tmp_path):
         future = pool.submit(
             helper["wait_between_pairs"], request, acknowledgement, poll_seconds=0.01
         )
-        deadline = time.monotonic() + 5
-        while not acknowledgement.exists() and time.monotonic() < deadline:
-            time.sleep(0.01)
-        assert json.loads(acknowledgement.read_text())["state"] == "paused_between_request_pairs"
-        assert not future.done()
-        request.unlink()
+        try:
+            deadline = time.monotonic() + 5
+            while not acknowledgement.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            assert (
+                json.loads(acknowledgement.read_text())["state"]
+                == "paused_between_request_pairs"
+            )
+            assert not future.done()
+        finally:
+            request.unlink(missing_ok=True)
         assert future.result(timeout=5) > 0
     assert not acknowledgement.exists()
 

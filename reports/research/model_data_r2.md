@@ -1,13 +1,13 @@
 # Model and data research R2
 
-Status: **research evaluation complete; local 32k timing still running**. Both
-matched pilots are checkpoint-verified. Their strict and line results fail the
-registered promotion rule, so neither checkpoint is promoted and the sealed
-research test remains closed. The active playground checkpoint has not changed.
-The registered context job ended with runtime blocks; its valid partial scores
-are reported below.
+Status: **R2 analysis and local runtime grid complete; context and Granite FP16
+line phases runtime blocked**. Both matched pilots are checkpoint-verified.
+Their strict and line results fail the registered promotion rule, so neither
+checkpoint is promoted and the sealed research test remains closed. The active
+playground checkpoint has not changed. The context job's valid partial scores
+and runtime blocks are reported below.
 
-## Evidence available so far
+## Results
 
 The required initial comparison completed all 200 corrected causal fixtures on
 T4 using Transformers 5.5 and Torch 2.10, FP16 text-only models, raw causal
@@ -25,7 +25,7 @@ were executed on Crabcake in the existing network-disabled containers.
 | R2_STANDARD, Transformers FP16 / T4 | 4/200 | 19/180 | 0.580 s median T4 line call | Unknown | No registered long-context score | Executed; not promoted |
 | R2_FILTERED, Transformers FP16 / T4 | 5/200 | 19/180 | 0.548 s median T4 line call | Unknown | No registered long-context score | Executed; not promoted |
 | Granite H-350M, Transformers FP16 / T4 | 3/200 | Incomplete, 1/180 generated | Unknown | Unknown | No registered long-context score | Strict executed; line OOM |
-| Granite H-350M, native Q4_K_M / Kiwi CPU | 0/200 | 6/180 | 2.725 s median across 180 line cases, Kiwi two-thread CPU | 1.981 GiB in separate Crabcake 2k grid | Line fixtures and 1,171–2,005 actual input tokens in the 2k grid | Strict and corrected line executed |
+| Granite H-350M, native Q4_K_M / Kiwi CPU | 0/200 | 6/180 | 2.725 s median across 180 line cases, Kiwi two-thread CPU | 4,274,323,456-byte peak in separate Crabcake 32k grid | Crabcake 2k, 8k and 32k timing grids executed; no long-context intelligence claim | Strict, corrected line and local timing executed |
 
 These strict counts are same-task comparisons under the frozen 200-case protocol.
 Qwen2.5 FP16 leads at 11/200, with P12 at 9/200, but their paired difference
@@ -155,6 +155,21 @@ The intentional pause between Granite request pairs is recorded outside request
 durations. These measurements compare fixed source prompts and output ceilings,
 not equal token counts or distant-context correctness. The per-bucket source is
 `model_data_r2/local_inference/summary.json`.
+
+Granite's completed 32k Crabcake grid has 40 requests, a 201.695-second median,
+212.624-second p95, and 4,274,323,456-byte peak server RSS. Actual inputs range
+from 29,912 to 30,913 Granite tokens. Every repeated output matches; no request
+truncated and server prompt-cache reuse is zero. Granite was faster than the
+other two native models on these fixed source prompts, but its tokenizer counted
+fewer input tokens and its strict/line quality was much lower. The timing grid
+does not measure whether any model used distant code correctly.
+
+The completed local grid has 360 requests across three models, three source
+length buckets, 20 prompts per bucket and two repetitions. All nine buckets
+have 40 unique requests and identical repeated outputs. No request truncated
+or used the server prompt cache. The source prompts and runtime revision are
+fixed; the actual token counts vary by tokenizer. The terminal controller
+status is in `model_data_r2/local_inference/grid-status.json`.
 
 Qwen2.5 Q4 versus its own FP16 checkpoint had two gains and six losses. Runtime
 and precision both change in that comparison; it is not a pure quantization
@@ -486,11 +501,25 @@ bundle was fetched and matched its local bytes and SHA-256. Run IDs, page counts
 and scientific counts are in `model_data_r2/telemetry_index.json` and its
 referenced reconciliation file.
 
-After the plot filter change, repository verification passed 227/227 tests in
-24.76 seconds, Ruff, and mypy across 106 source files. The commands and logs
-are in `model_data_r2/environment/verification-window.json`. The registered
-GPU jobs are terminal. The 52-file `model_data_r2/artifact_manifest.json` passed
-hash verification; Granite's local 32k runtime grid remains in progress.
+Three live local inference runs were also queried through all 12, 14 and six
+gateway pages respectively, with separate failure queries. Each has 120
+`model.generate` spans and 120 request starts matching its 120 scientific
+measurements, plus 60 distinct source-prompt case IDs across the three buckets.
+The failure queries returned no rows. Qwen2.5's gateway result repeated one
+identical heartbeat row; it is deduplicated by span ID, and it does not add a
+model request. The run IDs and counts are in
+`model_data_r2/local_inference/telemetry-reconciliation.json`.
+
+The first full pytest run after the local grid caught a race in the pause
+acknowledgement file: a reader observed the new path before JSON had been
+written. That test then waited on its own uncleared pause request. The local
+runner now replaces the completed JSON file atomically, and the test removes
+its request even if an assertion fails. The final full run passed 227 tests in
+23.86 seconds; Ruff, mypy across 106 source files, 16 Bun tests and the
+TypeScript check also passed. Commands, the initial failure and final logs are
+in `model_data_r2/environment/verification-window.json`. The registered GPU
+jobs are terminal, and the local grid controller exited with status complete.
+The 59-file `model_data_r2/artifact_manifest.json` passed hash verification.
 
 The research recommendation is to investigate Qwen2.5-Coder as the smaller
 local-code candidate, using a future matched next-edit evaluation before any

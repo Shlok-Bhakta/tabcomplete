@@ -1,6 +1,6 @@
 # Model/data R2 campaign handoff
 
-## Continuation update, 2026-09-23 22:10 UTC
+## Final continuation update, 2026-09-24 00:33 UTC
 
 The snapshot below is historical. The registered baseline, both pilots,
 evaluation and context Kaggle jobs are now terminal. No further GPU job is
@@ -19,27 +19,32 @@ but strict and line quality regress. No checkpoint was promoted and the sealed
 test slice remains closed. The research direction is Qwen2.5-Coder as a smaller
 candidate for a future matched next-edit study, not a deployed replacement.
 
-The GPU campaign controller has exited after terminal status. The local grid
-controller remains PID 2508891. P12's 32k bucket finished all 40 requests and
-passed the pair identity, no-truncation and zero-cache checks. Its median total
-request was 623.769 seconds, with 34,965–35,295 actual prompt tokens and
-8,096,616,448-byte peak server RSS. Qwen2.5's 32k bucket also finished all 40
-requests with the same protocol checks. Its median total request was 819.701
-seconds, with 32,704 actual prompt tokens and 8,761,196,544-byte peak server
-RSS. Granite's 32k child is PID 3180670 as of this update. A cooperative pause
-between pairs allowed the completed Qwen2.5 analysis; the pause was then
-released. Preserve Granite's 20 prompts and two repetitions. Check current
-PIDs and files before signalling any process.
+The GPU campaign and local grid controllers have exited. The local grid status
+is complete: 360 requests across all three models and 2k, 8k and 32k source
+buckets. Every bucket has 20 prompts with two repetitions, identical paired
+outputs, no truncation and zero server prompt-cache reuse. In the 32k bucket,
+median total requests were P12 623.769 seconds, Qwen2.5 819.701 seconds and
+Granite 201.695 seconds on Crabcake's four-thread CPU runtime. Actual input
+token counts vary by tokenizer; these are latency measurements, not evidence
+that the models used distant context correctly. All final local measurements,
+metadata, source prompts, summary and controller status are hash recorded.
 
 Telemetry bundles are imported and reconciled; 1,492 evaluation and 164 context
-captured payloads synced, with a remote byte/hash check from each. The
-52-file `artifact_manifest.json` passed hash verification. Full Python
-verification after the only source edit passed 227 tests, Ruff and mypy. The
-remaining independent work is Granite's local 32k runtime grid, then refresh
-its summary, plots and report the actual final counts. The report is a verified
-research snapshot while that grid runs.
+captured payloads synced, with a remote byte/hash check from each. Three live
+local inference runs were also queried through every page, each matching 120
+scientific requests with no failure rows. The 59-file `artifact_manifest.json`
+passed hash verification. The final full
+repository check passed 227 tests, Ruff and mypy; 16 Bun tests and TypeScript
+also passed. The first final pytest exposed a partial-write race in the local
+pause acknowledgement. Atomic JSON replacement and test cleanup fixed it;
+the failing and passing runs are recorded in the verification window. The
+research report is complete within the registered campaign. Granite FP16 line
+and the long-context suite remain explicitly runtime blocked, not scored as
+model failures. No checkpoint was promoted and no further GPU job is planned.
 
-Snapshot: 2026-09-23 04:16 UTC. This packet was requested while work was running. The campaign is incomplete. No checkpoint has been promoted and the sealed test slice remains closed.
+The material below preserves the 2026-09-23 04:16 UTC handoff as a historical
+snapshot. Its running and pending tasks have the final outcomes recorded above
+and in the research report. The campaign was incomplete at that snapshot.
 
 ## Start here
 
