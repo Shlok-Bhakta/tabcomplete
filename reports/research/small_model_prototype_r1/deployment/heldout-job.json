@@ -1,6 +1,6 @@
 {
   "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
-  "commit": "e407fbd4a637d2584b707f41c5b1beb522e4ea7f",
+  "commit": "107c82490299010359d0621792927ab0e238d2a8",
   "finalization_reserve_seconds": 900,
   "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
   "quota_before": {
@@ -119,7 +119,7 @@
         "status": "unknown"
       }
     ],
-    "observed_at": "2026-09-25T08:28:01.626704+00:00",
+    "observed_at": "2026-09-25T08:34:03.908331+00:00",
     "remaining": 15.72,
     "renewal": "2026-09-26T00:00:00",
     "source": "authenticated Kaggle CLI quota and kernel status",
@@ -127,10 +127,12 @@
     "units": "Kaggle account-hours",
     "used": 29.28
   },
-  "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-selected-heldout",
+  "reference": "shlokbhakta/tabcomplete-r1-heldout",
+  "reference_resolution": "Kaggle created the slug from the corrected <=50-character title; authenticated list and status verified this reference.",
+  "requested_reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-selected-heldout",
   "selected_alias": "q25-coder",
   "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
   "session_seconds_limit": 7200,
-  "state": "submission_pending",
-  "submitted_at": "2026-09-25T08:28:01.626678+00:00"
+  "state": "submitted",
+  "submitted_at": "2026-09-25T08:34:03.908305+00:00"
 }

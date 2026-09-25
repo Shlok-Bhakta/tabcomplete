@@ -536,7 +536,7 @@ def submit_selected_stage(plan: dict, stage: str) -> dict:
         .replace("__SELECTED_ALIAS__", alias)
         .replace("__ADAPTED_WEIGHT_SHA__", weight_sha)
     )
-    reference = f"shlokbhakta/tabcomplete-small-model-prototype-r1-selected-{stage}"
+    reference = f"shlokbhakta/tabcomplete-r1-{stage}"
     metadata: dict[str, Any] = {
         "id": reference, "title": f"tabcomplete-r1-{stage}", "code_file": "run.py",
         "language": "python", "kernel_type": "script", "is_private": True,
