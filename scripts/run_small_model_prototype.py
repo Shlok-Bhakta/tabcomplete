@@ -376,13 +376,20 @@ def submit_adaptation(plan: dict) -> dict:
     if any(alias not in ALLOWED or alias == "p12-control" for alias in finalists):
         raise ValueError("non-allowlisted adaptation finalist")
     job_path = REPORT / "adaptation/job.json"
+    attempt = 1
     if job_path.exists():
         job = json.loads(job_path.read_text())
         if job["plan_sha256"] != digest(REPORT / "plan.json"):
             raise ValueError("adaptation belongs to another plan")
         job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
         save(job_path, job)
-        return job
+        if "ERROR" not in job["observed_status"].upper():
+            return job
+        attempt = job.get("attempt", 1) + 1
+        if attempt > 2:
+            raise RuntimeError("adaptation retry limit reached; inspect failed job")
+        save(REPORT / f"adaptation/job-v{attempt - 1}.json", job)
+        job_path.unlink()
     check_budget(plan, session_seconds=28_800, input_tokens=4_000_000)
     commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
     if command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no").strip():
@@ -428,6 +435,7 @@ def submit_adaptation(plan: dict) -> dict:
         "finalization_reserve_seconds": 1_800,
         "quota_before": quota(),
         "state": "submission_pending",
+        "attempt": attempt,
     }
     save(job_path, job)
     command("kaggle", "kernels", "push", "-p", str(folder), timeout=180)

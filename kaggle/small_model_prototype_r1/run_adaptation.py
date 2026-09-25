@@ -20,7 +20,7 @@ SELECTION_SHA = "__SELECTION_SHA__"
 FINALISTS = json.loads('__FINALISTS__')
 MODEL_SOURCES = {
     "q25-coder": ("Qwen/Qwen2.5-Coder-0.5B", "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
-                  "d58d103feb3d4c4bbfb86cfbe5620053a78c437a5469cefa44d8bf7dccb4e363"),
+                  "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"),
     "q3-base": ("Qwen/Qwen3-0.6B-Base", "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
                 "cd2a512003e2f9f3cd3c32a9c3573f820bb28c940f73c57b1ddaa983d9223eba"),
     "lfm350-base": ("LiquidAI/LFM2.5-350M-Base", "9960764e30892e01f29a6dc23df2533fcd8bd5ae",
@@ -83,7 +83,11 @@ def training_call(alias, model_path, phase, lr, *, max_examples=0, destination=N
             "--learning-rate", str(lr), "--deadline-monotonic", str(DEADLINE)]
     if max_examples:
         args.extend(["--max-examples", str(max_examples)])
-    elapsed = run(args, alias + "-" + phase + "-" + str(lr))
+    elapsed = run(
+        args,
+        alias + "-" + phase + "-" + str(lr),
+        environment={"PYTHONPATH": str(ROOT / "src") + os.pathsep + str(ROOT / "scripts")},
+    )
     return json.loads((result_path / (phase + "-result.json")).read_text()), elapsed
 
 

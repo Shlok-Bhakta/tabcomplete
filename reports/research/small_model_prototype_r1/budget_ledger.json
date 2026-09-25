@@ -1,5 +1,5 @@
 {
-  "gpu_session_seconds": 1260.712008028,
+  "gpu_session_seconds": 1321.222008028,
   "training_input_tokens": 0,
   "new_artifact_bytes": 0,
   "sessions": [
@@ -27,6 +27,15 @@
       "quota_used_before_hours": 26.48,
       "quota_used_after_hours": 26.55,
       "line_outputs_per_new_model": 180
+    },
+    {
+      "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+      "status": "failed_before_training",
+      "observed_wall_seconds": 60.51,
+      "training_input_tokens": 0,
+      "cause": "q25 source weight check used historical metadata revision string instead of source file SHA-256",
+      "actual_source_weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+      "kaggle_kernel_version": 1
     }
   ]
 }
