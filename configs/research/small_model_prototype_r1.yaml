@@ -1,0 +1,46 @@
+schema_version: 1
+source_commit: fb1e868bf6e04e40660574e1ff5162071e7d3f1f
+models:
+  q25-coder: Qwen/Qwen2.5-Coder-0.5B
+  q3-base: Qwen/Qwen3-0.6B-Base
+  lfm350-base: LiquidAI/LFM2.5-350M-Base
+  p12-control: local-r2-validated
+limits:
+  gpu_session_wall_hours: 10
+  additional_nonpadding_training_input_tokens: 32000000
+  max_training_passes: 2
+  new_research_artifact_bytes: 12884901888
+  new_target_model_bytes: 2147483648
+  max_target_candidate_artifacts: 2
+  finalization_reserve_seconds: 900
+screening:
+  max_new_tokens: 96
+  decode: greedy
+  prompt: raw_causal
+  causal_cases: 200
+  line_cases: 180
+  runtime_context_tokens: 2304
+  runtime_batch_tokens: 256
+  runtime_microbatch_tokens: 64
+  runtime_slots: 1
+  runtime_cache_ram_mib: 128
+  context_source_targets: [512, 1024, 2048]
+  replay_repetitions: 2
+adaptation:
+  wire_version: compact-next-edit-v1
+  max_sequence_tokens: 2048
+  effective_batch_examples: 16
+  pilot_train_states_target: 4096
+  pilot_development_states_min: 512
+  learning_rates: [0.00001, 0.00003]
+  learning_rate_probe_examples: 1024
+  warmup_fraction: 0.03
+  cosine_final_fraction: 0.1
+  gradient_clip: 1.0
+  weight_decay: 0.01
+deployment:
+  start_mode: manual
+  automatic_max_resident_bytes: 1610612736
+  automatic_median_latency_ms: 500
+  automatic_p95_latency_ms: 1000
+  enabled_automatic_personalization: false

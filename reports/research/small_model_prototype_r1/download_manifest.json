@@ -1,0 +1,21 @@
+{
+  "downloads": [],
+  "frozen_at": "2026-09-25T04:01:12.379293+00:00",
+  "reused": {
+    "p12-control-fp16": {
+      "bytes": 2013387056,
+      "path": "/home/crabcake/Projects/tabcomplete/outputs/kaggle/code_cpt_train_v3/code_cpt_run/main/final/model.safetensors",
+      "sha256": "d4d3fdb8d30ae0f3e4a1342a3d10ead7e0a4363e0f8ca406a8267c726316ac43"
+    },
+    "p12-control-q4": {
+      "bytes": 672329216,
+      "path": "/home/crabcake/Projects/tabcomplete-model-data-r2/artifacts/research/model_data_r2/p12-text-Q4_K_M.gguf",
+      "sha256": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24"
+    },
+    "q25-coder-q4": {
+      "bytes": 397807328,
+      "path": "/home/crabcake/Projects/tabcomplete-model-data-r2/artifacts/research/model_data_r2/q25-Q4_K_M.gguf",
+      "sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30"
+    }
+  }
+}
