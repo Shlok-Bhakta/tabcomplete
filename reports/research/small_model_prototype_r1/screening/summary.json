@@ -16,8 +16,9 @@
       "license": "existing derivative; see R2 manifest",
       "native_q4_line_exact_180": 19,
       "native_q4_strict_functional_pass_200": 8,
+      "parameter_count_method": "sum of all 321 safetensors tensor shapes in validated local FP16 checkpoint",
       "source": "existing validated R2 P12 checkpoint",
-      "total_parameters": null,
+      "total_parameters": 1006672704,
       "unquantized_line_exact_180": 20,
       "unquantized_strict_functional_pass_200": 9
     },

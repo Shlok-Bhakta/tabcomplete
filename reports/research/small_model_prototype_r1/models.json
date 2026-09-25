@@ -46,7 +46,9 @@
         "sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30"
       }
     },
-    "source": "existing validated R2 P12 checkpoint"
+    "parameter_count_method": "sum of all 321 safetensors tensor shapes in validated local FP16 checkpoint",
+    "source": "existing validated R2 P12 checkpoint",
+    "total_parameters": 1006672704
   },
   "q25-coder": {
     "license": "apache-2.0",

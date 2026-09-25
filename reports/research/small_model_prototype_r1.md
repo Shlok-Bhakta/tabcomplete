@@ -9,7 +9,7 @@ This campaign starts at R2 commit `fb1e868bf6e04e40660574e1ff5162071e7d3f1f` on 
 | q25-coder | `Qwen/Qwen2.5-Coder-0.5B@8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301` | 494,032,768 | Apache-2.0 | 11/200 | 16/180 | 7/200; 18/180 |
 | q3-base | `Qwen/Qwen3-0.6B-Base@da87bfb608c14b7cf20ba1ce41287e8de496c0cd` | 596,049,920 | Apache-2.0 | 9/200 | 18/180 | 10/200; 17/180 |
 | lfm350-base | `LiquidAI/LFM2.5-350M-Base@9960764e30892e01f29a6dc23df2533fcd8bd5ae` | 354,483,968 | `lfm1.0` | 1/200 | 17/180 | Not run; it did not pass the strict quality screen |
-| p12-control | Existing validated R2 P12 checkpoint, hash in [models.json](small_model_prototype_r1/models.json) | R2 checkpoint | Existing derivative | 9/200 | 20/180 | 8/200; 19/180 |
+| p12-control | Existing validated R2 P12 checkpoint, hash in [models.json](small_model_prototype_r1/models.json) | 1,006,672,704 | Existing derivative | 9/200 | 20/180 | 8/200; 19/180 |
 
 The strict metric is functional sandbox success, not string equality. The line metric is exact first-line continuation. Q4 quality changed runtime as well as precision: FP16 used Transformers on Kaggle and Q4 used pinned llama.cpp on crabcake. Its differences are not a pure quantization ablation. The Q4 line run used the registered 8,192-token context; interactive replay used 2,304. Full source, tokenizer, artifact, suite, and output identities are recorded in [models.json](small_model_prototype_r1/models.json), [summary.json](small_model_prototype_r1/screening/summary.json), and the private result files named by the [download manifest](small_model_prototype_r1/download_manifest.json).
 
