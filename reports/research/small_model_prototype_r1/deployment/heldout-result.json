@@ -1,0 +1,51 @@
+{
+  "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "elapsed_seconds": 348.63072865699996,
+  "evaluation_summary": {
+    "by_action": {
+      "delete": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      },
+      "insert": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      },
+      "no_edit": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      },
+      "replace": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      }
+    },
+    "cases": 1024,
+    "edit_required": 768,
+    "edit_required_exact_after_state": 768,
+    "no_edit_false_positive": 0,
+    "no_edit_total": 256,
+    "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+    "terminated": 1024,
+    "valid": 1024
+  },
+  "finalization_reserve_seconds": 900,
+  "gpu_session_seconds_limit": 7200,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "sealed_split_sha256": "0b66a598e08b28b8dcfa4a0517ca695abc1b55527f7bb7bc718b213cf769a9d5",
+  "selected_alias": "q25-coder",
+  "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
+  "status": "complete"
+}

@@ -2,6 +2,7 @@
   "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
   "commit": "107c82490299010359d0621792927ab0e238d2a8",
   "finalization_reserve_seconds": 900,
+  "observed_status": "KernelWorkerStatus.COMPLETE",
   "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
   "quota_before": {
     "active_jobs": [],
@@ -130,6 +131,7 @@
   "reference": "shlokbhakta/tabcomplete-r1-heldout",
   "reference_resolution": "Kaggle created the slug from the corrected <=50-character title; authenticated list and status verified this reference.",
   "requested_reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-selected-heldout",
+  "result_sha256": "e5408e6b1cd614d488c2b223b83ce07b961df74f249bb26b9b79664eb04d2351",
   "selected_alias": "q25-coder",
   "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
   "session_seconds_limit": 7200,

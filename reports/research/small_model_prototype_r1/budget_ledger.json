@@ -1,6 +1,6 @@
 {
   "artifact_accounting_note": "Research conversion and adaptation jobs enforced a 12 GiB new-artifact cap independently, including temporary conversions. Kaggle adaptation output stores only allowlisted candidate states. Local quantized artifact inventory and selected export are recorded separately in download_manifest.json; no existing checkpoint was deleted to make space.",
-  "gpu_session_seconds": 11073.928192672,
+  "gpu_session_seconds": 11422.558921329,
   "new_artifact_bytes": 626013440,
   "sessions": [
     {
@@ -79,6 +79,16 @@
       "source": "version 5 progress.json and authenticated Kaggle quota observed after completion",
       "status": "complete",
       "training_input_tokens": 2003684
+    },
+    {
+      "heldout_cases": 1024,
+      "observed_wall_seconds": 348.63072865699996,
+      "quota_used_after_hours": 29.38,
+      "quota_used_before_hours": 29.28,
+      "reference": "shlokbhakta/tabcomplete-r1-heldout",
+      "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
+      "status": "complete",
+      "training_input_tokens": 0
     }
   ],
   "target_quantized_bytes": 396704352,

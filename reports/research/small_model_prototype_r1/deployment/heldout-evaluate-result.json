@@ -1,0 +1,50 @@
+{
+  "phase": "evaluate",
+  "parameters": 494032768,
+  "model_class": "Qwen2ForCausalLM",
+  "model_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "tokenizer_sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8",
+  "learning_rate": 3e-05,
+  "evaluation": {
+    "summary": {
+      "cases": 1024,
+      "valid": 1024,
+      "terminated": 1024,
+      "edit_required": 768,
+      "edit_required_exact_after_state": 768,
+      "no_edit_total": 256,
+      "no_edit_false_positive": 0,
+      "by_action": {
+        "replace": {
+          "total": 256,
+          "valid": 256,
+          "terminated": 256,
+          "exact_after_state": 256,
+          "false_positive": 0
+        },
+        "insert": {
+          "total": 256,
+          "valid": 256,
+          "terminated": 256,
+          "exact_after_state": 256,
+          "false_positive": 0
+        },
+        "delete": {
+          "total": 256,
+          "valid": 256,
+          "terminated": 256,
+          "exact_after_state": 256,
+          "false_positive": 0
+        },
+        "no_edit": {
+          "total": 256,
+          "valid": 256,
+          "terminated": 256,
+          "exact_after_state": 256,
+          "false_positive": 0
+        }
+      },
+      "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim"
+    }
+  }
+}
