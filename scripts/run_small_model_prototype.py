@@ -511,9 +511,12 @@ def submit_selected_stage(plan: dict, stage: str) -> dict:
             or job["selection_sha256"] != digest(decision_path)
         ):
             raise ValueError("selected-model job fingerprint changed")
-        job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
-        save(job_path, job)
-        return job
+        if job["state"] == "submitted":
+            job["observed_status"] = command(
+                "kaggle", "kernels", "status", job["reference"]
+            ).strip()
+            save(job_path, job)
+            return job
     check_budget(plan, session_seconds=7200 if stage == "heldout" else 0,
                  new_bytes=2 * 1024**3 if stage == "conversion" else 0)
     commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
@@ -535,7 +538,7 @@ def submit_selected_stage(plan: dict, stage: str) -> dict:
     )
     reference = f"shlokbhakta/tabcomplete-small-model-prototype-r1-selected-{stage}"
     metadata: dict[str, Any] = {
-        "id": reference, "title": reference.split("/")[1], "code_file": "run.py",
+        "id": reference, "title": f"tabcomplete-r1-{stage}", "code_file": "run.py",
         "language": "python", "kernel_type": "script", "is_private": True,
         "enable_gpu": stage == "heldout", "enable_internet": True,
         "dataset_sources": [],
