@@ -79,7 +79,7 @@ def render_service(model: Path) -> str:
         "After=network.target\n\n[Service]\nType=simple\n"
         f"ExecStart={RUNTIME} -m {model} --host 127.0.0.1 --port 19093 "
         "-t 4 -tb 4 -ngl 0 -c 2304 -b 256 -ub 64 -np 1 "
-        "--cache-ram 128 --no-cache-idle-slots --no-warmup\n"
+        "--cache-ram 128 --ctx-checkpoints 32 --no-cache-idle-slots --no-warmup\n"
         "Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\n"
         "MemoryMax=1500M\n\n[Install]\nWantedBy=default.target\n"
     )

@@ -244,14 +244,14 @@ def extract(db_path: Path) -> dict:
             )
         ):
             continue
-        key = (
+        state_key = (
             record["session_id"],
             record["context_hash"],
             record["pre_state_hash"],
             record["file_sha256"],
             record["region_sha256"],
         )
-        by_state[key].append(record)
+        by_state[state_key].append(record)
     for peers in by_state.values():
         accepted = [row for row in peers if row["explicit_outcome"] == "prediction_accepted"]
         rejected = [row for row in peers if row["explicit_outcome"] == "prediction_rejected"]

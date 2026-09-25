@@ -40,6 +40,7 @@
         "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=472833879\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=414745294",
         "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30393780\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28330281"
       },
+      "ram_available_at_end_bytes": 11088900096,
       "source_contexts": {
         "1024": {
           "actual_input_token_range": [
@@ -127,6 +128,7 @@
         "io": "some avg10=0.00 avg60=0.00 avg300=0.02 total=465275625\nfull avg10=0.00 avg60=0.00 avg300=0.01 total=408228879",
         "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=29583739\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=27527195"
       },
+      "ram_available_at_end_bytes": 11363586048,
       "source_contexts": {
         "1024": {
           "actual_input_token_range": [
@@ -214,6 +216,7 @@
         "io": "some avg10=0.00 avg60=0.00 avg300=0.04 total=465197009\nfull avg10=0.00 avg60=0.00 avg300=0.04 total=408157638",
         "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=29583738\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=27527194"
       },
+      "ram_available_at_end_bytes": 11809062912,
       "source_contexts": {
         "1024": {
           "actual_input_token_range": [
@@ -301,6 +304,7 @@
         "io": "some avg10=0.04 avg60=0.03 avg300=0.08 total=472169209\nfull avg10=0.04 avg60=0.03 avg300=0.06 total=414160951",
         "memory": "some avg10=0.00 avg60=0.00 avg300=0.04 total=30393755\nfull avg10=0.00 avg60=0.00 avg300=0.04 total=28330255"
       },
+      "ram_available_at_end_bytes": 11308367872,
       "source_contexts": {
         "1024": {
           "actual_input_token_range": [

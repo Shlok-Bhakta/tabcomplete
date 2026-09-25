@@ -141,6 +141,23 @@ def freeze(config_path: Path) -> dict:
         plan = json.loads(path.read_text())
         if plan["config_sha256"] != digest(config_path):
             raise ValueError("configuration changed after freeze; register a new plan revision")
+        for inventory in ("existing_artifacts", "fixtures"):
+            for item in plan[inventory].values():
+                file = Path(item["path"])
+                if not file.is_file() or digest(file) != item["sha256"]:
+                    raise ValueError(f"{inventory} changed after freeze: {file}")
+        runtime = ROOT.parent / "tabcomplete/outputs/tools/llama.cpp"
+        environment = plan["environment"]
+        if (
+            platform.node() != environment["host"]
+            or platform.python_version() != environment["python"]
+            or digest(ROOT / "uv.lock") != environment["uv_lock_sha256"]
+            or command("git", "-C", str(runtime), "rev-parse", "HEAD").strip()
+            != environment["runtime_revision"]
+            or digest(runtime / "build/bin/llama-server")
+            != environment["runtime_binary_sha256"]
+        ):
+            raise ValueError("frozen environment changed; register a new plan revision")
         return plan
     existing = {
         alias: {"path": str(file), "bytes": file.stat().st_size, "sha256": digest(file)}
