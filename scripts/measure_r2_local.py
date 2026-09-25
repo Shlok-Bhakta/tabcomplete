@@ -16,7 +16,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-import psutil
 
 from tinycomplete.eval.code_generation import DetailedGeneration, returned_first_line
 from tinycomplete.observability.context import RunContext
@@ -197,6 +196,8 @@ class NativeProvider:
 
 
 def measure(args):
+    import psutil
+
     args.output.mkdir(parents=True, exist_ok=True)
     revision = subprocess.check_output(
         ["git", "-C", str(args.runtime), "rev-parse", "HEAD"], text=True

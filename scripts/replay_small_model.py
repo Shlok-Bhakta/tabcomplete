@@ -150,6 +150,10 @@ def main() -> None:
     parser.add_argument("--diagnostic-saved-idle-cache", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
+    if (args.output / "measurements.jsonl").exists():
+        raise FileExistsError(
+            "replay output already exists; use a new suite or condition directory"
+        )
     if not args.model.is_file():
         raise FileNotFoundError(args.model)
     if (

@@ -1,6 +1,128 @@
 {
-  "downloads": [],
+  "downloads": [
+    {
+      "alias": "q25-coder",
+      "files": [
+        {
+          "bytes": 659,
+          "name": "config.json"
+        },
+        {
+          "bytes": 139,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 988097824,
+          "name": "model.safetensors"
+        },
+        {
+          "bytes": 7031645,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 7228,
+          "name": "tokenizer_config.json"
+        }
+      ],
+      "immutable_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+      "location": "private Kaggle notebook temporary storage; unquantized weights not copied to desktop",
+      "purpose": "matched adaptation",
+      "source": "Qwen/Qwen2.5-Coder-0.5B",
+      "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    },
+    {
+      "alias": "q3-base",
+      "files": [
+        {
+          "bytes": 727,
+          "name": "config.json"
+        },
+        {
+          "bytes": 138,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 1192135096,
+          "name": "model.safetensors"
+        },
+        {
+          "bytes": 7031645,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 9678,
+          "name": "tokenizer_config.json"
+        }
+      ],
+      "immutable_revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+      "location": "private Kaggle notebook temporary storage; unquantized weights not copied to desktop",
+      "purpose": "screening/conversion",
+      "source": "Qwen/Qwen3-0.6B-Base",
+      "weight_sha256": "cd2a512003e2f9f3cd3c32a9c3573f820bb28c940f73c57b1ddaa983d9223eba"
+    },
+    {
+      "alias": "lfm350-base",
+      "files": [
+        {
+          "bytes": 1281,
+          "name": "config.json"
+        },
+        {
+          "bytes": 134,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 708984464,
+          "name": "model.safetensors"
+        },
+        {
+          "bytes": 4733016,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 526,
+          "name": "tokenizer_config.json"
+        }
+      ],
+      "immutable_revision": "9960764e30892e01f29a6dc23df2533fcd8bd5ae",
+      "location": "private Kaggle notebook temporary storage; unquantized weights not copied to desktop",
+      "purpose": "screening/conversion",
+      "source": "LiquidAI/LFM2.5-350M-Base",
+      "weight_sha256": "af70818c41a5cdb3f9587f91de12ff5f7847b8b0a2ba734534205ccea1d98aba"
+    }
+  ],
   "frozen_at": "2026-09-25T04:01:12.379293+00:00",
+  "new_desktop_model_bytes": 626013440,
+  "new_desktop_model_limit_bytes": 2147483648,
+  "quantized_artifacts": [
+    {
+      "alias": "q3-base",
+      "bytes": 396704352,
+      "immutable_revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+      "job_completed_cleanly": true,
+      "local_desktop_path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/collected/conversion-q3/small_model_prototype_r1_conversion/q3-base-Q4_K_M.gguf",
+      "native_replay_verified": true,
+      "precision": "Q4_K_M",
+      "research_conversion_job": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+      "sha256": "dd84ce11f646f36ff8afd594b6bef447f14f2dbf93fa981922b4cad1c3f11e05",
+      "source": "Qwen/Qwen3-0.6B-Base",
+      "source_weight_sha256": "cd2a512003e2f9f3cd3c32a9c3573f820bb28c940f73c57b1ddaa983d9223eba"
+    },
+    {
+      "alias": "lfm350-base",
+      "bytes": 229309088,
+      "immutable_revision": "9960764e30892e01f29a6dc23df2533fcd8bd5ae",
+      "job_completed_cleanly": false,
+      "local_desktop_path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/collected/lfm-q4/small_model_prototype_r1_lfm_conversion/lfm350-base-Q4_K_M.gguf",
+      "native_replay_verified": true,
+      "precision": "Q4_K_M",
+      "research_conversion_job": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+      "sha256": "f099bfa59808c55d022b89a5d0c77bd135b3cc62a05bbd351e685978dc86b0ab",
+      "source": "LiquidAI/LFM2.5-350M-Base",
+      "source_weight_sha256": "af70818c41a5cdb3f9587f91de12ff5f7847b8b0a2ba734534205ccea1d98aba"
+    }
+  ],
+  "recorded_at": "2026-09-25T05:14:35.632068+00:00",
   "reused": {
     "p12-control-fp16": {
       "bytes": 2013387056,

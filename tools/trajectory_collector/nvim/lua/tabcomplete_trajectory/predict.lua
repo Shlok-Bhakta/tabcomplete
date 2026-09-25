@@ -13,6 +13,7 @@ local opts = {
   precision = "Q4_K_M",
   adapter_identity = "none",
   debounce_ms = 200,
+  expiry_ms = 30000,
   synthetic = false,
   automatic_gates_passed = false,
 }
@@ -20,6 +21,8 @@ local generation = 0
 local pending = nil
 local active = nil
 local timer = nil
+local expiry_timer = nil
+local applying = false
 local last_status = "idle"
 local group = nil
 M._request_impl = nil -- headless integration seam; never used by the installed client
@@ -40,8 +43,21 @@ local function close_preview()
   end
 end
 
+local function lifecycle(state, outcome, reason)
+  if not state then return end
+  collector.emit(state.bufnr, "heartbeat", {
+    prediction_id = state.prediction_id, prediction_lifecycle = outcome,
+    reason = reason, recorded_at_ms = util.now_ms(), synthetic = opts.synthetic,
+  })
+end
+
 local function clear(reason)
   generation = generation + 1
+  if expiry_timer then expiry_timer:stop() end
+  if pending then lifecycle(pending.state, "cancelled", reason or "cleared") end
+  if active and reason ~= "accepted" and reason ~= "explicitly rejected" then
+    lifecycle(active, reason == "expired" and "expired" or "invalidated", reason or "cleared")
+  end
   if pending and pending.process then
     pcall(pending.process.kill, pending.process, "sigterm")
   end
@@ -132,10 +148,12 @@ end
 
 local function show(state, action)
   if action.action == "no_edit" then
+    lifecycle(state, "no_edit", "explicit model no-edit")
     last_status = "no_edit"
     return
   end
   if action.text == state.region then
+    lifecycle(state, "unchanged", "replacement matches editable region")
     last_status = "unchanged replacement"
     return
   end
@@ -167,6 +185,14 @@ local function show(state, action)
     action = action.action, shown_at_ms = state.shown_at_ms, context_hash = state.context_hash,
     pre_state_hash = state.content_hash, synthetic = opts.synthetic,
   })
+  if not expiry_timer then expiry_timer = vim.uv.new_timer() end
+  expiry_timer:stop()
+  local prediction_id = state.prediction_id
+  expiry_timer:start(opts.expiry_ms, 0, function()
+    vim.schedule(function()
+      if active and active.prediction_id == prediction_id then clear("expired") end
+    end)
+  end)
   last_status = "proposal shown"
 end
 
@@ -190,12 +216,29 @@ function M.predict()
       vim.schedule(function()
         if current_generation ~= generation or not pending or pending.state ~= state then return end
         pending = nil
-        if result.code ~= 0 then last_status = "model-service outage"; return end
-        if not still_current(state) then last_status = "stale response dropped"; return end
+        if result.code ~= 0 then
+          lifecycle(state, result.code == 28 and "timeout" or "transport_failure",
+            "model service returned exit code " .. tostring(result.code))
+          last_status = "model-service outage"
+          return
+        end
+        if not still_current(state) then
+          lifecycle(state, "stale_response", "editor state changed before response")
+          last_status = "stale response dropped"
+          return
+        end
         local action, parse_err = parse_sse(result.stdout or "")
-        if not action then last_status = parse_err; return end
+        if not action then
+          lifecycle(state, "invalid_output", parse_err)
+          last_status = parse_err
+          return
+        end
         state.responded_at_ms = util.now_ms()
-        if mode == "shadow" then last_status = "shadow response"; return end
+        if mode == "shadow" then
+          lifecycle(state, "shadow_completed", "proposal was not displayed")
+          last_status = "shadow response"
+          return
+        end
         show(state, action)
       end)
   end
@@ -220,12 +263,14 @@ function M.accept()
   local replacement = vim.split(action.text, "\n", { plain = true })
   -- Setting the same local value closes any prior undo block without erasing it.
   vim.bo[state.bufnr].undolevels = vim.bo[state.bufnr].undolevels
+  applying = true
   vim.api.nvim_buf_set_text(state.bufnr, state.row, state.start_col, state.row, state.end_col,
     replacement)
   collector.log_prediction_accepted({ prediction_id = state.prediction_id,
     accepted_chars = vim.fn.strchars(action.text), accepted_lines = #replacement,
     total_chars = vim.fn.strchars(action.text), synthetic = opts.synthetic,
     accepted_at_ms = util.now_ms() })
+  applying = false
   clear("accepted")
   return true
 end
@@ -264,7 +309,9 @@ function M.setup(options)
   if group then pcall(vim.api.nvim_del_augroup_by_id, group) end
   group = vim.api.nvim_create_augroup("TabCompletePredict", { clear = true })
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "BufLeave", "BufWipeout" }, {
-    group = group, callback = function() clear("invalidated by editor change") end,
+    group = group, callback = function()
+      if not applying then clear("invalidated by editor change") end
+    end,
   })
   vim.api.nvim_create_autocmd({ "TextChangedI", "CursorMovedI" }, {
     group = group, callback = function()

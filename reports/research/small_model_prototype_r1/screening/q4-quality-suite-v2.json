@@ -1,0 +1,12 @@
+{
+  "suite_revision": "small-q4-v2",
+  "registered_at": "2026-09-25T05:21:00.713684+00:00",
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "line_fixture_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+  "quality_context_tokens": 8192,
+  "interactive_context_tokens_unchanged": 2304,
+  "change_reason": "The q3 Q4 line run under the interactive 2304-token limit stopped after 18 cases when the next fixed prompt tokenized to 3510 tokens. Use an explicit 8192-token server context for frozen line quality only. Preserve partial v1 outputs and do not change source prompts or scoring.",
+  "max_new_tokens": 96,
+  "decode": "greedy",
+  "stopping": "native first newline or EOS"
+}

@@ -35,6 +35,8 @@ def main():
         "--plan", type=Path, default=Path("reports/research/model_data_r2/preregistered_plan.json")
     )
     parser.add_argument("--threads", type=int, default=2)
+    parser.add_argument("--context-tokens", type=int, default=2304)
+    parser.add_argument("--suite-revision", default="r2-original")
     args = parser.parse_args()
     httpx.get(args.url + "/health", timeout=10).raise_for_status()
     provider = NativeProvider(args.url, args.alias)
@@ -62,6 +64,8 @@ def main():
             runtime_revision="f072b103714dfa1eee531f80b24512faf38e3dd2",
             hardware=args.hardware,
             threads=args.threads,
+            runtime_context_tokens=args.context_tokens,
+            quality_suite_revision=args.suite_revision,
             concurrency=1,
             stopping="native first newline or EOS, ceiling 96"
             if line_mode

@@ -1,0 +1,135 @@
+{
+  "commit": "53f39357b3c339f16602fa6cc283fbbf2c7e2ff4",
+  "finalists": [
+    "q25-coder",
+    "q3-base"
+  ],
+  "finalization_reserve_seconds": 1800,
+  "observed_status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.ERROR\"",
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "quota_before": {
+    "active_jobs": [],
+    "jobs": [
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+        "status": "shlokbhakta/tabcomplete-r1-lfm-q4-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-context",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-context has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-evaluation",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-evaluation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-baseline has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "unknown"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/notebookd2edcfa65c",
+        "status": "unknown"
+      }
+    ],
+    "observed_at": "2026-09-25T05:06:20.102551+00:00",
+    "remaining": 18.45,
+    "renewal": "2026-09-26T00:00:00",
+    "source": "authenticated Kaggle CLI quota and kernel status",
+    "total": 45.0,
+    "units": "Kaggle account-hours",
+    "used": 26.55
+  },
+  "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+  "selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "session_seconds_limit": 28800,
+  "state": "submitted",
+  "submitted_at": "2026-09-25T05:06:20.102526+00:00"
+}

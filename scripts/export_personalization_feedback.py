@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION = "personalization-feedback-evidence-v1"
+SCHEMA_VERSION = "personalization-feedback-evidence-v2"
 PREDICTION_TYPES = {
     "prediction_requested",
     "prediction_shown",
@@ -23,11 +23,38 @@ PREDICTION_TYPES = {
     "prediction_partially_accepted",
     "prediction_rejected",
 }
+LIFECYCLE_EVENT_TYPE = "heartbeat"
 RESOLVED = {
     "prediction_accepted",
     "prediction_partially_accepted",
     "prediction_rejected",
 }
+
+
+def same_file(row: sqlite3.Row, file_path: str | None) -> bool:
+    if not file_path:
+        return False
+    try:
+        return json.loads(row["payload_json"] or "{}").get("path") == file_path
+    except json.JSONDecodeError:
+        return False
+
+
+def observation_window(
+    anchor: dict | None, later: list[sqlite3.Row], file_path: str | None, milliseconds: int
+) -> dict:
+    if not anchor:
+        return {"observed": False, "censored": True, "edit_event_ids": []}
+    limit = anchor["timestamp_ms"] + milliseconds
+    observed = any(row["timestamp_ms"] >= limit for row in later)
+    edits = [
+        row["event_id"]
+        for row in later
+        if row["event_type"] == "edit_delta"
+        and row["timestamp_ms"] <= limit
+        and same_file(row, file_path)
+    ]
+    return {"observed": observed, "censored": not observed, "edit_event_ids": edits}
 
 
 def extract(db_path: Path) -> dict:
@@ -56,14 +83,20 @@ def extract(db_path: Path) -> dict:
                 )
             previous = sequence
             kind = row["event_type"]
-            if kind not in PREDICTION_TYPES:
+            if kind not in PREDICTION_TYPES and kind != LIFECYCLE_EVENT_TYPE:
                 continue
-            counts[kind] += 1
             try:
                 payload = json.loads(row["payload_json"] or "{}")
             except json.JSONDecodeError:
                 counts["malformed_payload"] += 1
                 continue
+            if kind == LIFECYCLE_EVENT_TYPE:
+                lifecycle = payload.get("prediction_lifecycle")
+                if not isinstance(lifecycle, str) or not lifecycle:
+                    continue
+                counts["lifecycle_" + lifecycle] += 1
+            else:
+                counts[kind] += 1
             prediction_id = payload.get("prediction_id")
             if not isinstance(prediction_id, str) or not prediction_id:
                 counts["missing_prediction_id"] += 1
@@ -90,6 +123,7 @@ def extract(db_path: Path) -> dict:
         requested = by_type.get("prediction_requested")
         shown = by_type.get("prediction_shown")
         resolutions = [event for event in events if event["type"] in RESOLVED]
+        lifecycle_events = [event for event in events if event["type"] == LIFECYCLE_EVENT_TYPE]
         flags = []
         if not requested:
             flags.append("missing_request")
@@ -109,6 +143,26 @@ def extract(db_path: Path) -> dict:
         if any(gap["session_id"] == proposal["session_id"] for gap in sequence_gaps):
             flags.append("session_sequence_gap")
         outcome = resolutions[0]["type"] if len(resolutions) == 1 else None
+        anchor = resolutions[0] if len(resolutions) == 1 else shown
+        file_path = payload.get("file")
+        later = (
+            [
+                row
+                for row in sessions[proposal["session_id"]]
+                if row["sequence_number"] > anchor["sequence"]
+            ]
+            if anchor
+            else []
+        )
+
+        next_save = next(
+            (
+                row
+                for row in later
+                if row["event_type"] == "buffer_write" and same_file(row, file_path)
+            ),
+            None,
+        )
         record = {
             "session_id": proposal["session_id"],
             "prediction_id": proposal["prediction_id"],
@@ -120,21 +174,119 @@ def extract(db_path: Path) -> dict:
             "resolution_event_id": resolutions[0]["event_id"] if len(resolutions) == 1 else None,
             "context_hash": payload.get("context_hash"),
             "pre_state_hash": payload.get("pre_state_hash"),
+            "file_sha256": hashlib.sha256(file_path.encode()).hexdigest()
+            if isinstance(file_path, str)
+            else None,
+            "region_sha256": hashlib.sha256(
+                json.dumps(
+                    {
+                        "start": shown["payload"].get("proposed_start"),
+                        "end": shown["payload"].get("proposed_end"),
+                    },
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()
+            if shown
+            and shown["payload"].get("proposed_start") is not None
+            and shown["payload"].get("proposed_end") is not None
+            else None,
+            "proposal_sha256": hashlib.sha256(
+                json.dumps(
+                    {
+                        "action": shown["payload"].get("action"),
+                        "text": shown["payload"].get("proposed_text"),
+                    },
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()
+            if shown
+            and isinstance(shown["payload"].get("action"), str)
+            and isinstance(shown["payload"].get("proposed_text"), str)
+            else None,
+            "display_timestamp_ms": shown["timestamp_ms"] if shown else None,
             "model": payload.get("model"),
             "model_revision": payload.get("model_revision"),
             "precision": payload.get("precision"),
             "adapter_identity": payload.get("adapter_identity"),
+            "lifecycle": [
+                {
+                    "event_id": event["event_id"],
+                    "kind": event["payload"]["prediction_lifecycle"],
+                    "reason": event["payload"].get("reason"),
+                    "timestamp_ms": event["timestamp_ms"],
+                }
+                for event in lifecycle_events
+            ],
+            "five_second_outcome": observation_window(anchor, later, file_path, 5_000),
+            "thirty_second_outcome": observation_window(anchor, later, file_path, 30_000),
+            "next_save_event_id": next_save["event_id"] if next_save else None,
+            "next_save_censored": next_save is None,
+            "undo_event_id": None,
+            "undo_semantics_observable": False,
             "ambiguity_flags": flags,
         }
         evidence.append(record)
-        # A preference pair needs two alternatives for the same verified state.
-        # One accept or reject event alone does not supply that comparison.
+
+    # Candidate comparisons require the same state, file, region and distinct
+    # displayed actions. Replay verification remains a separate promotion gate.
+    by_state: dict[tuple, list[dict]] = defaultdict(list)
+    for record in evidence:
+        if not all(
+            record.get(key)
+            for key in (
+                "context_hash",
+                "pre_state_hash",
+                "file_sha256",
+                "region_sha256",
+                "proposal_sha256",
+            )
+        ):
+            continue
+        key = (
+            record["session_id"],
+            record["context_hash"],
+            record["pre_state_hash"],
+            record["file_sha256"],
+            record["region_sha256"],
+        )
+        by_state[key].append(record)
+    for peers in by_state.values():
+        accepted = [row for row in peers if row["explicit_outcome"] == "prediction_accepted"]
+        rejected = [row for row in peers if row["explicit_outcome"] == "prediction_rejected"]
+        for preferred in accepted:
+            for dispreferred in rejected:
+                if (
+                    preferred["proposal_sha256"] == dispreferred["proposal_sha256"]
+                    or abs(preferred["display_timestamp_ms"] - dispreferred["display_timestamp_ms"])
+                    > 300_000
+                ):
+                    continue
+                flags = sorted(
+                    set(preferred["ambiguity_flags"] + dispreferred["ambiguity_flags"])
+                    | {"replay_not_verified"}
+                )
+                defensible_pairs.append(
+                    {
+                        "session_id": preferred["session_id"],
+                        "context_hash": preferred["context_hash"],
+                        "pre_state_hash": preferred["pre_state_hash"],
+                        "preferred_prediction_id": preferred["prediction_id"],
+                        "dispreferred_prediction_id": dispreferred["prediction_id"],
+                        "preferred_resolution_event_id": preferred["resolution_event_id"],
+                        "dispreferred_resolution_event_id": dispreferred["resolution_event_id"],
+                        "ambiguity_flags": flags,
+                    }
+                )
 
     evidence.sort(key=lambda row: (row["session_id"], row["prediction_id"]))
-    distinct_sessions = len({r["session_id"] for r in evidence if not r["ambiguity_flags"]})
+    distinct_sessions = len(
+        {pair["session_id"] for pair in defensible_pairs if not pair["ambiguity_flags"]}
+    )
     readiness = {
         "enabled": False,
-        "defensible_preference_pairs": len(defensible_pairs),
+        "defensible_preference_pairs": sum(
+            not pair["ambiguity_flags"] for pair in defensible_pairs
+        ),
         "distinct_verified_sessions": distinct_sessions,
         "minimum_pairs": 256,
         "minimum_sessions": 3,
@@ -172,7 +324,8 @@ def main() -> None:
             {
                 "sessions": result["sessions_seen"],
                 "proposals": len(result["evidence"]),
-                "defensible_pairs": len(result["candidate_preference_pairs"]),
+                "candidate_pairs": len(result["candidate_preference_pairs"]),
+                "defensible_pairs": result["readiness"]["defensible_preference_pairs"],
                 "sequence_gaps": len(result["sequence_gaps"]),
                 "ready": False,
             }

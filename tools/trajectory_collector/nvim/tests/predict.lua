@@ -102,8 +102,31 @@ assert(kinds.prediction_requested == 8)
 assert(kinds.prediction_shown == 4)
 assert(kinds.prediction_accepted == 3)
 assert(kinds.prediction_rejected == 1)
+local lifecycle = {}
+for _, event in ipairs(collector.queue) do
+  if event.event_type == "heartbeat" and event.payload.prediction_lifecycle then
+    lifecycle[event.payload.prediction_lifecycle] = (lifecycle[event.payload.prediction_lifecycle] or 0) + 1
+  end
+end
+assert(lifecycle.no_edit == 1)
+assert(lifecycle.cancelled == 1)
+assert(lifecycle.stale_response == 1)
+assert(lifecycle.transport_failure == 1)
 assert(not predict.set_mode("automatic"))
 assert(predict.status().mode == "manual")
+predict.setup({ expiry_ms = 30 })
+response("R\nx")
+assert(predict.predict())
+assert(vim.wait(1000, function() return predict.status().proposal_active end))
+assert(vim.wait(1000, function() return predict.status().state == "expired" end))
+assert(not predict.status().proposal_active)
+local expired = false
+for _, event in ipairs(collector.queue) do
+  if event.event_type == "heartbeat" and event.payload.prediction_lifecycle == "expired" then
+    expired = true
+  end
+end
+assert(expired)
 vim.fn.delete(file)
 vim.fn.delete(other)
 print("predict headless safety checks passed")
