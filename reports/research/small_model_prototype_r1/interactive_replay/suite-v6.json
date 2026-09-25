@@ -1,0 +1,8 @@
+{
+  "suite_revision": 6,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "explanation": "Revision 5 used two checkpoints; in the full 24-token replay cache_n stayed zero. Eight checkpoints in revision 6 also yielded cache_n=0. Both runs were stopped as failed diagnostics. A short eight-token same-prompt probe had shown reuse at two checkpoints, but it did not generalize to the frozen 24-token replay.",
+  "model_revision_unchanged": true,
+  "source_states_unchanged": true,
+  "backend_revision_unchanged": true
+}

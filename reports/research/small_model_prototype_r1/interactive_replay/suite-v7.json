@@ -1,0 +1,8 @@
+{
+  "suite_revision": 7,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "explanation": "Revision 7 retains the normal 32 active context checkpoints and cache-ram 128, and toggles only saved idle slot caching. The normal configuration already disables optional saved idle slots with --no-cache-idle-slots. This diagnostic can compare saved idle snapshots without discarding active prompt state.",
+  "model_revision_unchanged": true,
+  "source_states_unchanged": true,
+  "backend_revision_unchanged": true
+}

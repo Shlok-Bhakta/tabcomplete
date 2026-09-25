@@ -147,7 +147,7 @@ def main() -> None:
     parser.add_argument("--runtime", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--port", type=int, default=19094)
-    parser.add_argument("--diagnostic-no-saved-cache", action="store_true")
+    parser.add_argument("--diagnostic-saved-idle-cache", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     if not args.model.is_file():
@@ -186,13 +186,13 @@ def main() -> None:
         "--cache-ram",
         "128",
         "--ctx-checkpoints",
-        "2" if args.diagnostic_no_saved_cache else "32",
-        "--no-cache-idle-slots",
+        "32",
+        "--cache-idle-slots" if args.diagnostic_saved_idle_cache else "--no-cache-idle-slots",
         "--no-warmup",
         "--perf",
     ]
-    # Keep the minimum tested checkpoint count that retains active sequence reuse.
-    # Zero or one checkpoints, or cache-ram=0, removes it in this runtime.
+    # Active context checkpoints remain at 32. Saved idle slots are optional;
+    # compare them separately because lowering checkpoint count loses reuse.
     log = (args.output / "server.log").open("w")
     start = time.perf_counter()
     process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
@@ -240,7 +240,7 @@ def main() -> None:
             for repetition in range(2):
                 before = proc_memory(process.pid)
                 result = generate(
-                    url, state["prompt"], cache_prompt=not args.diagnostic_no_saved_cache
+                    url, state["prompt"], cache_prompt=True
                 )
                 after = proc_memory(process.pid)
                 records.append(
@@ -278,10 +278,10 @@ def main() -> None:
             "slots": 1,
             "context_tokens": 2304,
             "cache_ram_mib": 128,
-            "context_checkpoints": 2 if args.diagnostic_no_saved_cache else 32,
+            "context_checkpoints": 32,
             "batch_tokens": 256,
             "microbatch_tokens": 64,
-            "diagnostic_no_saved_cache": args.diagnostic_no_saved_cache,
+            "saved_idle_slots": args.diagnostic_saved_idle_cache,
             "model_load_seconds": load_seconds,
             "peak_memory": peak,
             "post_request_memory": proc_memory(process.pid),

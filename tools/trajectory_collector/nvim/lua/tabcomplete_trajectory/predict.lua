@@ -218,6 +218,8 @@ function M.accept()
   local action = state.action
   if action.action ~= "replace" then return false, "no edit" end
   local replacement = vim.split(action.text, "\n", { plain = true })
+  -- Setting the same local value closes any prior undo block without erasing it.
+  vim.bo[state.bufnr].undolevels = vim.bo[state.bufnr].undolevels
   vim.api.nvim_buf_set_text(state.bufnr, state.row, state.start_col, state.row, state.end_col,
     replacement)
   collector.log_prediction_accepted({ prediction_id = state.prediction_id,

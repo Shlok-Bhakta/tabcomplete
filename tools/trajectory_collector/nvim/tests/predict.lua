@@ -32,6 +32,27 @@ assert(vim.wait(1000, function() return predict.status().proposal_active end))
 assert(predict.accept())
 assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "hi")
 
+-- Insert at the cursor, then undo the single buffer change.
+vim.opt.virtualedit = "onemore"
+vim.api.nvim_win_set_cursor(0, { 1, 2 })
+response("R\n!")
+assert(predict.predict())
+assert(vim.wait(1000, function() return predict.status().proposal_active end))
+assert(predict.accept())
+assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "hi!")
+vim.cmd("undo")
+assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "hi")
+
+-- Delete the declared region, then restore it with undo.
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+response("R\n")
+assert(predict.predict())
+assert(vim.wait(1000, function() return predict.status().proposal_active end))
+assert(predict.accept())
+assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "")
+vim.cmd("undo")
+assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "hi")
+
 response("R\n")
 assert(predict.predict())
 assert(vim.wait(1000, function() return predict.status().proposal_active end))
@@ -50,13 +71,39 @@ assert(vim.wait(1000, function() return not predict.status().in_flight end))
 assert(not predict.status().proposal_active)
 assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "human")
 
+-- A response after a file switch must not become a proposal.
+local delayed
+predict._request_impl = function(_, _, callback)
+  delayed = callback
+  return { kill = function() end }
+end
+assert(predict.predict())
+local other = vim.fn.tempname() .. ".js"
+vim.fn.writefile({ "const value = 1;" }, other)
+vim.cmd("edit " .. vim.fn.fnameescape(other))
+delayed({ code = 0, stdout = "data: " .. vim.json.encode({ content = "R\nwrong", stop = false })
+  .. "\ndata: " .. vim.json.encode({ content = "", stop = true, stop_type = "eos" }) .. "\n" })
+assert(vim.wait(1000, function() return not predict.status().in_flight end))
+assert(not predict.status().proposal_active)
+assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "const value = 1;")
+
+-- Service failure leaves the buffer intact.
+predict._request_impl = function(_, _, callback)
+  callback({ code = 7, stdout = "" })
+  return { kill = function() end }
+end
+assert(predict.predict())
+assert(vim.wait(1000, function() return predict.status().state == "model-service outage" end))
+assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "const value = 1;")
+
 local kinds = {}
 for _, event in ipairs(collector.queue) do kinds[event.event_type] = (kinds[event.event_type] or 0) + 1 end
-assert(kinds.prediction_requested == 4)
-assert(kinds.prediction_shown == 2)
-assert(kinds.prediction_accepted == 1)
+assert(kinds.prediction_requested == 8)
+assert(kinds.prediction_shown == 4)
+assert(kinds.prediction_accepted == 3)
 assert(kinds.prediction_rejected == 1)
 assert(not predict.set_mode("automatic"))
 assert(predict.status().mode == "manual")
 vim.fn.delete(file)
+vim.fn.delete(other)
 print("predict headless safety checks passed")
