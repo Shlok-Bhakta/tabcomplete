@@ -193,7 +193,6 @@
       "total_parameters": 596049920
     }
   },
-  "plan_revision": 2,
   "protocol": {
     "causal_cases": 200,
     "context_source_targets": [
@@ -312,9 +311,7 @@
     "units": "Kaggle account-hours",
     "used": 26.19
   },
-  "revision_reason": "The first screening notebook loaded both approved checkpoints but stopped before scoring because the smoke record read nonexistent DetailedGeneration.generated_tokens. Version 2 uses DetailedGeneration.tokens and passes this campaign plan hash to the line evaluator. The model, fixture, prompt, and decode rules are unchanged. The failed 93.14-second session is retained in the budget ledger.",
   "schema_version": 1,
   "sealed_test_opened": false,
-  "source_commit": "fb1e868bf6e04e40660574e1ff5162071e7d3f1f",
-  "supersedes_sha256": "600bbcdee6a10f78c4faad6de59e54983683a58f3a19d81d03428e967fb5f332"
+  "source_commit": "fb1e868bf6e04e40660574e1ff5162071e7d3f1f"
 }

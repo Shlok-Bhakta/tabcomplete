@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--alias", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--plan-sha", default=None)
     args = parser.parse_args()
     rows = [json.loads(line) for line in args.suite.read_text().splitlines()]
     for case in rows:
@@ -85,7 +86,8 @@ def main():
         campaign_id="tabcomplete-model-data-r2",
         tokenizer_sha256=file_sha256(args.model / "tokenizer.json"),
         stopping="incremental first token containing newline or EOS; ceiling 96",
-        plan_sha256=file_sha256(Path("reports/research/model_data_r2/preregistered_plan.json")),
+        plan_sha256=args.plan_sha
+        or file_sha256(Path("reports/research/model_data_r2/preregistered_plan.json")),
         model_inventory={
             "class": type(provider.model).__name__,
             "parameters": sum(parameter.numel() for parameter in provider.model.parameters()),

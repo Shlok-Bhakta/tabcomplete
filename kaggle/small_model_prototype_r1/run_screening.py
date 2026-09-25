@@ -106,7 +106,7 @@ def main():
             record.update(model_class=type(provider.model).__name__, total_parameters=actual,
                           tokenizer_class=type(provider.tokenizer).__name__,
                           smoke={"text": smoke.text, "finish_reason": smoke.finish_reason,
-                                 "tokens": smoke.generated_tokens},
+                                 "tokens": smoke.tokens},
                           peak_gpu_bytes=torch.cuda.max_memory_allocated())
             if not smoke.text or not all(torch.isfinite(p).all().item() for p in list(provider.model.parameters())[:1]):
                 raise ValueError("smoke produced empty or nonfinite output")
@@ -131,7 +131,8 @@ def main():
             save(state)
             (OUT / (alias + "-line")).mkdir(exist_ok=True)
             run([sys.executable, str(ROOT / "scripts/evaluate_causal_line.py"), "--suite", str(lines[0]),
-                 "--model", str(model_path), "--alias", alias, "--output", str(OUT / (alias + "-line"))],
+                 "--model", str(model_path), "--alias", alias, "--output", str(OUT / (alias + "-line")),
+                 "--plan-sha", PLAN_SHA],
                  alias + "-line")
             record["status"] = "complete"
             record["elapsed_seconds"] = time.monotonic() - START

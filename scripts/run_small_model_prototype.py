@@ -245,7 +245,8 @@ def check_budget(
 
 
 def submit_screening(plan: dict) -> dict:
-    job_path = REPORT / "screening/job.json"
+    revision = plan.get("plan_revision", 1)
+    job_path = REPORT / f"screening/job-v{revision}.json"
     if job_path.exists():
         job = json.loads(job_path.read_text())
         if job["plan_sha256"] != digest(REPORT / "plan.json"):
@@ -268,7 +269,7 @@ def submit_screening(plan: dict) -> dict:
             "__PLAN_SHA__", digest(REPORT / "plan.json")
         )
     )
-    reference = "shlokbhakta/tabcomplete-small-model-prototype-r1-screening"
+    reference = f"shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v{revision}"
     save(
         folder / "kernel-metadata.json",
         {
