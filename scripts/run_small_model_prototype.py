@@ -418,7 +418,9 @@ def submit_adaptation(plan: dict) -> dict:
         job_path.unlink()
     check_budget(plan, session_seconds=28_800, input_tokens=4_000_000)
     commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
-    if command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no").strip():
+    changed = command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no")
+    own_job = str(job_path.relative_to(ROOT))
+    if any(line[3:] != own_job for line in changed.splitlines()):
         raise RuntimeError("commit scientific code before Kaggle submission")
     remote = command("git", "ls-remote", "origin", "refs/heads/research/small-model-prototype-r1")
     if remote.split()[0] != commit:
