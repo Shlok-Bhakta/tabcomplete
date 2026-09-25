@@ -8,6 +8,7 @@ from train_small_next_edit import (  # noqa: E402
     EFFECTIVE_BATCH,
     disposable_fixture_rows,
     encode_rows,
+    ordered_training_rows,
 )
 
 
@@ -48,6 +49,15 @@ def test_disposable_fixture_has_explicit_no_edit_and_deletion_cues() -> None:
         assert item["history_before"] == ""
         assert item["history_replacement"] == item["current"]
         assert item["after"] == (item["current"] if item["action"] == "no_edit" else "")
+
+
+def test_training_order_is_stable_without_mutating_source() -> None:
+    rows = [{"id": f"state-{i}"} for i in range(32)]
+    first = ordered_training_rows(rows)
+    second = ordered_training_rows(list(reversed(rows)))
+    assert [row["id"] for row in first] == [row["id"] for row in second]
+    assert [row["id"] for row in first] != [row["id"] for row in rows]
+    assert [row["id"] for row in rows] == [f"state-{i}" for i in range(32)]
 
 
 def test_example_weighted_accumulation_matches_full_update() -> None:

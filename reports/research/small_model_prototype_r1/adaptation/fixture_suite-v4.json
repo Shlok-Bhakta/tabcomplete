@@ -1,0 +1,27 @@
+{
+  "schema_version": 4,
+  "registered_before_v5_outputs": true,
+  "parent_plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "finalist_selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "v2_baselines_sha256": "73ea81854126c116d4f3b898f4d66ae5814a58851eccdb25e09c0c16ffc2f755",
+  "v4_diagnostic_sha256": "838d04dfe5ba87cdbf2d46fec295244a12fe9e72a4ddfaf9de6ab96ae91432e0",
+  "reason": "V4's eight optimizer updates on a balanced 64-state format task produced q3 no-edit actions on every case and no terminated q25 action. The model had too few updates to demonstrate both action choices; the previous trainer counted attempted steps without reporting skipped scaler steps or a weight delta. V5 adds measured applied steps and weight movement and uses four-example accumulation only for this disposable diagnostic. The production pilot still uses effective batch 16. No development or held-out adaptation outcome has been viewed.",
+  "v5_fixture": {
+    "source": "disposable synthetic family 99; no editor task quality claim",
+    "states": 64,
+    "action_counts": {"no_edit": 32, "delete": 32},
+    "ordered_rows_sha256": "a93bc94949855a80e3a2b01a69450d5a1225f118606968b0c2eaeab72957cdfe",
+    "passes": 2,
+    "learning_rate": 0.0001,
+    "effective_batch_examples": 4,
+    "gate": "An applied optimizer step, nonzero sampled first-layer weight movement, one valid terminated exact no-edit, and one valid terminated exact deletion. This is only an implementation check."
+  },
+  "main_training_order": "Sort by immutable example id, then shuffle with Python Random(271828), identically for both finalists; no data/split content change.",
+  "main_training_order_sha256": "90b0a147f2fa30c0e49e3e38432222aa860a09ab6e3b43e0b1e845bae452bf20",
+  "learning_rate_probe_first_1024_action_counts": {"replace": 257, "insert": 263, "delete": 264, "no_edit": 240},
+  "main_effective_batch_examples": 16,
+  "main_training_passes": 1,
+  "main_pilot_lr_choices": [0.00001, 0.00003],
+  "main_train_development_heldout_contents_changed": false,
+  "sealed_heldout_opened": false
+}

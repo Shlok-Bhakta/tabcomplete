@@ -1,6 +1,6 @@
 {
   "artifact_accounting_note": "Persistent new research q3 and LFM Q4 files total 626,013,440 bytes. The LFM desktop copy was removed after screening; only q3 Q4 remains newly added on desktop. Temporary research conversions were bounded by per-job 12 GiB checks; adaptation output will be added when observed.",
-  "gpu_session_seconds": 5570.907775121,
+  "gpu_session_seconds": 5938.848790991,
   "new_artifact_bytes": 626013440,
   "sessions": [
     {
@@ -57,8 +57,18 @@
       "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
       "status": "partial_fixture_gate",
       "training_input_tokens": 46072
+    },
+    {
+      "kaggle_kernel_version": 4,
+      "observed_wall_seconds": 367.94101587,
+      "quota_used_after_hours": 27.85,
+      "quota_used_before_hours": 27.75,
+      "reason": "With eight effective-batch-16 updates, q3 produced N for every case and q25 no terminated action; no probe or main pilot started.",
+      "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+      "status": "partial_fixture_gate",
+      "training_input_tokens": 8624
     }
   ],
   "target_quantized_bytes": 396704352,
-  "training_input_tokens": 89192
+  "training_input_tokens": 97816
 }

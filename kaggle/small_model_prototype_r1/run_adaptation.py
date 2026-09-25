@@ -134,7 +134,9 @@ def main():
     sys.path.insert(0, str(ROOT / "src"))
     sys.path.insert(0, str(ROOT / "scripts"))
     from huggingface_hub import snapshot_download
-    from train_small_next_edit import disposable_fixture_rows, encode_rows, read_rows
+    from train_small_next_edit import (
+        disposable_fixture_rows, encode_rows, ordered_training_rows, read_rows,
+    )
     from transformers import AutoTokenizer
 
     data_dir = OUT / "data"
@@ -144,7 +146,7 @@ def main():
         if sha(data_dir / (split + ".jsonl")) != expected:
             raise ValueError("synthetic adaptation data changed")
     fixture_suite_path = (
-        ROOT / "reports/research/small_model_prototype_r1/adaptation/fixture_suite-v3.json"
+        ROOT / "reports/research/small_model_prototype_r1/adaptation/fixture_suite-v4.json"
     )
     if sha(fixture_suite_path) != FIXTURE_SUITE_SHA:
         raise ValueError("training-only fixture suite changed")
@@ -169,14 +171,18 @@ def main():
         if sha(model_path / "model.safetensors") != expected_weight:
             raise ValueError("downloaded checkpoint changed")
         tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=False)
-        train_rows = read_rows(data_dir / "train.jsonl")
+        train_rows = ordered_training_rows(read_rows(data_dir / "train.jsonl"))
+        order_hash = hashlib.sha256("\n".join(row["id"] for row in train_rows).encode()).hexdigest()
+        if order_hash != fixture_suite["main_training_order_sha256"]:
+            raise ValueError("ordered adaptation examples changed")
+        record["training_order_sha256"] = order_hash
         inventory, _ = encode_rows(tokenizer, train_rows)
         per_pass = sum(row["input_tokens"] for row in inventory)
         fixture_rows = disposable_fixture_rows()
         fixture_payload = "".join(
             json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n" for row in fixture_rows
         ).encode()
-        fixture_sha = fixture_suite["v4_fixture"]["ordered_rows_sha256"]
+        fixture_sha = fixture_suite["v5_fixture"]["ordered_rows_sha256"]
         if hashlib.sha256(fixture_payload).hexdigest() != fixture_sha:
             raise ValueError("training-only fixture rows changed")
         fixture_inventory, _ = encode_rows(tokenizer, fixture_rows)
@@ -192,11 +198,15 @@ def main():
         save(state)
         record["unadapted_development"] = baseline["models"][alias]
         save(state)
-        fixture, elapsed = training_call(alias, model_path, "fixture", 3e-4)
-        record["fixture"] = {"seconds": elapsed, "summary": fixture["evaluation"]["summary"]}
+        fixture, elapsed = training_call(alias, model_path, "fixture", 1e-4)
+        record["fixture"] = {"seconds": elapsed, "summary": fixture["evaluation"]["summary"],
+                             "training": fixture["training"],
+                             "token_inventory": fixture["token_inventory"]}
         save(state)
         fixture_actions = fixture["evaluation"]["summary"]["by_action"]
-        if (any(fixture_actions[action]["valid"] == 0
+        if (fixture["training"]["applied_updates"] == 0
+                or fixture["training"]["diagnostic_first_layer_max_abs_delta"] == 0
+                or any(fixture_actions[action]["valid"] == 0
                 or fixture_actions[action]["terminated"] == 0
                 for action in ("no_edit", "delete"))
                 or fixture_actions["delete"]["exact_after_state"] == 0

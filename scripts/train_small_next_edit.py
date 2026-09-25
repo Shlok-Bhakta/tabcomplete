@@ -32,6 +32,13 @@ def read_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
+def ordered_training_rows(rows: list[dict]) -> list[dict]:
+    """One fixed permutation shared across tokenizers and both LR probes."""
+    result = sorted(rows, key=lambda row: row["id"])
+    random.Random(271828).shuffle(result)
+    return result
+
+
 def disposable_fixture_rows() -> list[dict]:
     """A two-action serialization diagnostic, excluded from editor training."""
     rows = []
@@ -108,14 +115,15 @@ def example_weighted_scalar(losses):
 
 
 def train(
-    model, encoded: list[dict], *, lr: float, passes: int, deadline: float, output: Path | None
+    model, encoded: list[dict], *, lr: float, passes: int, deadline: float,
+    output: Path | None, effective_batch: int = EFFECTIVE_BATCH,
 ) -> dict:
     import torch
     from bitsandbytes.optim import AdamW8bit
 
     if passes < 1 or passes > 2:
         raise ValueError("at most two full passes per adaptation set")
-    if len(encoded) % EFFECTIVE_BATCH:
+    if len(encoded) % effective_batch:
         raise ValueError("training set must divide exactly into effective batches")
     planned_tokens = sum(item["input_tokens"] for item in encoded) * passes
     if planned_tokens > MAX_INPUT_TOKENS:
@@ -130,7 +138,18 @@ def train(
         raise TypeError("FP32 master weights required")
     optimizer = AdamW8bit(model.parameters(), lr=lr, weight_decay=0.01)
     scaler = torch.amp.GradScaler("cuda", init_scale=256.0, growth_interval=2000)
-    updates = len(encoded) * passes // EFFECTIVE_BATCH
+    diagnostic_parameter = next(
+        (
+            parameter
+            for name, parameter in model.named_parameters()
+            if "layers.0." in name and parameter.ndim == 2
+        ),
+        None,
+    )
+    if diagnostic_parameter is None:
+        raise RuntimeError("no first-layer matrix available to verify weight updates")
+    diagnostic_before = diagnostic_parameter.detach().flatten()[:4096].clone()
+    updates = len(encoded) * passes // effective_batch
     warmup = max(1, math.ceil(updates * 0.03))
 
     def factor(step: int) -> float:
@@ -143,6 +162,7 @@ def train(
     loss_log = []
     tokens_used = 0
     step = 0
+    applied_updates = 0
     optimizer.zero_grad(set_to_none=True)
     torch.cuda.reset_peak_memory_stats()
     started = time.monotonic()
@@ -162,8 +182,8 @@ def train(
                 ).loss
             if not bool(torch.isfinite(loss).item()):
                 raise FloatingPointError("nonfinite response-only loss")
-            scaler.scale(loss / EFFECTIVE_BATCH).backward()
-            if (position + 1) % EFFECTIVE_BATCH == 0:
+            scaler.scale(loss / effective_batch).backward()
+            if (position + 1) % effective_batch == 0:
                 scaler.unscale_(optimizer)
                 norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 if not bool(torch.isfinite(norm).item()):
@@ -171,13 +191,16 @@ def train(
                 scale_before = scaler.get_scale()
                 scaler.step(optimizer)
                 scaler.update()
-                if scaler.get_scale() >= scale_before:
+                applied = scaler.get_scale() >= scale_before
+                if applied:
+                    applied_updates += 1
                     scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
                 step += 1
                 loss_log.append(
                     {
                         "update": step,
+                        "applied": applied,
                         "epoch": epoch,
                         "loss_last_example": float(loss.detach().float().item()),
                         "gradient_norm": float(norm.item()),
@@ -189,6 +212,13 @@ def train(
             del input_ids, labels, mask, loss
     result = {
         "updates": step,
+        "applied_updates": applied_updates,
+        "diagnostic_first_layer_max_abs_delta": float(
+            (diagnostic_parameter.detach().flatten()[:4096] - diagnostic_before)
+            .abs()
+            .max()
+            .item()
+        ),
         "training_input_tokens": tokens_used,
         "seconds": time.monotonic() - started,
         "peak_gpu_allocated_bytes": torch.cuda.max_memory_allocated(),
@@ -196,7 +226,7 @@ def train(
         "loss_end": loss_log[-1]["loss_last_example"],
         "loss_normalization": "equal mean of per-example response+EOS means",
         "microbatch_examples": 1,
-        "effective_batch_examples": EFFECTIVE_BATCH,
+        "effective_batch_examples": effective_batch,
         "passes": passes,
         "warmup_updates": warmup,
         "optimizer": "bitsandbytes AdamW8bit",
@@ -347,6 +377,8 @@ def main() -> None:
     loaded_parameters = sum(parameter.numel() for parameter in model.parameters())
     model.to("cuda")
     rows = read_rows(args.data)
+    if args.phase in ("probe", "main"):
+        rows = ordered_training_rows(rows)
     if args.max_examples:
         rows = rows[: args.max_examples]
     if args.phase == "fixture":
@@ -370,6 +402,7 @@ def main() -> None:
             passes=passes,
             deadline=args.deadline_monotonic,
             output=args.output if args.phase == "main" else None,
+            effective_batch=4 if args.phase == "fixture" else EFFECTIVE_BATCH,
         )
         if args.phase == "main":
             tokenizer.save_pretrained(args.output / "inference")
