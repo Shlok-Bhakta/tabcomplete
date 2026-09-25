@@ -1,0 +1,18 @@
+{
+  "schema_version": 8,
+  "registered_before_new_outputs": true,
+  "parent_plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "reason": "The V7 replay's fourth label combined an earlier edit with a file return without actually changing file identity. It also lacked a distinct near-cursor replacement. V8 preserves V7 results as historical measurements and registers twelve explicit ordered states with an A-to-B-to-A switch before new latency outputs.",
+  "source_quality_fixtures_changed": false,
+  "source_states_sha256": "ed7dea82be74dbcf6720eada55901400d8e5c655c23ded668389ae524d739677",
+  "source_states": 12,
+  "repetitions_per_state": 2,
+  "source_context_targets": [512, 1024, 2048],
+  "included_operations": ["fresh_open", "append_chars", "replace_near_cursor", "reject_then_type_different", "edit_earlier_in_file", "switch_to_other_file", "return_to_first_file", "append_after_return"],
+  "file_identity_in_prompt": true,
+  "host": "crabcake",
+  "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "precision": "Q4_K_M",
+  "server": {"threads": 4, "slots": 1, "context_tokens": 2304, "cache_ram_mib": 128, "context_checkpoints": 32, "batch_tokens": 256, "microbatch_tokens": 64, "saved_idle_slots": false, "speculative_model": false},
+  "quality_or_finalist_selection_changes": false
+}

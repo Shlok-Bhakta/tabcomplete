@@ -1,0 +1,26 @@
+{
+  "baseline_reuse": "Hash-locked identical 512-state unadapted outputs from V2; no repeated GPU baseline generation.",
+  "finalist_selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "main_pilot_data_or_lr_choices_changed": false,
+  "parent_plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "reason": "The V3 labeled editor fixture at 1e-3 rose in q25 loss and both models hit the 96-token cutoff on all 64 cases. It did not test stable serialization. V4 uses a simpler two-action diagnostic and the lower 3e-4 rate that previously yielded finite, terminated outputs. No development or held-out adaptation result has been seen.",
+  "registered_before_v4_outputs": true,
+  "schema_version": 3,
+  "sealed_heldout_opened": false,
+  "v2_baselines_sha256": "73ea81854126c116d4f3b898f4d66ae5814a58851eccdb25e09c0c16ffc2f755",
+  "v3_diagnostic_sha256": "ab4f43d095e6be744bbd999bc07c62495de16fe3cd6b59ef7bf5fcbdb7ddb787",
+  "v4_fixture": {
+    "action_counts": {
+      "delete": 32,
+      "no_edit": 32
+    },
+    "effective_batch_examples": 16,
+    "gate": "At least one exact no-edit and one exact deletion, and a valid terminated response for each action. This is an implementation check, not a performance threshold.",
+    "learning_rate": 0.0003,
+    "ordered_rows_sha256": "a93bc94949855a80e3a2b01a69450d5a1225f118606968b0c2eaeab72957cdfe",
+    "passes": 2,
+    "prompt": "Two literal N/R action examples, then an alternating no_edit or delete action cue and a case index; response includes newline and EOS.",
+    "source": "disposable synthetic family 99; never used as adaptation quality evidence",
+    "states": 64
+  }
+}

@@ -35,16 +35,19 @@ def test_disposable_fixture_has_explicit_no_edit_and_deletion_cues() -> None:
     assert len(rows) == 64
     assert len({row["id"] for row in rows}) == 64
     by_action = {
-        action: [row for row in rows if row["action"] == action]
-        for action in ("replace", "insert", "delete", "no_edit")
+        action: [row for row in rows if row["action"] == action] for action in ("delete", "no_edit")
     }
     assert {action: len(group) for action, group in by_action.items()} == {
-        "replace": 8, "insert": 8, "delete": 16, "no_edit": 32
+        "delete": 32, "no_edit": 32
     }
-    assert all("header=N" in row["prompt"] and row["response"] == "N\n"
+    assert all("action=no_edit\nanswer=" in row["prompt"] and row["response"] == "N\n"
                for row in by_action["no_edit"])
-    assert all("header=R" in row["prompt"] and row["response"] == "R\n"
+    assert all("action=delete\nanswer=" in row["prompt"] and row["response"] == "R\n"
                for row in by_action["delete"])
+    for item in rows:
+        assert item["history_before"] == ""
+        assert item["history_replacement"] == item["current"]
+        assert item["after"] == (item["current"] if item["action"] == "no_edit" else "")
 
 
 def test_example_weighted_accumulation_matches_full_update() -> None:

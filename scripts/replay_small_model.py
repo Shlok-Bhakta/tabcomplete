@@ -69,30 +69,47 @@ def pressure() -> dict[str, str]:
 
 
 def source_states() -> list[dict]:
-    """Twelve exact synthetic editor states; same bytes for every tokenizer."""
+    """Twelve ordered editor states, including a file switch and return."""
     rows = []
     for target, count in ((512, 29), (1024, 58), (2048, 116)):
         base = "".join(f"def f_{i}(value):\n    return value + {i}\n" for i in range(count))
-        states = [
-            ("fresh_open", base + "def compute(value):\n    return "),
-            ("append_chars", base + "def compute(value):\n    return value + "),
-            ("reject_then_type_different", base + "def compute(value):\n    return value - "),
-            (
-                "earlier_edit_switch_return",
-                base.replace("return value + 1", "return value + 2", 1)
-                + "def compute(value):\n    return value - ",
-            ),
-        ]
-        for index, (operation, prompt) in enumerate(states):
+        a = "# file: src/example.py\n" + base
+        b = "# file: tests/other.py\n" + base
+        edited_a = a.replace("return value + 1", "return value + 2", 1)
+        tail = "def compute(value):\n    return "
+        if target == 512:
+            states = [
+                ("fresh_open", "src/example.py", a + tail),
+                ("append_chars", "src/example.py", a + tail + "value + "),
+                ("replace_near_cursor", "src/example.py", a + tail + "value * "),
+                ("reject_then_type_different", "src/example.py", a + tail + "value - "),
+            ]
+        elif target == 1024:
+            states = [
+                ("edit_earlier_in_file", "src/example.py", edited_a + tail + "value - "),
+                ("switch_to_other_file", "tests/other.py", b + tail + "value * "),
+                ("return_to_first_file", "src/example.py", edited_a + tail + "value - "),
+                ("append_after_return", "src/example.py", edited_a + tail + "value - 1"),
+            ]
+        else:
+            states = [
+                ("fresh_open", "src/example.py", a + tail),
+                ("replace_near_cursor", "src/example.py", a + tail + "value * "),
+                ("reject_then_type_different", "src/example.py", a + tail + "value - "),
+                ("edit_earlier_in_file", "src/example.py", edited_a + tail + "value - "),
+            ]
+        for index, (operation, file_id, prompt) in enumerate(states):
             rows.append(
                 {
                     "id": f"synthetic-{target}-{index}",
                     "source_target": target,
                     "operation": operation,
+                    "file_id": file_id,
                     "prompt": prompt,
                     "state_sha256": sha(prompt.encode()),
                 }
             )
+    assert len(rows) == 12
     return rows
 
 
@@ -251,6 +268,7 @@ def main() -> None:
                     {
                         "state_id": state["id"],
                         "operation": state["operation"],
+                        "file_id": state["file_id"],
                         "state_sha256": state["state_sha256"],
                         "source_target": state["source_target"],
                         "input_tokens": len(input_ids),

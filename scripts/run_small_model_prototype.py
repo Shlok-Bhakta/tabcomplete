@@ -393,7 +393,7 @@ def submit_adaptation(plan: dict) -> dict:
     if any(alias not in ALLOWED or alias == "p12-control" for alias in finalists):
         raise ValueError("non-allowlisted adaptation finalist")
     job_path = REPORT / "adaptation/job.json"
-    fixture_suite = REPORT / "adaptation/fixture_suite-v2.json"
+    fixture_suite = REPORT / "adaptation/fixture_suite-v3.json"
     fixture_suite_sha = digest(fixture_suite) if fixture_suite.exists() else None
     attempt = 1
     if job_path.exists():
@@ -406,13 +406,13 @@ def submit_adaptation(plan: dict) -> dict:
             "COMPLETE" in job["observed_status"].upper()
             and fixture_suite_sha is not None
             and job.get("fixture_suite_sha256") != fixture_suite_sha
-            and json.loads((REPORT / "adaptation/diagnostic-v2.json").read_text())["status"]
+            and json.loads((REPORT / "adaptation/diagnostic-v3.json").read_text())["status"]
             == "partial"
         )
         if "ERROR" not in job["observed_status"].upper() and not retry_completed_diagnostic:
             return job
         attempt = job.get("attempt", 1) + 1
-        if attempt > 3:
+        if attempt > 4:
             raise RuntimeError("adaptation retry limit reached; inspect failed job")
         save(REPORT / f"adaptation/job-v{attempt - 1}.json", job)
         job_path.unlink()

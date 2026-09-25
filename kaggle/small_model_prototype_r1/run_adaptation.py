@@ -144,7 +144,7 @@ def main():
         if sha(data_dir / (split + ".jsonl")) != expected:
             raise ValueError("synthetic adaptation data changed")
     fixture_suite_path = (
-        ROOT / "reports/research/small_model_prototype_r1/adaptation/fixture_suite-v2.json"
+        ROOT / "reports/research/small_model_prototype_r1/adaptation/fixture_suite-v3.json"
     )
     if sha(fixture_suite_path) != FIXTURE_SUITE_SHA:
         raise ValueError("training-only fixture suite changed")
@@ -176,10 +176,9 @@ def main():
         fixture_payload = "".join(
             json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n" for row in fixture_rows
         ).encode()
-        fixture_sha = fixture_suite["v3_fixture"]["ordered_rows_sha256"]
+        fixture_sha = fixture_suite["v4_fixture"]["ordered_rows_sha256"]
         if hashlib.sha256(fixture_payload).hexdigest() != fixture_sha:
             raise ValueError("training-only fixture rows changed")
-        from build_small_edit_data import ACTIONS
         fixture_inventory, _ = encode_rows(tokenizer, fixture_rows)
         fixture_tokens = sum(row["input_tokens"] for row in fixture_inventory) * 2
         probe_tokens = sum(row["input_tokens"] for row in inventory[:1024])
@@ -193,12 +192,13 @@ def main():
         save(state)
         record["unadapted_development"] = baseline["models"][alias]
         save(state)
-        fixture, elapsed = training_call(alias, model_path, "fixture", 1e-3)
+        fixture, elapsed = training_call(alias, model_path, "fixture", 3e-4)
         record["fixture"] = {"seconds": elapsed, "summary": fixture["evaluation"]["summary"]}
         save(state)
         fixture_actions = fixture["evaluation"]["summary"]["by_action"]
         if (any(fixture_actions[action]["valid"] == 0
-                or fixture_actions[action]["terminated"] == 0 for action in ACTIONS)
+                or fixture_actions[action]["terminated"] == 0
+                for action in ("no_edit", "delete"))
                 or fixture_actions["delete"]["exact_after_state"] == 0
                 or fixture_actions["no_edit"]["exact_after_state"] == 0):
             record["status"] = "fixture_failed"

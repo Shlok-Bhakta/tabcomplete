@@ -33,22 +33,34 @@ def read_rows(path: Path) -> list[dict]:
 
 
 def disposable_fixture_rows() -> list[dict]:
-    """A labeled format/stop diagnostic, deliberately excluded from the main data."""
-    from build_small_edit_data import ACTIONS, LANGUAGES, example
-
-    counts = {"replace": 2, "insert": 2, "delete": 4, "no_edit": 8}
+    """A two-action serialization diagnostic, excluded from editor training."""
     rows = []
-    for language in LANGUAGES:
-        for action in ACTIONS:
-            for variant in range(counts[action]):
-                row = example(language, action, 99, variant)
-                header = "N" if action == "no_edit" else "R"
-                hint = f"<training-only-format action={action} header={header}>\n"
-                if action in ("replace", "insert"):
-                    hint += "Replacement bytes:\n" + row["response"][2:] + "\n"
-                hint += "</training-only-format>\n"
-                row["prompt"] += hint
-                rows.append(row)
+    for variant in range(32):
+        for action in ("no_edit", "delete"):
+            current = f"line_{variant}\n"
+            rows.append(
+                {
+                    "id": f"fixture-{action}-{variant}",
+                    "source": "training-only synthetic format diagnostic",
+                    "group": f"fixture/{action}/family-99",
+                    "action": action,
+                    "history_before": "",
+                    "history_start": 0,
+                    "history_end": 0,
+                    "history_replacement": current,
+                    "current": current,
+                    "region_start": 0,
+                    "region_end": len(current.encode()),
+                    "after": current if action == "no_edit" else "",
+                    "prompt": (
+                        "Training-only compact action examples:\n"
+                        "action=no_edit\nanswer=N\n"
+                        "action=delete\nanswer=R\n"
+                        f"case={variant}\naction={action}\nanswer="
+                    ),
+                    "response": "N\n" if action == "no_edit" else "R\n",
+                }
+            )
     assert len(rows) == 64
     return rows
 
