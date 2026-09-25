@@ -1,6 +1,7 @@
 {
   "lfm350-base": {
-    "license": "other",
+    "license": "lfm1.0",
+    "license_source": "publisher model card; Hub API cardData reported other",
     "remote_files": [
       {
         "bytes": 1281,

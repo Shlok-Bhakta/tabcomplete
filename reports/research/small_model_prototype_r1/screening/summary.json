@@ -3,7 +3,8 @@
   "models": {
     "lfm350-base": {
       "immutable_revision": "9960764e30892e01f29a6dc23df2533fcd8bd5ae",
-      "license": "other",
+      "license": "lfm1.0",
+      "license_source": "publisher model card; Hub API cardData reported other",
       "native_q4_line_exact_180": null,
       "native_q4_strict_functional_pass_200": null,
       "source": "LiquidAI/LFM2.5-350M-Base",

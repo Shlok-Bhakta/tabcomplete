@@ -1,0 +1,338 @@
+{
+  "condition": "controlled desktop, one model at a time",
+  "host": "crabcake",
+  "lfm350_base_note": "V7 controlled and normal-editing measurements remain authoritative for LFM; exact V8 artifact retrieval was rate limited and will be retried.",
+  "model_results": {
+    "p12-control": {
+      "cold_first_request_seconds": 5.48578773799818,
+      "file_switch_and_return": [
+        {
+          "backend_cache_n": 0,
+          "file_id": "src/example.py",
+          "operation": "edit_earlier_in_file",
+          "token_prefix_with_previous_state": 33
+        },
+        {
+          "backend_cache_n": 0,
+          "file_id": "tests/other.py",
+          "operation": "switch_to_other_file",
+          "token_prefix_with_previous_state": 3
+        },
+        {
+          "backend_cache_n": 0,
+          "file_id": "src/example.py",
+          "operation": "return_to_first_file",
+          "token_prefix_with_previous_state": 3
+        },
+        {
+          "backend_cache_n": 921,
+          "file_id": "src/example.py",
+          "operation": "append_after_return",
+          "token_prefix_with_previous_state": 925
+        }
+      ],
+      "model_load_seconds": 2.236957887012977,
+      "model_sha256": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24",
+      "peak_process_memory_bytes": {
+        "Anonymous": 557051904,
+        "Pss": 1227208704,
+        "Pss_Anon": 557051904,
+        "Pss_File": 679544832,
+        "Rss": 1231069184,
+        "Swap": 0,
+        "VmHWM_status": 1231069184,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 557051904,
+        "Pss": 1227208704,
+        "Pss_Anon": 557051904,
+        "Pss_File": 670156800,
+        "Rss": 1231069184,
+        "Swap": 0,
+        "VmHWM_status": 1231069184,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=487262953\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=428024196",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694203\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628389"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=487200968\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=427968359",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694203\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628389"
+      },
+      "raw_measurements_sha256": "24ff61324d2f023b40b6199ed29d5160598cabd43fb93fc982bd8a0fec38156e",
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            925,
+            926
+          ],
+          "cache_reused_tokens_range": [
+            921,
+            922
+          ],
+          "eight_output_median_seconds": 0.3575885579921305,
+          "first_output_median_seconds": 0.0935527810070198,
+          "sixteen_output_median_seconds": 0.6474975915334653,
+          "warm_completed_median_seconds": 0.9494033769879024
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1883,
+            1885
+          ],
+          "cache_reused_tokens_range": [
+            1879,
+            1881
+          ],
+          "eight_output_median_seconds": 0.3882182119996287,
+          "first_output_median_seconds": 0.11085421600728296,
+          "sixteen_output_median_seconds": 0.7002909679722507,
+          "warm_completed_median_seconds": 1.0182387904787902
+        },
+        "512": {
+          "actual_input_token_range": [
+            459,
+            461
+          ],
+          "cache_reused_tokens_range": [
+            455,
+            457
+          ],
+          "eight_output_median_seconds": 0.3293109749793075,
+          "first_output_median_seconds": 0.0839553854893893,
+          "sixteen_output_median_seconds": 0.6070990434964187,
+          "warm_completed_median_seconds": 0.8882080760085955
+        }
+      },
+      "vmstat_delta": {
+        "pgmajfault": 111,
+        "pswpin": 108,
+        "pswpout": 0
+      }
+    },
+    "q25-coder": {
+      "cold_first_request_seconds": 4.289559128985275,
+      "file_switch_and_return": [
+        {
+          "backend_cache_n": 31,
+          "file_id": "src/example.py",
+          "operation": "edit_earlier_in_file",
+          "token_prefix_with_previous_state": 31
+        },
+        {
+          "backend_cache_n": 3,
+          "file_id": "tests/other.py",
+          "operation": "switch_to_other_file",
+          "token_prefix_with_previous_state": 3
+        },
+        {
+          "backend_cache_n": 865,
+          "file_id": "src/example.py",
+          "operation": "return_to_first_file",
+          "token_prefix_with_previous_state": 3
+        },
+        {
+          "backend_cache_n": 866,
+          "file_id": "src/example.py",
+          "operation": "append_after_return",
+          "token_prefix_with_previous_state": 866
+        }
+      ],
+      "model_load_seconds": 0.8977360889548436,
+      "model_sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30",
+      "peak_process_memory_bytes": {
+        "Anonymous": 158134272,
+        "Pss": 558771200,
+        "Pss_Anon": 158134272,
+        "Pss_File": 404976640,
+        "Rss": 562774016,
+        "Swap": 0,
+        "VmHWM_status": 573022208,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 158134272,
+        "Pss": 558771200,
+        "Pss_Anon": 158134272,
+        "Pss_File": 400636928,
+        "Rss": 562774016,
+        "Swap": 0,
+        "VmHWM_status": 573022208,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=487102557\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=427880421",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694149\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628341"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=487049703\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=427836172",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694149\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628341"
+      },
+      "raw_measurements_sha256": "a3df6a35d22cfb7256264fc0b251f65441526698c7c4b85f1f02c50275100416",
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            866,
+            867
+          ],
+          "cache_reused_tokens_range": [
+            865,
+            866
+          ],
+          "eight_output_median_seconds": 0.2261415119864978,
+          "first_output_median_seconds": 0.04116762749617919,
+          "sixteen_output_median_seconds": 0.4263694669934921,
+          "warm_completed_median_seconds": 0.6176737264904659
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1766,
+            1768
+          ],
+          "cache_reused_tokens_range": [
+            1765,
+            1767
+          ],
+          "eight_output_median_seconds": 0.269587558490457,
+          "first_output_median_seconds": 0.05820694248541258,
+          "sixteen_output_median_seconds": 0.5114916095044464,
+          "warm_completed_median_seconds": 0.754785578494193
+        },
+        "512": {
+          "actual_input_token_range": [
+            429,
+            431
+          ],
+          "cache_reused_tokens_range": [
+            428,
+            430
+          ],
+          "eight_output_median_seconds": 0.19928393349982798,
+          "first_output_median_seconds": 0.03521922053187154,
+          "sixteen_output_median_seconds": 0.37581539098755457,
+          "warm_completed_median_seconds": 0.5672003204817884
+        }
+      },
+      "vmstat_delta": {
+        "pgmajfault": 0,
+        "pswpin": 0,
+        "pswpout": 0
+      }
+    },
+    "q3-base": {
+      "cold_first_request_seconds": 4.3087689420208335,
+      "file_switch_and_return": [
+        {
+          "backend_cache_n": 31,
+          "file_id": "src/example.py",
+          "operation": "edit_earlier_in_file",
+          "token_prefix_with_previous_state": 31
+        },
+        {
+          "backend_cache_n": 3,
+          "file_id": "tests/other.py",
+          "operation": "switch_to_other_file",
+          "token_prefix_with_previous_state": 3
+        },
+        {
+          "backend_cache_n": 3,
+          "file_id": "src/example.py",
+          "operation": "return_to_first_file",
+          "token_prefix_with_previous_state": 3
+        },
+        {
+          "backend_cache_n": 866,
+          "file_id": "src/example.py",
+          "operation": "append_after_return",
+          "token_prefix_with_previous_state": 866
+        }
+      ],
+      "model_load_seconds": 1.3797336230054498,
+      "model_sha256": "dd84ce11f646f36ff8afd594b6bef447f14f2dbf93fa981922b4cad1c3f11e05",
+      "peak_process_memory_bytes": {
+        "Anonymous": 642564096,
+        "Pss": 1040496640,
+        "Pss_Anon": 642564096,
+        "Pss_File": 403866624,
+        "Rss": 1044447232,
+        "Swap": 0,
+        "VmHWM_status": 1044455424,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 540487680,
+        "Pss": 938420224,
+        "Pss_Anon": 540487680,
+        "Pss_File": 397932544,
+        "Rss": 942370816,
+        "Swap": 0,
+        "VmHWM_status": 1043496960,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=487169659\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=427938259",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694149\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628341"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=487111716\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=427889451",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694149\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628341"
+      },
+      "raw_measurements_sha256": "0298c45020ab252041ab712b1bb559abc9321e33904447eb00c03006ebefed49",
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            866,
+            867
+          ],
+          "cache_reused_tokens_range": [
+            865,
+            866
+          ],
+          "eight_output_median_seconds": 0.34406064500217326,
+          "first_output_median_seconds": 0.05282281001564115,
+          "sixteen_output_median_seconds": 0.6770927114994265,
+          "warm_completed_median_seconds": 0.9884705194854178
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1766,
+            1768
+          ],
+          "cache_reused_tokens_range": [
+            1765,
+            1767
+          ],
+          "eight_output_median_seconds": 0.5857817124924622,
+          "first_output_median_seconds": 0.09247882850468159,
+          "sixteen_output_median_seconds": 1.1655214244965464,
+          "warm_completed_median_seconds": 1.7203586759860627
+        },
+        "512": {
+          "actual_input_token_range": [
+            429,
+            431
+          ],
+          "cache_reused_tokens_range": [
+            428,
+            430
+          ],
+          "eight_output_median_seconds": 0.2691958755021915,
+          "first_output_median_seconds": 0.04596690897597,
+          "sixteen_output_median_seconds": 0.5525254454987589,
+          "warm_completed_median_seconds": 0.8033982299966738
+        }
+      },
+      "vmstat_delta": {
+        "pgmajfault": 0,
+        "pswpin": 0,
+        "pswpout": 0
+      }
+    }
+  },
+  "observed_at": "2026-09-25T06:57:11.897007+00:00",
+  "schema_version": 1,
+  "suite_revision": 8,
+  "suite_sha256": "3f49654e781196b41fe1f049d23f93e501fca250609d727580631fbb0c626193"
+}
