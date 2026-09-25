@@ -1,0 +1,8 @@
+{
+  "suite_revision": 3,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "explanation": "Revision 2 set cache-ram=0. Pinned llama.cpp treated this as disabling active prompt reuse (observed cache_n=0 on all requests). Revision 3 retains cache-ram=128, keeps the active slot, disables optional context checkpoints with --ctx-checkpoints 0, and already disables saved idle slots. Earlier diagnostic outputs are preserved and excluded from snapshot-cost inference.",
+  "model_revision_unchanged": true,
+  "source_states_unchanged": true,
+  "backend_revision_unchanged": true
+}

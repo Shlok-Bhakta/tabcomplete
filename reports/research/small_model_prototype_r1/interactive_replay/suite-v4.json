@@ -1,0 +1,8 @@
+{
+  "suite_revision": 4,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "explanation": "Revision 3 set --ctx-checkpoints 0. It also yielded cache_n=0 for repeated requests, so active prefix state was not retained. Revision 4 tried one checkpoint; it likewise yielded cache_n=0. Both runs are retained as failed diagnostics.",
+  "model_revision_unchanged": true,
+  "source_states_unchanged": true,
+  "backend_revision_unchanged": true
+}

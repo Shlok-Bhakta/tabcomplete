@@ -1,0 +1,8 @@
+{
+  "suite_revision": 5,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "explanation": "A bounded 2/4/8-checkpoint probe showed verified cache_n=219 on a repeated 220-token request at all three settings. Revision 5 uses two checkpoints, --cache-ram 128 and --no-cache-idle-slots, versus the default 32 checkpoints. This preserves active-prefix reuse while limiting optional checkpoint storage. The failed zero/one-checkpoint runs remain historical.",
+  "model_revision_unchanged": true,
+  "source_states_unchanged": true,
+  "backend_revision_unchanged": true
+}

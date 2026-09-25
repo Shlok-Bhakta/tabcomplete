@@ -383,7 +383,7 @@ def submit_adaptation(plan: dict) -> dict:
         job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
         save(job_path, job)
         return job
-    check_budget(plan, session_seconds=14_400, input_tokens=4_000_000)
+    check_budget(plan, session_seconds=28_800, input_tokens=4_000_000)
     commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
     if command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no").strip():
         raise RuntimeError("commit scientific code before Kaggle submission")
@@ -424,7 +424,7 @@ def submit_adaptation(plan: dict) -> dict:
         "finalists": finalists,
         "commit": commit,
         "submitted_at": datetime.now(UTC).isoformat(),
-        "session_seconds_limit": 14_400,
+        "session_seconds_limit": 28_800,
         "finalization_reserve_seconds": 1_800,
         "quota_before": quota(),
         "state": "submission_pending",

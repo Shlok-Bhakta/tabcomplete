@@ -30,6 +30,11 @@ def main():
     parser.add_argument("--hardware", required=True)
     parser.add_argument("--precision", choices=("Q4_K_M", "F16"), default="Q4_K_M")
     parser.add_argument("--line-only", action="store_true")
+    parser.add_argument("--campaign-id", default="tabcomplete-model-data-r2")
+    parser.add_argument(
+        "--plan", type=Path, default=Path("reports/research/model_data_r2/preregistered_plan.json")
+    )
+    parser.add_argument("--threads", type=int, default=2)
     args = parser.parse_args()
     httpx.get(args.url + "/health", timeout=10).raise_for_status()
     provider = NativeProvider(args.url, args.alias)
@@ -52,17 +57,17 @@ def main():
             protocol=protocol,
         )
         metadata.update(
-            campaign_id="tabcomplete-model-data-r2",
+            campaign_id=args.campaign_id,
             precision=args.precision,
             runtime_revision="f072b103714dfa1eee531f80b24512faf38e3dd2",
             hardware=args.hardware,
-            threads=2,
+            threads=args.threads,
             concurrency=1,
             stopping="native first newline or EOS, ceiling 96"
             if line_mode
             else "EOS or ceiling 96",
             raw_response_definition="exact native API text; native stop string is omitted",
-            plan_sha256=file_sha256(Path("reports/research/model_data_r2/preregistered_plan.json")),
+            plan_sha256=file_sha256(args.plan),
         )
         kwargs = {"prompt_builder": lambda case: case.prompt} if line_mode else {}
         predictions = generate_predictions(

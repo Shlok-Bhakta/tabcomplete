@@ -184,13 +184,15 @@ def main() -> None:
         "-np",
         "1",
         "--cache-ram",
-        "0" if args.diagnostic_no_saved_cache else "128",
+        "128",
+        "--ctx-checkpoints",
+        "2" if args.diagnostic_no_saved_cache else "32",
         "--no-cache-idle-slots",
         "--no-warmup",
         "--perf",
     ]
-    # cache-ram=0 disables optional saved snapshots. Keep active slot state;
-    # --no-cache-prompt would also disable useful sequence reuse.
+    # Keep the minimum tested checkpoint count that retains active sequence reuse.
+    # Zero or one checkpoints, or cache-ram=0, removes it in this runtime.
     log = (args.output / "server.log").open("w")
     start = time.perf_counter()
     process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
@@ -275,7 +277,8 @@ def main() -> None:
             "threads": 4,
             "slots": 1,
             "context_tokens": 2304,
-            "cache_ram_mib": 0 if args.diagnostic_no_saved_cache else 128,
+            "cache_ram_mib": 128,
+            "context_checkpoints": 2 if args.diagnostic_no_saved_cache else 32,
             "batch_tokens": 256,
             "microbatch_tokens": 64,
             "diagnostic_no_saved_cache": args.diagnostic_no_saved_cache,

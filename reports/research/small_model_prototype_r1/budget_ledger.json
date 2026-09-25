@@ -1,5 +1,5 @@
 {
-  "gpu_session_seconds": 1011.7059205269999,
+  "gpu_session_seconds": 1260.712008028,
   "training_input_tokens": 0,
   "new_artifact_bytes": 0,
   "sessions": [
@@ -19,6 +19,14 @@
       "quota_used_after_hours": 26.48,
       "causal_outputs_per_new_model": 200,
       "line_outputs_per_new_model": 0
+    },
+    {
+      "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+      "status": "complete",
+      "observed_wall_seconds": 249.006087501,
+      "quota_used_before_hours": 26.48,
+      "quota_used_after_hours": 26.55,
+      "line_outputs_per_new_model": 180
     }
   ]
 }

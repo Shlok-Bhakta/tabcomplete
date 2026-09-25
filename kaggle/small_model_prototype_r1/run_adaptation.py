@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 START = time.monotonic()
-SESSION_SECONDS = 14_400
+SESSION_SECONDS = 28_800
 FINALIZATION_RESERVE = 1_800
 DEADLINE = START + SESSION_SECONDS - FINALIZATION_RESERVE
 ROOT = Path("/kaggle/working/tabcomplete")
@@ -17,7 +17,7 @@ OUT = Path("/kaggle/working/small_model_prototype_r1_adaptation")
 COMMIT = "__CHECKOUT_COMMIT__"
 PLAN_SHA = "__PLAN_SHA__"
 SELECTION_SHA = "__SELECTION_SHA__"
-FINALISTS = __FINALISTS__
+FINALISTS = json.loads('__FINALISTS__')
 MODEL_SOURCES = {
     "q25-coder": ("Qwen/Qwen2.5-Coder-0.5B", "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
                   "d58d103feb3d4c4bbfb86cfbe5620053a78c437a5469cefa44d8bf7dccb4e363"),
@@ -72,9 +72,11 @@ def run(args, label, *, environment=None):
 def training_call(alias, model_path, phase, lr, *, max_examples=0, destination=None):
     result_path = destination or (OUT / alias / (phase + "-" + str(lr)))
     result_path.mkdir(parents=True, exist_ok=True)
+    data_split = "development" if phase == "evaluate" else "train"
     args = [sys.executable, str(ROOT / "scripts/train_small_next_edit.py"),
             "--model", str(model_path), "--expected-weight-sha256", MODEL_SOURCES[alias][2],
-            "--data", str(OUT / "data/train.jsonl"), "--data-sha256", DATA_HASHES["train"],
+            "--data", str(OUT / "data" / (data_split + ".jsonl")),
+            "--data-sha256", DATA_HASHES[data_split],
             "--development", str(OUT / "data/development.jsonl"),
             "--development-sha256", DATA_HASHES["development"],
             "--output", str(result_path), "--phase", phase,
@@ -117,8 +119,8 @@ def main():
     sys.path.insert(0, str(ROOT / "src"))
     sys.path.insert(0, str(ROOT / "scripts"))
     from huggingface_hub import snapshot_download
-    from transformers import AutoTokenizer
     from train_small_next_edit import encode_rows, read_rows
+    from transformers import AutoTokenizer
 
     data_dir = OUT / "data"
     run([sys.executable, str(ROOT / "scripts/build_small_edit_data.py"),
@@ -158,11 +160,17 @@ def main():
         record["token_inventory"] = {"main_pass": per_pass, "fixture": fixture_tokens,
                                      "each_lr_probe": probe_tokens}
         save(state)
+        baseline, elapsed = training_call(alias, model_path, "evaluate", 0.0,
+                                          max_examples=512)
+        record["unadapted_development"] = {
+            "seconds": elapsed, "summary": baseline["evaluation"]["summary"]}
+        save(state)
         fixture, elapsed = training_call(alias, model_path, "fixture", 3e-4)
         record["fixture"] = {"seconds": elapsed, "summary": fixture["evaluation"]["summary"]}
         save(state)
         fixture_actions = fixture["evaluation"]["summary"]["by_action"]
         if any(fixture_actions[action]["valid"] == 0 or fixture_actions[action]["terminated"] == 0
+               or fixture_actions[action]["exact_after_state"] == 0
                for action in ACTIONS):
             record["status"] = "fixture_failed"
             save(state)

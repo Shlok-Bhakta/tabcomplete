@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "locked_before_adaptation": true,
+  "locked_at": "2026-09-25T04:59:49.049381+00:00",
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "finalists": [
+    "q25-coder",
+    "q3-base"
+  ],
+  "rejected": [
+    "lfm350-base",
+    "p12-control"
+  ],
+  "measurements": {
+    "q25-coder": {
+      "model_sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30",
+      "service_peak_rss_bytes": 545976320,
+      "service_post_request_rss_bytes": 545976320,
+      "warm_512_source_median_completed_seconds": 0.5526837825018447,
+      "swap_in_pages": 0,
+      "swap_out_pages": 0,
+      "host": "crabcake",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+    },
+    "q3-base": {
+      "model_sha256": "dd84ce11f646f36ff8afd594b6bef447f14f2dbf93fa981922b4cad1c3f11e05",
+      "service_peak_rss_bytes": 1042685952,
+      "service_post_request_rss_bytes": 941518848,
+      "warm_512_source_median_completed_seconds": 0.7542841854738072,
+      "swap_in_pages": 0,
+      "swap_out_pages": 0,
+      "host": "crabcake",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+    },
+    "p12-control": {
+      "model_sha256": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24",
+      "service_peak_rss_bytes": 1205538816,
+      "service_post_request_rss_bytes": 1205538816,
+      "warm_512_source_median_completed_seconds": 0.883758216019487,
+      "swap_in_pages": 0,
+      "swap_out_pages": 0,
+      "host": "crabcake",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+    }
+  },
+  "unquantized_causal_exact_200": {
+    "q25-coder": 11,
+    "q3-base": 9,
+    "lfm350-base": 1,
+    "p12-control": 9
+  },
+  "unquantized_line_exact_180": {
+    "q25-coder": 16,
+    "q3-base": 18,
+    "lfm350-base": 17,
+    "p12-control": 20
+  },
+  "rationale": "Retain q25-coder by campaign rule. q3-base offers similar measured same-task code quality, Apache-2.0 license, supported native Q4 runtime and adaptation path, and <1.5 GiB service RSS on desktop despite higher memory and latency than q25. LFM strict causal accuracy 1/200 and custom lfm1.0 license make it an implausible challenger despite line score 17/180. P12 is the fixed reference and is not retrained. Q4 quality for q3 will be measured separately; unquantized-to-Q4 includes runtime change.",
+  "adaptation_quality_seen": false,
+  "target_note": "crabcake desktop measured; T480s SSH unavailable"
+}
