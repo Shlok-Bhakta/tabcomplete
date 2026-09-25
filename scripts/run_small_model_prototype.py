@@ -461,14 +461,104 @@ def submit_adaptation(plan: dict) -> dict:
     return job
 
 
+def submit_selected_stage(plan: dict, stage: str) -> dict:
+    if stage not in ("heldout", "conversion"):
+        raise ValueError("unknown selected-model stage")
+    decision_path = REPORT / "deployment/selection.json"
+    decision = json.loads(decision_path.read_text())
+    finalists = json.loads((REPORT / "selection.json").read_text())["finalists"]
+    if (
+        not decision.get("locked_before_heldout")
+        or decision["plan_sha256"] != digest(REPORT / "plan.json")
+        or decision["selected_alias"] not in ("q25-coder", "q3-base")
+        or decision["selected_alias"] not in finalists
+    ):
+        raise ValueError("invalid development-locked deployment decision")
+    progress_path = REPORT / "adaptation/progress.json"
+    progress = json.loads(progress_path.read_text())
+    alias = decision["selected_alias"]
+    weight_sha = decision["adapted_weight_sha256"]
+    if (
+        progress["status"] != "complete"
+        or progress["plan_sha256"] != decision["plan_sha256"]
+        or progress["models"][alias]["main"]["training"]["inference_weight_sha256"]
+        != weight_sha
+    ):
+        raise ValueError("adaptation result does not match selected checkpoint")
+    if stage == "conversion":
+        heldout_path = REPORT / "deployment/heldout-result.json"
+        heldout = json.loads(heldout_path.read_text())
+        if heldout["status"] != "complete" or heldout["selection_sha256"] != digest(decision_path):
+            raise ValueError("complete the one locked held-out evaluation before export")
+    job_path = REPORT / f"deployment/{stage}-job.json"
+    if job_path.exists():
+        job = json.loads(job_path.read_text())
+        if (
+            job["plan_sha256"] != digest(REPORT / "plan.json")
+            or job["selection_sha256"] != digest(decision_path)
+        ):
+            raise ValueError("selected-model job fingerprint changed")
+        job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
+        save(job_path, job)
+        return job
+    check_budget(plan, session_seconds=7200 if stage == "heldout" else 0,
+                 new_bytes=2 * 1024**3 if stage == "conversion" else 0)
+    commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
+    if command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no").strip():
+        raise RuntimeError("commit scientific code before Kaggle submission")
+    remote = command("git", "ls-remote", "origin", "refs/heads/research/small-model-prototype-r1")
+    if remote.split()[0] != commit:
+        raise RuntimeError("push the campaign branch before Kaggle submission")
+    folder = ROOT / f"artifacts/research/small_model_prototype_r1/submission/{stage}"
+    folder.mkdir(parents=True, exist_ok=True)
+    source_name = "run_selected_heldout.py" if stage == "heldout" else "run_selected_conversion.py"
+    source = (ROOT / "kaggle/small_model_prototype_r1" / source_name).read_text()
+    (folder / "run.py").write_text(
+        source.replace("__CHECKOUT_COMMIT__", commit)
+        .replace("__PLAN_SHA__", digest(REPORT / "plan.json"))
+        .replace("__SELECTION_SHA__", digest(decision_path))
+        .replace("__SELECTED_ALIAS__", alias)
+        .replace("__ADAPTED_WEIGHT_SHA__", weight_sha)
+    )
+    reference = f"shlokbhakta/tabcomplete-small-model-prototype-r1-selected-{stage}"
+    metadata: dict[str, Any] = {
+        "id": reference, "title": reference.split("/")[1], "code_file": "run.py",
+        "language": "python", "kernel_type": "script", "is_private": True,
+        "enable_gpu": stage == "heldout", "enable_internet": True,
+        "dataset_sources": [],
+        "kernel_sources": ["shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation"],
+        "competition_sources": [],
+    }
+    if stage == "heldout":
+        metadata["machine_shape"] = "NvidiaTeslaT4"
+    save(folder / "kernel-metadata.json", metadata)
+    job = {
+        "reference": reference, "plan_sha256": digest(REPORT / "plan.json"),
+        "selection_sha256": digest(decision_path), "selected_alias": alias,
+        "adapted_weight_sha256": weight_sha, "commit": commit,
+        "submitted_at": datetime.now(UTC).isoformat(),
+        "session_seconds_limit": 7200, "finalization_reserve_seconds": 900,
+        "quota_before": quota() if stage == "heldout" else None,
+        "state": "submission_pending",
+    }
+    save(job_path, job)
+    command("kaggle", "kernels", "push", "-p", str(folder), timeout=180)
+    job["state"] = "submitted"
+    save(job_path, job)
+    return job
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--stage", choices=("auto", "heldout", "conversion"), default="auto")
     args = parser.parse_args()
     plan = freeze(args.config)
     if args.execute:
-        if (REPORT / "selection.json").exists():
+        if args.stage != "auto":
+            job = submit_selected_stage(plan, args.stage)
+        elif (REPORT / "selection.json").exists():
             job = submit_adaptation(plan)
         elif plan.get("plan_revision") == 3:
             job = submit_line_repair(plan)
