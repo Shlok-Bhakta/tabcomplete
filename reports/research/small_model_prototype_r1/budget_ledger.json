@@ -1,7 +1,9 @@
 {
   "artifact_accounting_note": "Research conversion and adaptation jobs enforced a 12 GiB new-artifact cap independently, including temporary conversions. Kaggle adaptation output stores only allowlisted candidate states. Local quantized artifact inventory and selected export are recorded separately in download_manifest.json; no existing checkpoint was deleted to make space.",
   "gpu_session_seconds": 11422.558921329,
-  "new_artifact_bytes": 626013440,
+  "new_artifact_bytes": 1023820672,
+  "selected_conversion_new_artifact_bytes_including_staged_symlink_accounting": 2395206210,
+  "selected_desktop_model_bytes": 397807232,
   "sessions": [
     {
       "candidate_scores_produced": 0,

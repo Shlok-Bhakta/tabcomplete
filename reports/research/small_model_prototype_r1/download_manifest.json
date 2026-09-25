@@ -92,7 +92,7 @@
     }
   ],
   "frozen_at": "2026-09-25T04:01:12.379293+00:00",
-  "new_desktop_model_bytes": 0,
+  "new_desktop_model_bytes": 397807232,
   "new_desktop_model_limit_bytes": 2147483648,
   "quantized_artifacts": [
     {
@@ -125,6 +125,23 @@
       "sha256": "f099bfa59808c55d022b89a5d0c77bd135b3cc62a05bbd351e685978dc86b0ab",
       "source": "LiquidAI/LFM2.5-350M-Base",
       "source_weight_sha256": "af70818c41a5cdb3f9587f91de12ff5f7847b8b0a2ba734534205ccea1d98aba"
+    },
+    {
+      "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+      "alias": "q25-coder",
+      "bytes": 397807232,
+      "conversion_manifest": "deployment/conversion-manifest.json",
+      "immutable_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+      "local_desktop_path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+      "native_development_verified": true,
+      "native_heldout_verified": true,
+      "precision": "Q4_K_M",
+      "purpose": "selected adapted deployment",
+      "research_conversion_job": "shlokbhakta/tabcomplete-r1-conversion",
+      "retained_on_desktop": true,
+      "sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+      "source": "Qwen/Qwen2.5-Coder-0.5B",
+      "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
     }
   ],
   "recorded_at": "2026-09-25T05:14:35.632068+00:00",
@@ -145,5 +162,5 @@
       "sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30"
     }
   },
-  "updated_at": "2026-09-25T08:25:38.893050+00:00"
+  "updated_at": "2026-09-25T10:03:30.433050+00:00"
 }

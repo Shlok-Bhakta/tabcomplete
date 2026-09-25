@@ -8,7 +8,9 @@ local model = assert(vim.env.TABCOMPLETE_MODEL_ALIAS)
 local revision = assert(vim.env.TABCOMPLETE_MODEL_SHA256)
 assert(vim.fn.filereadable(fixture) == 1, "synthetic test file required")
 
+vim.cmd("filetype on")
 vim.cmd("edit " .. vim.fn.fnameescape(fixture))
+assert(vim.bo.filetype ~= "", "fixture filetype was not detected")
 vim.cmd("runtime plugin/tabcomplete_predict.lua")
 local collector = require("tabcomplete_trajectory").setup({
   server_url = collector_url, capture_keys = false, batch_interval_ms = 30000,
@@ -56,7 +58,27 @@ for attempt = 1, 12 do
   end
   if outcomes.accepted > 0 and outcomes.rejected > 0 then break end
 end
+assert(outcomes.accepted > 0 and outcomes.rejected > 0, "model did not yield both decisions")
+local before_human = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+local comment = vim.bo.filetype == "python" and "# synthetic typing after rejection"
+  or "// synthetic typing after rejection"
+-- End the previous undo block so this simulated human edit undoes separately.
+vim.bo.undolevels = vim.bo.undolevels
+vim.api.nvim_buf_set_lines(0, -1, -1, false, { comment })
+vim.api.nvim_exec_autocmds("TextChanged", { buffer = 0 })
+assert(vim.api.nvim_buf_get_lines(0, -2, -1, false)[1] == comment)
+vim.cmd("undo")
+assert(vim.deep_equal(vim.api.nvim_buf_get_lines(0, 0, -1, false), before_human))
+outcomes.subsequent_simulated_edits = 1
 vim.cmd("write")
+collector._test.anchor(vim.api.nvim_get_current_buf(), "write")
+assert(vim.wait(10000, function()
+  for _, event in ipairs(collector.queue) do
+    if event.event_type == "buffer_write" and event.payload.path == fixture
+        and event.payload.blob_uploaded then return true end
+  end
+  return false
+end), "final replay anchor was not uploaded")
 local flushed, ok = false, false
 collector.flush_now(function(success) flushed, ok = true, success end)
 assert(vim.wait(10000, function() return flushed end), "collector flush timed out")

@@ -1,0 +1,78 @@
+{
+  "data_sha256": "0b66a598e08b28b8dcfa4a0517ca695abc1b55527f7bb7bc718b213cf769a9d5",
+  "model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "observed_at": "2026-09-25T10:01:53.234311+00:00",
+  "peak_sampled_rss_bytes": 670375936,
+  "post_request_memory": {
+    "Anonymous": 265707520,
+    "Pss": 666439680,
+    "Pss_Anon": 265707520,
+    "Pss_File": 400732160,
+    "Rss": 670375936,
+    "Swap": 0,
+    "VmHWM_status": 670375936,
+    "VmSwap_status": 0
+  },
+  "precision": "Q4_K_M",
+  "pressure_after": {
+    "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=501217963\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=441312567",
+    "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694735\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628822"
+  },
+  "pressure_before": {
+    "io": "some avg10=0.00 avg60=0.00 avg300=0.00 total=500470251\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=440656495",
+    "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30694732\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28628819"
+  },
+  "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "summary": {
+    "by_action": {
+      "delete": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      },
+      "insert": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      },
+      "no_edit": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      },
+      "replace": {
+        "exact_after_state": 256,
+        "false_positive": 0,
+        "terminated": 256,
+        "total": 256,
+        "valid": 256
+      }
+    },
+    "cases": 1024,
+    "completed_action_median_seconds": 1.2358496884990018,
+    "completed_action_p95_seconds": 1.933324956044089,
+    "edit_required": 768,
+    "edit_required_exact_after_state": 768,
+    "no_edit_false_positive": 0,
+    "no_edit_total": 256,
+    "output_tokens_mean": 8.0234375,
+    "output_tokens_p95": 25.0,
+    "reversals_of_latest_edit": 0,
+    "score_kind": "synthetic exact after-state; no user-acceptance claim",
+    "terminated": 1024,
+    "truncations": 0,
+    "unnecessary_changes": 0,
+    "valid": 1024
+  },
+  "swap_and_major_fault_delta": {
+    "pgmajfault": 3,
+    "pswpin": 1,
+    "pswpout": 0
+  }
+}

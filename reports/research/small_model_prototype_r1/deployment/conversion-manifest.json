@@ -1,0 +1,23 @@
+{
+  "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "artifact_budget_bytes": 12884901888,
+  "compatibility_repair": "immutable trained source tokenizer with adapted weights",
+  "converter_sha256": "e9a1da876330bbce9687541ab31736542a01b4ac43c6686126514a50f122fb7f",
+  "converter_tokenizer_config_sha256": "283ec39d07ebfd1904aa2dee3c7d73524ed96c489fdb3915629900d3ab3ac319",
+  "elapsed_seconds": 343.64388902100006,
+  "gpu_enabled": false,
+  "inference_export_tokenizer_sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8",
+  "new_artifact_bytes": 2395206210,
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "precision": "Q4_K_M",
+  "q4_bytes": 397807232,
+  "q4_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "quantizer_sha256": "140099aa3e8368ab7da1d6594b7ed205a6cf5f932a330f843b39dc72d8633f0b",
+  "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "selected_alias": "q25-coder",
+  "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
+  "status": "complete",
+  "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+  "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+  "tokenizer_source": "Qwen/Qwen2.5-Coder-0.5B"
+}

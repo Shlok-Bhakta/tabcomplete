@@ -1,0 +1,15 @@
+{
+  "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "commit": "dd2264cf4ef67d63a309b29dfa7bcbfec82cdeec",
+  "finalization_reserve_seconds": 900,
+  "manifest_sha256": "81bbda5e71476fc304d958aeb107955c12c2cd36d42efd50f50f39696c3e4018",
+  "observed_status": "KernelWorkerStatus.COMPLETE",
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "quota_before": null,
+  "reference": "shlokbhakta/tabcomplete-r1-conversion",
+  "selected_alias": "q25-coder",
+  "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
+  "session_seconds_limit": 7200,
+  "state": "submitted",
+  "submitted_at": "2026-09-25T09:05:09.413320+00:00"
+}

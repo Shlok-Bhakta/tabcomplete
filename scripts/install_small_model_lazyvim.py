@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "tools/trajectory_collector/nvim"
-RUNTIME = ROOT.parent / "tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server"
+DEFAULT_RUNTIME = ROOT.parent / "tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server"
 
 
 def sha(path: Path) -> str:
@@ -70,14 +70,14 @@ def render_config(original: str, *, model_revision: str, model_alias: str) -> st
     return updated
 
 
-def render_service(model: Path) -> str:
-    for path in (model, RUNTIME):
+def render_service(model: Path, runtime: Path) -> str:
+    for path in (model, runtime):
         if any(char.isspace() for char in str(path)):
             raise ValueError("service paths must not contain whitespace")
     return (
         "[Unit]\nDescription=TabComplete local next-edit predictor\n"
         "After=network.target\n\n[Service]\nType=simple\n"
-        f"ExecStart={RUNTIME} -m {model} --host 127.0.0.1 --port 19093 "
+        f"ExecStart={runtime} -m {model} --host 127.0.0.1 --port 19093 "
         "-t 4 -tb 4 -ngl 0 -c 2304 -b 256 -ub 64 -np 1 "
         "--cache-ram 128 --ctx-checkpoints 32 --no-cache-idle-slots --no-warmup\n"
         "Restart=on-failure\nRestartSec=3\nNoNewPrivileges=yes\n"
@@ -86,17 +86,18 @@ def render_service(model: Path) -> str:
 
 
 def install(
-    config: Path, unit: Path, model: Path, expected_sha: str, model_alias: str, *, dry_run: bool
+    config: Path, unit: Path, model: Path, runtime: Path, expected_sha: str,
+    model_alias: str, *, dry_run: bool
 ) -> dict:
     if owned_by_nix(config) or owned_by_nix(unit):
         raise RuntimeError("Nix/Home Manager owns this path; edit its source configuration")
     if not model.is_file() or sha(model) != expected_sha:
         raise ValueError("selected model artifact hash mismatch")
-    if not RUNTIME.is_file():
-        raise FileNotFoundError(RUNTIME)
+    if not runtime.is_file():
+        raise FileNotFoundError(runtime)
     original = config.read_text()
     updated = render_config(original, model_revision=expected_sha, model_alias=model_alias)
-    service = render_service(model)
+    service = render_service(model.resolve(), runtime.resolve())
     if dry_run:
         return {
             "config": str(config),
@@ -139,6 +140,7 @@ def install(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
     parser.add_argument("--model-sha256", required=True)
     parser.add_argument("--model-alias", required=True)
     parser.add_argument(
@@ -157,6 +159,7 @@ def main() -> None:
         args.config,
         args.unit,
         args.model,
+        args.runtime,
         args.model_sha256,
         args.model_alias,
         dry_run=args.dry_run,

@@ -1,0 +1,15 @@
+{
+  "helper_names": [
+    "curl"
+  ],
+  "host": "crabcake",
+  "interval_target_ms": 10,
+  "max_combined_rss_bytes": 560713728,
+  "max_helper_rss_bytes": 10981376,
+  "max_service_rss_bytes": 549732352,
+  "observed_at": "2026-09-25T10:15:05.628649+00:00",
+  "purpose": "separate actual-plugin helper-memory diagnostic; scripted synthetic decisions",
+  "sample_count": 119,
+  "selected_model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "session_id": "2abe4b6e-46b7-4674-b6ec-252021e87f55"
+}

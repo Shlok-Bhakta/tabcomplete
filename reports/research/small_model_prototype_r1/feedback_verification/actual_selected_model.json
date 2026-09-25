@@ -1,0 +1,251 @@
+{
+  "actual_selected_model_inference": true,
+  "automatic_personalization_enabled": false,
+  "duplicate_file_versions": 0,
+  "earlier_replay_verified_sessions": [
+    "f0935875-fe01-40df-a519-ab23bbe165cf",
+    "5547b5b5-db3f-443c-98d0-2f162c04f50d",
+    "2dd9456d-97d7-4dd7-b71d-0d45a37d0d5c",
+    "58a83a2b-c15e-40ce-9e51-8f79aa1e01a1"
+  ],
+  "excluded_first_python_smoke_session": "a1455eb9-fa19-4230-b71f-6805335181bd lacked final anchor; test repaired before recorded replay-verification sessions",
+  "export_candidate_pairs": 0,
+  "export_defensible_pairs": 0,
+  "export_observed_at": "2026-09-25T10:24:01.922199+00:00",
+  "export_proposals": 58,
+  "export_schema_version": "personalization-feedback-evidence-v2",
+  "export_sequence_gaps_all_sessions": 4,
+  "export_sequence_gaps_in_selected_sessions": 0,
+  "export_sessions_seen": 38,
+  "export_source_event_snapshot_sha256": "eea1109c3a37ea50936afcb5cbf665a67161bb2b594d37aab2a427c3f2c7ddaa",
+  "filetypes_detected": true,
+  "host": "crabcake",
+  "mode": "manual",
+  "model": "q25-coder",
+  "model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "precision": "Q4_K_M",
+  "readiness": {
+    "defensible_preference_pairs": 0,
+    "distinct_verified_sessions": 0,
+    "enabled": false,
+    "generic_regression_set_verified": false,
+    "held_out_temporal_session_split": false,
+    "inference_contention_cleared": false,
+    "minimum_pairs": 256,
+    "minimum_sessions": 3,
+    "ready": false,
+    "rollback_artifact_verified": false,
+    "training_memory_verified": false
+  },
+  "repository_id_count": 1,
+  "request_to_display_median_ms": 1146.5,
+  "request_to_display_ms": [
+    1240,
+    908,
+    1270,
+    747,
+    1231,
+    770,
+    1542,
+    1062
+  ],
+  "request_to_display_note": "Eight scripted synthetic proposals only; not the required 50 qualified calibration proposals.",
+  "request_to_display_p95_ms_nearest_rank": 1542,
+  "request_to_display_sample_size": 8,
+  "schema_version": 2,
+  "sessions": [
+    {
+      "anchors": [
+        {
+          "blob_match": true,
+          "bytes": 63,
+          "event_type": "buffer_open",
+          "sha256": "7e4a9bb86beae0d8a175f7b2212a9d6b79f860d5be43668022e93c54854cafe7"
+        },
+        {
+          "blob_match": true,
+          "bytes": 63,
+          "event_type": "buffer_write",
+          "sha256": "7e4a9bb86beae0d8a175f7b2212a9d6b79f860d5be43668022e93c54854cafe7"
+        },
+        {
+          "blob_match": true,
+          "bytes": 63,
+          "event_type": "buffer_write",
+          "sha256": "7e4a9bb86beae0d8a175f7b2212a9d6b79f860d5be43668022e93c54854cafe7"
+        }
+      ],
+      "displayed_proposals": 2,
+      "event_counts": {
+        "buffer_open": 1,
+        "buffer_write": 2,
+        "edit_delta": 4,
+        "prediction_accepted": 1,
+        "prediction_rejected": 1,
+        "prediction_requested": 2,
+        "prediction_shown": 2,
+        "repo_snapshot": 1,
+        "session_end": 1,
+        "session_start": 1
+      },
+      "events": 16,
+      "five_second_censored": 2,
+      "language": "python",
+      "next_save_censored": 0,
+      "replay": "REPLAY-OK; four deltas, zero unanchored, zero mismatches",
+      "repo_id": "repo:0ca009b05d312159b434f1696966f98d65036afd489076c16838446c1f387e4b",
+      "scripted_acceptances": 1,
+      "scripted_rejections": 1,
+      "sequence_gaps": 0,
+      "session_id": "445e43dc-a2b4-46fa-be3c-dc2ef80e8231",
+      "simulated_subsequent_human_edits": 1,
+      "simulated_undo_after_subsequent_edit": 1,
+      "thirty_second_censored": 2
+    },
+    {
+      "anchors": [
+        {
+          "blob_match": true,
+          "bytes": 75,
+          "event_type": "buffer_open",
+          "sha256": "cd28640cc0fad58a769164f2b9e9b6a3595ed07e3f19db4c69dd996001429057"
+        },
+        {
+          "blob_match": true,
+          "bytes": 75,
+          "event_type": "buffer_write",
+          "sha256": "cd28640cc0fad58a769164f2b9e9b6a3595ed07e3f19db4c69dd996001429057"
+        },
+        {
+          "blob_match": true,
+          "bytes": 75,
+          "event_type": "buffer_write",
+          "sha256": "cd28640cc0fad58a769164f2b9e9b6a3595ed07e3f19db4c69dd996001429057"
+        }
+      ],
+      "displayed_proposals": 2,
+      "event_counts": {
+        "buffer_open": 1,
+        "buffer_write": 2,
+        "edit_delta": 4,
+        "prediction_accepted": 1,
+        "prediction_rejected": 1,
+        "prediction_requested": 2,
+        "prediction_shown": 2,
+        "repo_snapshot": 1,
+        "session_end": 1,
+        "session_start": 1
+      },
+      "events": 16,
+      "five_second_censored": 2,
+      "language": "javascript",
+      "next_save_censored": 0,
+      "replay": "REPLAY-OK; four deltas, zero unanchored, zero mismatches",
+      "repo_id": "repo:0ca009b05d312159b434f1696966f98d65036afd489076c16838446c1f387e4b",
+      "scripted_acceptances": 1,
+      "scripted_rejections": 1,
+      "sequence_gaps": 0,
+      "session_id": "b88508df-ed54-4872-a12e-51c0ea8a93f3",
+      "simulated_subsequent_human_edits": 1,
+      "simulated_undo_after_subsequent_edit": 1,
+      "thirty_second_censored": 2
+    },
+    {
+      "anchors": [
+        {
+          "blob_match": true,
+          "bytes": 89,
+          "event_type": "buffer_open",
+          "sha256": "f26060a169668565c14b40d7a84e734d80b140966795a307dde00be1dd313607"
+        },
+        {
+          "blob_match": true,
+          "bytes": 89,
+          "event_type": "buffer_write",
+          "sha256": "f26060a169668565c14b40d7a84e734d80b140966795a307dde00be1dd313607"
+        },
+        {
+          "blob_match": true,
+          "bytes": 89,
+          "event_type": "buffer_write",
+          "sha256": "f26060a169668565c14b40d7a84e734d80b140966795a307dde00be1dd313607"
+        }
+      ],
+      "displayed_proposals": 2,
+      "event_counts": {
+        "buffer_open": 1,
+        "buffer_write": 2,
+        "edit_delta": 4,
+        "prediction_accepted": 1,
+        "prediction_rejected": 1,
+        "prediction_requested": 2,
+        "prediction_shown": 2,
+        "repo_snapshot": 1,
+        "session_end": 1,
+        "session_start": 1
+      },
+      "events": 16,
+      "five_second_censored": 2,
+      "language": "go",
+      "next_save_censored": 0,
+      "replay": "REPLAY-OK; four deltas, zero unanchored, zero mismatches",
+      "repo_id": "repo:0ca009b05d312159b434f1696966f98d65036afd489076c16838446c1f387e4b",
+      "scripted_acceptances": 1,
+      "scripted_rejections": 1,
+      "sequence_gaps": 0,
+      "session_id": "372d0c19-827c-4016-80dd-b1c87fec1768",
+      "simulated_subsequent_human_edits": 1,
+      "simulated_undo_after_subsequent_edit": 1,
+      "thirty_second_censored": 2
+    },
+    {
+      "anchors": [
+        {
+          "blob_match": true,
+          "bytes": 75,
+          "event_type": "buffer_open",
+          "sha256": "245d5bb9b9d3428547cb771075c81b9eb92648aa07bacc8f879f3d93eb449548"
+        },
+        {
+          "blob_match": true,
+          "bytes": 75,
+          "event_type": "buffer_write",
+          "sha256": "245d5bb9b9d3428547cb771075c81b9eb92648aa07bacc8f879f3d93eb449548"
+        },
+        {
+          "blob_match": true,
+          "bytes": 75,
+          "event_type": "buffer_write",
+          "sha256": "245d5bb9b9d3428547cb771075c81b9eb92648aa07bacc8f879f3d93eb449548"
+        }
+      ],
+      "displayed_proposals": 2,
+      "event_counts": {
+        "buffer_open": 1,
+        "buffer_write": 2,
+        "edit_delta": 4,
+        "prediction_accepted": 1,
+        "prediction_rejected": 1,
+        "prediction_requested": 2,
+        "prediction_shown": 2,
+        "repo_snapshot": 1,
+        "session_end": 1,
+        "session_start": 1
+      },
+      "events": 16,
+      "five_second_censored": 2,
+      "language": "rust",
+      "next_save_censored": 0,
+      "replay": "REPLAY-OK; four deltas, zero unanchored, zero mismatches",
+      "repo_id": "repo:0ca009b05d312159b434f1696966f98d65036afd489076c16838446c1f387e4b",
+      "scripted_acceptances": 1,
+      "scripted_rejections": 1,
+      "sequence_gaps": 0,
+      "session_id": "0b8c46df-92b0-456e-9631-7ed4b7def15d",
+      "simulated_subsequent_human_edits": 1,
+      "simulated_undo_after_subsequent_edit": 1,
+      "thirty_second_censored": 2
+    }
+  ],
+  "synthetic": true
+}

@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-09-25T10:25:53.227874+00:00",
+  "personal_feedback_export_committed": false,
+  "report_files": [
+    {
+      "bytes": 12589,
+      "path": "plan.json",
+      "sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8"
+    },
+    {
+      "bytes": 3291,
+      "path": "models.json",
+      "sha256": "4c7785374d04fc9f4000226ebbacd58b67368d2ab8c24debcca05a0a0dc8eb0a"
+    },
+    {
+      "bytes": 2488,
+      "path": "selection.json",
+      "sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2"
+    },
+    {
+      "bytes": 2815,
+      "path": "deployment/selection.json",
+      "sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98"
+    },
+    {
+      "bytes": 1356,
+      "path": "deployment/conversion-manifest.json",
+      "sha256": "81bbda5e71476fc304d958aeb107955c12c2cd36d42efd50f50f39696c3e4018"
+    },
+    {
+      "bytes": 2455,
+      "path": "deployment/native-q4-development-summary.json",
+      "sha256": "88b120e27089db734a19a4619f5cb0dc336659458f6d48a3b32c19c998fa22a1"
+    },
+    {
+      "bytes": 2452,
+      "path": "deployment/native-q4-heldout-summary.json",
+      "sha256": "2b1490b27d3c31ae7826506d286ab72fa7f70dadcf3a0667bcfbee5e65a88544"
+    },
+    {
+      "bytes": 1817,
+      "path": "deployment/installation.json",
+      "sha256": "69927e7ccc3607c0feac2810f19b9a098ef677b4fb4402f6b324145dfdfef986"
+    },
+    {
+      "bytes": 3710,
+      "path": "deployment/selected-action-latency.json",
+      "sha256": "4ecf21d0bea2c930aa4fcd9a0ee27ed546bedf4a2a736714a5917280aa3619ed"
+    },
+    {
+      "bytes": 523,
+      "path": "deployment/helper-memory.json",
+      "sha256": "ddd368c1ae83b23f054dc53c4facaa7b47f56974100d495dc1dac244976997bf"
+    },
+    {
+      "bytes": 8250,
+      "path": "feedback_verification/actual_selected_model.json",
+      "sha256": "535d1aac9fc51fd28e95d9b54fd0f24d4233e6accb21e007a29f0e0bf32f7f1c"
+    },
+    {
+      "bytes": 4412,
+      "path": "budget_ledger.json",
+      "sha256": "98d05c7abbb1ba95000e8fe92f83cf1d549ecc60eb6e7f463cb1756760033b1a"
+    },
+    {
+      "bytes": 5829,
+      "path": "quota_final.json",
+      "sha256": "3898b6cb5bf2aab7aef05c2c3391af5bab7ab447e506bf20e23aa27247f0f35a"
+    },
+    {
+      "bytes": 6505,
+      "path": "download_manifest.json",
+      "sha256": "854f10b72c966ed68b381f603fd884eed0541be07dcbbc3b9b900d05c5bc24ad"
+    },
+    {
+      "bytes": 884,
+      "path": "observability.json",
+      "sha256": "6feaa17e8c696d1966fc9ecb84df66e52df8ae9bfdc17677c2824f473e8d47a7"
+    },
+    {
+      "bytes": 4693,
+      "path": "HANDOFF.md",
+      "sha256": "035b181260fc30a6dcd73798f864ffe16065eb576d92d7f72b6cda6892a144ad"
+    }
+  ],
+  "schema_version": 1,
+  "selected_runtime_artifact": {
+    "bytes": 397807232,
+    "local_ignored_path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+    "published": false,
+    "sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626"
+  },
+  "training_artifacts_committed": false
+}

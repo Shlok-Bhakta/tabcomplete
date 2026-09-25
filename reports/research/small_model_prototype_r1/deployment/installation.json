@@ -1,0 +1,42 @@
+{
+  "automatic_mode_gates_passed": false,
+  "backup_path": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua.backup-20260925T100355Z",
+  "backup_sha256": "ff2af79c8dec643900f98bca900a8c9b546cbd0cdbeb6d1e7a8c6bc834471b63",
+  "cgroup_memory_current_bytes": 144429056,
+  "cgroup_memory_peak_bytes": 145797120,
+  "commands": [
+    "TabCompletePredict",
+    "TabCompleteAccept",
+    "TabCompleteReject",
+    "TabCompleteMode",
+    "TabCompleteStatus"
+  ],
+  "config_path": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+  "config_sha256": "6b487c1029820a332a8476cc93c8dc9bda2bcee9e984625635b86209ed31a8c1",
+  "host": "crabcake",
+  "memory_note": "Process RSS includes file-backed model pages and is the predictor RAM metric; cgroup memory.current charged fewer shared file pages in this sample.",
+  "mode": "manual",
+  "model_alias": "q25-coder",
+  "model_bytes": 397807232,
+  "model_path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+  "model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "observed_at": "2026-09-25T10:14:05.403768+00:00",
+  "precision": "Q4_K_M",
+  "service_active": true,
+  "service_health": {
+    "status": "ok"
+  },
+  "service_main_pid": 4177810,
+  "service_process_memory_bytes": {
+    "Anonymous": 143515648,
+    "Pss": 544062464,
+    "Pss_Anon": 143515648,
+    "Pss_File": 400546816,
+    "Rss": 547954688,
+    "Swap": 0
+  },
+  "service_unit_path": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service",
+  "service_unit_sha256": "119f2e1fde204befc776e3046d0fe2c160be37c315c475b567d29aa65a54e26c",
+  "t480s_installed": false,
+  "target_kind": "desktop"
+}
