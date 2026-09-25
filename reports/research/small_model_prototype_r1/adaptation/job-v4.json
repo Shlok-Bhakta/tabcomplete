@@ -1,12 +1,13 @@
 {
-  "attempt": 5,
-  "commit": "e57bd784b2fbdfa5fbff92ef0ba84c4be1f5c0cd",
+  "attempt": 4,
+  "commit": "035054e2c174b7b0df80f006d7b9964116e59e99",
   "finalists": [
     "q25-coder",
     "q3-base"
   ],
   "finalization_reserve_seconds": 1800,
-  "fixture_suite_sha256": "a4c875795bba3a7734a85a8b07a9cc9943440975ee5fdfbb7a17a66225204897",
+  "fixture_suite_sha256": "65e158c7496439807035c0420630ef48718745cf41261d8ae8f69a6adec78b4d",
+  "observed_status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\"",
   "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
   "quota_before": {
     "active_jobs": [],
@@ -124,17 +125,17 @@
         "status": "unknown"
       }
     ],
-    "observed_at": "2026-09-25T06:53:42.774660+00:00",
-    "remaining": 17.15,
+    "observed_at": "2026-09-25T06:40:30.260681+00:00",
+    "remaining": 17.25,
     "renewal": "2026-09-26T00:00:00",
     "source": "authenticated Kaggle CLI quota and kernel status",
     "total": 45.0,
     "units": "Kaggle account-hours",
-    "used": 27.85
+    "used": 27.75
   },
   "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
   "selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
   "session_seconds_limit": 28800,
   "state": "submitted",
-  "submitted_at": "2026-09-25T06:53:42.774636+00:00"
+  "submitted_at": "2026-09-25T06:40:30.260655+00:00"
 }
