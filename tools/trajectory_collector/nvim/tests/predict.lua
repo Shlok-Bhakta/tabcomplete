@@ -3,6 +3,11 @@ local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h:h")
 vim.opt.rtp:prepend(root)
 local collector = require("tabcomplete_trajectory")
 local predict = require("tabcomplete_trajectory.predict")
+vim.cmd("runtime plugin/tabcomplete_predict.lua")
+for _, command in ipairs({ "TabCompletePredict", "TabCompleteAccept", "TabCompleteReject",
+  "TabCompleteMode", "TabCompleteStatus" }) do
+  assert(vim.fn.exists(":" .. command) == 2)
+end
 collector.started = true
 collector.disabled = false
 collector.paused = false
@@ -127,6 +132,20 @@ for _, event in ipairs(collector.queue) do
   end
 end
 assert(expired)
+vim.api.nvim_buf_set_lines(0, 0, 1, false, { "αβ" })
+vim.api.nvim_exec_autocmds("TextChanged", { buffer = 0 })
+vim.api.nvim_buf_set_lines(0, 0, 1, false, { "αγ" })
+vim.api.nvim_exec_autocmds("TextChanged", { buffer = 0 })
+local captured_prompt
+predict._request_impl = function(state, _, callback)
+  captured_prompt = state.prompt
+  callback({ code = 7, stdout = "" })
+  return { kill = function() end }
+end
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+assert(predict.predict())
+assert(captured_prompt:find("<actual-recent-edit start=2 end=4>", 1, true))
+assert(captured_prompt:find("αγ", 1, true))
 vim.fn.delete(file)
 vim.fn.delete(other)
 print("predict headless safety checks passed")

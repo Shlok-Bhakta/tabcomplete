@@ -1,0 +1,61 @@
+{
+  "suite_revision": 7,
+  "observed_at": "2026-09-25T05:45:53.329999+00:00",
+  "model": "q25-coder Q4_K_M",
+  "host": "crabcake",
+  "runtime": "llama.cpp f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "fixed_settings": {
+    "slots": 1,
+    "context_tokens": 2304,
+    "cache_ram_mib": 128,
+    "context_checkpoints": 32,
+    "batch_tokens": 256,
+    "microbatch_tokens": 64,
+    "threads": 4,
+    "active_prompt_cache": true
+  },
+  "comparison": {
+    "no_saved_idle_slots": {
+      "summary_sha256": "2219bcee372b0b86b795527c4f6078d6568219d27f49f76931ef0571cca6dcf5",
+      "peak_rss_bytes": 545976320,
+      "post_request_rss_bytes": 545976320,
+      "peak_anonymous_bytes": 141508608,
+      "cache_reuse_tokens_on_repeated_prompts": [
+        421,
+        423,
+        856,
+        858,
+        1758,
+        1760
+      ],
+      "warm_512_completed_median_seconds": 0.5526837825018447,
+      "vmstat_delta": {
+        "pswpin": 0,
+        "pswpout": 0,
+        "pgmajfault": 0
+      }
+    },
+    "saved_idle_slots": {
+      "summary_sha256": "2dc48d67928171ef78b1f9842a3a0451274e2b07e8f5d6d753ec8343ca8aec40",
+      "peak_rss_bytes": 545435648,
+      "post_request_rss_bytes": 545435648,
+      "peak_anonymous_bytes": 141508608,
+      "cache_reuse_tokens_on_repeated_prompts": [
+        421,
+        423,
+        856,
+        858,
+        1758,
+        1760
+      ],
+      "warm_512_completed_median_seconds": 0.5360689575027209,
+      "vmstat_delta": {
+        "pswpin": 0,
+        "pswpout": 0,
+        "pgmajfault": 0
+      }
+    }
+  },
+  "interpretation": "Disabling saved idle-slot snapshots preserved the verified active prefix reuse. At one slot it did not materially reduce process RSS; optional idle snapshots were not the observed dominant memory cost. Peak anonymous memory still includes active KV, work buffers and prompt cache overhead and cannot be separated exactly from RSS.",
+  "failed_diagnostics": "No-cache-prompt, cache-ram=0, and context-checkpoint caps 0/1/2/8 removed active prefix reuse in the 24-token replay (cache_n=0). Those runs are preserved but excluded from optional-snapshot memory inference."
+}

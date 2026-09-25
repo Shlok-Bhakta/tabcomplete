@@ -12,9 +12,13 @@ afterEach(() => {
 
 describe("replay", () => {
   test("REPLAY-OK on fixture (exit 0)", async () => {
-    const r = await runScript("replay.ts", ["--file", REL_PATH, "--repo", REPO_A, "--db", f.dbPath]);
+    const r = await runScript("replay.ts", [
+      "--file", REL_PATH, "--repo", REPO_A, "--session", "sess-fixture-0001",
+      "--db", f.dbPath,
+    ]);
     expect(r.exit).toBe(0);
     expect(r.stdout).toContain("REPLAY-OK");
+    expect(r.stdout).toContain("unanchored: 0");
   });
 
   test("planted phantom zero-text deletion -> REPLAY-FAIL with suspect ts/seq", async () => {

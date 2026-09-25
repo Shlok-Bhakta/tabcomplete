@@ -25,6 +25,8 @@ local expiry_timer = nil
 local applying = false
 local last_status = "idle"
 local group = nil
+local tracked_content = {}
+local recent_edit = {}
 M._request_impl = nil -- headless integration seam; never used by the installed client
 
 local function utf8_boundary(line, col)
@@ -32,6 +34,45 @@ local function utf8_boundary(line, col)
   if col == #line then return true end
   local byte = line:byte(col + 1)
   return byte < 0x80 or byte >= 0xC0
+end
+
+local function content_of(bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) then return nil end
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local content = table.concat(lines, "\n")
+  if vim.bo[bufnr].endofline then content = content .. "\n" end
+  return content
+end
+
+local function capture_actual_edit(bufnr)
+  local after = content_of(bufnr)
+  if not after then return end
+  local before = tracked_content[bufnr]
+  tracked_content[bufnr] = after
+  if not before or before == after then return end
+  local prefix = 0
+  while prefix < math.min(#before, #after) and before:byte(prefix + 1) == after:byte(prefix + 1) do
+    prefix = prefix + 1
+  end
+  while prefix > 0 and ((before:byte(prefix + 1) or 0) >= 0x80
+      and (before:byte(prefix + 1) or 0) < 0xC0
+      or (after:byte(prefix + 1) or 0) >= 0x80 and (after:byte(prefix + 1) or 0) < 0xC0) do
+    prefix = prefix - 1
+  end
+  local suffix = 0
+  while suffix < math.min(#before - prefix, #after - prefix)
+      and before:byte(#before - suffix) == after:byte(#after - suffix) do
+    suffix = suffix + 1
+  end
+  local old_end, new_end = #before - suffix, #after - suffix
+  while suffix > 0 and (not utf8_boundary(before, old_end)
+      or not utf8_boundary(after, new_end)) do
+    suffix = suffix - 1
+    old_end, new_end = #before - suffix, #after - suffix
+  end
+  local inserted = after:sub(prefix + 1, new_end)
+  if before:sub(1, prefix) .. inserted .. before:sub(old_end + 1) ~= after then return end
+  recent_edit[bufnr] = { start_byte = prefix, end_byte = old_end, text = inserted }
 end
 
 local function close_preview()
@@ -83,10 +124,7 @@ local function buffer_state()
     return nil, "cursor is not on a UTF-8 boundary"
   end
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local content = table.concat(lines, "\n")
-  if vim.bo[bufnr].endofline then
-    content = content .. "\n"
-  end
+  local content = content_of(bufnr)
   local before = table.concat(vim.list_slice(lines, math.max(1, row - 79), row), "\n")
   if before ~= "" then before = before .. "\n" end
   before = before .. line:sub(1, col)
@@ -94,10 +132,18 @@ local function buffer_state()
   local after = line:sub(#line + 1)
   if #after_lines > 0 then after = after .. "\n" .. table.concat(after_lines, "\n") end
   local region = line:sub(col + 1)
-  local region_start = #before
+  local prior_lines = table.concat(vim.list_slice(lines, 1, row), "\n")
+  if row > 0 then prior_lines = prior_lines .. "\n" end
+  local region_start = #prior_lines + col
   local filetype = vim.bo[bufnr].filetype
+  local history = "<recent-edit unavailable>\n"
+  local latest = recent_edit[bufnr]
+  if latest then
+    history = "<actual-recent-edit start=" .. latest.start_byte .. " end=" .. latest.end_byte
+      .. ">\n" .. latest.text .. "\n</actual-recent-edit>\n"
+  end
   local prompt = "<repo " .. path .. ">\n<filetype " .. filetype .. ">\n"
-    .. "<file " .. path .. ">\n" .. before .. "[[EDIT]]" .. region .. "[[/EDIT]]"
+    .. history .. "<file " .. path .. ">\n" .. before .. "[[EDIT]]" .. region .. "[[/EDIT]]"
     .. after .. "\n</file>\n<P " .. path .. " " .. region_start .. ">\n"
     .. "Return one compact next-edit action: N\\n for no edit or R\\n followed by exact replacement text. End with EOS.\n"
   return {
@@ -266,6 +312,7 @@ function M.accept()
   applying = true
   vim.api.nvim_buf_set_text(state.bufnr, state.row, state.start_col, state.row, state.end_col,
     replacement)
+  tracked_content[state.bufnr] = content_of(state.bufnr)
   collector.log_prediction_accepted({ prediction_id = state.prediction_id,
     accepted_chars = vim.fn.strchars(action.text), accepted_lines = #replacement,
     total_chars = vim.fn.strchars(action.text), synthetic = opts.synthetic,
@@ -308,9 +355,29 @@ function M.setup(options)
   clear("idle")
   if group then pcall(vim.api.nvim_del_augroup_by_id, group) end
   group = vim.api.nvim_create_augroup("TabCompletePredict", { clear = true })
-  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "BufLeave", "BufWipeout" }, {
-    group = group, callback = function()
-      if not applying then clear("invalidated by editor change") end
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(bufnr) then tracked_content[bufnr] = content_of(bufnr) end
+  end
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    group = group, callback = function(args)
+      if not applying then
+        capture_actual_edit(args.buf)
+        clear("invalidated by editor change")
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout" }, {
+    group = group, callback = function(args)
+      clear("invalidated by file switch")
+      if args.event == "BufWipeout" then
+        tracked_content[args.buf] = nil
+        recent_edit[args.buf] = nil
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = group, callback = function(args)
+      tracked_content[args.buf] = content_of(args.buf)
     end,
   })
   vim.api.nvim_create_autocmd({ "TextChangedI", "CursorMovedI" }, {

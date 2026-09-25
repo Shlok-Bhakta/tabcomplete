@@ -1,0 +1,66 @@
+{
+  "observed_at": "2026-09-25T05:44:45.679622+00:00",
+  "condition": "representative headless normal-editing process mix, not observed user interactive session",
+  "processes": [
+    {
+      "pid": 4033526,
+      "name": "firefox",
+      "rss_bytes": 500314112
+    },
+    {
+      "pid": 4033755,
+      "name": "Socket Process",
+      "rss_bytes": 51253248
+    },
+    {
+      "pid": 4033874,
+      "name": "Web Content",
+      "rss_bytes": 89591808
+    },
+    {
+      "pid": 4034056,
+      "name": "Isolated Web Co",
+      "rss_bytes": 140099584
+    },
+    {
+      "pid": 4034476,
+      "name": "Utility Process",
+      "rss_bytes": 33656832
+    },
+    {
+      "pid": 4034643,
+      "name": "nvim",
+      "rss_bytes": 30355456
+    },
+    {
+      "pid": 4034644,
+      "name": "Web Content",
+      "rss_bytes": 76718080
+    },
+    {
+      "pid": 4034648,
+      "name": "Web Content",
+      "rss_bytes": 76767232
+    },
+    {
+      "pid": 4034654,
+      "name": "Web Content",
+      "rss_bytes": 76795904
+    },
+    {
+      "pid": 4035211,
+      "name": "nvim",
+      "rss_bytes": 28196864
+    },
+    {
+      "pid": 4035225,
+      "name": "lua-language-server",
+      "rss_bytes": 247672832
+    }
+  ],
+  "total_background_rss_bytes": 1351421952,
+  "browser": "Firefox headless with a local blank tab",
+  "editor": "two LazyVim headless instances on synthetic Python and Lua files",
+  "language_server": "lua-language-server active",
+  "hardware_host": "crabcake"
+}

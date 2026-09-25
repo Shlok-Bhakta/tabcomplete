@@ -151,6 +151,7 @@ export function resolveFile(
 
 export interface AnchorEvent {
   timestamp_ms: number;
+  sequence_number: number;
   event_type: string;
   content_hash: string;
   session_id: string;
@@ -165,12 +166,12 @@ export function fileAnchors(
   const paths = [relPath, ...absPaths];
   const placeholders = paths.map(() => "?").join(",");
   return db.query(
-    `SELECT timestamp_ms, event_type, json_extract(payload_json, '$.content_hash') AS content_hash,
+    `SELECT timestamp_ms, sequence_number, event_type, json_extract(payload_json, '$.content_hash') AS content_hash,
             session_id FROM events
      WHERE event_type IN ('buffer_open','buffer_write')
        AND json_extract(payload_json, '$.path') IN (${placeholders})
        AND json_extract(payload_json, '$.content_hash') IS NOT NULL
-     ORDER BY timestamp_ms ASC`,
+     ORDER BY timestamp_ms ASC, sequence_number ASC`,
   ).all(...paths) as AnchorEvent[];
 }
 

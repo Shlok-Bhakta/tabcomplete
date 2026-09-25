@@ -1,0 +1,59 @@
+{
+  "observed_at": "2026-09-25T05:47:44.916699+00:00",
+  "condition": "controlled desktop Q4 replay, greedy, same source bytes and seed, fresh first execution vs cached repeated execution",
+  "models": {
+    "q25-coder": {
+      "cases": 12,
+      "exact_token_sequence_matches": 8,
+      "mismatches": [
+        {
+          "state_id": "synthetic-512-0",
+          "first_different_output_token_1based": 1,
+          "cached_context_tokens_reused": 421
+        },
+        {
+          "state_id": "synthetic-512-1",
+          "first_different_output_token_1based": 7,
+          "cached_context_tokens_reused": 423
+        },
+        {
+          "state_id": "synthetic-1024-1",
+          "first_different_output_token_1based": 5,
+          "cached_context_tokens_reused": 858
+        },
+        {
+          "state_id": "synthetic-2048-3",
+          "first_different_output_token_1based": 2,
+          "cached_context_tokens_reused": 1760
+        }
+      ],
+      "measurements_sha256": "e5949b425cab9a2bd12e49cc0245f866bb6f068391abf4a1f5129786b70c16f4"
+    },
+    "q3-base": {
+      "cases": 12,
+      "exact_token_sequence_matches": 11,
+      "mismatches": [
+        {
+          "state_id": "synthetic-2048-0",
+          "first_different_output_token_1based": 5,
+          "cached_context_tokens_reused": 1758
+        }
+      ],
+      "measurements_sha256": "33ea19925b6d8f32572775d131ab1226b5ce84c2074d007fba6261379314ae69"
+    },
+    "lfm350-base": {
+      "cases": 12,
+      "exact_token_sequence_matches": 12,
+      "mismatches": [],
+      "measurements_sha256": "8e79b31f23555fd1decb799f3cf42dd343c3071bc4efe9042bedfda9e935596c"
+    },
+    "p12-control": {
+      "cases": 12,
+      "exact_token_sequence_matches": 12,
+      "mismatches": [],
+      "measurements_sha256": "1263f8b515998df5a73b9c446589c78afd7dc3ba9cdffdda7f4a12a6db1d830b"
+    }
+  },
+  "runtime_documentation": "Pinned llama.cpp tools/server/README.md states cache_prompt reuse may change results because logits are not guaranteed bit-identical between different batch sizes.",
+  "interpretation": "Observed mismatches are consistent with the documented numerical behavior; they are not proof of an incorrect source prefix. The response is still guarded by exact editor-state hashes before acceptance."
+}

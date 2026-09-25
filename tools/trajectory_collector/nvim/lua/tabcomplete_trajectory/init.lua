@@ -50,6 +50,14 @@ local function buf_file_id(bufnr)
   return util.file_id(abs, root, repository.cache.root_name)
 end
 
+local function current_repo_id()
+  local root = repository.cache.root
+  if not root or root == "" then return nil end
+  local identity = repository.cache.origin
+  if not identity or identity == "" then identity = root end
+  return "repo:" .. util.sha256hex(identity)
+end
+
 --- POST a JSON body to server_url .. path. Never throws, never blocks.
 --- cb(ok:boolean, info). Warns once (never crashes) when URL is missing.
 function post_to(path, body, cb)
@@ -327,7 +335,7 @@ local function snapshot_repo(reason)
     M.last_err = "repo snapshot failed: " .. tostring(snap)
     return
   end
-  local repo_id = "repo:" .. (snap.root_name or "unknown")
+  local repo_id = current_repo_id()
   local files = {}
   for _, e in ipairs(snap.files or {}) do
     if e.content_hash and e.path and e.path ~= "" and e.path:sub(1, 1) ~= "/" then
@@ -628,6 +636,13 @@ function M.setup(opts)
     started_at_ms = started_at,
     protocol_version = events.PROTOCOL_VERSION,
     nvim_version = vim.inspect(vim.version()),
+    repo_id = current_repo_id(),
+    root_name = repository.cache.root_name,
+    root_identity_hash = repository.cache.root and util.sha256hex(repository.cache.root) or nil,
+    origin_url = repository.cache.origin,
+    git_head_at_start = repository.cache.head,
+    git_branch_at_start = repository.cache.branch,
+    cwd_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t"),
   }
   post_to("/v1/session/start", start_body, function(ok)
     if not ok then

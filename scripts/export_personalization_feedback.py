@@ -231,6 +231,8 @@ def extract(db_path: Path) -> dict:
     # displayed actions. Replay verification remains a separate promotion gate.
     by_state: dict[tuple, list[dict]] = defaultdict(list)
     for record in evidence:
+        if "human_provenance_unverified" in record["ambiguity_flags"]:
+            continue
         if not all(
             record.get(key)
             for key in (

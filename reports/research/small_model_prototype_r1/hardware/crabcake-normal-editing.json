@@ -1,0 +1,341 @@
+{
+  "condition": "representative headless Firefox + two LazyVim instances + lua-language-server; synthetic disposable repository; no competing build/conversion/download/benchmark",
+  "host": "crabcake",
+  "measurements": {
+    "lfm350-base": {
+      "cold_request_seconds": 2.2018062109709717,
+      "load_seconds": 0.6962855259771459,
+      "model_sha256": "f099bfa59808c55d022b89a5d0c77bd135b3cc62a05bbd351e685978dc86b0ab",
+      "peak_process_memory_bytes": {
+        "Anonymous": 232099840,
+        "Pss": 464548864,
+        "Pss_Anon": 232099840,
+        "Pss_File": 236192768,
+        "Rss": 468557824,
+        "Swap": 0,
+        "VmHWM_status": 468557824,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 232099840,
+        "Pss": 464548864,
+        "Pss_Anon": 232099840,
+        "Pss_File": 232449024,
+        "Rss": 468557824,
+        "Swap": 0,
+        "VmHWM_status": 468557824,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.08 avg60=0.08 avg300=0.24 total=479339736\nfull avg10=0.04 avg60=0.06 avg300=0.22 total=420503658",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.00 avg60=0.06 avg300=0.25 total=479263155\nfull avg10=0.00 avg60=0.05 avg300=0.24 total=420457038",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            762,
+            764
+          ],
+          "cache_reused_tokens_range": [
+            758,
+            760
+          ],
+          "warm_16_output_median_seconds": 0.2888481355039403,
+          "warm_8_output_median_seconds": 0.1575632554886397,
+          "warm_completed_median_seconds": 0.41932047298178077,
+          "warm_first_output_median_seconds": 0.04695430348510854
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1516,
+            1518
+          ],
+          "cache_reused_tokens_range": [
+            1512,
+            1514
+          ],
+          "warm_16_output_median_seconds": 0.32287865597754717,
+          "warm_8_output_median_seconds": 0.1898604039743077,
+          "warm_completed_median_seconds": 0.46494585048640147,
+          "warm_first_output_median_seconds": 0.06338104198221117
+        },
+        "512": {
+          "actual_input_token_range": [
+            385,
+            387
+          ],
+          "cache_reused_tokens_range": [
+            381,
+            383
+          ],
+          "warm_16_output_median_seconds": 0.2547577235091012,
+          "warm_8_output_median_seconds": 0.1441624240251258,
+          "warm_completed_median_seconds": 0.36471648249425925,
+          "warm_first_output_median_seconds": 0.04635024050367065
+        }
+      },
+      "summary_sha256": "7a068f3689a395b89003ae729dcbee78269d73892ee646e905e2f3137908eb89",
+      "vmstat_delta": {
+        "pgmajfault": 0,
+        "pswpin": 0,
+        "pswpout": 0
+      }
+    },
+    "p12-control": {
+      "cold_request_seconds": 5.618556051980704,
+      "load_seconds": 1.861770520976279,
+      "model_sha256": "c1d0da11f691667169c9738c46162c3e5421b6eeb11b075359a5fd58fba1eb24",
+      "peak_process_memory_bytes": {
+        "Anonymous": 556929024,
+        "Pss": 1226598400,
+        "Pss_Anon": 556929024,
+        "Pss_File": 679043072,
+        "Rss": 1230495744,
+        "Swap": 0,
+        "VmHWM_status": 1230495744,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 556929024,
+        "Pss": 1226598400,
+        "Pss_Anon": 556929024,
+        "Pss_File": 669669376,
+        "Rss": 1230495744,
+        "Swap": 0,
+        "VmHWM_status": 1230495744,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.00 avg60=0.01 avg300=0.15 total=479458096\nfull avg10=0.00 avg60=0.00 avg300=0.14 total=420573976",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.08 avg60=0.08 avg300=0.24 total=479339906\nfull avg10=0.04 avg60=0.06 avg300=0.22 total=420503821",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            916,
+            918
+          ],
+          "cache_reused_tokens_range": [
+            912,
+            914
+          ],
+          "warm_16_output_median_seconds": 0.677142005006317,
+          "warm_8_output_median_seconds": 0.37890272500226274,
+          "warm_completed_median_seconds": 0.9703974979929626,
+          "warm_first_output_median_seconds": 0.10002490901388228
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1876,
+            1878
+          ],
+          "cache_reused_tokens_range": [
+            1872,
+            1874
+          ],
+          "warm_16_output_median_seconds": 0.7320362320169806,
+          "warm_8_output_median_seconds": 0.4051033995056059,
+          "warm_completed_median_seconds": 1.064559498016024,
+          "warm_first_output_median_seconds": 0.11606998552451842
+        },
+        "512": {
+          "actual_input_token_range": [
+            452,
+            454
+          ],
+          "cache_reused_tokens_range": [
+            448,
+            450
+          ],
+          "warm_16_output_median_seconds": 0.6316818914783653,
+          "warm_8_output_median_seconds": 0.34116841899231076,
+          "warm_completed_median_seconds": 0.9308301679848228,
+          "warm_first_output_median_seconds": 0.08483081599115394
+        }
+      },
+      "summary_sha256": "4451eb392ab7ea82a5b55c393ec04bb2781dda2743821c5e6c219c10167d7b95",
+      "vmstat_delta": {
+        "pgmajfault": 15,
+        "pswpin": 1,
+        "pswpout": 0
+      }
+    },
+    "q25-coder": {
+      "cold_request_seconds": 4.371813378995284,
+      "load_seconds": 0.9509696110035293,
+      "model_sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30",
+      "peak_process_memory_bytes": {
+        "Anonymous": 141504512,
+        "Pss": 541616128,
+        "Pss_Anon": 141504512,
+        "Pss_File": 404588544,
+        "Rss": 545558528,
+        "Swap": 0,
+        "VmHWM_status": 555659264,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 141504512,
+        "Pss": 541616128,
+        "Pss_Anon": 141504512,
+        "Pss_File": 400111616,
+        "Rss": 545558528,
+        "Swap": 0,
+        "VmHWM_status": 555659264,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.00 avg60=0.23 avg300=0.34 total=479201742\nfull avg10=0.00 avg60=0.23 avg300=0.32 total=420404471",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.00 avg60=0.61 avg300=0.42 total=479152337\nfull avg10=0.00 avg60=0.59 avg300=0.39 total=420362531",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581040"
+      },
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            857,
+            859
+          ],
+          "cache_reused_tokens_range": [
+            856,
+            858
+          ],
+          "warm_16_output_median_seconds": 0.4181252935086377,
+          "warm_8_output_median_seconds": 0.2224657539918553,
+          "warm_completed_median_seconds": 0.6213428250339348,
+          "warm_first_output_median_seconds": 0.04348005700740032
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1759,
+            1761
+          ],
+          "cache_reused_tokens_range": [
+            1758,
+            1760
+          ],
+          "warm_16_output_median_seconds": 0.5596739255124703,
+          "warm_8_output_median_seconds": 0.2946737475285772,
+          "warm_completed_median_seconds": 0.8139647310308646,
+          "warm_first_output_median_seconds": 0.05428657348966226
+        },
+        "512": {
+          "actual_input_token_range": [
+            422,
+            424
+          ],
+          "cache_reused_tokens_range": [
+            421,
+            423
+          ],
+          "warm_16_output_median_seconds": 0.4162178885017056,
+          "warm_8_output_median_seconds": 0.21875439048744738,
+          "warm_completed_median_seconds": 0.6100946480000857,
+          "warm_first_output_median_seconds": 0.03791808249661699
+        }
+      },
+      "summary_sha256": "306ebfc52846912d8b52edafd507147f06a48b65afdf54542b6d4d31d50163ab",
+      "vmstat_delta": {
+        "pgmajfault": 1,
+        "pswpin": 1,
+        "pswpout": 0
+      }
+    },
+    "q3-base": {
+      "cold_request_seconds": 4.197390747023746,
+      "load_seconds": 1.3734191689873114,
+      "model_sha256": "dd84ce11f646f36ff8afd594b6bef447f14f2dbf93fa981922b4cad1c3f11e05",
+      "peak_process_memory_bytes": {
+        "Anonymous": 641622016,
+        "Pss": 1038626816,
+        "Pss_Anon": 641622016,
+        "Pss_File": 403441664,
+        "Rss": 1042599936,
+        "Swap": 0,
+        "VmHWM_status": 1042599936,
+        "VmSwap_status": 0
+      },
+      "post_request_memory_bytes": {
+        "Anonymous": 540454912,
+        "Pss": 937459712,
+        "Pss_Anon": 540454912,
+        "Pss_File": 397004800,
+        "Rss": 941432832,
+        "Swap": 0,
+        "VmHWM_status": 1042034688,
+        "VmSwap_status": 0
+      },
+      "pressure_after": {
+        "io": "some avg10=0.00 avg60=0.06 avg300=0.25 total=479263155\nfull avg10=0.00 avg60=0.05 avg300=0.24 total=420457038",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "pressure_before": {
+        "io": "some avg10=0.00 avg60=0.23 avg300=0.34 total=479201742\nfull avg10=0.00 avg60=0.23 avg300=0.32 total=420404471",
+        "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=30646678\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=28581041"
+      },
+      "source_contexts": {
+        "1024": {
+          "actual_input_token_range": [
+            857,
+            859
+          ],
+          "cache_reused_tokens_range": [
+            856,
+            858
+          ],
+          "warm_16_output_median_seconds": 0.711913553532213,
+          "warm_8_output_median_seconds": 0.35602614347590134,
+          "warm_completed_median_seconds": 1.0490508185175713,
+          "warm_first_output_median_seconds": 0.06140717401285656
+        },
+        "2048": {
+          "actual_input_token_range": [
+            1759,
+            1761
+          ],
+          "cache_reused_tokens_range": [
+            1758,
+            1760
+          ],
+          "warm_16_output_median_seconds": 1.1542936179903336,
+          "warm_8_output_median_seconds": 0.5924797665211372,
+          "warm_completed_median_seconds": 1.7262221849814523,
+          "warm_first_output_median_seconds": 0.09077595151029527
+        },
+        "512": {
+          "actual_input_token_range": [
+            422,
+            424
+          ],
+          "cache_reused_tokens_range": [
+            421,
+            423
+          ],
+          "warm_16_output_median_seconds": 0.5117432645056397,
+          "warm_8_output_median_seconds": 0.26532363350270316,
+          "warm_completed_median_seconds": 0.749439902981976,
+          "warm_first_output_median_seconds": 0.043898127507418394
+        }
+      },
+      "summary_sha256": "1b78e6eefedffdca8a589ccfc53c9d2d34cba140c226c5ad58e53e5e98ef5097",
+      "vmstat_delta": {
+        "pgmajfault": 2,
+        "pswpin": 3,
+        "pswpout": 0
+      }
+    }
+  },
+  "observed_at": "2026-09-25T05:50:14.942025+00:00",
+  "schema_version": 1,
+  "workload_manifest_sha256": "cf48b7916d175c791b0f6eebdc12327a09f39cd37c79ebfd207cf51b01ecd35b"
+}

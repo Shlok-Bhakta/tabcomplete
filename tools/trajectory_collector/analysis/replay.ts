@@ -8,22 +8,39 @@
  * Exit 0 on full match, 1 otherwise. Prints to stdout only.
  *
  * Usage:
- *   bun analysis/replay.ts --file exercises/07_structs/structs1.rs [--repo repo:rustlings] [--db /path/collector.sqlite]
+ *   bun analysis/replay.ts --file example.py --session <session-id> [--db /path/collector.sqlite]
  */
 import { blobBytes, fileAnchors, fileDeltas, openReadOnly, parseArgs, resolveFile, DEFAULT_DB } from "./lib.ts";
 import type { DeltaEvent } from "./lib.ts";
 
-const args = parseArgs(Bun.argv.slice(2), new Set(["db", "file", "repo"]));
+const args = parseArgs(Bun.argv.slice(2), new Set(["db", "file", "repo", "session"]));
 const dbPath = args.db ?? DEFAULT_DB;
 const db = openReadOnly(dbPath);
 
 const { file, absPaths } = resolveFile(db, { file: args.file, repo: args.repo });
-const anchors = fileAnchors(db, file.relative_path, absPaths);
+const anchors = fileAnchors(db, file.relative_path, absPaths).filter(
+  (anchor) => !args.session || anchor.session_id === args.session,
+);
 if (anchors.length === 0) {
   console.error(`no anchors found for ${file.relative_path}`);
   process.exit(2);
 }
-const deltas = fileDeltas(db, file.relative_path, absPaths);
+const sessionDeltas = fileDeltas(db, file.relative_path, absPaths).filter(
+  (delta) => !args.session || delta.session_id === args.session,
+);
+const first = anchors[0]!;
+const last = anchors[anchors.length - 1]!;
+const afterFirst = (delta: DeltaEvent) =>
+  delta.session_id === first.session_id
+    ? delta.sequence_number > first.sequence_number
+    : delta.timestamp_ms > first.timestamp_ms;
+const beforeLast = (delta: DeltaEvent) =>
+  delta.session_id === last.session_id
+    ? delta.sequence_number < last.sequence_number
+    : delta.timestamp_ms < last.timestamp_ms;
+const deltas = sessionDeltas.filter((delta) => afterFirst(delta) && beforeLast(delta));
+const outside = sessionDeltas.filter((delta) => !afterFirst(delta) || !beforeLast(delta));
+const unanchored = outside.length;
 
 const norm = (b: Uint8Array): { lines: string[]; trailingNl: boolean } => {
   let s = new TextDecoder().decode(b);
@@ -96,9 +113,13 @@ if (match) {
 
 console.log(`# replay (READ-ONLY, db=${dbPath})`);
 console.log(`# file: ${file.relative_path}`);
-console.log(`# anchors: ${anchors.length}  deltas replayed: ${deltas.length}  delta mismatches: ${failures}`);
+console.log(`# session: ${args.session ?? "all"}`);
+console.log(`# anchors: ${anchors.length}  deltas replayed: ${deltas.length}  unanchored: ${unanchored}  delta mismatches: ${failures}`);
 console.log(`# rebuilt bytes: ${enc.length}  target bytes: ${target.length}`);
-if (match && failures === 0) {
+for (const delta of outside.slice(0, 10)) {
+  console.log(`# unanchored delta ts=${delta.timestamp_ms} seq=${delta.sequence_number}`);
+}
+if (match && failures === 0 && unanchored === 0) {
   console.log("REPLAY-OK: anchor + deltas byte-equal the final anchor");
 } else {
   if (suspects.length > 0) {

@@ -1,0 +1,77 @@
+{
+  "line_metric": "exact first-line continuation on the corrected fixed 180-case suite",
+  "models": {
+    "lfm350-base": {
+      "immutable_revision": "9960764e30892e01f29a6dc23df2533fcd8bd5ae",
+      "license": "other",
+      "native_q4_line_exact_180": null,
+      "native_q4_strict_functional_pass_200": null,
+      "source": "LiquidAI/LFM2.5-350M-Base",
+      "total_parameters": 354483968,
+      "unquantized_line_exact_180": 17,
+      "unquantized_strict_functional_pass_200": 1
+    },
+    "p12-control": {
+      "immutable_revision": "existing validated local checkpoint",
+      "license": "existing derivative; see R2 manifest",
+      "native_q4_line_exact_180": 19,
+      "native_q4_strict_functional_pass_200": 8,
+      "source": "existing validated R2 P12 checkpoint",
+      "total_parameters": null,
+      "unquantized_line_exact_180": 20,
+      "unquantized_strict_functional_pass_200": 9
+    },
+    "q25-coder": {
+      "immutable_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+      "license": "apache-2.0",
+      "native_q4_line_exact_180": 18,
+      "native_q4_strict_functional_pass_200": 7,
+      "source": "Qwen/Qwen2.5-Coder-0.5B",
+      "total_parameters": 494032768,
+      "unquantized_line_exact_180": 16,
+      "unquantized_strict_functional_pass_200": 11
+    },
+    "q3-base": {
+      "immutable_revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+      "license": "apache-2.0",
+      "native_q4_line_exact_180": 17,
+      "native_q4_strict_functional_pass_200": 10,
+      "source": "Qwen/Qwen3-0.6B-Base",
+      "total_parameters": 596049920,
+      "unquantized_line_exact_180": 18,
+      "unquantized_strict_functional_pass_200": 9
+    }
+  },
+  "paired": {
+    "q3_q4_vs_unquantized_line_exact": {
+      "q4_only": 2,
+      "shared_exact": 15,
+      "unquantized_only": 3
+    },
+    "q3_q4_vs_unquantized_strict_functional": {
+      "q4_only": 2,
+      "shared_pass": 8,
+      "unquantized_only": 1
+    },
+    "q3_vs_q25_unquantized_line_exact": {
+      "discordant_cases": 6,
+      "q25_only": 2,
+      "q3_only": 4,
+      "shared_exact": 14,
+      "two_sided_sign_p": 0.6875
+    },
+    "q3_vs_q25_unquantized_strict_functional": {
+      "discordant_cases": 10,
+      "q25_only": 6,
+      "q3_only": 4,
+      "shared_pass": 5,
+      "two_sided_sign_p": 0.75390625
+    }
+  },
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "precision_comparison_note": "Unquantized tests used Transformers on Kaggle. Native Q4 used pinned llama.cpp on crabcake; runtime and precision changed together. Q4 line quality used 8192-token context under registered suite-v2, while interactive replay used 2304. Do not interpret differences as pure quantization effects.",
+  "recorded_at": "2026-09-25T05:41:27.248314+00:00",
+  "schema_version": 1,
+  "sealed_next_edit_test_used_for_selection": false,
+  "strict_metric": "functional sandbox test pass on the fixed 200-case causal suite; not exact string match"
+}

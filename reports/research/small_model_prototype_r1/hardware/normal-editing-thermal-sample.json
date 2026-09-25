@@ -1,0 +1,12 @@
+{
+  "observed_at": "2026-09-25T05:46:44.455631+00:00",
+  "host": "crabcake",
+  "cpu0_frequency_khz": 2953998,
+  "thermal_zones": [
+    {
+      "zone": "thermal_zone0",
+      "millidegrees_c": 41000
+    }
+  ],
+  "sampling_note": "Sample during q3 normal-editing replay; not a continuous thermal trace."
+}
