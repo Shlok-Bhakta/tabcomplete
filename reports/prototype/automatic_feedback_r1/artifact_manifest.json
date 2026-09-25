@@ -13,7 +13,7 @@
       "sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c"
     }
   ],
-  "generated_at": "2026-09-25T20:29:52.842150+00:00",
+  "generated_at": "2026-09-25T20:35:08.316937+00:00",
   "personal_feedback_committed": false,
   "tracked_files": [
     {
@@ -27,9 +27,14 @@
       "sha256": "a54ad68d76c9656b06735fc0e141dea83b71a10563ad71af920cc5bb680624b7"
     },
     {
-      "bytes": 4526,
+      "bytes": 59301,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_after_install.json",
+      "sha256": "12e2daa0a5c1fa16647cbb9b2e9678775ad75a38be13be83e1db3bea5e576c6a"
+    },
+    {
+      "bytes": 5356,
       "path": "reports/prototype/automatic_feedback_r1/runtime_experiments.jsonl",
-      "sha256": "1facf04ed05e3b0118215bdf47d0aa4cdfb18e44fccd2bcb5e562d24ff41bf5c"
+      "sha256": "f560dade1f91a33dc9c7b5251fd375240a205c21ff5548880c1a718f20e6ec7f"
     },
     {
       "bytes": 59297,
@@ -77,9 +82,9 @@
       "sha256": "a36ee1c9c290083bd7ef1518177bf7df1ff96724539c0e3b937e8d33a0c56112"
     },
     {
-      "bytes": 9764,
+      "bytes": 10188,
       "path": "reports/prototype/automatic_feedback_r1.md",
-      "sha256": "fc6b3d44aa7ea5254ba3612cfdde21a6b26c387617b703c7fe7481c43c3f3316"
+      "sha256": "26d69aaa1e24f5ca539234804fd902abc3ffe0eaa69359a1b889aa445c973308"
     },
     {
       "bytes": 32599,
