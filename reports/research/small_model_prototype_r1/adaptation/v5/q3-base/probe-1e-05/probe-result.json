@@ -1,0 +1,78 @@
+{
+  "phase": "probe",
+  "parameters": 596049920,
+  "model_class": "Qwen3ForCausalLM",
+  "model_weight_sha256": "cd2a512003e2f9f3cd3c32a9c3573f820bb28c940f73c57b1ddaa983d9223eba",
+  "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+  "learning_rate": 1e-05,
+  "token_inventory": {
+    "examples": 1024,
+    "nonpadding_training_input_tokens": 166291,
+    "prompt_tokens": 158059,
+    "supervised_response_and_eos_tokens": 8232,
+    "max_sequence_tokens": 210
+  },
+  "training": {
+    "updates": 64,
+    "applied_updates": 64,
+    "diagnostic_first_layer_max_abs_delta": 0.0001540016382932663,
+    "training_input_tokens": 166291,
+    "seconds": 321.59886537500006,
+    "peak_gpu_allocated_bytes": 7544819712,
+    "loss_start": 1.7610810995101929,
+    "loss_end": 7.854383511585183e-06,
+    "loss_normalization": "equal mean of per-example response+EOS means",
+    "microbatch_examples": 1,
+    "effective_batch_examples": 16,
+    "passes": 1,
+    "warmup_updates": 2,
+    "optimizer": "bitsandbytes AdamW8bit",
+    "weight_decay": 0.01,
+    "max_gradient_norm": 1.0,
+    "master_weights": "FP32",
+    "compute": "FP16 autocast",
+    "dynamic_loss_scaling": true
+  },
+  "evaluation": {
+    "summary": {
+      "cases": 512,
+      "valid": 512,
+      "terminated": 512,
+      "edit_required": 384,
+      "edit_required_exact_after_state": 384,
+      "no_edit_total": 128,
+      "no_edit_false_positive": 0,
+      "by_action": {
+        "replace": {
+          "total": 128,
+          "valid": 128,
+          "terminated": 128,
+          "exact_after_state": 128,
+          "false_positive": 0
+        },
+        "insert": {
+          "total": 128,
+          "valid": 128,
+          "terminated": 128,
+          "exact_after_state": 128,
+          "false_positive": 0
+        },
+        "delete": {
+          "total": 128,
+          "valid": 128,
+          "terminated": 128,
+          "exact_after_state": 128,
+          "false_positive": 0
+        },
+        "no_edit": {
+          "total": 128,
+          "valid": 128,
+          "terminated": 128,
+          "exact_after_state": 128,
+          "false_positive": 0
+        }
+      },
+      "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim"
+    }
+  }
+}

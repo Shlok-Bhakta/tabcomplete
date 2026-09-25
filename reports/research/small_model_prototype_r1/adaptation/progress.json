@@ -1,0 +1,603 @@
+{
+  "baseline_reuse_sha256": "73ea81854126c116d4f3b898f4d66ae5814a58851eccdb25e09c0c16ffc2f755",
+  "elapsed_seconds": 5135.0794016810005,
+  "finalists": [
+    "q25-coder",
+    "q3-base"
+  ],
+  "finalization_reserve_seconds": 1800,
+  "fixture_suite_sha256": "a4c875795bba3a7734a85a8b07a9cc9943440975ee5fdfbb7a17a66225204897",
+  "models": {
+    "q25-coder": {
+      "chosen_learning_rate": 1e-05,
+      "fixture": {
+        "seconds": 63.91364926,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 32,
+              "false_positive": 0,
+              "terminated": 32,
+              "total": 32,
+              "valid": 32
+            },
+            "no_edit": {
+              "exact_after_state": 32,
+              "false_positive": 0,
+              "terminated": 32,
+              "total": 32,
+              "valid": 32
+            }
+          },
+          "cases": 64,
+          "edit_required": 32,
+          "edit_required_exact_after_state": 32,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 32,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 64,
+          "valid": 64
+        },
+        "token_inventory": {
+          "examples": 64,
+          "max_sequence_tokens": 34,
+          "nonpadding_training_input_tokens": 2156,
+          "prompt_tokens": 1964,
+          "supervised_response_and_eos_tokens": 192
+        },
+        "training": {
+          "applied_updates": 32,
+          "compute": "FP16 autocast",
+          "diagnostic_first_layer_max_abs_delta": 0.0013087224215269089,
+          "dynamic_loss_scaling": true,
+          "effective_batch_examples": 4,
+          "loss_end": 3.973640616550256e-07,
+          "loss_normalization": "equal mean of per-example response+EOS means",
+          "loss_start": 4.574434280395508,
+          "master_weights": "FP32",
+          "max_gradient_norm": 1.0,
+          "microbatch_examples": 1,
+          "optimizer": "bitsandbytes AdamW8bit",
+          "passes": 2,
+          "peak_gpu_allocated_bytes": 6084297728,
+          "seconds": 35.411843852000004,
+          "training_input_tokens": 4312,
+          "updates": 32,
+          "warmup_updates": 1,
+          "weight_decay": 0.01
+        }
+      },
+      "main": {
+        "development": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            },
+            "insert": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            },
+            "no_edit": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            },
+            "replace": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            }
+          },
+          "cases": 1024,
+          "edit_required": 768,
+          "edit_required_exact_after_state": 768,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 256,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 1024,
+          "valid": 1024
+        },
+        "seconds": 1276.1414116309998,
+        "token_inventory": {
+          "examples": 4096,
+          "max_sequence_tokens": 210,
+          "nonpadding_training_input_tokens": 664948,
+          "prompt_tokens": 632432,
+          "supervised_response_and_eos_tokens": 32516
+        },
+        "training": {
+          "applied_updates": 256,
+          "compute": "FP16 autocast",
+          "diagnostic_first_layer_max_abs_delta": 0.00037723127752542496,
+          "dynamic_loss_scaling": true,
+          "effective_batch_examples": 16,
+          "inference_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+          "loss_end": 1.589456957162838e-07,
+          "loss_normalization": "equal mean of per-example response+EOS means",
+          "loss_start": 1.6564521789550781,
+          "master_weights": "FP32",
+          "max_gradient_norm": 1.0,
+          "microbatch_examples": 1,
+          "optimizer": "bitsandbytes AdamW8bit",
+          "passes": 1,
+          "peak_gpu_allocated_bytes": 6333262336,
+          "seconds": 966.8858018530002,
+          "training_input_tokens": 664948,
+          "training_state_sha256": "90bf7709a02876737cd1be6e1f698382ad787db7c56230b41bed8a3cbd83d580",
+          "updates": 256,
+          "warmup_updates": 8,
+          "weight_decay": 0.01
+        }
+      },
+      "probes": {
+        "1e-05": {
+          "score": [
+            384,
+            128,
+            512,
+            512
+          ],
+          "seconds": 397.35455633199996,
+          "summary": {
+            "by_action": {
+              "delete": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "insert": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "no_edit": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "replace": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              }
+            },
+            "cases": 512,
+            "edit_required": 384,
+            "edit_required_exact_after_state": 384,
+            "no_edit_false_positive": 0,
+            "no_edit_total": 128,
+            "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+            "terminated": 512,
+            "valid": 512
+          }
+        },
+        "3e-05": {
+          "score": [
+            384,
+            128,
+            512,
+            512
+          ],
+          "seconds": 405.492098037,
+          "summary": {
+            "by_action": {
+              "delete": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "insert": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "no_edit": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "replace": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              }
+            },
+            "cases": 512,
+            "edit_required": 384,
+            "edit_required_exact_after_state": 384,
+            "no_edit_false_positive": 0,
+            "no_edit_total": 128,
+            "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+            "terminated": 512,
+            "valid": 512
+          }
+        }
+      },
+      "reload": {
+        "optimizer_updates": 256,
+        "resumable_state_loaded": true,
+        "seconds": 24.38431230900005,
+        "training_input_tokens": 664948
+      },
+      "reserved_tokens": 1001842,
+      "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+      "selection_before_main": true,
+      "source": "Qwen/Qwen2.5-Coder-0.5B",
+      "status": "complete",
+      "token_inventory": {
+        "each_lr_probe": 166291,
+        "fixture": 4312,
+        "main_pass": 664948
+      },
+      "training_order_sha256": "90b0a147f2fa30c0e49e3e38432222aa860a09ab6e3b43e0b1e845bae452bf20",
+      "unadapted_development": {
+        "seconds": 1253.39692534,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 128,
+              "total": 128,
+              "valid": 0
+            },
+            "insert": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 54,
+              "total": 128,
+              "valid": 0
+            },
+            "no_edit": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 12,
+              "total": 128,
+              "valid": 0
+            },
+            "replace": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            }
+          },
+          "cases": 512,
+          "edit_required": 384,
+          "edit_required_exact_after_state": 0,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 128,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 194,
+          "valid": 0
+        }
+      }
+    },
+    "q3-base": {
+      "chosen_learning_rate": 1e-05,
+      "fixture": {
+        "seconds": 70.62101096200013,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 32,
+              "false_positive": 0,
+              "terminated": 32,
+              "total": 32,
+              "valid": 32
+            },
+            "no_edit": {
+              "exact_after_state": 32,
+              "false_positive": 0,
+              "terminated": 32,
+              "total": 32,
+              "valid": 32
+            }
+          },
+          "cases": 64,
+          "edit_required": 32,
+          "edit_required_exact_after_state": 32,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 32,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 64,
+          "valid": 64
+        },
+        "token_inventory": {
+          "examples": 64,
+          "max_sequence_tokens": 34,
+          "nonpadding_training_input_tokens": 2156,
+          "prompt_tokens": 1964,
+          "supervised_response_and_eos_tokens": 192
+        },
+        "training": {
+          "applied_updates": 32,
+          "compute": "FP16 autocast",
+          "diagnostic_first_layer_max_abs_delta": 0.0011243242770433426,
+          "dynamic_loss_scaling": true,
+          "effective_batch_examples": 4,
+          "loss_end": 4.7683681714261184e-07,
+          "loss_normalization": "equal mean of per-example response+EOS means",
+          "loss_start": 5.938581943511963,
+          "master_weights": "FP32",
+          "max_gradient_norm": 1.0,
+          "microbatch_examples": 1,
+          "optimizer": "bitsandbytes AdamW8bit",
+          "passes": 2,
+          "peak_gpu_allocated_bytes": 7252152832,
+          "seconds": 43.859626886000115,
+          "training_input_tokens": 4312,
+          "updates": 32,
+          "warmup_updates": 1,
+          "weight_decay": 0.01
+        }
+      },
+      "main": {
+        "development": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            },
+            "insert": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            },
+            "no_edit": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            },
+            "replace": {
+              "exact_after_state": 256,
+              "false_positive": 0,
+              "terminated": 256,
+              "total": 256,
+              "valid": 256
+            }
+          },
+          "cases": 1024,
+          "edit_required": 768,
+          "edit_required_exact_after_state": 768,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 256,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 1024,
+          "valid": 1024
+        },
+        "seconds": 1685.3757478910002,
+        "token_inventory": {
+          "examples": 4096,
+          "max_sequence_tokens": 210,
+          "nonpadding_training_input_tokens": 664948,
+          "prompt_tokens": 632432,
+          "supervised_response_and_eos_tokens": 32516
+        },
+        "training": {
+          "applied_updates": 256,
+          "compute": "FP16 autocast",
+          "diagnostic_first_layer_max_abs_delta": 0.00022932887077331543,
+          "dynamic_loss_scaling": true,
+          "effective_batch_examples": 16,
+          "inference_weight_sha256": "520cad66d416df5f661486aef90466223f775d4295e933f85c25ad8d3dfa5fe9",
+          "loss_end": 2.3841853646899835e-07,
+          "loss_normalization": "equal mean of per-example response+EOS means",
+          "loss_start": 1.7610810995101929,
+          "master_weights": "FP32",
+          "max_gradient_norm": 1.0,
+          "microbatch_examples": 1,
+          "optimizer": "bitsandbytes AdamW8bit",
+          "passes": 1,
+          "peak_gpu_allocated_bytes": 7544819712,
+          "seconds": 1283.7745648699997,
+          "training_input_tokens": 664948,
+          "training_state_sha256": "ace34ec1733ba30202456f316113c8da3c62b0ffbd073e543c6c717c87c4ecd1",
+          "updates": 256,
+          "warmup_updates": 8,
+          "weight_decay": 0.01
+        }
+      },
+      "probes": {
+        "1e-05": {
+          "score": [
+            384,
+            128,
+            512,
+            512
+          ],
+          "seconds": 526.6844041690001,
+          "summary": {
+            "by_action": {
+              "delete": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "insert": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "no_edit": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "replace": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              }
+            },
+            "cases": 512,
+            "edit_required": 384,
+            "edit_required_exact_after_state": 384,
+            "no_edit_false_positive": 0,
+            "no_edit_total": 128,
+            "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+            "terminated": 512,
+            "valid": 512
+          }
+        },
+        "3e-05": {
+          "score": [
+            384,
+            128,
+            512,
+            512
+          ],
+          "seconds": 543.1755426940003,
+          "summary": {
+            "by_action": {
+              "delete": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "insert": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "no_edit": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              },
+              "replace": {
+                "exact_after_state": 128,
+                "false_positive": 0,
+                "terminated": 128,
+                "total": 128,
+                "valid": 128
+              }
+            },
+            "cases": 512,
+            "edit_required": 384,
+            "edit_required_exact_after_state": 384,
+            "no_edit_false_positive": 0,
+            "no_edit_total": 128,
+            "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+            "terminated": 512,
+            "valid": 512
+          }
+        }
+      },
+      "reload": {
+        "optimizer_updates": 256,
+        "resumable_state_loaded": true,
+        "seconds": 27.346074981999664,
+        "training_input_tokens": 664948
+      },
+      "reserved_tokens": 1001842,
+      "revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+      "selection_before_main": true,
+      "source": "Qwen/Qwen3-0.6B-Base",
+      "status": "complete",
+      "token_inventory": {
+        "each_lr_probe": 166291,
+        "fixture": 4312,
+        "main_pass": 664948
+      },
+      "training_order_sha256": "90b0a147f2fa30c0e49e3e38432222aa860a09ab6e3b43e0b1e845bae452bf20",
+      "unadapted_development": {
+        "seconds": 2145.593590192,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 55,
+              "total": 128,
+              "valid": 0
+            },
+            "insert": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            },
+            "no_edit": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            },
+            "replace": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            }
+          },
+          "cases": 512,
+          "edit_required": 384,
+          "edit_required_exact_after_state": 0,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 128,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 55,
+          "valid": 0
+        }
+      }
+    }
+  },
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "reserved_training_input_tokens": 2003684,
+  "selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "session_seconds_limit": 28800,
+  "status": "complete"
+}

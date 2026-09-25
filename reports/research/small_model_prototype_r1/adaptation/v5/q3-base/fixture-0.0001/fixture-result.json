@@ -1,0 +1,64 @@
+{
+  "phase": "fixture",
+  "parameters": 596049920,
+  "model_class": "Qwen3ForCausalLM",
+  "model_weight_sha256": "cd2a512003e2f9f3cd3c32a9c3573f820bb28c940f73c57b1ddaa983d9223eba",
+  "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+  "learning_rate": 0.0001,
+  "token_inventory": {
+    "examples": 64,
+    "nonpadding_training_input_tokens": 2156,
+    "prompt_tokens": 1964,
+    "supervised_response_and_eos_tokens": 192,
+    "max_sequence_tokens": 34
+  },
+  "training": {
+    "updates": 32,
+    "applied_updates": 32,
+    "diagnostic_first_layer_max_abs_delta": 0.0011243242770433426,
+    "training_input_tokens": 4312,
+    "seconds": 43.859626886000115,
+    "peak_gpu_allocated_bytes": 7252152832,
+    "loss_start": 5.938581943511963,
+    "loss_end": 4.7683681714261184e-07,
+    "loss_normalization": "equal mean of per-example response+EOS means",
+    "microbatch_examples": 1,
+    "effective_batch_examples": 4,
+    "passes": 2,
+    "warmup_updates": 1,
+    "optimizer": "bitsandbytes AdamW8bit",
+    "weight_decay": 0.01,
+    "max_gradient_norm": 1.0,
+    "master_weights": "FP32",
+    "compute": "FP16 autocast",
+    "dynamic_loss_scaling": true
+  },
+  "evaluation": {
+    "summary": {
+      "cases": 64,
+      "valid": 64,
+      "terminated": 64,
+      "edit_required": 32,
+      "edit_required_exact_after_state": 32,
+      "no_edit_total": 32,
+      "no_edit_false_positive": 0,
+      "by_action": {
+        "no_edit": {
+          "total": 32,
+          "valid": 32,
+          "terminated": 32,
+          "exact_after_state": 32,
+          "false_positive": 0
+        },
+        "delete": {
+          "total": 32,
+          "valid": 32,
+          "terminated": 32,
+          "exact_after_state": 32,
+          "false_positive": 0
+        }
+      },
+      "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim"
+    }
+  }
+}

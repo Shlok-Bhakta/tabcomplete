@@ -1,0 +1,55 @@
+{
+  "adaptation_progress_sha256": "35a51ac35a2777cce8e601f7ee14e46b886f835f500733f5bfa3e2d917dff273",
+  "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "automatic_mode_blockers": [
+    "No 50 qualified genuine displayed proposals or 80% calibrated task-correct slice",
+    "Warm 24-token controlled action median exceeds provisional 500 ms gate",
+    "Synthetic development template families do not establish live edit quality"
+  ],
+  "automatic_mode_eligible": false,
+  "development_results": {
+    "q25-coder": {
+      "controlled_512_warm_completed_median_seconds": 0.5672003204817884,
+      "controlled_peak_predictor_rss_bytes": 562774016,
+      "development_cases": 1024,
+      "edit_required_exact_after_state": 768,
+      "edit_required_total": 768,
+      "main_training_input_tokens": 664948,
+      "main_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+      "no_edit_exact_after_state": 256,
+      "no_edit_false_positive": 0,
+      "no_edit_total": 256,
+      "terminated": 1024,
+      "valid": 1024
+    },
+    "q3-base": {
+      "controlled_512_warm_completed_median_seconds": 0.8033982299966738,
+      "controlled_peak_predictor_rss_bytes": 1044447232,
+      "development_cases": 1024,
+      "edit_required_exact_after_state": 768,
+      "edit_required_total": 768,
+      "main_training_input_tokens": 664948,
+      "main_weight_sha256": "520cad66d416df5f661486aef90466223f775d4295e933f85c25ad8d3dfa5fe9",
+      "no_edit_exact_after_state": 256,
+      "no_edit_false_positive": 0,
+      "no_edit_total": 256,
+      "terminated": 1024,
+      "valid": 1024
+    }
+  },
+  "development_sha256": "3e0c6046dd9726b174c263d823b726f8dee778281845dd09bfe9dd7062dcd465",
+  "heldout_outcomes_seen": false,
+  "locked_before_heldout": true,
+  "observed_at": "2026-09-25T08:24:55.871238+00:00",
+  "paired_uncertainty": {
+    "edit_required_discordant_cases": 0,
+    "interpretation": "Both models were perfect on 16 synthetic development task-family groups. Zero discordance does not establish equivalence, transfer to real edits, or human acceptance.",
+    "no_edit_discordant_cases": 0
+  },
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "precision_for_first_export": "Q4_K_M",
+  "rationale": "q25 and q3 tie on the registered synthetic development outcomes. q25 has stronger or comparable unadapted strict causal code results, lower target-desktop service RSS (563 MB versus 1044 MB) and faster controlled 512-context warm completed actions (0.567 s versus 0.803 s). Both use an Apache-2.0 foundation. Choose q25 while retaining q3 as a measured research comparator.",
+  "schema_version": 1,
+  "selected_alias": "q25-coder",
+  "wire_version": "compact-next-edit-v1 over canonical-v2 action"
+}

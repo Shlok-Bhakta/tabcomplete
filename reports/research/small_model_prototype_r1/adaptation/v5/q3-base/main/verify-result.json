@@ -1,0 +1,34 @@
+{
+  "phase": "verify",
+  "parameters": 596049920,
+  "model_class": "Qwen3ForCausalLM",
+  "model_weight_sha256": "520cad66d416df5f661486aef90466223f775d4295e933f85c25ad8d3dfa5fe9",
+  "tokenizer_sha256": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+  "learning_rate": 1e-05,
+  "evaluation": {
+    "summary": {
+      "cases": 16,
+      "valid": 16,
+      "terminated": 16,
+      "edit_required": 16,
+      "edit_required_exact_after_state": 16,
+      "no_edit_total": 0,
+      "no_edit_false_positive": 0,
+      "by_action": {
+        "replace": {
+          "total": 16,
+          "valid": 16,
+          "terminated": 16,
+          "exact_after_state": 16,
+          "false_positive": 0
+        }
+      },
+      "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim"
+    }
+  },
+  "reload": {
+    "optimizer_updates": 256,
+    "training_input_tokens": 664948,
+    "resumable_state_loaded": true
+  }
+}
