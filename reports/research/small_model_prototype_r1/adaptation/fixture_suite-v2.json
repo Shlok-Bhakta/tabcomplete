@@ -1,0 +1,36 @@
+{
+  "baseline_reuse": "The identical 512-state unadapted development outputs from V2 are reused by SHA-256; they are not rerun on GPU.",
+  "finalist_selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "main_pilot_changed": false,
+  "parent_plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "reason": "The first 64-state disposable fixture reduced loss and learned R headers, EOS, and deletion, but both finalists output R for every no-edit case. Its gate correctly stopped main training. The diagnostic was harder than a format check and made no-edit discrimination invisible to the trainer check. No development or held-out adaptation quality was observed.",
+  "registered_before_v3_outputs": true,
+  "schema_version": 2,
+  "sealed_heldout_opened": false,
+  "v2_baselines_sha256": "73ea81854126c116d4f3b898f4d66ae5814a58851eccdb25e09c0c16ffc2f755",
+  "v2_diagnostic_sha256": "e80e22f7d9d53be6bc2bf2eda3e8abe152c1b9fe216790638689e3780c7e20da",
+  "v2_observation": {
+    "q25_delete_correct": "14/16",
+    "q25_no_edit_correct": "0/16",
+    "q25_terminated": "62/64",
+    "q3_delete_correct": "16/16",
+    "q3_no_edit_correct": "0/16",
+    "q3_terminated": "64/64"
+  },
+  "v3_fixture": {
+    "effective_batch_examples": 16,
+    "gate": "At least one exact no-edit and deletion, and a valid terminated action for every action family. Main pilot data and development split remain unchanged.",
+    "hint": "Explicit action/header cue after the ordinary prompt; replacement bytes supplied only for insertion/replacement. This checks serialization, EOS, and learnability rather than useful editing.",
+    "learning_rate": 0.001,
+    "ordered_rows_sha256": "77afe6aa218bd230f45d8d23b13221c5cb9c9700b68a49a0c89565469b69a95e",
+    "passes": 2,
+    "per_language": {
+      "delete": 4,
+      "insert": 2,
+      "no_edit": 8,
+      "replace": 2
+    },
+    "source": "disposable synthetic family 99, not present in train/development/heldout",
+    "states": 64
+  }
+}

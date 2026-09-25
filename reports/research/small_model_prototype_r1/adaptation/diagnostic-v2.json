@@ -1,0 +1,209 @@
+{
+  "elapsed_seconds": 3612.200644893,
+  "finalists": [
+    "q25-coder",
+    "q3-base"
+  ],
+  "finalization_reserve_seconds": 1800,
+  "models": {
+    "q25-coder": {
+      "fixture": {
+        "seconds": 63.83273504500016,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 14,
+              "false_positive": 0,
+              "terminated": 14,
+              "total": 16,
+              "valid": 14
+            },
+            "insert": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            },
+            "no_edit": {
+              "exact_after_state": 0,
+              "false_positive": 16,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            },
+            "replace": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            }
+          },
+          "cases": 64,
+          "edit_required": 48,
+          "edit_required_exact_after_state": 14,
+          "no_edit_false_positive": 16,
+          "no_edit_total": 16,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 62,
+          "valid": 62
+        }
+      },
+      "reserved_tokens": 1003238,
+      "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+      "source": "Qwen/Qwen2.5-Coder-0.5B",
+      "status": "fixture_failed",
+      "token_inventory": {
+        "each_lr_probe": 158365,
+        "fixture": 21560,
+        "main_pass": 664948
+      },
+      "unadapted_development": {
+        "seconds": 1253.39692534,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 128,
+              "total": 128,
+              "valid": 0
+            },
+            "insert": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 54,
+              "total": 128,
+              "valid": 0
+            },
+            "no_edit": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 12,
+              "total": 128,
+              "valid": 0
+            },
+            "replace": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            }
+          },
+          "cases": 512,
+          "edit_required": 384,
+          "edit_required_exact_after_state": 0,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 128,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 194,
+          "valid": 0
+        }
+      }
+    },
+    "q3-base": {
+      "fixture": {
+        "seconds": 73.16261013599978,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 16,
+              "false_positive": 0,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            },
+            "insert": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            },
+            "no_edit": {
+              "exact_after_state": 0,
+              "false_positive": 16,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            },
+            "replace": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 16,
+              "total": 16,
+              "valid": 16
+            }
+          },
+          "cases": 64,
+          "edit_required": 48,
+          "edit_required_exact_after_state": 16,
+          "no_edit_false_positive": 16,
+          "no_edit_total": 16,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 64,
+          "valid": 64
+        }
+      },
+      "reserved_tokens": 1003238,
+      "revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+      "source": "Qwen/Qwen3-0.6B-Base",
+      "status": "fixture_failed",
+      "token_inventory": {
+        "each_lr_probe": 158365,
+        "fixture": 21560,
+        "main_pass": 664948
+      },
+      "unadapted_development": {
+        "seconds": 2145.593590192,
+        "summary": {
+          "by_action": {
+            "delete": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 55,
+              "total": 128,
+              "valid": 0
+            },
+            "insert": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            },
+            "no_edit": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            },
+            "replace": {
+              "exact_after_state": 0,
+              "false_positive": 0,
+              "terminated": 0,
+              "total": 128,
+              "valid": 0
+            }
+          },
+          "cases": 512,
+          "edit_required": 384,
+          "edit_required_exact_after_state": 0,
+          "no_edit_false_positive": 0,
+          "no_edit_total": 128,
+          "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+          "terminated": 55,
+          "valid": 0
+        }
+      }
+    }
+  },
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "reserved_training_input_tokens": 2006476,
+  "selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "session_seconds_limit": 28800,
+  "status": "partial"
+}

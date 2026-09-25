@@ -393,6 +393,8 @@ def submit_adaptation(plan: dict) -> dict:
     if any(alias not in ALLOWED or alias == "p12-control" for alias in finalists):
         raise ValueError("non-allowlisted adaptation finalist")
     job_path = REPORT / "adaptation/job.json"
+    fixture_suite = REPORT / "adaptation/fixture_suite-v2.json"
+    fixture_suite_sha = digest(fixture_suite) if fixture_suite.exists() else None
     attempt = 1
     if job_path.exists():
         job = json.loads(job_path.read_text())
@@ -400,10 +402,17 @@ def submit_adaptation(plan: dict) -> dict:
             raise ValueError("adaptation belongs to another plan")
         job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
         save(job_path, job)
-        if "ERROR" not in job["observed_status"].upper():
+        retry_completed_diagnostic = (
+            "COMPLETE" in job["observed_status"].upper()
+            and fixture_suite_sha is not None
+            and job.get("fixture_suite_sha256") != fixture_suite_sha
+            and json.loads((REPORT / "adaptation/diagnostic-v2.json").read_text())["status"]
+            == "partial"
+        )
+        if "ERROR" not in job["observed_status"].upper() and not retry_completed_diagnostic:
             return job
         attempt = job.get("attempt", 1) + 1
-        if attempt > 2:
+        if attempt > 3:
             raise RuntimeError("adaptation retry limit reached; inspect failed job")
         save(REPORT / f"adaptation/job-v{attempt - 1}.json", job)
         job_path.unlink()
@@ -421,6 +430,7 @@ def submit_adaptation(plan: dict) -> dict:
         source.replace("__CHECKOUT_COMMIT__", commit)
         .replace("__PLAN_SHA__", digest(REPORT / "plan.json"))
         .replace("__SELECTION_SHA__", digest(selection_path))
+        .replace("__FIXTURE_SUITE_SHA__", fixture_suite_sha or "")
         .replace("__FINALISTS__", json.dumps(finalists))
     )
     reference = "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation"
@@ -445,6 +455,7 @@ def submit_adaptation(plan: dict) -> dict:
         "reference": reference,
         "plan_sha256": digest(REPORT / "plan.json"),
         "selection_sha256": digest(selection_path),
+        "fixture_suite_sha256": fixture_suite_sha,
         "finalists": finalists,
         "commit": commit,
         "submitted_at": datetime.now(UTC).isoformat(),

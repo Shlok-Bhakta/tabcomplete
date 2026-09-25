@@ -4,7 +4,11 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from train_small_next_edit import EFFECTIVE_BATCH, encode_rows  # noqa: E402
+from train_small_next_edit import (  # noqa: E402
+    EFFECTIVE_BATCH,
+    disposable_fixture_rows,
+    encode_rows,
+)
 
 
 class TinyTokenizer:
@@ -26,6 +30,23 @@ def test_response_and_eos_only_are_supervised() -> None:
         assert item["target_tokens"] > 1
 
 
+def test_disposable_fixture_has_explicit_no_edit_and_deletion_cues() -> None:
+    rows = disposable_fixture_rows()
+    assert len(rows) == 64
+    assert len({row["id"] for row in rows}) == 64
+    by_action = {
+        action: [row for row in rows if row["action"] == action]
+        for action in ("replace", "insert", "delete", "no_edit")
+    }
+    assert {action: len(group) for action, group in by_action.items()} == {
+        "replace": 8, "insert": 8, "delete": 16, "no_edit": 32
+    }
+    assert all("header=N" in row["prompt"] and row["response"] == "N\n"
+               for row in by_action["no_edit"])
+    assert all("header=R" in row["prompt"] and row["response"] == "R\n"
+               for row in by_action["delete"])
+
+
 def test_example_weighted_accumulation_matches_full_update() -> None:
     torch = pytest.importorskip("torch")
     assert EFFECTIVE_BATCH == 16
@@ -42,3 +63,6 @@ def test_example_weighted_accumulation_matches_full_update() -> None:
         [(second(x).squeeze() - y) ** 2 for x, y in zip(observations, targets, strict=True)]
     ).mean().backward()
     assert torch.allclose(first.weight.grad, second.weight.grad, rtol=1e-6, atol=1e-6)
+    torch.optim.SGD(first.parameters(), lr=0.01).step()
+    torch.optim.SGD(second.parameters(), lr=0.01).step()
+    assert torch.allclose(first.weight, second.weight, rtol=1e-6, atol=1e-6)

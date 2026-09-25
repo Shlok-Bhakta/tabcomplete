@@ -1,0 +1,98 @@
+{
+  "baseline_cases_per_model": 512,
+  "models": {
+    "q25-coder": {
+      "seconds": 1253.39692534,
+      "summary": {
+        "by_action": {
+          "delete": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 128,
+            "total": 128,
+            "valid": 0
+          },
+          "insert": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 54,
+            "total": 128,
+            "valid": 0
+          },
+          "no_edit": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 12,
+            "total": 128,
+            "valid": 0
+          },
+          "replace": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 0,
+            "total": 128,
+            "valid": 0
+          }
+        },
+        "cases": 512,
+        "edit_required": 384,
+        "edit_required_exact_after_state": 0,
+        "no_edit_false_positive": 0,
+        "no_edit_total": 128,
+        "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+        "terminated": 194,
+        "valid": 0
+      }
+    },
+    "q3-base": {
+      "seconds": 2145.593590192,
+      "summary": {
+        "by_action": {
+          "delete": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 55,
+            "total": 128,
+            "valid": 0
+          },
+          "insert": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 0,
+            "total": 128,
+            "valid": 0
+          },
+          "no_edit": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 0,
+            "total": 128,
+            "valid": 0
+          },
+          "replace": {
+            "exact_after_state": 0,
+            "false_positive": 0,
+            "terminated": 0,
+            "total": 128,
+            "valid": 0
+          }
+        },
+        "cases": 512,
+        "edit_required": 384,
+        "edit_required_exact_after_state": 0,
+        "no_edit_false_positive": 0,
+        "no_edit_total": 128,
+        "score_kind": "synthetic exact after-state; no compiler or user-acceptance claim",
+        "terminated": 55,
+        "valid": 0
+      }
+    }
+  },
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "schema_version": 1,
+  "selection_sha256": "db69ddf45c4e188be1dc56c157afa4fa66ffe28eb1ec39374bdb256616ec4fc2",
+  "source_commit": "540c97d478939242f1927dd2b4a42622c2c743a3",
+  "source_job": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+  "source_kernel_version": 2,
+  "source_progress_sha256": "e80e22f7d9d53be6bc2bf2eda3e8abe152c1b9fe216790638689e3780c7e20da"
+}

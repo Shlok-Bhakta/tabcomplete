@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -17,6 +18,7 @@ OUT = Path("/kaggle/working/small_model_prototype_r1_adaptation")
 COMMIT = "__CHECKOUT_COMMIT__"
 PLAN_SHA = "__PLAN_SHA__"
 SELECTION_SHA = "__SELECTION_SHA__"
+FIXTURE_SUITE_SHA = "__FIXTURE_SUITE_SHA__"
 FINALISTS = json.loads('__FINALISTS__')
 MODEL_SOURCES = {
     "q25-coder": ("Qwen/Qwen2.5-Coder-0.5B", "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
@@ -69,12 +71,14 @@ def run(args, label, *, environment=None):
     return time.monotonic() - started
 
 
-def training_call(alias, model_path, phase, lr, *, max_examples=0, destination=None):
+def training_call(alias, model_path, phase, lr, *, max_examples=0, destination=None,
+                  expected_weight=None):
     result_path = destination or (OUT / alias / (phase + "-" + str(lr)))
     result_path.mkdir(parents=True, exist_ok=True)
     data_split = "development" if phase == "evaluate" else "train"
     args = [sys.executable, str(ROOT / "scripts/train_small_next_edit.py"),
-            "--model", str(model_path), "--expected-weight-sha256", MODEL_SOURCES[alias][2],
+            "--model", str(model_path), "--expected-weight-sha256",
+            expected_weight or MODEL_SOURCES[alias][2],
             "--data", str(OUT / "data" / (data_split + ".jsonl")),
             "--data-sha256", DATA_HASHES[data_split],
             "--development", str(OUT / "data/development.jsonl"),
@@ -96,6 +100,13 @@ def score(result):
     return (summary["edit_required_exact_after_state"],
             summary["by_action"].get("no_edit", {}).get("exact_after_state", 0),
             summary["valid"], summary["terminated"])
+
+
+def release_source_cache(model_path):
+    cache_root = model_path.parents[1]
+    if not cache_root.is_relative_to(OUT / "hf-cache"):
+        raise RuntimeError("refusing to remove a pre-existing checkpoint")
+    shutil.rmtree(cache_root)
 
 
 def main():
@@ -123,7 +134,7 @@ def main():
     sys.path.insert(0, str(ROOT / "src"))
     sys.path.insert(0, str(ROOT / "scripts"))
     from huggingface_hub import snapshot_download
-    from train_small_next_edit import encode_rows, read_rows
+    from train_small_next_edit import disposable_fixture_rows, encode_rows, read_rows
     from transformers import AutoTokenizer
 
     data_dir = OUT / "data"
@@ -132,6 +143,20 @@ def main():
     for split, expected in DATA_HASHES.items():
         if sha(data_dir / (split + ".jsonl")) != expected:
             raise ValueError("synthetic adaptation data changed")
+    fixture_suite_path = (
+        ROOT / "reports/research/small_model_prototype_r1/adaptation/fixture_suite-v2.json"
+    )
+    if sha(fixture_suite_path) != FIXTURE_SUITE_SHA:
+        raise ValueError("training-only fixture suite changed")
+    fixture_suite = json.loads(fixture_suite_path.read_text())
+    baseline_path = ROOT / "reports/research/small_model_prototype_r1/adaptation/v2-baselines.json"
+    if sha(baseline_path) != fixture_suite["v2_baselines_sha256"]:
+        raise ValueError("frozen V2 baseline changed")
+    baseline = json.loads(baseline_path.read_text())
+    if baseline["plan_sha256"] != PLAN_SHA or baseline["selection_sha256"] != SELECTION_SHA:
+        raise ValueError("unadapted baseline belongs to another comparison")
+    state["fixture_suite_sha256"] = FIXTURE_SUITE_SHA
+    state["baseline_reuse_sha256"] = sha(baseline_path)
     state["status"] = "pilots"
     save(state)
     for alias in FINALISTS:
@@ -147,12 +172,14 @@ def main():
         train_rows = read_rows(data_dir / "train.jsonl")
         inventory, _ = encode_rows(tokenizer, train_rows)
         per_pass = sum(row["input_tokens"] for row in inventory)
-        fixture_rows = []
-        from build_small_edit_data import ACTIONS, LANGUAGES, example
-        for language in LANGUAGES:
-            for action in ACTIONS:
-                for variant in range(4):
-                    fixture_rows.append(example(language, action, 99, variant))
+        fixture_rows = disposable_fixture_rows()
+        fixture_payload = "".join(
+            json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n" for row in fixture_rows
+        ).encode()
+        fixture_sha = fixture_suite["v3_fixture"]["ordered_rows_sha256"]
+        if hashlib.sha256(fixture_payload).hexdigest() != fixture_sha:
+            raise ValueError("training-only fixture rows changed")
+        from build_small_edit_data import ACTIONS
         fixture_inventory, _ = encode_rows(tokenizer, fixture_rows)
         fixture_tokens = sum(row["input_tokens"] for row in fixture_inventory) * 2
         probe_tokens = sum(row["input_tokens"] for row in inventory[:1024])
@@ -164,20 +191,19 @@ def main():
         record["token_inventory"] = {"main_pass": per_pass, "fixture": fixture_tokens,
                                      "each_lr_probe": probe_tokens}
         save(state)
-        baseline, elapsed = training_call(alias, model_path, "evaluate", 0.0,
-                                          max_examples=512)
-        record["unadapted_development"] = {
-            "seconds": elapsed, "summary": baseline["evaluation"]["summary"]}
+        record["unadapted_development"] = baseline["models"][alias]
         save(state)
-        fixture, elapsed = training_call(alias, model_path, "fixture", 3e-4)
+        fixture, elapsed = training_call(alias, model_path, "fixture", 1e-3)
         record["fixture"] = {"seconds": elapsed, "summary": fixture["evaluation"]["summary"]}
         save(state)
         fixture_actions = fixture["evaluation"]["summary"]["by_action"]
-        if any(fixture_actions[action]["valid"] == 0 or fixture_actions[action]["terminated"] == 0
-               or fixture_actions[action]["exact_after_state"] == 0
-               for action in ACTIONS):
+        if (any(fixture_actions[action]["valid"] == 0
+                or fixture_actions[action]["terminated"] == 0 for action in ACTIONS)
+                or fixture_actions["delete"]["exact_after_state"] == 0
+                or fixture_actions["no_edit"]["exact_after_state"] == 0):
             record["status"] = "fixture_failed"
             save(state)
+            release_source_cache(model_path)
             continue
         probes = {}
         for lr in (1e-5, 3e-5):
@@ -196,8 +222,11 @@ def main():
                           "token_inventory": main_result["token_inventory"],
                           "development": main_result["evaluation"]["summary"]}
         save(state)
-        verified, elapsed = training_call(alias, model_path, "verify", choice, max_examples=16,
-                                           destination=OUT / alias / "main")
+        release_source_cache(model_path)
+        adapted_weight = main_result["training"]["inference_weight_sha256"]
+        verified, elapsed = training_call(alias, OUT / alias / "main/inference", "verify", choice,
+                                           max_examples=16, destination=OUT / alias / "main",
+                                           expected_weight=adapted_weight)
         record["reload"] = {"seconds": elapsed, **verified["reload"]}
         record["status"] = "complete"
         save(state)

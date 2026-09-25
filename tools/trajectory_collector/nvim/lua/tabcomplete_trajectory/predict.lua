@@ -27,7 +27,15 @@ local last_status = "idle"
 local group = nil
 local tracked_content = {}
 local recent_edit = {}
+local last_repo_identity = nil
 M._request_impl = nil -- headless integration seam; never used by the installed client
+
+local function repo_identity(path)
+  local directory = vim.fn.fnamemodify(path, ":h")
+  local lines = vim.fn.systemlist({ "git", "-C", directory, "rev-parse", "HEAD" })
+  local head = vim.v.shell_error == 0 and lines[1] or "unversioned"
+  return directory .. ":" .. head
+end
 
 local function utf8_boundary(line, col)
   if col < 0 or col > #line then return false end
@@ -149,6 +157,7 @@ local function buffer_state()
   return {
     bufnr = bufnr, path = path, row = row, start_col = col, end_col = #line,
     region = region, changedtick = vim.api.nvim_buf_get_changedtick(bufnr),
+    repo_identity = repo_identity(path),
     content_hash = util.sha256hex(content), prompt = prompt,
     context_hash = util.sha256hex(prompt), requested_at_ms = util.now_ms(),
     prediction_id = util.uuid(), filetype = filetype,
@@ -160,6 +169,7 @@ local function still_current(state)
     return false
   end
   if vim.api.nvim_buf_get_name(state.bufnr) ~= state.path then return false end
+  if repo_identity(state.path) ~= state.repo_identity then return false end
   if vim.api.nvim_buf_get_changedtick(state.bufnr) ~= state.changedtick then return false end
   local line = vim.api.nvim_buf_get_lines(state.bufnr, state.row, state.row + 1, false)[1]
   if not line or line:sub(state.start_col + 1, state.end_col) ~= state.region then return false end
@@ -256,8 +266,10 @@ function M.predict()
     max_output_tokens = 96, temperature = 0, wire_version = "compact-next-edit-v1",
     synthetic = opts.synthetic, human_verified = not opts.synthetic, mode = mode,
   })
+  local reuse_context = state.repo_identity == last_repo_identity
+  last_repo_identity = state.repo_identity
   local body = vim.json.encode({ prompt = state.prompt, n_predict = 96, temperature = 0,
-    stream = true, cache_prompt = true, id_slot = 0 })
+    stream = true, cache_prompt = reuse_context, id_slot = 0 })
   local function finished(result)
       vim.schedule(function()
         if current_generation ~= generation or not pending or pending.state ~= state then return end
@@ -353,6 +365,7 @@ end
 function M.setup(options)
   opts = vim.tbl_deep_extend("force", opts, options or {})
   clear("idle")
+  last_repo_identity = nil
   if group then pcall(vim.api.nvim_del_augroup_by_id, group) end
   group = vim.api.nvim_create_augroup("TabCompletePredict", { clear = true })
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do

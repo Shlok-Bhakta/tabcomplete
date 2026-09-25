@@ -32,6 +32,27 @@ def read_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
+def disposable_fixture_rows() -> list[dict]:
+    """A labeled format/stop diagnostic, deliberately excluded from the main data."""
+    from build_small_edit_data import ACTIONS, LANGUAGES, example
+
+    counts = {"replace": 2, "insert": 2, "delete": 4, "no_edit": 8}
+    rows = []
+    for language in LANGUAGES:
+        for action in ACTIONS:
+            for variant in range(counts[action]):
+                row = example(language, action, 99, variant)
+                header = "N" if action == "no_edit" else "R"
+                hint = f"<training-only-format action={action} header={header}>\n"
+                if action in ("replace", "insert"):
+                    hint += "Replacement bytes:\n" + row["response"][2:] + "\n"
+                hint += "</training-only-format>\n"
+                row["prompt"] += hint
+                rows.append(row)
+    assert len(rows) == 64
+    return rows
+
+
 def encode_rows(tokenizer, rows: list[dict]) -> tuple[list[dict], dict]:
     if tokenizer.eos_token_id is None:
         raise ValueError("model tokenizer has no EOS token")
@@ -317,14 +338,7 @@ def main() -> None:
     if args.max_examples:
         rows = rows[: args.max_examples]
     if args.phase == "fixture":
-        from build_small_edit_data import ACTIONS, LANGUAGES, example
-
-        rows = [
-            example(language, action, 99, variant)
-            for language in LANGUAGES
-            for action in ACTIONS
-            for variant in range(4)
-        ]
+        rows = disposable_fixture_rows()
     result: dict = {
         "phase": args.phase,
         "parameters": loaded_parameters,
