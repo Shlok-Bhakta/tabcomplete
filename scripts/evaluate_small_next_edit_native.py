@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import statistics
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -75,26 +77,34 @@ def score(row: dict, response: dict) -> dict:
     )
     predicted = parsed.action
     correct = False
+    predicted_after = None
     if predicted is not None:
         try:
-            correct = (
-                apply_next_edit_action(
-                    row["current"], row["region_start"], row["region_end"], predicted
-                )
-                == row["after"]
+            predicted_after = apply_next_edit_action(
+                row["current"], row["region_start"], row["region_end"], predicted
             )
+            correct = predicted_after == row["after"]
         except ValueError:
             pass
     return {
         "id": row["id"],
         "gold_action": row["action"],
         "predicted_action": predicted.action if predicted else None,
+        "predicted_text": predicted.text if predicted and predicted.action == "replace" else None,
+        "raw_output": response["text"],
         "parse_status": parsed.status,
         "terminated": eos,
         "exact_after_state": correct,
         "false_positive": row["action"] == "no_edit"
         and predicted is not None
         and predicted.action == "replace",
+        "unnecessary_change": row["action"] == "no_edit"
+        and predicted_after is not None
+        and predicted_after != row["current"],
+        "reverses_latest_edit": predicted_after is not None
+        and row["history_before"] != row["current"]
+        and predicted_after == row["history_before"],
+        "truncated": response["stop_type"] == "limit",
         "output_tokens": response["tokens"],
         "output_bytes": len(response["text"].encode()),
         "latency_seconds": response["latency_seconds"],
@@ -116,6 +126,12 @@ def summarize(records: list[dict]) -> dict:
         bucket["exact_after_state"] += row["exact_after_state"]
         bucket["false_positive"] += row["false_positive"]
     edits = [row for row in records if row["gold_action"] != "no_edit"]
+    latencies = sorted(row["latency_seconds"] for row in records)
+    output_tokens = sorted(row["output_tokens"] for row in records)
+    def percentile(values: list[float] | list[int], p: float) -> float | None:
+        if not values:
+            return None
+        return float(values[min(len(values) - 1, math.ceil(len(values) * p) - 1)])
     return {
         "cases": len(records),
         "valid": sum(row["parse_status"] == "ok" for row in records),
@@ -124,6 +140,13 @@ def summarize(records: list[dict]) -> dict:
         "edit_required_exact_after_state": sum(row["exact_after_state"] for row in edits),
         "no_edit_total": by_action.get("no_edit", {}).get("total", 0),
         "no_edit_false_positive": by_action.get("no_edit", {}).get("false_positive", 0),
+        "unnecessary_changes": sum(row["unnecessary_change"] for row in records),
+        "reversals_of_latest_edit": sum(row["reverses_latest_edit"] for row in records),
+        "truncations": sum(row["truncated"] for row in records),
+        "output_tokens_mean": statistics.mean(output_tokens) if output_tokens else None,
+        "output_tokens_p95": percentile(output_tokens, 0.95),
+        "completed_action_median_seconds": statistics.median(latencies) if latencies else None,
+        "completed_action_p95_seconds": percentile(latencies, 0.95),
         "by_action": by_action,
         "score_kind": "synthetic exact after-state; no user-acceptance claim",
     }
