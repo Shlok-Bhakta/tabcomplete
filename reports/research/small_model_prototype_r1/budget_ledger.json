@@ -1,5 +1,5 @@
 {
-  "artifact_accounting_note": "Persistent new q3 and LFM Q4 files total 626,013,440 bytes. Temporary research conversions were bounded by the per-job 12 GiB checks and removed after conversion; adaptation output is added when observed. The desktop keeps at most two candidate Q4 artifacts at once.",
+  "artifact_accounting_note": "Persistent new research q3 and LFM Q4 files total 626,013,440 bytes. The LFM desktop copy was removed after screening; only q3 Q4 remains newly added on desktop. Temporary research conversions were bounded by per-job 12 GiB checks; adaptation output will be added when observed.",
   "gpu_session_seconds": 4933.422652921,
   "new_artifact_bytes": 626013440,
   "sessions": [
@@ -49,6 +49,6 @@
       "unadapted_development_cases_per_finalist": 512
     }
   ],
-  "target_quantized_bytes": 626013440,
+  "target_quantized_bytes": 396704352,
   "training_input_tokens": 43120
 }

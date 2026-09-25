@@ -92,7 +92,7 @@
     }
   ],
   "frozen_at": "2026-09-25T04:01:12.379293+00:00",
-  "new_desktop_model_bytes": 626013440,
+  "new_desktop_model_bytes": 396704352,
   "new_desktop_model_limit_bytes": 2147483648,
   "quantized_artifacts": [
     {
@@ -104,6 +104,7 @@
       "native_replay_verified": true,
       "precision": "Q4_K_M",
       "research_conversion_job": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+      "retained_on_desktop": true,
       "sha256": "dd84ce11f646f36ff8afd594b6bef447f14f2dbf93fa981922b4cad1c3f11e05",
       "source": "Qwen/Qwen3-0.6B-Base",
       "source_weight_sha256": "cd2a512003e2f9f3cd3c32a9c3573f820bb28c940f73c57b1ddaa983d9223eba"
@@ -116,7 +117,10 @@
       "local_desktop_path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/collected/lfm-q4/small_model_prototype_r1_lfm_conversion/lfm350-base-Q4_K_M.gguf",
       "native_replay_verified": true,
       "precision": "Q4_K_M",
+      "removed_after_screening_at": "2026-09-25T06:28:56.629370+00:00",
       "research_conversion_job": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+      "research_copy_retained": "private Kaggle conversion output; recorded hash and native replay remain",
+      "retained_on_desktop": false,
       "sha256": "f099bfa59808c55d022b89a5d0c77bd135b3cc62a05bbd351e685978dc86b0ab",
       "source": "LiquidAI/LFM2.5-350M-Base",
       "source_weight_sha256": "af70818c41a5cdb3f9587f91de12ff5f7847b8b0a2ba734534205ccea1d98aba"
@@ -139,5 +143,6 @@
       "path": "/home/crabcake/Projects/tabcomplete-model-data-r2/artifacts/research/model_data_r2/q25-Q4_K_M.gguf",
       "sha256": "7947f482e7d645aa8d3a5f863e4ba5c24ebe17d9602cb40e1cddb60e37b65c30"
     }
-  }
+  },
+  "updated_at": "2026-09-25T06:28:56.629370+00:00"
 }
