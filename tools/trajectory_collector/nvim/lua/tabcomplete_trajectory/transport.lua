@@ -100,9 +100,15 @@ function M.post_json_async(url, body_table, timeout_ms, cb)
         cb(false, { exit_code = code, signal = signal, stderr_tail = (raw or ""):sub(-500) })
         return
       end
-      local _, http_code = M.split_http_code(raw or "")
+      local response_body, http_code = M.split_http_code(raw or "")
       if http_code and http_code >= 200 and http_code < 300 then
-        cb(true, { http_code = http_code })
+        local ok_json, decoded = pcall(vim.json.decode, response_body)
+        if ok_json and type(decoded) == "table" then
+          decoded.http_code = http_code
+          cb(true, decoded)
+        else
+          cb(true, { http_code = http_code })
+        end
       else
         cb(false, { http_code = http_code, body_tail = (raw or ""):sub(-500) })
       end

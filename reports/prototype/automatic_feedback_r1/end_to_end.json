@@ -1,0 +1,29 @@
+{
+  "acceptance_key_installed": "<M-l>",
+  "accepted_prediction_id": "f05aa50b-d6a4-4f7c-a994-5a1fe9329da7",
+  "accepted_undo_separate": true,
+  "automatic_pause_to_request": true,
+  "automatic_personalization_enabled": false,
+  "automatic_proposals_displayed": 3,
+  "collector_offline_spool_tested_in_existing_lua_suite": true,
+  "explicit_rejection_tested_in_deterministic_stub": true,
+  "host": "crabcake",
+  "implicit_typing_dismissal_prediction_id": "913cfca4-08c0-46cf-b0a8-89e1289f697a",
+  "manual_predict_command_called": false,
+  "measured_edit_to_display_ms": [
+    402,
+    375,
+    386
+  ],
+  "mode_after_editor_restart": "automatic",
+  "model_outage_backoff_tested": true,
+  "observed_at": "2026-09-25T20:20:07.339164+00:00",
+  "real_selected_model_inference": true,
+  "session_id": "d849500c-abda-4559-894c-36d3a94f97f9",
+  "session_replay": "REPLAY-OK",
+  "stale_and_no_edit_tested_in_deterministic_stub": true,
+  "synthetic": true,
+  "typed_match_prediction_id": "f9929cce-7af0-456f-83cb-289e128ea93d",
+  "visual_inspection_performed": false,
+  "visual_limitation": "Headless extmark display and command state were verified; no human visual acceptance was observed."
+}

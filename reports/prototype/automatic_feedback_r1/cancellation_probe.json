@@ -1,0 +1,24 @@
+{
+  "observed_at": "2026-09-25T20:09:02.757636+00:00",
+  "token_observed": true,
+  "time_to_first_token_seconds": 9.478838865994476,
+  "slot_idle_after_close_seconds": 0.10489475901704282,
+  "observations": [
+    {
+      "seconds_after_close": 0.0012482820311561227,
+      "is_processing": true,
+      "id_task": 1
+    },
+    {
+      "seconds_after_close": 0.0527035589911975,
+      "is_processing": true,
+      "id_task": 1
+    },
+    {
+      "seconds_after_close": 0.10489475901704282,
+      "is_processing": false,
+      "id_task": 1
+    }
+  ],
+  "model": "selected q25 Q4_K_M; synthetic source"
+}

@@ -19,6 +19,7 @@ M.shadows = {} -- bufnr -> {lines: string[], delta_count: integer, file: string}
 M.attached = {} -- bufnr -> true
 M.on_emit = nil -- function(envelope_fields) set by init
 M.on_anchor = nil -- function(bufnr, reason) set by init
+M.on_delta = nil -- optional prediction listener; receives exact collector delta + envelope
 
 local function snapshot_lines(bufnr)
   local ok, lines = pcall(vim.api.nvim_buf_get_lines, bufnr, 0, -1, false)
@@ -136,13 +137,21 @@ local function on_lines_handler(event, bufnr, changedtick, firstline, lastline, 
   delta.cursor_after = util.cursor_zero()
   shadow.lines = M.splice_lines(shadow.lines, firstline, lastline, fresh)
   shadow.delta_count = (shadow.delta_count or 0) + 1
+  local envelope
   if M.on_emit then
     local ok_e, err_e = pcall(M.on_emit, bufnr, "edit_delta", delta)
+    if ok_e then envelope = err_e end
     if not ok_e then
       require("tabcomplete_trajectory.config").warn_once(
         "emit-edit-delta",
         "edit_delta emit failed: " .. tostring(err_e)
       )
+    end
+  end
+  if M.on_delta then
+    local ok_d, err_d = pcall(M.on_delta, bufnr, delta, envelope)
+    if not ok_d then
+      require("tabcomplete_trajectory.config").warn_once("prediction-delta", "prediction delta listener failed: " .. tostring(err_d))
     end
   end
   -- Periodic anchor every N deltas: full-content anchor so replay stays bounded.

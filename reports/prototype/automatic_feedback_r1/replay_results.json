@@ -1,0 +1,16 @@
+{
+  "all_blob_hashes_verified": true,
+  "anchor_count": 10,
+  "blob_count": 7,
+  "delta_count": 7,
+  "delta_mismatches": 0,
+  "note": "Existing analysis/replay.ts read-only verifier passed for this session.",
+  "rebuilt_bytes": 63,
+  "relative_file": "main.py",
+  "repository_id": "repo:ac02ac0c2f78c692b0f8e75ae1b007aa010f4ca2f1d992d30bc09c2dbfe164c1",
+  "result": "REPLAY-OK",
+  "session_id": "d849500c-abda-4559-894c-36d3a94f97f9",
+  "synthetic": true,
+  "target_bytes": 63,
+  "unanchored_deltas": 0
+}

@@ -66,6 +66,32 @@ IDs. SDK initialization belongs once per process, never once per case.
 
 ## Metric and timing rules
 
+### Experimental automatic editor suggestions
+
+An explicit `experimental_auto_opt_in` permits automatic suggestion display while
+`automatic_quality_validated=false`. The two fields report different facts.
+Automatic application and automatic personalization training remain disabled.
+After a relevant insert-mode change, debounce 250 ms, recheck the current buffer
+and cursor, and send at most one request for an unchanged state. Invalidate a
+visible proposal on new input; supersede an unseen request without starting a
+second server job while the single slot is occupied. `off` cancels timers and
+pending work immediately. Test acceptance, cursor/range staleness, typing during
+inference, out-of-order completion, cancellation, and clean undo.
+
+Store request, generation, display, acceptance, dismissal, and later edit events
+in the existing trajectory collector SQLite database. Rebuild query projections
+from those raw events. Keep explicit rejection, divergent typing, typed match,
+partial match, unseen cancellation, navigation, expiration, shadow, no-edit, and
+transport failure distinct. `synthetic=false` does not prove human review.
+Do not start automatic training or turn ambiguous later edits into rewards.
+
+Measure same-prompt cache repeats separately from changed editor states. Report
+debounce, queue, prompt processing, generation, complete display latency, peak
+and retained process memory, helper memory, swap, and pressure with their actual
+units. `cache_prompt=true` alone does not prove reuse; use backend token counts.
+Keep runtime and context-policy hashes with the scientific record. Do not treat
+standard Q4 KV cache storage as TurboQuant or Q4 weights as KV compression.
+
 `metrics.PERMITTED_METRIC_ATTRIBUTES` is the tested allowlist:
 service, task, language, backend, model_alias, quantization, outcome,
 context_size_bucket, suite_version, protocol_version, device_type, rank_role,

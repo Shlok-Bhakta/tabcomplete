@@ -20,7 +20,7 @@ local function response(body, stop_type)
   local chunks = { "data: " .. vim.json.encode({ content = body, stop = false }),
     "data: " .. vim.json.encode({ content = "", stop = true, stop_type = stop_type or "eos" }) }
   predict._request_impl = function(_, _, callback)
-    callback({ code = 0, stdout = table.concat(chunks, "\n") .. "\n" })
+    callback({ code = 0, stdout = table.concat(chunks, "\n\n") .. "\n\n" })
     return { kill = function() end }
   end
 end
@@ -29,6 +29,11 @@ local file = vim.fn.tempname() .. ".py"
 vim.fn.writefile({ "hello" }, file)
 vim.cmd("edit " .. vim.fn.fnameescape(file))
 vim.bo.filetype = "python"
+local buffers = require("tabcomplete_trajectory.buffers")
+buffers.set_callbacks(function(buf, kind, payload)
+  return collector.emit(buf, kind, payload)
+end, function() end)
+assert(buffers.attach(vim.api.nvim_get_current_buf()))
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 
 response("R\nhi")
@@ -73,7 +78,7 @@ assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "hi")
 
 response("N\n")
 assert(predict.predict())
-assert(vim.wait(1000, function() return predict.status().state == "no_edit" end))
+assert(vim.wait(1000, function() return predict.status().state == "model_no_edit" end))
 assert(not predict.status().proposal_active)
 
 response("R\nlate")
@@ -93,8 +98,9 @@ assert(predict.predict())
 local other = vim.fn.tempname() .. ".js"
 vim.fn.writefile({ "const value = 1;" }, other)
 vim.cmd("edit " .. vim.fn.fnameescape(other))
+assert(buffers.attach(vim.api.nvim_get_current_buf()))
 delayed({ code = 0, stdout = "data: " .. vim.json.encode({ content = "R\nwrong", stop = false })
-  .. "\ndata: " .. vim.json.encode({ content = "", stop = true, stop_type = "eos" }) .. "\n" })
+  .. "\n\ndata: " .. vim.json.encode({ content = "", stop = true, stop_type = "eos" }) .. "\n\n" })
 assert(vim.wait(1000, function() return not predict.status().in_flight end))
 assert(not predict.status().proposal_active)
 assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "const value = 1;")
@@ -105,7 +111,7 @@ predict._request_impl = function(_, _, callback)
   return { kill = function() end }
 end
 assert(predict.predict())
-assert(vim.wait(1000, function() return predict.status().state == "model-service outage" end))
+assert(vim.wait(1000, function() return predict.status().state:find("model request failed", 1, true) end))
 assert(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "const value = 1;")
 
 local kinds = {}
@@ -120,10 +126,9 @@ for _, event in ipairs(collector.queue) do
     lifecycle[event.payload.prediction_lifecycle] = (lifecycle[event.payload.prediction_lifecycle] or 0) + 1
   end
 end
-assert(lifecycle.no_edit == 1)
-assert(lifecycle.cancelled == 1)
-assert(lifecycle.stale_response == 1)
-assert(lifecycle.transport_failure == 1)
+assert(lifecycle.model_no_edit == 1)
+assert(lifecycle.cancelled_unseen == 2)
+assert(lifecycle.request_failed == 1)
 assert(not predict.set_mode("automatic"))
 assert(predict.status().mode == "manual")
 predict.setup({ expiry_ms = 30 })
@@ -134,7 +139,7 @@ assert(vim.wait(1000, function() return predict.status().state == "expired" end)
 assert(not predict.status().proposal_active)
 local expired = false
 for _, event in ipairs(collector.queue) do
-  if event.event_type == "heartbeat" and event.payload.prediction_lifecycle == "expired" then
+  if event.event_type == "prediction_dismissed" and event.payload.outcome == "expired" then
     expired = true
   end
 end
@@ -153,6 +158,7 @@ vim.api.nvim_win_set_cursor(0, { 1, 0 })
 assert(predict.predict())
 assert(captured_prompt:find("<actual-recent-edit start=2 end=4>", 1, true))
 assert(captured_prompt:find("αγ", 1, true))
+assert(vim.wait(1000, function() return not predict.status().in_flight end))
 response("R\nshould-not-apply")
 assert(predict.predict())
 assert(vim.wait(1000, function() return predict.status().proposal_active end))

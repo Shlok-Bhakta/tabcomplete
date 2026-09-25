@@ -3,6 +3,7 @@ import { openDatabase, resolveDbPath } from "./db";
 import { ingestRepositorySnapshot } from "./ingest";
 import { findMissingHashes, storeBlob } from "./blobs";
 import { collectStats } from "./stats";
+import { rebuildPrediction } from "./projection";
 import {
   MAX_BODY_BYTES,
   PROTOCOL_VERSION,
@@ -222,6 +223,7 @@ function handleEventsBatch(db: Database, body: unknown): Response {
   );
   let ingested = 0;
   const txn = db.transaction((evs: EventEnvelope[]) => {
+    const affected = new Map<string, [string, string]>();
     for (const ev of evs) {
       const payloadJson = ev.payload === undefined ? null : JSON.stringify(ev.payload);
       const res = stmt.run(
@@ -237,7 +239,18 @@ function handleEventsBatch(db: Database, body: unknown): Response {
         ev.mode ?? null,
         payloadJson,
       );
-      if (Number(res.changes) > 0) ingested += 1;
+      if (Number(res.changes) > 0) {
+        ingested += 1;
+        const payload = ev.payload;
+        if ((ev.event_type.startsWith("prediction_") || ev.event_type === "heartbeat")
+            && isRecord(payload) && typeof payload["prediction_id"] === "string") {
+          const id = payload["prediction_id"] as string;
+          affected.set(`${ev.session_id}\u0000${id}`, [ev.session_id, id]);
+        }
+      }
+    }
+    for (const [sessionId, predictionId] of affected.values()) {
+      rebuildPrediction(db, sessionId, predictionId);
     }
   });
   txn(validated);

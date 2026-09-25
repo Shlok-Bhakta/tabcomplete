@@ -1,4 +1,4 @@
-"""Install a local, manual-mode LazyVim predictor without replacing mappings."""
+"""Install the selected local LazyVim predictor without replacing mappings."""
 
 from __future__ import annotations
 
@@ -31,7 +31,14 @@ def owned_by_nix(path: Path) -> bool:
     return False
 
 
-def render_config(original: str, *, model_revision: str, model_alias: str) -> str:
+def render_config(
+    original: str,
+    *,
+    model_revision: str,
+    model_alias: str,
+    runtime_config_hash: str,
+    experimental_automatic: bool,
+) -> str:
     match = re.search(
         r'(?m)^(\s*dir\s*=\s*)"[^"]*/tools/trajectory_collector/nvim"(,\s*)$', original
     )
@@ -44,13 +51,15 @@ def render_config(original: str, *, model_revision: str, model_alias: str) -> st
     needle = 'require("tabcomplete_trajectory").setup({'
     if needle not in updated:
         raise ValueError("collector setup call not found")
-    # The predictor plugin file defines the commands and starts in manual mode.
-    # LazyVim's existing collector config sets only model identity after setup.
+    mode = "automatic" if experimental_automatic else "manual"
     line = (
         '\n      require("tabcomplete_trajectory.predict").setup({ '
         f'model = "{model_alias}", model_revision = "{model_revision}", '
         'precision = "Q4_K_M", adapter_identity = "full-weight", '
-        "automatic_gates_passed = false })"
+        f'runtime_config_hash = "{runtime_config_hash}", '
+        f'mode = "{mode}", experimental_auto_opt_in = '
+        f"{str(experimental_automatic).lower()}, automatic_quality_validated = false, "
+        "automatic_personalization_enabled = false, persist_mode = true })"
     )
     if 'require("tabcomplete_trajectory.predict").setup' in updated:
         updated = re.sub(
@@ -86,30 +95,50 @@ def render_service(model: Path, runtime: Path) -> str:
 
 
 def install(
-    config: Path, unit: Path, model: Path, runtime: Path, expected_sha: str,
-    model_alias: str, *, dry_run: bool
+    config: Path,
+    unit: Path,
+    model: Path,
+    runtime: Path,
+    expected_sha: str,
+    model_alias: str,
+    *,
+    dry_run: bool,
+    experimental_automatic: bool = False,
 ) -> dict:
     if owned_by_nix(config) or owned_by_nix(unit):
         raise RuntimeError("Nix/Home Manager owns this path; edit its source configuration")
     if not model.is_file() or sha(model) != expected_sha:
         raise ValueError("selected model artifact hash mismatch")
+    if model.stat().st_size != 397_807_232:
+        raise ValueError("selected model artifact size mismatch")
     if not runtime.is_file():
         raise FileNotFoundError(runtime)
     original = config.read_text()
-    updated = render_config(original, model_revision=expected_sha, model_alias=model_alias)
     service = render_service(model.resolve(), runtime.resolve())
+    runtime_config_hash = hashlib.sha256(service.encode()).hexdigest()
+    updated = render_config(
+        original,
+        model_revision=expected_sha,
+        model_alias=model_alias,
+        runtime_config_hash=runtime_config_hash,
+        experimental_automatic=experimental_automatic,
+    )
     if dry_run:
         return {
             "config": str(config),
             "unit": str(unit),
             "model_sha256": expected_sha,
-            "mode": "manual",
+            "mode": "automatic" if experimental_automatic else "manual",
+            "runtime_config_hash": runtime_config_hash,
             "dry_run": True,
         }
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     backup = config.with_name(config.name + ".backup-" + stamp)
     backup.write_text(original)
     prior_unit = unit.read_text() if unit.exists() else None
+    unit_backup = unit.with_name(unit.name + ".backup-" + stamp) if prior_unit else None
+    if unit_backup and prior_unit:
+        unit_backup.write_text(prior_unit)
     config.write_text(updated)
     unit.parent.mkdir(parents=True, exist_ok=True)
     unit.write_text(service)
@@ -118,21 +147,28 @@ def install(
         subprocess.run(
             ["systemctl", "--user", "enable", "--now", unit.name], check=True, capture_output=True
         )
+        if prior_unit != service:
+            subprocess.run(
+                ["systemctl", "--user", "restart", unit.name], check=True, capture_output=True
+            )
     except (OSError, subprocess.CalledProcessError):
         config.write_text(original)
         if prior_unit is None:
             unit.unlink(missing_ok=True)
         else:
             unit.write_text(prior_unit)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=False, capture_output=True)
         raise RuntimeError(
             "local predictor service failed to start; installer restored configuration"
         ) from None
     return {
         "config": str(config),
         "backup": str(backup),
+        "unit_backup": str(unit_backup) if unit_backup else None,
         "unit": str(unit),
         "model_sha256": expected_sha,
-        "mode": "manual",
+        "mode": "automatic" if experimental_automatic else "manual",
+        "runtime_config_hash": runtime_config_hash,
         "dry_run": False,
     }
 
@@ -143,6 +179,7 @@ def main() -> None:
     parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
     parser.add_argument("--model-sha256", required=True)
     parser.add_argument("--model-alias", required=True)
+    parser.add_argument("--experimental-automatic", action="store_true")
     parser.add_argument(
         "--config",
         type=Path,
@@ -163,6 +200,7 @@ def main() -> None:
         args.model_sha256,
         args.model_alias,
         dry_run=args.dry_run,
+        experimental_automatic=args.experimental_automatic,
     )
     print(result)
 

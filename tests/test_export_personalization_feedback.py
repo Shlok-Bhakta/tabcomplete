@@ -152,5 +152,7 @@ def test_same_state_opposite_decisions_are_ambiguous_candidate_pair(tmp_path: Pa
     conn.close()
     result = extract(db)
     assert len(result["candidate_preference_pairs"]) == 1
-    assert result["candidate_preference_pairs"][0]["ambiguity_flags"] == ["replay_not_verified"]
+    assert result["candidate_preference_pairs"][0]["ambiguity_flags"] == [
+        "missing_pre_state_anchor", "replay_not_verified",
+    ]
     assert result["readiness"]["defensible_preference_pairs"] == 0

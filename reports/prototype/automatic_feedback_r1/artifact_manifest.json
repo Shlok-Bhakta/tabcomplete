@@ -1,0 +1,101 @@
+{
+  "collector_backup_sha256": "c7692b6e9e86cd4505177c7a78d64031619806fe3fabfb7aec95e9ab63a54081",
+  "collector_image_id": "de871579ebec3f8ef045b84a6e9d777a936855fa88b9e0f98fea07bc35b708a1",
+  "external_artifacts": [
+    {
+      "bytes": 397807232,
+      "path": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+      "sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626"
+    },
+    {
+      "bytes": 17906456,
+      "path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+      "sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c"
+    }
+  ],
+  "generated_at": "2026-09-25T20:29:52.842150+00:00",
+  "personal_feedback_committed": false,
+  "tracked_files": [
+    {
+      "bytes": 3278,
+      "path": "reports/prototype/automatic_feedback_r1/installed_configuration.json",
+      "sha256": "ec99af21fc60417ed1af0a97e54a2eaff5ec2cbbdc72a8150d2af011831c7889"
+    },
+    {
+      "bytes": 59285,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_baseline.json",
+      "sha256": "a54ad68d76c9656b06735fc0e141dea83b71a10563ad71af920cc5bb680624b7"
+    },
+    {
+      "bytes": 4526,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_experiments.jsonl",
+      "sha256": "1facf04ed05e3b0118215bdf47d0aa4cdfb18e44fccd2bcb5e562d24ff41bf5c"
+    },
+    {
+      "bytes": 59297,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_cpu2_prompt4.json",
+      "sha256": "473b3777f67ad60ac5ae378c2cd2ba3bb76087d6d43e369d17e0f43cb54fed1c"
+    },
+    {
+      "bytes": 59261,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_cpu4_prompt2.json",
+      "sha256": "4697311364a99745e076a893f0a08beda0b63d06482e0d16d692eddcdc5acbf4"
+    },
+    {
+      "bytes": 59320,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_batch128.json",
+      "sha256": "8b433b1037eb2c459ade6672e8c54866a898dd87c51239b1d0df17a371d7b4bd"
+    },
+    {
+      "bytes": 59261,
+      "path": "reports/prototype/automatic_feedback_r1/runtime_q8kv.json",
+      "sha256": "07312ac269dad9d5769088fd921cbc1024f78a33680d1bde1ecf33bdc81fbcf8"
+    },
+    {
+      "bytes": 601,
+      "path": "reports/prototype/automatic_feedback_r1/cancellation_probe.json",
+      "sha256": "f4e83eca3bf562d30cc49aa372cd4b1e0e0d47827c14bd3360972ed62b09ffca"
+    },
+    {
+      "bytes": 5468,
+      "path": "reports/prototype/automatic_feedback_r1/feedback_projection_verification.json",
+      "sha256": "a4158ab9079e55fe82b5bc3b531d099e58bf30ea655120cb37e44cedd2c3ccbe"
+    },
+    {
+      "bytes": 505,
+      "path": "reports/prototype/automatic_feedback_r1/replay_results.json",
+      "sha256": "2ad6d3997a72da59bece74c00ef3cdce2adaf4298488afc38d91418198f0c177"
+    },
+    {
+      "bytes": 1185,
+      "path": "reports/prototype/automatic_feedback_r1/end_to_end.json",
+      "sha256": "bfa5b415d3afbc1eb69f70b697d338ae645db64b02186fd9519a0bfa491e129b"
+    },
+    {
+      "bytes": 3054,
+      "path": "reports/prototype/automatic_feedback_r1/HANDOFF.md",
+      "sha256": "a36ee1c9c290083bd7ef1518177bf7df1ff96724539c0e3b937e8d33a0c56112"
+    },
+    {
+      "bytes": 9764,
+      "path": "reports/prototype/automatic_feedback_r1.md",
+      "sha256": "fc6b3d44aa7ea5254ba3612cfdde21a6b26c387617b703c7fe7481c43c3f3316"
+    },
+    {
+      "bytes": 32599,
+      "path": "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua",
+      "sha256": "e93cf25dda86cd21df990fd241cef243f0df13ac0c0fc6f6fd76bc14480b953d"
+    },
+    {
+      "bytes": 2308,
+      "path": "tools/trajectory_collector/nvim/tests/automatic_shared_slot.lua",
+      "sha256": "d9b5f14fcabec6606b45877cc9d1154f314a76f4bd36a23447608fd5f1642e1d"
+    },
+    {
+      "bytes": 6940,
+      "path": "tools/trajectory_collector/server/src/projection.ts",
+      "sha256": "a3d80fcdc5fa0518f1371db355dd2d3ed542bc9ad37cbca7b2ffb46fd12529d8"
+    }
+  ],
+  "weights_committed": false
+}

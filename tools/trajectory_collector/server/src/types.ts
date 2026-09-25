@@ -22,6 +22,8 @@ export const EVENT_TYPES = [
   "prediction_accepted",
   "prediction_partially_accepted",
   "prediction_rejected",
+  "prediction_generated",
+  "prediction_dismissed",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

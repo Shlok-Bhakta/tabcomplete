@@ -27,6 +27,7 @@ M.pending_cursor = nil
 M.cursor_timer = nil
 M.key_ns = nil
 M.augroup = nil
+M.last_key_event = nil
 
 -- Forward declarations for callbacks registered before definition.
 local flush_now, retry_spool, post_to, anchor_buffer
@@ -241,7 +242,12 @@ local function ensure_blob(content, cb)
     -- Server answers which hashes it already has; the mock/test path and
     -- minimal servers may not implement `missing`, in which case we upload
     -- when the check itself failed, and skip only on explicit confirmation.
-    if ok and type(info) == "table" and info.present then
+    local missing = ok and type(info) == "table" and info.missing
+    local is_missing = false
+    if type(missing) == "table" then
+      for _, value in ipairs(missing) do if value == sha then is_missing = true end end
+    end
+    if ok and type(missing) == "table" and not is_missing then
       if cb then
         cb(true, sha)
       end
@@ -267,6 +273,9 @@ local function ensure_blob(content, cb)
     end)
   end)
 end
+
+-- Prediction payloads share the collector's content-addressed blob store.
+M.store_prediction_blob = ensure_blob
 
 --- Anchor a buffer: full canonical content -> sha256 -> blobs/check|upload,
 --- then emit buffer_open/buffer_write carrying content_hash. Resets the
@@ -315,6 +324,10 @@ function anchor_buffer(bufnr, reason)
       reason = reason,
     })
   end)
+end
+
+function M.anchor_prediction(bufnr)
+  anchor_buffer(bufnr, "prediction_request")
 end
 
 --- Snapshot repo context and POST /v1/repository/snapshot (best effort).
@@ -551,6 +564,8 @@ local function setup_key_capture()
       mode = util.current_mode(),
       payload = { key = normalized, typed = typed == 1 or typed == true },
     })
+    M.last_key_event = { event_id = env.event_id, timestamp_ms = env.timestamp_ms,
+      bufnr = bufnr, mode = env.mode }
     M.queue[#M.queue + 1] = env
     if #M.queue >= (config.options.batch_max_events or 100) then
       flush_now()
@@ -605,6 +620,7 @@ function M.setup(opts)
   M.seq = 0
   M.queue = {}
   M.current_file_id = nil
+  M.last_key_event = nil
   M.pending_cursor = nil
 
   buffers.set_callbacks(emit_from_buffers, anchor_buffer)

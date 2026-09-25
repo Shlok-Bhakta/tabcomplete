@@ -1101,3 +1101,42 @@ describe("WAL mode assertions", () => {
     expect(sync?.synchronous).toBe(1);
   });
 });
+
+describe("prediction projection ingestion", () => {
+  test("out-of-order retry batches update one projection row", async () => {
+    expect((await post("/v1/session/start", SESSION_BASE)).status).toBe(201);
+    const event = (id: string, seq: number, eventType: string, payload: object) => ({
+      protocol_version: 1, event_id: id, session_id: "sess-1", sequence_number: seq,
+      timestamp_ms: 1790000000000 + seq, event_type: eventType,
+      file_id: "repo:synthetic:main.py", cursor: { row: 0, col: 0 }, mode: "i",
+      payload: { prediction_id: "prediction-1", ...payload },
+    });
+    const later = [
+      event("display", 3, "prediction_shown", { active_buffer: true }),
+      event("dismiss", 4, "prediction_dismissed", {
+        outcome: "typed_match", outcome_source: "editor_observation", ended_by_event_id: "delta",
+      }),
+    ];
+    const earlier = [
+      event("request", 1, "prediction_requested", {
+        file_identity: "repo:synthetic:main.py", pre_state_hash: "a".repeat(64),
+        pre_state_sequence: 0, model_revision: "selected-q25",
+      }),
+      event("generated", 2, "prediction_generated", { action_blob_hash: "b".repeat(64) }),
+    ];
+    const batch = (events: object[]) => ({ protocol_version: 1, events });
+    expect((await post("/v1/events/batch", batch(later))).status).toBe(200);
+    expect((await post("/v1/events/batch", batch(earlier))).status).toBe(200);
+    const replay = await bodyJson(await post("/v1/events/batch", batch([...earlier, ...later])));
+    expect(replay.ingested).toBe(0);
+    const row = app!.db.query<{ outcome: string; request_event_id: string;
+      shown_event_id: string; resolved_file_id: number | null; updated_through_sequence: number }, []>(
+      "SELECT outcome,request_event_id,shown_event_id,resolved_file_id,updated_through_sequence " +
+      "FROM prediction_projection WHERE prediction_id='prediction-1'",
+    ).get();
+    expect(row).toEqual({ outcome: "typed_match", request_event_id: "request",
+      shown_event_id: "display", resolved_file_id: null, updated_through_sequence: 4 });
+    expect(app!.db.query<{n: number}, []>("SELECT COUNT(*) n FROM prediction_projection").get()?.n)
+      .toBe(1);
+  });
+});

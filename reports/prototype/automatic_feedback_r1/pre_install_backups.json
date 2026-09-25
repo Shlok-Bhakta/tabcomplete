@@ -1,0 +1,12 @@
+[
+  {
+    "source": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+    "backup": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua.backup-automatic-20260925T194234Z",
+    "sha256": "6b487c1029820a332a8476cc93c8dc9bda2bcee9e984625635b86209ed31a8c1"
+  },
+  {
+    "source": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service",
+    "backup": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service.backup-automatic-20260925T194234Z",
+    "sha256": "119f2e1fde204befc776e3046d0fe2c160be37c315c475b567d29aa65a54e26c"
+  }
+]
