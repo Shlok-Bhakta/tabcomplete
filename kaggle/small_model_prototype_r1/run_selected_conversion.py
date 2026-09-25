@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -20,6 +21,10 @@ ALIAS = "__SELECTED_ALIAS__"
 WEIGHT_SHA = "__ADAPTED_WEIGHT_SHA__"
 RUNTIME_SHA = "f072b103714dfa1eee531f80b24512faf38e3dd2"
 MAX_NEW_BYTES = 12 * 1024**3
+TOKENIZER_SOURCES = {
+    "q25-coder": ("Qwen/Qwen2.5-Coder-0.5B", "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301"),
+    "q3-base": ("Qwen/Qwen3-0.6B-Base", "da87bfb608c14b7cf20ba1ce41287e8de496c0cd"),
+}
 
 
 def sha(path):
@@ -76,6 +81,34 @@ def main():
     model = markers[0].parent / ALIAS / "main/inference"
     if sha(model / "model.safetensors") != WEIGHT_SHA:
         raise ValueError("attached checkpoint hash mismatch")
+    # The inference export was saved with Transformers 5.5. Its tokenizer
+    # metadata is not readable by the pinned llama.cpp converter's
+    # Transformers 4.57 dependency. Restore only the immutable source
+    # tokenizer metadata; keep the adapted weights and tokenizer.json exact.
+    from huggingface_hub import hf_hub_download
+
+    source, revision = TOKENIZER_SOURCES[ALIAS]
+    source_tokenizer = Path(hf_hub_download(source, "tokenizer.json", revision=revision))
+    source_config = Path(hf_hub_download(source, "tokenizer_config.json", revision=revision))
+    train_result = json.loads((markers[0].parent / ALIAS / "main/main-result.json").read_text())
+    if train_result["tokenizer_sha256"] != sha(source_tokenizer):
+        raise ValueError("trained tokenizer differs from immutable source")
+    staged = OUT / "conversion-input"
+    staged.mkdir()
+    for item in model.iterdir():
+        if item.is_file() and item.name not in ("tokenizer.json", "tokenizer_config.json"):
+            (staged / item.name).symlink_to(item)
+    shutil.copy2(source_tokenizer, staged / "tokenizer.json")
+    shutil.copy2(source_config, staged / "tokenizer_config.json")
+    state.update(
+        tokenizer_source=source,
+        tokenizer_revision=revision,
+        tokenizer_sha256=sha(source_tokenizer),
+        inference_export_tokenizer_sha256=sha(model / "tokenizer.json"),
+        converter_tokenizer_config_sha256=sha(source_config),
+        compatibility_repair="immutable trained source tokenizer with adapted weights",
+    )
+    marker.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
     run(["git", "clone", "--filter=blob:none", "https://github.com/ggml-org/llama.cpp.git",
          str(RUNTIME)], "runtime-clone")
     run(["git", "checkout", RUNTIME_SHA], "runtime-checkout", cwd=RUNTIME)
@@ -88,7 +121,7 @@ def main():
         raise RuntimeError("insufficient conversion budget")
     f16 = OUT / "selected-f16.gguf"
     q4 = OUT / (ALIAS + "-adapted-Q4_K_M.gguf")
-    run([sys.executable, str(RUNTIME / "convert_hf_to_gguf.py"), str(model),
+    run([sys.executable, str(RUNTIME / "convert_hf_to_gguf.py"), str(staged),
          "--outtype", "f16", "--outfile", str(f16)], "convert")
     if used_bytes() + 1 * 1024**3 > MAX_NEW_BYTES:
         raise RuntimeError("insufficient quantization budget")

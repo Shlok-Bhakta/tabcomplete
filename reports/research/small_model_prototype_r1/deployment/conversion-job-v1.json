@@ -1,0 +1,17 @@
+{
+  "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "commit": "64952606908656be7650fffc8b879dc761f6dec9",
+  "failure_reason": "Transformers 5.5 saved extra_special_tokens as list; pinned converter Transformers 4.57 expects a mapping.",
+  "failure_stage": "convert_hf_to_gguf.py tokenizer load",
+  "finalization_reserve_seconds": 900,
+  "observed_status": "KernelWorkerStatus.ERROR",
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "private_convert_log_sha256": "9beb7aaf4da7bbf12ab87f782f766b68ca7b7182fc0a40730bfc002f6ba81b37",
+  "quota_before": null,
+  "reference": "shlokbhakta/tabcomplete-r1-conversion",
+  "selected_alias": "q25-coder",
+  "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
+  "session_seconds_limit": 7200,
+  "state": "submitted",
+  "submitted_at": "2026-09-25T08:47:27.818916+00:00"
+}

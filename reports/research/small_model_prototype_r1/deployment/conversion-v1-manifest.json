@@ -1,0 +1,11 @@
+{
+  "status": "setup",
+  "plan_sha256": "be9a2e73fede1c9600664dd9d3d9630a3c6d50cda1bb5fc612064c05bd460ce8",
+  "selection_sha256": "bfc29f63e58b0aeaa354bc0b143bc96742b16b9014f55ce4b227d6abc5a92c98",
+  "selected_alias": "q25-coder",
+  "adapted_weight_sha256": "ad22285111aba002f6f7a322bdac522840554e6f0926f545006b6d77ef837927",
+  "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "precision": "Q4_K_M",
+  "artifact_budget_bytes": 12884901888,
+  "gpu_enabled": false
+}
