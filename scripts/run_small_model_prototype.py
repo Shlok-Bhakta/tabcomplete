@@ -304,6 +304,138 @@ def submit_screening(plan: dict) -> dict:
     return job
 
 
+def submit_line_repair(plan: dict) -> dict:
+    job_path = REPORT / "screening/line-repair-job.json"
+    if job_path.exists():
+        job = json.loads(job_path.read_text())
+        if job["plan_sha256"] != digest(REPORT / "plan.json"):
+            raise ValueError("line repair belongs to another plan")
+        job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
+        save(job_path, job)
+        return job
+    if plan.get("plan_revision") != 3:
+        raise ValueError("line repair requires registered plan revision 3")
+    check_budget(plan, session_seconds=3600)
+    commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
+    if command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no").strip():
+        raise RuntimeError("commit scientific code before Kaggle submission")
+    remote = command("git", "ls-remote", "origin", "refs/heads/research/small-model-prototype-r1")
+    if remote.split()[0] != commit:
+        raise RuntimeError("push the campaign branch before Kaggle submission")
+    folder = ROOT / "artifacts/research/small_model_prototype_r1/submission/line-repair"
+    folder.mkdir(parents=True, exist_ok=True)
+    source = (ROOT / "kaggle/small_model_prototype_r1/run_line_repair.py").read_text()
+    (folder / "run.py").write_text(
+        source.replace("__CHECKOUT_COMMIT__", commit).replace(
+            "__PLAN_SHA__", digest(REPORT / "plan.json")
+        )
+    )
+    reference = "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair"
+    save(
+        folder / "kernel-metadata.json",
+        {
+            "id": reference,
+            "title": reference.split("/")[1],
+            "code_file": "run.py",
+            "language": "python",
+            "kernel_type": "script",
+            "is_private": True,
+            "enable_gpu": True,
+            "enable_internet": True,
+            "machine_shape": "NvidiaTeslaT4",
+            "dataset_sources": ["shlokbhakta/tabcomplete-model-data-r2-inputs"],
+            "kernel_sources": [],
+            "competition_sources": [],
+        },
+    )
+    job = {
+        "reference": reference,
+        "plan_sha256": digest(REPORT / "plan.json"),
+        "commit": commit,
+        "submitted_at": datetime.now(UTC).isoformat(),
+        "session_seconds_limit": 3600,
+        "finalization_reserve_seconds": 900,
+        "quota_before": quota(),
+        "state": "submission_pending",
+    }
+    save(job_path, job)
+    command("kaggle", "kernels", "push", "-p", str(folder), timeout=180)
+    job["state"] = "submitted"
+    save(job_path, job)
+    return job
+
+
+def submit_adaptation(plan: dict) -> dict:
+    selection_path = REPORT / "selection.json"
+    selection = json.loads(selection_path.read_text())
+    if not selection.get("locked_before_adaptation"):
+        raise ValueError("finalist decision must be locked before adaptation")
+    finalists = selection["finalists"]
+    if finalists[0] != "q25-coder" or len(finalists) > 2 or len(set(finalists)) != len(finalists):
+        raise ValueError("invalid finalists")
+    if any(alias not in ALLOWED or alias == "p12-control" for alias in finalists):
+        raise ValueError("non-allowlisted adaptation finalist")
+    job_path = REPORT / "adaptation/job.json"
+    if job_path.exists():
+        job = json.loads(job_path.read_text())
+        if job["plan_sha256"] != digest(REPORT / "plan.json"):
+            raise ValueError("adaptation belongs to another plan")
+        job["observed_status"] = command("kaggle", "kernels", "status", job["reference"]).strip()
+        save(job_path, job)
+        return job
+    check_budget(plan, session_seconds=14_400, input_tokens=4_000_000)
+    commit = command("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
+    if command("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no").strip():
+        raise RuntimeError("commit scientific code before Kaggle submission")
+    remote = command("git", "ls-remote", "origin", "refs/heads/research/small-model-prototype-r1")
+    if remote.split()[0] != commit:
+        raise RuntimeError("push the campaign branch before Kaggle submission")
+    folder = ROOT / "artifacts/research/small_model_prototype_r1/submission/adaptation"
+    folder.mkdir(parents=True, exist_ok=True)
+    source = (ROOT / "kaggle/small_model_prototype_r1/run_adaptation.py").read_text()
+    (folder / "run.py").write_text(
+        source.replace("__CHECKOUT_COMMIT__", commit)
+        .replace("__PLAN_SHA__", digest(REPORT / "plan.json"))
+        .replace("__SELECTION_SHA__", digest(selection_path))
+        .replace("__FINALISTS__", json.dumps(finalists))
+    )
+    reference = "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation"
+    save(
+        folder / "kernel-metadata.json",
+        {
+            "id": reference,
+            "title": reference.split("/")[1],
+            "code_file": "run.py",
+            "language": "python",
+            "kernel_type": "script",
+            "is_private": True,
+            "enable_gpu": True,
+            "enable_internet": True,
+            "machine_shape": "NvidiaTeslaT4",
+            "dataset_sources": [],
+            "kernel_sources": [],
+            "competition_sources": [],
+        },
+    )
+    job = {
+        "reference": reference,
+        "plan_sha256": digest(REPORT / "plan.json"),
+        "selection_sha256": digest(selection_path),
+        "finalists": finalists,
+        "commit": commit,
+        "submitted_at": datetime.now(UTC).isoformat(),
+        "session_seconds_limit": 14_400,
+        "finalization_reserve_seconds": 1_800,
+        "quota_before": quota(),
+        "state": "submission_pending",
+    }
+    save(job_path, job)
+    command("kaggle", "kernels", "push", "-p", str(folder), timeout=180)
+    job["state"] = "submitted"
+    save(job_path, job)
+    return job
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
@@ -311,12 +443,17 @@ def main() -> None:
     args = parser.parse_args()
     plan = freeze(args.config)
     if args.execute:
-        job = submit_screening(plan)
+        if (REPORT / "selection.json").exists():
+            job = submit_adaptation(plan)
+        elif plan.get("plan_revision") == 3:
+            job = submit_line_repair(plan)
+        else:
+            job = submit_screening(plan)
         print(
             json.dumps(
                 {
                     "plan_sha256": digest(REPORT / "plan.json"),
-                    "screening_job": job["reference"],
+                    "job": job["reference"],
                     "state": job["state"],
                 }
             )

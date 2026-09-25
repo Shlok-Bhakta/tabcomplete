@@ -15,18 +15,6 @@
     "weight_decay": 0.01,
     "wire_version": "compact-next-edit-v1"
   },
-  "adaptation_data": {
-    "development_sha256": "3e0c6046dd9726b174c263d823b726f8dee778281845dd09bfe9dd7062dcd465",
-    "development_states": 1024,
-    "generator_sha256": "46c5fdcdf4aab917f934d7a6930d52532dd5eee22da72854d7fe259d511b97c8",
-    "groups": 96,
-    "heldout_sha256": "0b66a598e08b28b8dcfa4a0517ca695abc1b55527f7bb7bc718b213cf769a9d5",
-    "heldout_states": 1024,
-    "sealed_benchmark_training_states": 0,
-    "source": "deterministic synthetic trajectories; no personal or employer code",
-    "train_sha256": "b7be3cdb79379ed98618da9ee959bce5e049d4974b90db20377d1de92d554402",
-    "train_states": 4096
-  },
   "config_sha256": "2e93bc3d13560ed22e1cb6eccc12c8be55ce4801037a4d5e0d0a8fbb02541d6c",
   "environment": {
     "host": "crabcake",
@@ -205,7 +193,7 @@
       "total_parameters": 596049920
     }
   },
-  "plan_revision": 3,
+  "plan_revision": 2,
   "protocol": {
     "causal_cases": 200,
     "context_source_targets": [
@@ -324,9 +312,9 @@
     "units": "Kaggle account-hours",
     "used": 26.19
   },
-  "revision_reason": "Both new checkpoints completed 200-case strict causal generation under plan 2, but the line evaluator child failed before scoring because PYTHONPATH omitted the repository src directory. Plan 3 reruns only the unchanged 180-case line suite with the environment fixed. No fixture, prompt, model, or scoring rule changed. Synthetic adaptation data hashes are frozen before training.",
+  "revision_reason": "The first screening notebook loaded both approved checkpoints but stopped before scoring because the smoke record read nonexistent DetailedGeneration.generated_tokens. Version 2 uses DetailedGeneration.tokens and passes this campaign plan hash to the line evaluator. The model, fixture, prompt, and decode rules are unchanged. The failed 93.14-second session is retained in the budget ledger.",
   "schema_version": 1,
   "sealed_test_opened": false,
   "source_commit": "fb1e868bf6e04e40660574e1ff5162071e7d3f1f",
-  "supersedes_sha256": "b2e617c71603481a5650f40cea1c240c34fb002415c782a7a663709d391c36a4"
+  "supersedes_sha256": "600bbcdee6a10f78c4faad6de59e54983683a58f3a19d81d03428e967fb5f332"
 }

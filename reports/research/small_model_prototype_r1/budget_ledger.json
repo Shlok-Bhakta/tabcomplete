@@ -1,5 +1,5 @@
 {
-  "gpu_session_seconds": 93.14015202199994,
+  "gpu_session_seconds": 1011.7059205269999,
   "training_input_tokens": 0,
   "new_artifact_bytes": 0,
   "sessions": [
@@ -10,6 +10,15 @@
       "quota_used_before_hours": 26.19,
       "quota_used_after_hours": 26.22,
       "candidate_scores_produced": 0
+    },
+    {
+      "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+      "status": "partial",
+      "observed_wall_seconds": 918.5657685049999,
+      "quota_used_before_hours": 26.22,
+      "quota_used_after_hours": 26.48,
+      "causal_outputs_per_new_model": 200,
+      "line_outputs_per_new_model": 0
     }
   ]
 }

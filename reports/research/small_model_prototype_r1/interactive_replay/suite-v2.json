@@ -1,0 +1,9 @@
+{
+  "suite_revision": 2,
+  "plan_sha256": "b2e617c71603481a5650f40cea1c240c34fb002415c782a7a663709d391c36a4",
+  "explanation": "Revision 1 cache diagnostic set --no-cache-prompt, which also disabled active sequence reuse. Revision 2 sets cache-ram=0 and no-cache-idle-slots while preserving cache_prompt=true and the active slot KV state. Original measurements are retained but not used to infer optional snapshot cost.",
+  "changed_after_observing": "revision-1 cache_n was zero for every request and latency included full recomputation",
+  "model_revision_unchanged": true,
+  "source_states_unchanged": true,
+  "backend_revision_unchanged": true
+}
