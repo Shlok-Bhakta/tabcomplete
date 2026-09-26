@@ -14,12 +14,12 @@
       "sha256": "852130a4fdac9e28469417763439d0a8ebc37ac7b2a4626eb219b88118ff9699"
     },
     "reports/research/one_line_r1.md": {
-      "bytes": 7480,
-      "sha256": "ba34cfb20508253d95201c368a712e43600211b5065dabcce05a1a37ce2ee5ab"
+      "bytes": 7825,
+      "sha256": "603e957ac7b3f065e69528ab2fe8e6c270d042ebfcfdf8918c4ee81049c6d9ac"
     },
     "reports/research/one_line_r1/HANDOFF.md": {
-      "bytes": 2326,
-      "sha256": "510401416113e1661652010610b05aa43766274473c9553d286a248a26ec80fb"
+      "bytes": 2631,
+      "sha256": "d5abdf2d840ace2239d48486bfb8d6c7c7c50f762a76215855208ff48838c538"
     },
     "reports/research/one_line_r1/architecture_memo.md": {
       "bytes": 1716,

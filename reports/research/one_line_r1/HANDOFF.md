@@ -10,4 +10,6 @@ The next justified data step is a small source-grounded pilot that makes the int
 
 The training worker accepts local pinned model/data paths and a locked LR selection. Run its CPU inspect mode first, then submit it through the existing Kaggle orchestrator only after the campaign runner's live quota and storage checks pass. Its complete checkpoint must be validated by save/process-exit/reload before main SFT. No session or checkpoint exists in r1.
 
+The current controller has a deliberate data gate and a post-gate Kaggle-job-bundle stop. It does not itself submit a notebook or continue a multi-session GPU job. Package and verify that integration after an accepted dataset and LR selection exist; do not treat the CPU worker tests as CUDA validation.
+
 The running desktop editor, collector DB `/mnt/ssd/collector-data/collector.sqlite`, SigNoz, and the existing adapted q25 Q4 artifact were untouched. This branch contains no replacement inference weight. The TabComplete sealed test was not scored.

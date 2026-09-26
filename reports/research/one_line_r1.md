@@ -18,6 +18,8 @@ The named OpenCode Go model was listed by the authenticated CLI, but no inferenc
 
 The main data gate requires 20,000 accepted train states, at least 100 source groups, and 25 reviewed mechanisms. The actual accepted count is zero. The `--execute` entry point stops before GPU allocation at this gate. It would be misleading to consume Kaggle time teaching the new action header on these candidates and call it the requested broad edit model.
 
+The controller does not yet package or submit a Kaggle notebook after the data gate. The separate resumable GPU worker is implemented, but its q25 CUDA and optimizer path has not run. This is an unfinished execution step in addition to the data blocker; a future campaign must verify a Kaggle job bundle before using the worker for a main run.
+
 ## Implementation and evidence
 
 The [contract](../../src/tinycomplete/one_line/contract.py) applies one physical-line keep, replacement, deletion, or insertion byte-exactly across LF, CRLF, EOF, tabs, and Unicode. The [context serializer](../../src/tinycomplete/one_line/context.py) keeps answer-bearing split and mechanism metadata out of prompts. The [evaluation scorer](../../src/tinycomplete/one_line/evaluate.py) separates valid wire output, EOS, edit-required success, keep false edits, and unknown alternative edits. It has independent gold/unchanged controls, development-only display calibration, grouped uncertainty, paired outcomes, and a one-shot final-test claim. These are implementation tests, not model scores.
