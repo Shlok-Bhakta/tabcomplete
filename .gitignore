@@ -40,3 +40,4 @@ infra/observability/.provision-state.json
 .tabcomplete-observability/
 artifacts/research/model_data_r2/
 artifacts/research/small_model_prototype_r1/
+artifacts/research/one_line_r1/

@@ -1,0 +1,12 @@
+{
+  "status": "blocked_by_output_use_terms",
+  "requested_model": "opencode-go/muse-spark-1.3-contributor",
+  "installed_cli_version": "1.18.31",
+  "model_id_listed_by_authenticated_cli": true,
+  "teacher_calls": 0,
+  "calibration_cases": 0,
+  "student_labels_from_provider": 0,
+  "reason": "OpenCode Terms of Use effective 2026-08-15 prohibit programmatic extraction of Output and use of Output to develop AI models competing with the service or Third Party Models. A local code-edit student falls within this material restriction for the planned automated teacher route.",
+  "source": "https://opencode.ai/legal/terms-of-service",
+  "fallback": "public-source edit history with separately verified licenses and local deterministic validation"
+}

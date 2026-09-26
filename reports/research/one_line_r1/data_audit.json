@@ -1,0 +1,54 @@
+{
+  "schema": "single-line-edit-v1",
+  "suite_revision": 3,
+  "stage": "initial_100_candidate_public_git_pilot",
+  "candidate_artifact": "artifacts/research/one_line_r1/public_git_pilot_candidates.jsonl",
+  "candidate_sha256": "e3f9fbf684c56bb97954e58ac162f60cea1594a68016f3109c71927420298d5e",
+  "candidate_count": 100,
+  "structurally_valid_against_revision_3": 100,
+  "source_repositories": 4,
+  "languages": {
+    "python": 25,
+    "typescript": 25,
+    "rust": 25,
+    "go": 25
+  },
+  "actions": {
+    "keep": 0,
+    "replace_line": 65,
+    "insert_before": 32,
+    "delete_line": 3
+  },
+  "provenance": {
+    "git_observed_atomic_commit": 6,
+    "git_reconstructed_atomic_from_multi_change_commit": 94,
+    "observed_editor_timeline": 0
+  },
+  "recent_history_present": 0,
+  "lead_compact_old_new_screened": 100,
+  "lead_full_context_execution_audited": 0,
+  "inferability_accepted": 0,
+  "accepted_training_states": 0,
+  "reason_not_accepted": "The pilot validates extraction and byte-exact application only. It contains no prior edit history, no keep controls, no mechanism labels, and no objective evidence that the intended next action follows from the visible state. Most rows are synthetic-order decompositions of larger commits. The lead inspected all 100 compact old/new/action summaries but has not claimed the required full-context, execution-backed audit.",
+  "next_gate": "History-conditioned 100-case pilot completed. Its exact replay passes, but intent and repository diversity remain unverified; do not expand or accept training labels yet.",
+  "history_pilot": {
+    "artifact": "artifacts/research/one_line_r1/public_git_history_pilot_candidates.jsonl",
+    "sha256": "d016550d1899ac78e674d1b0cd83fbbe0d4826bf86ad3854247ebdeee1d78f4b",
+    "candidate_count": 100,
+    "suite_revision_3_replay_pass": 100,
+    "source_repositories": 4,
+    "nonempty_replayable_history": 100,
+    "reconstructed_order_edits": 95,
+    "synthetic_terminal_keep_controls": 5,
+    "inferability_accepted": 0,
+    "accepted_training_states": 0
+  },
+  "instinct_typescript_audit": {
+    "train_rows": 4371,
+    "train_one_line_at_visible_cursor_with_typescript_path_upper_bound": 2222,
+    "test_rows_structurally_scanned": 221,
+    "test_one_line_at_visible_cursor_with_typescript_path": 128,
+    "accepted_training_states": 0,
+    "limitations": "Excerpt-level states; no verified repository revision, source license per file, whole-file history, or independent source grouping. Test rows remain reserved."
+  }
+}

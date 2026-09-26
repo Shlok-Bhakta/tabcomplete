@@ -1,0 +1,15 @@
+# Data gate audit
+
+The main SFT gate requires at least 20,000 accepted, distinct training states from at least 100 source groups, with 25 reviewed edit mechanisms. This campaign has accepted zero. No training job was submitted.
+
+The first public Git pilot has 100 byte-exact candidate actions from four repositories. It has no prior edit history. The second 100-case pilot replays prior edits from pinned parent blobs, and every row passes the suite revision 3 application and wire checks. Its 95 edit examples use a reconstructed file order. That order is not an observed developer timeline. Five terminal keep examples mean only that the constructed commit sequence ended; they are not observed human decisions to leave code unchanged. A correct patch does not establish that the action was inferable from the visible editor state.
+
+I inspected the pilot's compact old-line, new-line, action, and history summaries. Some changes repeat visible edits, such as a type annotation update after another annotation update. Others add comments, alter tests, or change behavior with no visible request or objective check. The visible prompt does not independently establish which of several possible next edits the developer intended. These rows remain candidates, not supervised labels. A full-context, execution-backed inferability review has not accepted any row.
+
+Continue's pinned Instinct TypeScript train split has 4,371 rows. A read-only structural scan found 2,222 rows whose gold change fits one physical line at the visible cursor and has a TypeScript path. This is an upper bound before source-license, repository, whole-file, history, token-budget, and duplicate checks. The excerpt path does not establish a repository revision or independent source group. The evaluator also scanned the 221-row TypeScript test split for structure, finding 128 cursor-aligned one-line rows; it did not run model selection on them. The native test partition stays reserved.
+
+The 1.34 TB Themis Git dataset was inspected through remote metadata only. Its rows mix source licenses, including copyleft licenses, and the smallest relevant shard still ranges from hundreds of MB to several GB. Downloading a shard before the 100-case inferability pilot had a usable yield would spend storage without fixing the missing intent signal. The existing R2 Stack pool contains static files, not edit trajectories.
+
+The planned OpenCode Go teacher route was excluded before any call. The current [OpenCode Terms](https://opencode.ai/legal/terms-of-service) prohibit automated Output extraction and use of Output to develop competing AI models. The named model is visible in the authenticated CLI, but access alone does not grant the output use required for student labels. Teacher calls, teacher calibration cases, and provider-derived labels are all zero.
+
+The resulting shortfall is 20,000 accepted train states, 4,000 development states, 2,000 final-test states, at least 100 source groups, and reviewed mechanism diversity. The frozen final TabComplete test was not opened. A toy grammar run would not resolve this data gap or meet the user's model-quality objective.

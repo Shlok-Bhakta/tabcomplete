@@ -1,0 +1,6 @@
+{
+  "status": "no_model_quality_evaluation",
+  "development_cases": 0,
+  "final_test_cases_scored": 0,
+  "reason": "No accepted group-disjoint evaluation set and no trained artifact."
+}

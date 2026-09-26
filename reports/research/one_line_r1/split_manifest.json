@@ -1,0 +1,11 @@
+{
+  "schema": "single-line-edit-v1",
+  "suite_revision": 3,
+  "status": "not_constructed_no_accepted_cases",
+  "accepted_train": 0,
+  "accepted_development": 0,
+  "accepted_test": 0,
+  "source_group_isolation_verified": false,
+  "final_tabcomplete_test_opened": false,
+  "reason": "Candidate pilots have not passed independent inferability and grouping review."
+}

@@ -1,0 +1,15 @@
+# Focused evidence audit
+
+| Prior evidence | Decision for this campaign |
+| --- | --- |
+| Stage-1 and research R1 causal CPT improved held-out code NLL, while the later fresh-data cosine arms lost strict functional passes. | Do not run another raw-code CPT pass or use NLL alone to promote a next-edit model. |
+| R2's corrected 200-case strict suite contains multi-line function-body tasks; its 180-case line suite measures causal continuation. | Preserve both as historical/general-code diagnostics. Build a separate `single-line-edit-v1` benchmark for the new action contract. |
+| The small-model prototype generated 4,096 training states from four recipes in four languages. Its one-pass q25 adaptation used 664,948 nonpadding input tokens and 32,516 supervised response-plus-EOS tokens; the 1,024-case synthetic development result was perfect but template-related. | Keep the deployed adapter as a narrow control. Train the new student from untouched q25 on grouped public-source edits, and require source/held-out-mechanism evaluation. |
+| `build_small_edit_data.py` constructs recipe variants and family splits; `train_small_next_edit.py` uses response-only labels but walks one example at a time, logs only the last loss per update, and saves no model weights in its resumable state. | Reuse the validated masking idea; audit batch throughput, aggregate loss and full checkpoint restoration before a main run. |
+| Existing compact codec is `N\n`/`R\n` for a marked region, while the new task needs N/D/R/I physical-line actions. | Version the wire contract separately; preserve old results. |
+| Existing next-edit protocol applies byte offsets, and the evaluator has a network-disabled sandbox. | Reuse these byte and execution safeguards where applicable; add line-boundary semantics and independent gold/control checks. |
+| The collector already records editor trajectories and projections; the read-only exporter keeps ambiguity and gaps. | Do not migrate or use the live feedback database as a training source. Refresh human-label readiness read-only. |
+| The automatic-feedback report records 96-token capped tails and live Q4 service measurements. | Do not compare those latencies to future 64-token one-line responses as a pure runtime change. Do not change the live editor service. |
+| The current OpenCode Terms of Use forbid programmatic output extraction and using output to develop competing AI models. | No hosted teacher outputs enter labels or automated scoring. Record zero teacher calls and pursue licensed public edit history; revisit only with a separate compatible rights basis. |
+| A read-only refresh found 70 prediction projections but zero defensible candidate preference pairs in the existing feedback exporter. | Do not relabel synthetic acceptance smoke or ordinary proposal counts as human training preferences. |
+| `tabcomplete-predictor.service` remained active on crabcake, using the existing q25 adapted Q4 path, loopback port 19093, four CPU threads, and CPU-only `-ngl 0`. | Leave the live service and installed editor configuration unchanged during this model campaign. |

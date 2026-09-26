@@ -1,0 +1,268 @@
+{
+  "automatic_editor_promotion": false,
+  "budgets": {
+    "automatic_quota_renewal_use": false,
+    "maximum_kaggle_t4x2_session_wall_hours": 24,
+    "maximum_new_persistent_local_research_bytes": 12884901888,
+    "maximum_nonpadding_training_input_tokens": 100000000,
+    "minimum_session_finalization_minutes": 15,
+    "one_gpu_allocation_at_a_time": true,
+    "paid_overage": false,
+    "unknown_quota_initial_session_limit_minutes": 120
+  },
+  "config_sha256": "f394b7b1a545816b04ddbcccb10cbaeb398fde5651bfcc640e28cfdaa75bc362",
+  "data_policy": {
+    "final_tracks": [
+      "new_repositories",
+      "heldout_mechanisms"
+    ],
+    "initial_candidates": 100,
+    "keep_replace_insert_delete_target_fraction": [
+      0.25,
+      0.45,
+      0.2,
+      0.1
+    ],
+    "languages": [
+      "python",
+      "typescript",
+      "rust",
+      "go"
+    ],
+    "maximum_repository_fraction": 0.02,
+    "maximum_synthetic_repair_fraction": 0.1,
+    "maximum_template_fraction": 0.01,
+    "minimum_early_source_grounded_test": 200,
+    "minimum_early_test": 800,
+    "minimum_main_train": 20000,
+    "minimum_mechanisms": 25,
+    "minimum_source_groups": 100,
+    "second_stage_candidates": 1000,
+    "split_group_keys": [
+      "repository_alias_group",
+      "session_or_commit",
+      "generator_family",
+      "normalized_near_duplicate"
+    ],
+    "target_development": 4000,
+    "target_real_source_fraction": 0.5,
+    "target_test": 2000,
+    "target_train": 50000
+  },
+  "environment": {
+    "controller_host": "crabcake",
+    "controller_platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "local_cuda_assumed": false,
+    "python": "3.11.15",
+    "uv_lock_sha256": "c304a2a892a76261b286ac4b0da4be52ab77944add671908c63da85664f69c42"
+  },
+  "existing_model_files": {
+    "config.json": {
+      "bytes": 659,
+      "path": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/config.json",
+      "sha256": "e6bf24d1cf58278dcb4ded7e885b71cb1c56299b34c8046b1b64395d17b1891f"
+    },
+    "model.safetensors": {
+      "bytes": 988097824,
+      "path": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/model.safetensors",
+      "sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    },
+    "tokenizer.json": {
+      "bytes": 7031645,
+      "path": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/tokenizer.json",
+      "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+    }
+  },
+  "final_test_opened": false,
+  "frozen_at": "2026-09-26T11:29:27.124453+00:00",
+  "plan_revision": 2,
+  "protocol": {
+    "decoding": "greedy_until_real_eos",
+    "default_input_tokens": 1024,
+    "maximum_response_tokens_including_eos": 64,
+    "maximum_total_tokens": 2048,
+    "selection_order": [
+      "target_line",
+      "surrounding_function",
+      "recent_edits",
+      "relevant_imports_types",
+      "extra_context"
+    ],
+    "serializer": "one_line_reference_v1"
+  },
+  "quota_at_freeze": {
+    "active_jobs": [],
+    "job_statuses": [
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-r1-conversion has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-heldout",
+        "status": "shlokbhakta/tabcomplete-r1-heldout has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+        "status": "shlokbhakta/tabcomplete-r1-lfm-q4-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-context",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-context has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-evaluation",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-evaluation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-baseline has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "unknown"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/notebookd2edcfa65c",
+        "status": "unknown"
+      }
+    ],
+    "observed_at": "2026-09-26T11:29:03.783355+00:00",
+    "remaining": 45.0,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 0.0
+  },
+  "schema_sha256": "acb082d314d30c01fe8f0f314f2cc093d19fc6af7af873542eb40bea4061ed4f",
+  "selection": {
+    "final_test_reads": 1,
+    "keep_false_edit_guard": "development_calibrated_before_main",
+    "utility_correct_minus_lambda_incorrect": 3.0
+  },
+  "source_commit": "dda0218f0e92e99668026d1d44928506af2bc24f",
+  "suite_revision": 3,
+  "teacher": {
+    "label_route_enabled": false,
+    "maximum_completed_calls": 25000,
+    "maximum_output_tokens": 20000000,
+    "maximum_uncached_input_tokens": 60000000,
+    "reason": "OpenCode Terms of Use prohibit programmatic output extraction and output use to develop competing AI models.",
+    "requested_model": "opencode-go/muse-spark-1.3-contributor"
+  },
+  "training": {
+    "checkpoint_requirements": [
+      "weights",
+      "optimizer",
+      "scheduler",
+      "scaler",
+      "cpu_rng",
+      "gpu_rng",
+      "shuffle_state",
+      "consumed_position",
+      "token_totals"
+    ],
+    "compute_precision": "FP16",
+    "effective_batch_examples": 32,
+    "final_lr_fraction": 0.1,
+    "lr_pilot_examples": 2048,
+    "lr_pilots": [
+      1e-05,
+      3e-05
+    ],
+    "master_precision": "FP32",
+    "max_gradient_norm": 1.0,
+    "maximum_epochs": 2,
+    "optimizer": "AdamW8bit_if_supported",
+    "warmup_fraction": 0.03,
+    "weight_decay": 0.01
+  }
+}

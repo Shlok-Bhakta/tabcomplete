@@ -1,0 +1,16 @@
+{
+  "schema": "single-line-edit-v1",
+  "suite_revision": 3,
+  "status": "pilot_candidates_only",
+  "accepted_train": 0,
+  "accepted_development": 0,
+  "accepted_test": 0,
+  "planned_training_input_tokens": 0,
+  "source_repositories_with_accepted_rows": 0,
+  "mechanisms_with_accepted_rows": 0,
+  "pilot_candidate_count": 200,
+  "pilot_candidate_count_note": "Two 100-row exploratory pilots from the same four repositories; not 200 distinct accepted training states.",
+  "pilot_candidate_sha256": "e3f9fbf684c56bb97954e58ac162f60cea1594a68016f3109c71927420298d5e",
+  "history_pilot_candidate_sha256": "d016550d1899ac78e674d1b0cd83fbbe0d4826bf86ad3854247ebdeee1d78f4b",
+  "test_sealed": false
+}

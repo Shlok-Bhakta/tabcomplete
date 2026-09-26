@@ -1,0 +1,74 @@
+campaign: one_line_r1
+schema: single-line-edit-v1
+suite_revision: 3
+source_branch_commit: dda0218f0e92e99668026d1d44928506af2bc24f
+student:
+  model_id: Qwen/Qwen2.5-Coder-0.5B
+  revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+  tokenizer_revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+  weight_sha256: aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80
+  tokenizer_sha256: c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539
+  initializer: untouched_pretrained
+context:
+  default_input_tokens: 1024
+  maximum_total_tokens: 2048
+  maximum_response_tokens_including_eos: 64
+  serializer: single-line-context-v2
+  selection_order: [target_line, surrounding_function, recent_edits, relevant_imports_types, extra_context]
+  decoding: greedy_until_real_eos
+data:
+  languages: [python, typescript, rust, go]
+  initial_candidates: 100
+  second_stage_candidates: 1000
+  target_train: 50000
+  minimum_main_train: 20000
+  target_development: 4000
+  target_test: 2000
+  minimum_early_test: 800
+  minimum_early_source_grounded_test: 200
+  minimum_source_groups: 100
+  minimum_mechanisms: 25
+  maximum_repository_fraction: 0.02
+  maximum_template_fraction: 0.01
+  maximum_synthetic_repair_fraction: 0.10
+  target_real_source_fraction: 0.50
+  split_group_keys: [repository_alias_group, session_or_commit, generator_family, normalized_near_duplicate]
+  final_tracks: [new_repositories, heldout_mechanisms]
+  keep_replace_insert_delete_target_fraction: [0.25, 0.45, 0.20, 0.10]
+teacher:
+  requested_model: opencode-go/muse-spark-1.3-contributor
+  label_route_enabled: false
+  reason: OpenCode Terms of Use prohibit programmatic output extraction and output use to develop competing AI models.
+  maximum_completed_calls: 25000
+  maximum_uncached_input_tokens: 60000000
+  maximum_output_tokens: 20000000
+training:
+  effective_batch_examples: 32
+  maximum_epochs: 2
+  lr_pilots: [0.00001, 0.00003]
+  lr_pilot_examples: 2048
+  warmup_fraction: 0.03
+  final_lr_fraction: 0.10
+  optimizer: AdamW8bit_if_supported
+  weight_decay: 0.01
+  max_gradient_norm: 1.0
+  master_precision: FP32
+  compute_precision: FP16
+  checkpoint_requirements: [weights, optimizer, scheduler, scaler, cpu_rng, gpu_rng, shuffle_state, consumed_position, token_totals]
+selection:
+  utility_correct_minus_lambda_incorrect: 3.0
+  keep_false_edit_guard: development_calibrated_before_main
+  final_test_reads: 1
+budget:
+  maximum_kaggle_t4x2_session_wall_hours: 24
+  maximum_nonpadding_training_input_tokens: 100000000
+  maximum_new_persistent_local_research_bytes: 12884901888
+  minimum_session_finalization_minutes: 15
+  unknown_quota_initial_session_limit_minutes: 120
+  one_gpu_allocation_at_a_time: true
+  automatic_quota_renewal_use: false
+  paid_overage: false
+deployment:
+  modify_running_editor: false
+  maximum_sanity_actions: 100
+  candidate_precision: Q4_K_M

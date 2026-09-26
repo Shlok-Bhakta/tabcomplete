@@ -1,0 +1,20 @@
+{
+  "status": "worker_cpu_verified_main_not_started",
+  "model": "Qwen/Qwen2.5-Coder-0.5B",
+  "model_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+  "cpu_inspection": {
+    "disposable_synthetic_rows": 64,
+    "nonpadding_input_tokens": 9570,
+    "response_plus_eos_tokens": 128,
+    "planned_updates": 2,
+    "actual_updates_on_these_rows": 0
+  },
+  "unit_evidence": "Tiny Qwen2 CPU selected-logit gradient parity and continuous versus save/reload update parity passed.",
+  "main_examples": 0,
+  "main_training_input_tokens": 0,
+  "main_supervised_tokens": 0,
+  "main_updates": 0,
+  "main_epochs": 0,
+  "gpu_session_wall_seconds": 0,
+  "cuda_and_bitsandbytes_verified": false
+}
