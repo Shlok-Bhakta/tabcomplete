@@ -11,13 +11,20 @@ import json
 import math
 import os
 import random
+import re
 from collections import Counter, defaultdict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from tinycomplete.one_line.contract import EditAction, EditState, apply_action, decode_action
+from tinycomplete.one_line.contract import (
+    EditAction,
+    EditState,
+    apply_action,
+    decode_action,
+    physical_lines,
+)
 
 Split = Literal["train", "development", "test", "exploratory"]
 Outcome = Literal["pass", "fail", "unknown"]
@@ -569,4 +576,181 @@ def paired_outcomes(
         ],
         "samples": samples,
         "seed": seed,
+    }
+
+
+CALIBRATION_SUITE = "independent-synthetic-teacher-calibration-v1"
+
+
+def _canonical_sha256(value: object) -> str:
+    payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _physical_content(source: str, row: int) -> str | None:
+    lines = physical_lines(source.encode("utf-8"))
+    if row >= len(lines):
+        return None
+    return lines[row].content.decode("utf-8")
+
+
+def _calibration_objective(state: EditState, spec: dict) -> ObjectiveCheck:
+    """Build an independent structural check from visible source and frozen spec."""
+    from tree_sitter_language_pack import get_parser
+
+    parser = get_parser(state.filetype)
+    kind = spec["kind"]
+    target_before = _physical_content(state.source, state.target_row)
+    if target_before is None:
+        raise ValueError("calibration objective needs an existing target line")
+
+    if kind == "history_suffix":
+        if len(state.history) != 1:
+            raise ValueError("history-suffix case needs one prior edit")
+        history = state.history[0]
+        old_symbol = spec["history_old_symbol"]
+        new_symbol = spec["history_new_symbol"]
+        target_symbol = spec["target_old_symbol"]
+        prefix = spec["access_prefix"]
+        suffix = spec["access_suffix"]
+        if (
+            not new_symbol.startswith(old_symbol)
+            or new_symbol == old_symbol
+            or prefix + old_symbol + suffix not in history.old_text
+            or prefix + new_symbol + suffix not in history.new_text
+            or prefix + target_symbol + suffix not in target_before
+        ):
+            raise ValueError("history-suffix objective is not grounded in visible edits")
+        expected_access = prefix + target_symbol + new_symbol[len(old_symbol) :] + suffix
+        old_access = prefix + target_symbol + suffix
+        boundary = r"(?![A-Za-z0-9_])" if not suffix else ""
+        expected_pattern = re.compile(re.escape(expected_access) + boundary)
+        old_pattern = re.compile(re.escape(old_access) + boundary)
+
+        def property_check(source: str) -> bool:
+            line = _physical_content(source, state.target_row)
+            return (
+                line is not None
+                and bool(expected_pattern.search(line))
+                and not old_pattern.search(line)
+            )
+
+    elif kind == "preserve_target":
+        if len(state.history) != 1 or state.history[0].row != state.target_row:
+            raise ValueError("keep counterfactual requires a latest edit on the target")
+        if state.history[0].new_text != target_before:
+            raise ValueError("keep history does not reconstruct the current target")
+
+        def property_check(source: str) -> bool:
+            return _physical_content(source, state.target_row) == target_before
+
+    elif kind == "guard":
+        intent = spec.get("intent_text")
+        if not isinstance(intent, str) or intent not in state.source:
+            raise ValueError("guard intent is not visible in source")
+        pattern = re.compile(spec["required_regex"])
+        if pattern.search(state.source):
+            raise ValueError("guard already exists in pre-edit source")
+
+        def property_check(source: str) -> bool:
+            return bool(pattern.search(source))
+
+    elif kind == "dedupe_target":
+        intent = spec.get("intent_text")
+        if intent is not None and intent not in state.source:
+            raise ValueError("dedupe intent is not visible in source")
+        before_lines = physical_lines(state.source.encode("utf-8"))
+        if sum(line.content.decode("utf-8") == target_before for line in before_lines) != 2:
+            raise ValueError("dedupe source must contain the target statement exactly twice")
+
+        def property_check(source: str) -> bool:
+            after_lines = physical_lines(source.encode("utf-8"))
+            return (
+                len(after_lines) == len(before_lines) - 1
+                and sum(line.content.decode("utf-8") == target_before for line in after_lines) == 1
+            )
+
+    else:
+        raise ValueError("unsupported calibration objective")
+
+    def checked(source: str) -> bool:
+        if parser.parse(source.encode("utf-8")).root_node.has_error:
+            return False
+        return property_check(source)
+
+    return checked
+
+
+def load_calibration_cases(fixture_path: Path, manifest_path: Path) -> list[EvaluationCase]:
+    """Read only a prehashed development calibration suite."""
+    fixture_bytes = fixture_path.read_bytes()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if hashlib.sha256(fixture_bytes).hexdigest() != manifest.get("fixture_sha256"):
+        raise ValueError("calibration fixture hash differs from frozen manifest")
+    fixture = json.loads(fixture_bytes)
+    if fixture.get("suite") != CALIBRATION_SUITE or fixture.get("suite_revision") != 3:
+        raise ValueError("unknown calibration suite or contract revision")
+    rows = fixture.get("cases")
+    if not isinstance(rows, list) or len(rows) != manifest.get("case_count"):
+        raise ValueError("calibration case count differs from frozen manifest")
+    if {row["id"]: _canonical_sha256(row) for row in rows} != manifest.get("case_hashes"):
+        raise ValueError("calibration case hashes differ from frozen manifest")
+    cases = []
+    for row in rows:
+        if row["split"] != "development" or row["source_type"] != "synthetic":
+            raise ValueError("calibration cases must be synthetic development cases")
+        state = EditState.from_mapping(row["state"])
+        for history in state.history:
+            if _physical_content(state.source, history.row) != history.new_text:
+                raise ValueError("calibration history does not reconstruct current source")
+            if history.old_text == history.new_text:
+                raise ValueError("calibration history contains a no-op")
+        action = EditAction(**row["gold_action"])
+        objective = _calibration_objective(state, row["objective"])
+        case = EvaluationCase(
+            id=row["id"],
+            state=state,
+            gold_action=action,
+            after_source=row["after_source"],
+            split="development",
+            source_repo=row["source_repo"],
+            generator_family=row["generator_family"],
+            mechanism=row["mechanism"],
+            source_type="synthetic",
+            objective_check=objective,
+            objective_name=row["objective"]["kind"],
+        )
+        cases.append(case)
+    if len({case.id for case in cases}) != len(cases):
+        raise ValueError("duplicate calibration case IDs")
+    return cases
+
+
+def calibration_prompts(cases: Sequence[EvaluationCase], tokenizer: object) -> list[dict]:
+    """Give a provider only answer-free prompts and stable case IDs."""
+    from tinycomplete.one_line.context import serialize_state_bounded
+
+    output = []
+    for case in cases:
+        if case.split != "development":
+            raise ValueError("calibration prompts must use development cases")
+        context = serialize_state_bounded(case.state, tokenizer, max_input_tokens=1024)
+        output.append(
+            {"case_id": case.id, "prompt": context.text, "input_tokens": context.input_tokens}
+        )
+    return output
+
+
+def score_calibration_predictions(
+    cases: Sequence[EvaluationCase], predictions: Sequence[Prediction]
+) -> dict:
+    """Score one fixed teacher pass; the caller stores raw responses separately."""
+    if len(cases) != 16 or any(case.split != "development" for case in cases):
+        raise ValueError("expected the fixed 16-case development suite")
+    scores = evaluate_cases(cases, predictions, max_tokens=64)
+    return {
+        "suite": CALIBRATION_SUITE,
+        "summary": summarize(scores),
+        "by_language": stratified_summary(scores, "language"),
+        "cases": [score.__dict__ for score in scores],
     }

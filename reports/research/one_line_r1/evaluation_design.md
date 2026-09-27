@@ -24,7 +24,7 @@ Controls are gold, keep, seeded random action, and a deliberately simple rule. T
 
 The suite manifest contains case IDs, their digest, and any frozen content hashes. Before test cases are opened, a locked development selection must identify the selected artifact and exact suite-manifest SHA-256. `claim_sealed_evaluation` writes an exclusive, fsynced claim file. Repeating the claim fails, including after an interrupted run; a repeat requires a documented suite/plan revision. Batch scoring rejects test rows without a claim, rejects a mixture of test and non-test rows, and verifies the claimed case-ID digest. Direct single-case scoring also rejects unclaimed test rows. The claim is a local procedural guard, not a security boundary against someone intentionally bypassing Python code.
 
-No teacher solver output or sealed content enters training, LR choice, abstention calibration, or case-authoring feedback. The current OpenCode output-use restriction in the frozen schema excludes OpenCode output from student labels and automated benchmark scoring without a separate compatible rights basis.
+No sealed content enters training, LR choice, abstention calibration, or case-authoring feedback. Plan revision 4 records the user's reported permission for bounded Muse Spark 1.3 Contributor student-label and fixed benchmark use on public/synthetic content. Teacher outputs remain candidates until independent checks accept them; this evaluator never treats a teacher's self-assessment as the quality oracle.
 
 ## CPU verification
 

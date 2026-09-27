@@ -1,0 +1,41 @@
+{
+  "version": "one-line-teacher-protocol-v1",
+  "model": "opencode-go/muse-spark-1.3-contributor",
+  "source_classes": ["public", "synthetic"],
+  "session_policy": "One fresh session per author, blind solver, or reviewer request; one persistent loopback server; tools and plugins disabled.",
+  "calibration": {
+    "input": "Exactly single-line-context-v2 serialize_state_bounded output with the pinned q25 tokenizer and 1024 input-token limit. No gold, objective, or extra task instruction.",
+    "output": "One raw N/D/R/I wire action only. Provider message finish=stop is recorded separately from q25 EOS. Reject narration, JSON, multiple lines, and incomplete responses. Count wire plus q25 EOS against the 64-token scope cap.",
+    "fixture": "reports/research/one_line_r1/calibration_cases.json",
+    "fixture_sha256": "a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e",
+    "manifest": "reports/research/one_line_r1/calibration_manifest.json",
+    "manifest_sha256": "183f151eb8e7bd3a1d214856187a5d75697f376e7516d31880b81c57e0435135"
+  },
+  "author": {
+    "input": "One pinned public-source seed with its source and an author-only focus. The author sees no hidden evaluation answer.",
+    "output": "Exactly one JSON object with keys prior_edit, target_row, action, intent_evidence, objective. prior_edit has row, old_text, new_text and must replace an existing line of the seed exactly. action has canonical kind keep/replace_line/delete_line/insert_before and text only for line actions. The objective must describe a checkable property grounded in the visible source and prior edit. No full source copy, prose wrapper, code fence, or extra keys.",
+    "candidate_source": "artifacts/research/one_line_r1/public_source_authoring_100.jsonl",
+    "candidate_source_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933"
+  },
+  "blind_solver": {
+    "input": "Only the canonical serialized EditState after the validated prior edit; no author focus, gold action, objective, provenance, split, or future state.",
+    "output": "One raw N/D/R/I wire action, complete and within the q25 64-token action scope."
+  },
+  "reviewer": {
+    "input": "The public candidate state, proposed action, blind-solver action, and objective specification, with no author session context.",
+    "output": "Strict JSON accept/reject with a concise checkable reason and ambiguity flag. It cannot rewrite a failed objective or change the gold action."
+  },
+  "initial_pilot": {
+    "candidates": 100,
+    "maximum_calls": 300,
+    "minimum_structural_pass_rate_to_expand": 0.95,
+    "minimum_independent_objective_pass_rate_to_expand": 0.5,
+    "minimum_reviewed_source_groups_to_expand": 20,
+    "minimum_reviewed_mechanisms_to_expand": 8,
+    "training_acceptance": "Byte-exact prior edit replay and target application, in-scope token length, public license provenance, blind solver result, independent objective, and reviewer outcome must all be recorded. Agreement alone is not objective validity."
+  },
+  "second_pilot": {
+    "candidates": 1000,
+    "allowed_only_after_initial_gate": true
+  }
+}

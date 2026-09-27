@@ -10,7 +10,7 @@
     "paid_overage": false,
     "unknown_quota_initial_session_limit_minutes": 120
   },
-  "config_sha256": "04c260d84b1d4826aaa3f31d9b2a9caa10d29a2c12935b3e65cde21709492146",
+  "config_sha256": "d2348bbdeb58aa7c08e7938c28aa9cbff9b766e64a61d89945721dcc589e56de",
   "data_policy": {
     "final_tracks": [
       "new_repositories",
@@ -74,8 +74,8 @@
     }
   },
   "final_test_opened": false,
-  "frozen_at": "2026-09-27T03:37:45.526029+00:00",
-  "plan_revision": 6,
+  "frozen_at": "2026-09-27T03:20:07.339682+00:00",
+  "plan_revision": 5,
   "protocol": {
     "decoding": "greedy_until_real_eos",
     "default_input_tokens": 1024,
@@ -214,7 +214,7 @@
         "status": "unknown"
       }
     ],
-    "observed_at": "2026-09-27T03:37:21.334302+00:00",
+    "observed_at": "2026-09-27T03:19:43.399062+00:00",
     "remaining": 45.0,
     "renewal": "2026-10-03T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -250,8 +250,8 @@
       "public",
       "synthetic"
     ],
-    "protocol_path": "configs/research/one_line_teacher_protocol_v2.json",
-    "protocol_sha256": "9ae8db68e6f03aa0a88b14099e613cacb9a5ece04c4307a9dd3726b9363b80dc",
+    "protocol_path": "configs/research/one_line_teacher_protocol_v1.json",
+    "protocol_sha256": "9a0754519862cbf429f4b501e55b453445e7f7341f50b39126edff7d8afa99d5",
     "requested_model": "opencode-go/muse-spark-1.3-contributor",
     "route": "documented_open_code_go_responses_api",
     "starting_concurrency": 2

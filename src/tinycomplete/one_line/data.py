@@ -11,15 +11,20 @@ from __future__ import annotations
 import difflib
 import hashlib
 import json
+import os
 import re
 import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from .context import serialize_state_bounded
 from .contract import (
     ActionKind,
     EditAction,
@@ -27,6 +32,7 @@ from .contract import (
     Filetype,
     RecentEdit,
     apply_action,
+    encode_action,
     physical_lines,
 )
 
@@ -47,6 +53,40 @@ SOURCE_KINDS = frozenset(
         "git_reconstructed_order",
         "synthetic_terminal_keep",
     }
+)
+AUTHORING_FOCUS = (
+    "local API call update",
+    "argument propagation",
+    "return value handling",
+    "field access consistency",
+    "literal or boundary correction",
+    "import justified by use",
+    "exception or result propagation",
+    "method rename",
+    "collection operation",
+    "assertion tied to visible behavior",
+    "cleanup after prior removal",
+    "type annotation consistency",
+    "null or option handling",
+    "branch guard",
+    "loop boundary",
+    "string formatting",
+    "asynchronous flow",
+    "resource cleanup",
+    "path handling",
+    "serialization",
+    "logging consistency",
+    "error message",
+    "configuration use",
+    "call site consistency",
+    "test expectation",
+)
+_PUBLIC_REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
+_SENSITIVE_TEXT = re.compile(
+    r"-----BEGIN [^-]*PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9_]{20,}\b"
+    r"|\bsk-[A-Za-z0-9]{20,}\b|(?i:authorization\s*:\s*bearer\s+\S+)"
+    r"|(?i:\b(?:password|passwd|api[_-]?key|secret|access[_-]?token)\b\s*[:=]\s*[\"'][^\"']{8,}[\"'])"
+    r"|(?i:://[^\s/:]+:[^\s/@]+@)"
 )
 
 
@@ -419,6 +459,340 @@ def mine_public_git_pair_enriched(
         }
         enriched.append(row)
     return enriched
+
+
+def discover_r2_public_sources(pool_path: Path, filetype: Filetype) -> list[dict[str, Any]]:
+    """Use R2 Stack records only as leads for a fresh pinned public fetch."""
+
+    suffixes = {"python": {".py"}, "typescript": {".ts"}, "rust": {".rs"}, "go": {".go"}}
+    leads: list[dict[str, Any]] = []
+    with pool_path.open() as handle:
+        for line in handle:
+            row = json.loads(line)
+            repo, path = row.get("repository"), row.get("path")
+            if not isinstance(repo, str) or not _PUBLIC_REPO.fullmatch(repo):
+                continue
+            if not isinstance(path, str) or Path(path).suffix.lower() not in suffixes[filetype]:
+                continue
+            if row.get("licenses") != ["MIT"] or row.get("parse_status") != "pass":
+                continue
+            old_content = row.get("content")
+            if not isinstance(old_content, str) or not 500 <= len(old_content) <= 20_000:
+                continue
+            parts = {part.lower() for part in Path(path).parts}
+            if parts & (BLOCKED_PATH_PARTS | {"test", "tests", "examples", "docs", "fixtures"}):
+                continue
+            if Path(path).name.lower().startswith(("test_", "spec_")):
+                continue
+            lead = {
+                "source_repo": repo,
+                "source_aliases": sorted(set(row.get("repository_aliases") or [repo])),
+                "source_path": path,
+                "filetype": filetype,
+                "r2_discovery_content_sha256": row["content_sha256"],
+                "r2_discovery_revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+            }
+            leads.append(lead)
+    return sorted(
+        leads,
+        key=lambda row: sha256_bytes((row["source_repo"] + "/" + row["source_path"]).encode()),
+    )
+
+
+def _github_head(repo: str) -> str | None:
+    result = subprocess.run(
+        ["git", "ls-remote", f"https://github.com/{repo}.git", "HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=12,
+        check=False,
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+    )
+    if result.returncode or not result.stdout.strip():
+        return None
+    revision = result.stdout.split()[0]
+    return revision if re.fullmatch(r"[a-f0-9]{40}", revision) else None
+
+
+def _github_blob(repo: str, revision: str, path: str, *, max_bytes: int = 65_536) -> bytes | None:
+    if not _PUBLIC_REPO.fullmatch(repo) or not re.fullmatch(r"[a-f0-9]{40}", revision):
+        raise ValueError("invalid immutable GitHub source identity")
+    if Path(path).is_absolute() or ".." in Path(path).parts:
+        raise ValueError("invalid public source path")
+    url = f"https://raw.githubusercontent.com/{repo}/{revision}/" + urllib.parse.quote(
+        path, safe="/"
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=12) as response:
+            content = response.read(max_bytes + 1)
+    except urllib.error.HTTPError as error:
+        if error.code in (403, 429):
+            raise RuntimeError("public source host rate limited") from None
+        return None
+    except urllib.error.URLError:
+        return None
+    return content if len(content) <= max_bytes else None
+
+
+def verify_live_public_source(
+    lead: Mapping[str, Any],
+    *,
+    resolve_head: Callable[[str], str | None] = _github_head,
+    fetch_blob: Callable[[str, str, str], bytes | None] | None = None,
+) -> dict[str, Any] | None:
+    """Pin a live source and MIT license to the same immutable commit.
+
+    The R2 source bytes are never substituted when the historical blob is gone.
+    A repository license does not prove every file's licensing; explicit
+    conflicting file SPDX notices are rejected and missing notices are recorded.
+    """
+
+    repo, path = str(lead["source_repo"]), str(lead["source_path"])
+    if not _PUBLIC_REPO.fullmatch(repo):
+        raise ValueError("invalid public repository name")
+    revision = resolve_head(repo)
+    if revision is None or not re.fullmatch(r"[a-f0-9]{40}", revision):
+        return None
+    if fetch_blob is None:
+        fetch_blob = _github_blob
+    source_bytes = fetch_blob(repo, revision, path)
+    if source_bytes is None or not 500 <= len(source_bytes) <= 20_000:
+        return None
+    try:
+        source = source_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    if _SENSITIVE_TEXT.search(source) or "\x00" in source:
+        return None
+    notices = re.findall(r"SPDX-License-Identifier:\s*([^\r\n*]+)", source[:2048], re.I)
+    if notices and any(not re.fullmatch(r"\s*MIT\s*", notice, re.I) for notice in notices):
+        return None
+    if any(len(part) > 20_000 for part in source.splitlines()):
+        return None
+    # A function-like source is more likely to support a meaningful one-line
+    # editor task than a pure constant dump or generated table.
+    signal = {
+        "python": r"\b(?:def|class)\s+[A-Za-z_]",
+        "typescript": r"\b(?:function|class|interface|type|const)\b|=>",
+        "rust": r"\b(?:fn|impl|struct|enum)\b",
+        "go": r"\b(?:func|type)\b",
+    }[str(lead["filetype"])]
+    if not re.search(signal, source):
+        return None
+    try:
+        from tree_sitter_language_pack import get_parser
+
+        if get_parser(str(lead["filetype"])).parse(source_bytes).root_node.has_error:
+            return None
+    except (ImportError, KeyError, ValueError):
+        return None
+    license_path = None
+    license_bytes = None
+    for candidate in ("LICENSE", "LICENSE.md", "LICENSE.txt", "license", "LICENSE-MIT"):
+        value = fetch_blob(repo, revision, candidate)
+        if value is None:
+            continue
+        text = value.decode("utf-8", errors="replace")
+        if "GNU GENERAL PUBLIC LICENSE" in text.upper():
+            continue
+        if "MIT License" in text or "Permission is hereby granted, free of charge" in text:
+            license_path, license_bytes = candidate, value
+            break
+    if license_path is None or license_bytes is None:
+        return None
+    source_hash = sha256_bytes(source_bytes)
+    identifier = sha256_bytes(json.dumps([repo, revision, path]).encode())
+    suffix = Path(path).suffix.lower()
+    return {
+        "id": f"public-source/{identifier[:24]}",
+        "student_state_seed": {
+            "file_id": f"file_{identifier[:12]}{suffix}",
+            "filetype": lead["filetype"],
+            "source": source,
+        },
+        "authoring_metadata": {
+            "source_repo": repo,
+            "source_aliases": list(lead.get("source_aliases", (repo,))),
+            "source_revision": revision,
+            "source_path": path,
+            "source_url": f"https://github.com/{repo}/blob/{revision}/{urllib.parse.quote(path)}",
+            "source_sha256": source_hash,
+            "source_license": "MIT",
+            "license_path": license_path,
+            "license_sha256": sha256_bytes(license_bytes),
+            "file_spdx_notice": notices[0].strip() if notices else None,
+            "r2_discovery_content_sha256": lead["r2_discovery_content_sha256"],
+            "r2_discovery_revision": lead["r2_discovery_revision"],
+            "authoring_focus": None,
+            "focus_is_author_only": True,
+            "student_action_absent": True,
+            "source_provenance_verified": True,
+            "file_license_scope_unverified_without_notice": not bool(notices),
+        },
+    }
+
+
+def _strict_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON key")
+        value[key] = item
+    return value
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError("nonfinite JSON constant")
+
+
+def parse_author_response(
+    response_text: str,
+    source_row: Mapping[str, Any],
+    tokenizer: Any,
+) -> dict[str, Any]:
+    """Validate one Muse author candidate without trusting its task judgment.
+
+    The author supplies one prior replacement and one target action. The pinned
+    public source supplies all file bytes; the response must not duplicate it.
+    The caller provides the immutable q25 tokenizer, loaded once per batch.
+    """
+
+    if not isinstance(response_text, str) or len(response_text.encode("utf-8")) > 8192:
+        raise ValueError("author response exceeds bounded JSON size")
+    try:
+        raw = json.loads(
+            response_text,
+            object_pairs_hook=_strict_json_pairs,
+            parse_constant=_reject_json_constant,
+        )
+    except (json.JSONDecodeError, UnicodeError) as error:
+        raise ValueError("author response is not strict JSON") from error
+    if not isinstance(raw, dict) or set(raw) != {
+        "prior_edit",
+        "target_row",
+        "action",
+        "intent_evidence",
+        "objective",
+    }:
+        raise ValueError("author response has missing or unknown fields")
+    prior, target_action, objective = raw["prior_edit"], raw["action"], raw["objective"]
+    if not isinstance(prior, dict) or set(prior) != {"row", "old_text", "new_text"}:
+        raise ValueError("prior edit must be one exact replacement")
+    if type(prior["row"]) is not int or prior["row"] < 0:
+        raise ValueError("prior edit row is invalid")
+    if not isinstance(prior["old_text"], str) or not isinstance(prior["new_text"], str):
+        raise ValueError("prior edit text must be UTF-8 strings")
+    if prior["old_text"] == prior["new_text"] or any(
+        char in text for text in (prior["old_text"], prior["new_text"]) for char in "\r\n"
+    ):
+        raise ValueError("prior replacement must change exactly one physical line")
+    if type(raw["target_row"]) is not int or raw["target_row"] < 0:
+        raise ValueError("target row is invalid")
+    if not isinstance(target_action, dict) or set(target_action) != {"kind", "text"}:
+        raise ValueError("target action has missing or unknown fields")
+    if target_action["kind"] not in ("N", "D", "R", "I"):
+        raise ValueError("target action kind is not canonical")
+    if not isinstance(raw["intent_evidence"], str) or not 1 <= len(raw["intent_evidence"]) <= 1000:
+        raise ValueError("intent evidence is missing or too long")
+    if not isinstance(objective, dict) or not {"kind", "description"} <= set(objective):
+        raise ValueError("objective needs kind and description")
+    if set(objective) - {"kind", "description", "checks"}:
+        raise ValueError("objective contains an unknown field")
+    if not isinstance(objective["kind"], str) or not re.fullmatch(
+        r"[a-z][a-z0-9_]{0,39}", objective["kind"]
+    ):
+        raise ValueError("objective kind is invalid")
+    if (
+        not isinstance(objective["description"], str)
+        or not 1 <= len(objective["description"]) <= 1000
+    ):
+        raise ValueError("objective description is missing or too long")
+    checks = objective.get("checks", [])
+    if (
+        not isinstance(checks, list)
+        or len(checks) > 5
+        or any(not isinstance(item, str) or not 1 <= len(item) <= 300 for item in checks)
+    ):
+        raise ValueError("objective checks are invalid")
+    seed = source_row["student_state_seed"]
+    source = str(seed["source"])
+    metadata = source_row["authoring_metadata"]
+    if sha256_bytes(source.encode("utf-8")) != metadata["source_sha256"]:
+        raise ValueError("pinned public source hash mismatch")
+    if metadata["source_license"] != "MIT" or not re.fullmatch(
+        r"[a-f0-9]{40}", str(metadata["source_revision"])
+    ):
+        raise ValueError("public source identity is not pinned and licensed")
+    if source in response_text:
+        raise ValueError("author response duplicates the full source")
+    file_id = str(seed["file_id"])
+    filetype = cast(Filetype, seed["filetype"])
+    history = (RecentEdit(prior["row"], prior["old_text"], prior["new_text"]),)
+    current = replay_replacement_history(source, history, file_id=file_id, filetype=filetype)
+    state = EditState(file_id, filetype, current, raw["target_row"], 0, history)
+    kind = {"N": "keep", "D": "delete_line", "R": "replace_line", "I": "insert_before"}[
+        target_action["kind"]
+    ]
+    action = EditAction(cast(ActionKind, kind), target_action["text"])
+    if (
+        action.kind == "replace_line"
+        and state.target_row == history[0].row
+        and action.text == history[0].old_text
+    ):
+        raise ValueError("target reverses the prior intended replacement")
+    after = apply_action(state, action)
+    if action.kind != "keep" and after == current:
+        raise ValueError("edit-required action leaves source unchanged")
+    wire = encode_action(action)
+    response_tokens = len(tokenizer.encode(wire, add_special_tokens=False)) + 1
+    if response_tokens > 64:
+        raise ValueError("target action exceeds 64 q25 response tokens including EOS")
+    context = serialize_state_bounded(state, tokenizer, max_input_tokens=1024)
+    if context.included_history != 1 or context.input_tokens is None:
+        raise ValueError("recent edit is absent from bounded student context")
+    if context.input_tokens + response_tokens > 2048:
+        raise ValueError("candidate exceeds total token budget")
+    response_hash = sha256_bytes(response_text.encode("utf-8"))
+    return {
+        "id": "muse-author/"
+        + sha256_bytes(json.dumps([source_row["id"], response_hash]).encode())[:24],
+        "state": asdict(state),
+        "action": asdict(action),
+        "after_source": after,
+        "source_type": "muse_author_public_candidate",
+        "source_repo": metadata["source_repo"],
+        "source_aliases": metadata["source_aliases"],
+        "source_revision": metadata["source_revision"],
+        "source_license": metadata["source_license"],
+        "session_or_commit": metadata["source_revision"],
+        "mechanism": "unreviewed_teacher_author",
+        "generator_family": "muse_author_public_v1/" + str(metadata["source_repo"]),
+        "template_id": "authoring-source/" + str(source_row["id"]),
+        "provenance": {
+            "source_id": source_row["id"],
+            "source_sha256": metadata["source_sha256"],
+            "source_license_sha256": metadata["license_sha256"],
+            "author_response_sha256": response_hash,
+            "requested_focus": metadata["authoring_focus"],
+            "intent_evidence": raw["intent_evidence"],
+            "objective": objective,
+            "prior_edit_order": "teacher_constructed_synthetic",
+            "human_edit_order_observed": False,
+        },
+        "validation": {
+            "history_replays_to_state": True,
+            "apply_reconstructs_after": True,
+            "source_before_sha256": sha256_bytes(current.encode("utf-8")),
+            "source_after_sha256": sha256_bytes(after.encode("utf-8")),
+            "input_tokens": context.input_tokens,
+            "response_tokens_including_eos": response_tokens,
+            "history_visible_in_prompt": True,
+            "blind_solver_verified": False,
+            "reviewer_verified": False,
+            "objective_verified": False,
+            "accepted_training": False,
+        },
+    }
 
 
 _NORMALIZE = re.compile(r"(?:\b\d+(?:\.\d+)?\b)|(?:\b[A-Za-z_][A-Za-z_0-9]*\b)")

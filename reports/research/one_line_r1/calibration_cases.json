@@ -1,0 +1,519 @@
+{
+  "cases": [
+    {
+      "after_source": "def first_name(p):\n    return p[\"first_name\"]\n\ndef last_name(p):\n    return p[\"last_name\"]\n",
+      "generator_family": "python-history-pair",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "    return p[\"last_name\"]"
+      },
+      "id": "c01",
+      "mechanism": "history-rename",
+      "objective": {
+        "access_prefix": "p[\"",
+        "access_suffix": "\"]",
+        "history_new_symbol": "first_name",
+        "history_old_symbol": "first",
+        "kind": "history_suffix",
+        "target_old_symbol": "last"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/python-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "    return p[\"first_name\"]",
+            "old_text": "    return p[\"first\"]",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "def first_name(p):\n    return p[\"first_name\"]\n\ndef last_name(p):\n    return p[\"last\"]\n",
+        "target_row": 4
+      }
+    },
+    {
+      "after_source": "def first_name(p):\n    return p[\"first_name\"]\n\ndef last_name(p):\n    return p[\"last\"]\n",
+      "generator_family": "python-history-pair",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "c02",
+      "mechanism": "counterfactual-keep",
+      "objective": {
+        "kind": "preserve_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/python-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "    return p[\"last\"]",
+            "old_text": "    return p[\"last_name\"]",
+            "row": 4
+          }
+        ],
+        "relevant": [],
+        "source": "def first_name(p):\n    return p[\"first_name\"]\n\ndef last_name(p):\n    return p[\"last\"]\n",
+        "target_row": 4
+      }
+    },
+    {
+      "after_source": "def parse_count(count: int) -> int:\n    # Reject negative counts before returning.\n    if count < 0: raise ValueError(\"negative count\")\n    return count\n",
+      "generator_family": "python-guard",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    if count < 0: raise ValueError(\"negative count\")"
+      },
+      "id": "c03",
+      "mechanism": "negative-input-guard",
+      "objective": {
+        "intent_text": "Reject negative counts",
+        "kind": "guard",
+        "required_regex": "(?m)^\\s*if count < 0:\\s*raise ValueError\\(\"negative count\"\\)\\s*$"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/python-guard",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c03.py",
+        "filetype": "python",
+        "history": [],
+        "relevant": [],
+        "source": "def parse_count(count: int) -> int:\n    # Reject negative counts before returning.\n    return count\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "def reset(cache):\n    # Clear the cache once before reuse.\n    cache.clear()\n",
+      "generator_family": "python-dedupe",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "c04",
+      "mechanism": "duplicate-side-effect",
+      "objective": {
+        "intent_text": "once before reuse",
+        "kind": "dedupe_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/python-dedupe",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c04.py",
+        "filetype": "python",
+        "history": [],
+        "relevant": [],
+        "source": "def reset(cache):\n    # Clear the cache once before reuse.\n    cache.clear()\n    cache.clear()\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "export const primary = (row: Row) => row.primaryId;\nexport const secondary = (row: Row) => row.secondaryId;\n",
+      "generator_family": "typescript-history-pair",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "export const secondary = (row: Row) => row.secondaryId;"
+      },
+      "id": "c05",
+      "mechanism": "history-rename",
+      "objective": {
+        "access_prefix": "row.",
+        "access_suffix": "",
+        "history_new_symbol": "primaryId",
+        "history_old_symbol": "primary",
+        "kind": "history_suffix",
+        "target_old_symbol": "secondary"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/typescript-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "export const primary = (row: Row) => row.primaryId;",
+            "old_text": "export const primary = (row: Row) => row.primary;",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "export const primary = (row: Row) => row.primaryId;\nexport const secondary = (row: Row) => row.secondary;\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "export const primary = (row: Row) => row.primaryId;\nexport const secondary = (row: Row) => row.secondary;\n",
+      "generator_family": "typescript-history-pair",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "c06",
+      "mechanism": "counterfactual-keep",
+      "objective": {
+        "kind": "preserve_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/typescript-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "export const secondary = (row: Row) => row.secondary;",
+            "old_text": "export const secondary = (row: Row) => row.secondaryId;",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "export const primary = (row: Row) => row.primaryId;\nexport const secondary = (row: Row) => row.secondary;\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "export function label(value?: string): string {\n  // Missing values should display as an empty label.\n  if (value === undefined) return \"\";\n  return value;\n}\n",
+      "generator_family": "typescript-guard",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "  if (value === undefined) return \"\";"
+      },
+      "id": "c07",
+      "mechanism": "missing-value-guard",
+      "objective": {
+        "intent_text": "Missing values should display as an empty label",
+        "kind": "guard",
+        "required_regex": "(?m)^\\s*if\\s*\\(value === undefined\\)\\s*return \"\";\\s*$"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/typescript-guard",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c07.ts",
+        "filetype": "typescript",
+        "history": [],
+        "relevant": [],
+        "source": "export function label(value?: string): string {\n  // Missing values should display as an empty label.\n  return value;\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "import { parse } from \"./parser\";\nexport const run = (input: string) => parse(input);\n",
+      "generator_family": "typescript-dedupe",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "c08",
+      "mechanism": "duplicate-import",
+      "objective": {
+        "kind": "dedupe_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/typescript-dedupe",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c08.ts",
+        "filetype": "typescript",
+        "history": [],
+        "relevant": [],
+        "source": "import { parse } from \"./parser\";\nimport { parse } from \"./parser\";\nexport const run = (input: string) => parse(input);\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn primary(c: &Config) -> u64 { c.primary_ms }\nfn secondary(c: &Config) -> u64 { c.secondary_ms }\n",
+      "generator_family": "rust-history-pair",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "fn secondary(c: &Config) -> u64 { c.secondary_ms }"
+      },
+      "id": "c09",
+      "mechanism": "history-rename",
+      "objective": {
+        "access_prefix": "c.",
+        "access_suffix": "",
+        "history_new_symbol": "primary_ms",
+        "history_old_symbol": "primary",
+        "kind": "history_suffix",
+        "target_old_symbol": "secondary"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/rust-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.rs",
+        "filetype": "rust",
+        "history": [
+          {
+            "new_text": "fn primary(c: &Config) -> u64 { c.primary_ms }",
+            "old_text": "fn primary(c: &Config) -> u64 { c.primary }",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "fn primary(c: &Config) -> u64 { c.primary_ms }\nfn secondary(c: &Config) -> u64 { c.secondary }\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn primary(c: &Config) -> u64 { c.primary_ms }\nfn secondary(c: &Config) -> u64 { c.secondary }\n",
+      "generator_family": "rust-history-pair",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "c10",
+      "mechanism": "counterfactual-keep",
+      "objective": {
+        "kind": "preserve_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/rust-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.rs",
+        "filetype": "rust",
+        "history": [
+          {
+            "new_text": "fn secondary(c: &Config) -> u64 { c.secondary }",
+            "old_text": "fn secondary(c: &Config) -> u64 { c.secondary_ms }",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "fn primary(c: &Config) -> u64 { c.primary_ms }\nfn secondary(c: &Config) -> u64 { c.secondary }\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn ratio(total: i64, n: i64) -> Option<i64> {\n    // A zero count has no ratio.\n    if n == 0 { return None; }\n    Some(total / n)\n}\n",
+      "generator_family": "rust-guard",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    if n == 0 { return None; }"
+      },
+      "id": "c11",
+      "mechanism": "zero-divisor-guard",
+      "objective": {
+        "intent_text": "A zero count has no ratio",
+        "kind": "guard",
+        "required_regex": "(?m)^\\s*if n == 0\\s*\\{\\s*return None;\\s*\\}\\s*$"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/rust-guard",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c11.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn ratio(total: i64, n: i64) -> Option<i64> {\n    // A zero count has no ratio.\n    Some(total / n)\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "fn record(log: &mut Vec<String>, message: String) {\n    // Record each message once.\n    log.push(message.clone());\n}\n",
+      "generator_family": "rust-dedupe",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "c12",
+      "mechanism": "duplicate-record",
+      "objective": {
+        "intent_text": "once",
+        "kind": "dedupe_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/rust-dedupe",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c12.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn record(log: &mut Vec<String>, message: String) {\n    // Record each message once.\n    log.push(message.clone());\n    log.push(message.clone());\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nfunc primary(c Config) int { return c.PrimaryMs }\nfunc secondary(c Config) int { return c.SecondaryMs }\n",
+      "generator_family": "go-history-pair",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "func secondary(c Config) int { return c.SecondaryMs }"
+      },
+      "id": "c13",
+      "mechanism": "history-rename",
+      "objective": {
+        "access_prefix": "c.",
+        "access_suffix": "",
+        "history_new_symbol": "PrimaryMs",
+        "history_old_symbol": "Primary",
+        "kind": "history_suffix",
+        "target_old_symbol": "Secondary"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/go-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.go",
+        "filetype": "go",
+        "history": [
+          {
+            "new_text": "func primary(c Config) int { return c.PrimaryMs }",
+            "old_text": "func primary(c Config) int { return c.Primary }",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "package sample\nfunc primary(c Config) int { return c.PrimaryMs }\nfunc secondary(c Config) int { return c.Secondary }\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "package sample\nfunc primary(c Config) int { return c.PrimaryMs }\nfunc secondary(c Config) int { return c.Secondary }\n",
+      "generator_family": "go-history-pair",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "c14",
+      "mechanism": "counterfactual-keep",
+      "objective": {
+        "kind": "preserve_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/go-history-pair",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/counterfactual.go",
+        "filetype": "go",
+        "history": [
+          {
+            "new_text": "func secondary(c Config) int { return c.Secondary }",
+            "old_text": "func secondary(c Config) int { return c.SecondaryMs }",
+            "row": 2
+          }
+        ],
+        "relevant": [],
+        "source": "package sample\nfunc primary(c Config) int { return c.PrimaryMs }\nfunc secondary(c Config) int { return c.Secondary }\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "package sample\nfunc label(u *User) string {\n    // Missing users have an empty label.\n    if u == nil { return \"\" }\n    return u.Name\n}\n",
+      "generator_family": "go-guard",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    if u == nil { return \"\" }"
+      },
+      "id": "c15",
+      "mechanism": "nil-input-guard",
+      "objective": {
+        "intent_text": "Missing users have an empty label",
+        "kind": "guard",
+        "required_regex": "(?m)^\\s*if u == nil\\s*\\{\\s*return \"\"\\s*\\}\\s*$"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/go-guard",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c15.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "package sample\nfunc label(u *User) string {\n    // Missing users have an empty label.\n    return u.Name\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nfunc increment(counter *int) {\n    // Increment exactly once.\n    *counter++\n}\n",
+      "generator_family": "go-dedupe",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "c16",
+      "mechanism": "duplicate-increment",
+      "objective": {
+        "intent_text": "exactly once",
+        "kind": "dedupe_target"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/calibration/go-dedupe",
+      "source_revision": "calibration-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/calibration/c16.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "package sample\nfunc increment(counter *int) {\n    // Increment exactly once.\n    *counter++\n    *counter++\n}\n",
+        "target_row": 4
+      }
+    }
+  ],
+  "purpose": "fixed-development-only-teacher-calibration",
+  "schema": "single-line-edit-v1",
+  "suite": "independent-synthetic-teacher-calibration-v1",
+  "suite_revision": 3
+}

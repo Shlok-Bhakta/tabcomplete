@@ -1,6 +1,10 @@
 {
-  "status": "no_model_quality_evaluation",
-  "development_cases": 0,
+  "development_cases": 16,
   "final_test_cases_scored": 0,
-  "reason": "No accepted group-disjoint evaluation set and no trained artifact."
+  "reason": "No accepted group-disjoint evaluation set or trained artifact; fixed 16-case synthetic development calibration is diagnostic only.",
+  "status": "synthetic_development_calibration_only",
+  "teacher_plan5_valid_wire": 6,
+  "teacher_plan6_valid_final_block": 13,
+  "untouched_q25_calibration_cap_hits": 16,
+  "untouched_q25_calibration_valid_wire": 0
 }

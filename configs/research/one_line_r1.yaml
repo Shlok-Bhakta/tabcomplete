@@ -1,4 +1,5 @@
 campaign: one_line_r1
+plan_revision: 6
 schema: single-line-edit-v1
 suite_revision: 3
 source_branch_commit: dda0218f0e92e99668026d1d44928506af2bc24f
@@ -37,8 +38,19 @@ data:
   keep_replace_insert_delete_target_fraction: [0.25, 0.45, 0.20, 0.10]
 teacher:
   requested_model: opencode-go/muse-spark-1.3-contributor
-  label_route_enabled: false
-  reason: OpenCode Terms of Use prohibit programmatic output extraction and output use to develop competing AI models.
+  label_route_enabled: true
+  authorization_basis: user-reported direct provider approval on 2026-09-26
+  authorization_evidence_verified_independently: false
+  permitted_source_classes: [public, synthetic]
+  permitted_purposes: [calibration, student_label, automated_score]
+  route: documented_open_code_go_responses_api
+  starting_concurrency: 2
+  maximum_concurrency: 4
+  protocol_path: configs/research/one_line_teacher_protocol_v2.json
+  protocol_sha256: 9ae8db68e6f03aa0a88b14099e613cacb9a5ece04c4307a9dd3726b9363b80dc
+  calibration_fixture_sha256: a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e
+  calibration_manifest_sha256: 183f151eb8e7bd3a1d214856187a5d75697f376e7516d31880b81c57e0435135
+  authoring_source_sha256: f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933
   maximum_completed_calls: 25000
   maximum_uncached_input_tokens: 60000000
   maximum_output_tokens: 20000000

@@ -99,10 +99,26 @@ def freeze(config_path: Path) -> dict[str, Any]:
         or model["initializer"] != "untouched_pretrained"
     ):
         raise ValueError("unapproved student initializer")
-    if config["teacher"]["label_route_enabled"]:
-        raise ValueError("hosted teacher labels are disabled by current output-use terms")
+    teacher = config["teacher"]
+    if teacher["label_route_enabled"] and (
+        teacher["requested_model"] != "opencode-go/muse-spark-1.3-contributor"
+        or teacher["permitted_source_classes"] != ["public", "synthetic"]
+        or teacher["authorization_basis"] != "user-reported direct provider approval on 2026-09-26"
+    ):
+        raise ValueError("unapproved hosted teacher route")
     if config["suite_revision"] != 3:
         raise ValueError("unexpected suite revision")
+    if config["plan_revision"] >= 5:
+        identities = {
+            "protocol_sha256": ROOT / config["teacher"]["protocol_path"],
+            "calibration_fixture_sha256": REPORT / "calibration_cases.json",
+            "calibration_manifest_sha256": REPORT / "calibration_manifest.json",
+            "authoring_source_sha256": ROOT
+            / "artifacts/research/one_line_r1/public_source_authoring_100.jsonl",
+        }
+        for key, path in identities.items():
+            if digest(path) != config["teacher"][key]:
+                raise ValueError(f"frozen teacher input identity changed: {key}")
     files = {name: MODEL / name for name in ("model.safetensors", "tokenizer.json", "config.json")}
     files_record = {
         name: {"path": str(path), "bytes": path.stat().st_size, "sha256": digest(path)}
@@ -132,7 +148,7 @@ def freeze(config_path: Path) -> dict[str, Any]:
         return plan
     quota = live_quota()
     plan = {
-        "plan_revision": 3,
+        "plan_revision": config["plan_revision"],
         "suite_revision": 3,
         "frozen_at": datetime.now(UTC).isoformat(),
         "source_commit": config["source_branch_commit"],
@@ -179,11 +195,15 @@ def budget_check(
     ):
         raise RuntimeError("campaign input-token cap")
     artifact_root = ROOT / "artifacts/research/one_line_r1"
-    existing_bytes = sum(
-        path.stat().st_size
-        for path in artifact_root.rglob("*")
-        if path.is_file() and not path.is_symlink()
-    ) if artifact_root.exists() else 0
+    existing_bytes = (
+        sum(
+            path.stat().st_size
+            for path in artifact_root.rglob("*")
+            if path.is_file() and not path.is_symlink()
+        )
+        if artifact_root.exists()
+        else 0
+    )
     if existing_bytes + new_bytes > limits["maximum_new_persistent_local_research_bytes"]:
         raise RuntimeError("campaign local storage cap")
     if new_bytes > shutil.disk_usage(ROOT).free - 2 * 1024**3:

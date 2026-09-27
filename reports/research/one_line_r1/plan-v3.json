@@ -10,7 +10,7 @@
     "paid_overage": false,
     "unknown_quota_initial_session_limit_minutes": 120
   },
-  "config_sha256": "04c260d84b1d4826aaa3f31d9b2a9caa10d29a2c12935b3e65cde21709492146",
+  "config_sha256": "852130a4fdac9e28469417763439d0a8ebc37ac7b2a4626eb219b88118ff9699",
   "data_policy": {
     "final_tracks": [
       "new_repositories",
@@ -74,8 +74,8 @@
     }
   },
   "final_test_opened": false,
-  "frozen_at": "2026-09-27T03:37:45.526029+00:00",
-  "plan_revision": 6,
+  "frozen_at": "2026-09-26T11:31:21.810652+00:00",
+  "plan_revision": 3,
   "protocol": {
     "decoding": "greedy_until_real_eos",
     "default_input_tokens": 1024,
@@ -214,7 +214,7 @@
         "status": "unknown"
       }
     ],
-    "observed_at": "2026-09-27T03:37:21.334302+00:00",
+    "observed_at": "2026-09-26T11:30:58.044111+00:00",
     "remaining": 45.0,
     "renewal": "2026-10-03T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -222,7 +222,7 @@
     "units": "Kaggle account GPU-hours",
     "used": 0.0
   },
-  "schema_sha256": "4bf355601af3c987c8bac92ded74e990a97b70bee9e90dd0c0dde7287148f9bb",
+  "schema_sha256": "acb082d314d30c01fe8f0f314f2cc093d19fc6af7af873542eb40bea4061ed4f",
   "selection": {
     "final_test_reads": 1,
     "keep_false_edit_guard": "development_calibrated_before_main",
@@ -231,30 +231,12 @@
   "source_commit": "dda0218f0e92e99668026d1d44928506af2bc24f",
   "suite_revision": 3,
   "teacher": {
-    "authoring_source_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
-    "authorization_basis": "user-reported direct provider approval on 2026-09-26",
-    "authorization_evidence_verified_independently": false,
-    "calibration_fixture_sha256": "a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e",
-    "calibration_manifest_sha256": "183f151eb8e7bd3a1d214856187a5d75697f376e7516d31880b81c57e0435135",
-    "label_route_enabled": true,
+    "label_route_enabled": false,
     "maximum_completed_calls": 25000,
-    "maximum_concurrency": 4,
     "maximum_output_tokens": 20000000,
     "maximum_uncached_input_tokens": 60000000,
-    "permitted_purposes": [
-      "calibration",
-      "student_label",
-      "automated_score"
-    ],
-    "permitted_source_classes": [
-      "public",
-      "synthetic"
-    ],
-    "protocol_path": "configs/research/one_line_teacher_protocol_v2.json",
-    "protocol_sha256": "9ae8db68e6f03aa0a88b14099e613cacb9a5ece04c4307a9dd3726b9363b80dc",
-    "requested_model": "opencode-go/muse-spark-1.3-contributor",
-    "route": "documented_open_code_go_responses_api",
-    "starting_concurrency": 2
+    "reason": "OpenCode Terms of Use prohibit programmatic output extraction and output use to develop competing AI models.",
+    "requested_model": "opencode-go/muse-spark-1.3-contributor"
   },
   "training": {
     "checkpoint_requirements": [

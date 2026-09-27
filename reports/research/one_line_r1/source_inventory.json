@@ -19,8 +19,8 @@
       "messages"
     ],
     "source_licenses_individually_verified": false,
-    "test_partition_opened": true,
     "test_partition_audit": "Evaluation worker read official viewer rows for structural audit; no model outputs or selection performed.",
+    "test_partition_opened": true,
     "test_typescript_remote_bytes": 1176252,
     "train_partition_local_copy": "temporary /tmp only; no accepted rows",
     "train_typescript_remote_bytes": 25052002,
@@ -274,6 +274,38 @@
     "split_assignment": "none",
     "structural_apply_wire_hash_fail": 0,
     "structural_apply_wire_hash_pass": 100
+  },
+  "public_source_authoring_100": {
+    "accepted_training_count": 0,
+    "artifact_path": "artifacts/research/one_line_r1/public_source_authoring_100.jsonl",
+    "artifact_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+    "authoring_focus_category_count": 25,
+    "authoring_focus_exposure_each": 4,
+    "explicit_file_spdx_count": 1,
+    "language_counts": {
+      "go": 25,
+      "python": 25,
+      "rust": 25,
+      "typescript": 25
+    },
+    "limitations": [
+      "Repository-level MIT license does not certify every file without an explicit file notice.",
+      "Focus categories are author hints, not verified mechanisms or student prompt fields.",
+      "Exact source/commit identity is outside the student seed."
+    ],
+    "missing_file_spdx_count": 99,
+    "repository_license": "MIT verified from license bytes at same immutable commit as source file",
+    "row_count": 100,
+    "source_bytes_max": 18116,
+    "source_bytes_median": 2091.0,
+    "source_bytes_min": 518,
+    "source_discovery": "R2 Stack pool; old hexsha used only as discovery metadata; live source refetched at pinned GitHub HEAD",
+    "status": "authoring input only; blind solver, independent verifier, objective checks, and split allocation pending",
+    "student_gold_actions": 0,
+    "student_target_rows": 0,
+    "superseded_artifact_sha256": "f4ddf79a72d759ad51ef229ae7c3dd7c2e741a896cd5fe5484c427bf197ac29c",
+    "superseded_reason": "one source flagged by expanded credential-assignment screen; replaced before teacher use",
+    "unique_repository_groups": 100
   },
   "schema": "single-line-edit-v1",
   "themis_git_commits": {

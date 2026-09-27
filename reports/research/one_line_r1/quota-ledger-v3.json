@@ -124,7 +124,7 @@
           "status": "unknown"
         }
       ],
-      "observed_at": "2026-09-27T03:19:43.399062+00:00",
+      "observed_at": "2026-09-26T11:30:58.044111+00:00",
       "remaining": 45.0,
       "renewal": "2026-10-03T00:00:00",
       "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -256,7 +256,7 @@
           "status": "unknown"
         }
       ],
-      "observed_at": "2026-09-27T03:37:21.334302+00:00",
+      "observed_at": "2026-09-26T11:43:22.086889+00:00",
       "remaining": 45.0,
       "renewal": "2026-10-03T00:00:00",
       "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -266,9 +266,6 @@
     }
   ],
   "session_wall_seconds": 0,
-  "teacher_calls": 33,
-  "teacher_input_tokens": 72702,
-  "teacher_output_tokens_including_reasoning": 25982,
-  "teacher_reported_cost_usd": 0.0124666,
+  "teacher_calls": 0,
   "training_input_tokens": 0
 }

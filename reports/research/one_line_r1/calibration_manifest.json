@@ -1,0 +1,39 @@
+{
+  "actions": {
+    "delete_line": 4,
+    "insert_before": 4,
+    "keep": 4,
+    "replace_line": 4
+  },
+  "authoring": "original synthetic calibration cases; no overlap with four public Git pilot repositories or sealed TabComplete data",
+  "case_count": 16,
+  "case_hashes": {
+    "c01": "674cb48a43fac6359609e975a8e8bec1a5728e7e069552576678707be858a0d0",
+    "c02": "a9059c5a36a637ca6e32e669c6f80841bdcde16b50ce797833fd0baad6525eae",
+    "c03": "5ba2fe13f1aff07965dd838376dc87138c6a84715412abe87bac300f40a3a899",
+    "c04": "396a557e26f644dbabc99622f3169b3ed9df59d07db5d676c6bbf803d811bcc5",
+    "c05": "8b3aaec5ee70d20f914a09427c6225f2a8b7b1c5b887a54291b6b2819d751010",
+    "c06": "3811ef4bd4611391cd09aa9384d391fe6a6a586a08379dcbcc18cc503d179696",
+    "c07": "3d62555273d79de072245c7c5f7019f961d3fe4ac9bb5bc292cd83d90b72db42",
+    "c08": "acb83ffae3c6fa18125fb80e17d7331beb67298e0ad0b6b4163fdb81f0c4b972",
+    "c09": "a33393fb75de547f677cf692637a521c2de66f08cbe8e442bcc5009d41db2378",
+    "c10": "4e74ce9c77e530373fdbdcf5976d9182c43b6876241a54b9aa4e92792b86d769",
+    "c11": "5d8b00c498eabb5312cce0d4ebc207f7b42380ea0dc052829f9798804882b103",
+    "c12": "df12ebb9fe5952df2c15a12b3ff3654cb898c7c3c33f36f4bcf0415ac51e9e7d",
+    "c13": "1cc772bd01d37235d587828d4f7c09c0997701ba43c876d48d18369dad8dc327",
+    "c14": "637f33ba4a3a2a1cd3244d2f6ebb4d6d98670be8b5a5037247435c7c6e216a12",
+    "c15": "2b35e836cd16436ac89d16b77a9c152cee36929e16feb6c608f9fd6ca6e6a974",
+    "c16": "801da453d92c72628e93478d4b753aeff865a0a8214ac43cdf368e2b64909f39"
+  },
+  "fixture_sha256": "a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e",
+  "languages": {
+    "go": 4,
+    "python": 4,
+    "rust": 4,
+    "typescript": 4
+  },
+  "source_type": "synthetic",
+  "split": "development",
+  "suite": "independent-synthetic-teacher-calibration-v1",
+  "suite_revision": 3
+}
