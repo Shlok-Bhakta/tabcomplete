@@ -1,0 +1,48 @@
+{
+  "config": "v1.0",
+  "dataset_revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef",
+  "editor_commands": {
+    "create": 151,
+    "insert": 2,
+    "str_replace": 695,
+    "undo_edit": 2,
+    "view": 1626
+  },
+  "independently_accepted_labels": 0,
+  "languages": {
+    "go": 13,
+    "java": 3,
+    "javascript": 17,
+    "php": 7,
+    "python": 20,
+    "rust": 17,
+    "typescript": 23
+  },
+  "malformed_call_rows": 0,
+  "offsets": [
+    313,
+    7531,
+    17831,
+    36971,
+    60211
+  ],
+  "one_line_str_replace_calls": 24,
+  "probe_plan": "reports/research/one_line_r1/public_trace_probe_plan.json",
+  "reconstructed_pre_states": 0,
+  "repository_licenses": {
+    "Apache-2.0": 37,
+    "BSD-3-Clause": 10,
+    "MIT": 53
+  },
+  "response_bytes": 28594303,
+  "rows": 100,
+  "sampling_note": "Five fixed offset blocks; structural screen only, not a random quality sample",
+  "split": "sweagent",
+  "trajectories_with_one_line_str_replace": 12,
+  "trajectory_resolved_flags": {
+    "-1": 23,
+    "0": 39,
+    "1": 38
+  },
+  "unique_repositories": 86
+}

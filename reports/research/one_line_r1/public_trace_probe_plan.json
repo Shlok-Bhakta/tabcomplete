@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "created_utc_date": "2026-09-28",
+  "purpose": "Bounded structural screen of ordered public agent edit traces; no quality labels",
+  "dataset": "nvidia/Open-SWE-Traces",
+  "dataset_revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef",
+  "config": "v1.0",
+  "split": "sweagent",
+  "offsets": [313, 7531, 17831, 36971, 60211],
+  "rows_per_offset": 20,
+  "maximum_total_response_bytes": 41943040,
+  "maximum_one_response_bytes": 8388608,
+  "store_raw_trajectories": false,
+  "one_line_structural_rule": "str_replace_editor command=str_replace with string old_str and new_str, neither containing CR or LF",
+  "exclude_first_20_exploratory_rows": true,
+  "interpretation": "Counts are tool-call and trajectory structure only, not independently accepted next-edit states"
+}
