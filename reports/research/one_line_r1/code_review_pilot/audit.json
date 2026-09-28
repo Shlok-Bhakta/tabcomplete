@@ -1,0 +1,21 @@
+{
+  "observed_at_utc": "2026-09-28T03:21:18Z",
+  "dataset": "ronantakizawa/github-codereview",
+  "dataset_revision": "c3e3c6e7e9f61e3e7a5b52894bcd440d586ae6ca",
+  "readme_sha256": "c99f37c0225412333fd90e377e785f1f7794d21433794525986a10fb66f9b666",
+  "readme_bytes": 5416,
+  "license_metadata": "other",
+  "separate_license_file_present": false,
+  "per_row_source_license_field_present": false,
+  "per_row_source_commit_field_present": false,
+  "status": "stopped_before_source_download",
+  "blocker": "Current dataset use terms and file-level source licenses are not established by the pinned card and schema.",
+  "train_rows_fetched": 0,
+  "held_out_rows_fetched": 0,
+  "source_bytes_downloaded": 0,
+  "readme_bytes_downloaded": 5416,
+  "candidate_rows": 0,
+  "accepted_training_labels": 0,
+  "one_line_yield": null,
+  "blind_inferable_yield": null
+}

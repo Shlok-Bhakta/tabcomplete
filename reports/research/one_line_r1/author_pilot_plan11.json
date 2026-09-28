@@ -1,0 +1,18 @@
+{
+  "accepted_training": 0,
+  "completed_new_calls": 92,
+  "counts": {
+    "candidate_preflight": 70,
+    "rejected": 22
+  },
+  "expected_new_calls": 92,
+  "phase": "public_continuation",
+  "plan_sha256": "fb0a76a94d67b1a07a877ad650599da6679eafcb4162c6ac3ab6a9e1b9ca1860",
+  "raw_artifact": "artifacts/research/one_line_r1/author_pilot_plan11.jsonl",
+  "raw_artifact_sha256": "cba19d4bb666339f6191f9f21013bdbc1ca29b774450c9575091e4f4336a021d",
+  "remaining_new_calls": 0,
+  "reported_cost_usd": 0.098909992,
+  "reported_generated_tokens": 267345,
+  "reported_input_tokens": 453769,
+  "spec_sha256": "4de9a435032e7385a2ad8156d0e10d6f94df338292a577c5b85b2f19cd819e57"
+}

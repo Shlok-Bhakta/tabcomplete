@@ -56,3 +56,42 @@ def test_partial_refuses_wrong_incident_before_raw_rows(
     monkeypatch.setattr(audit, "PARTIAL_INCIDENT", incident)
     with pytest.raises(ValueError, match="incident identity or denominator changed"):
         audit.audit_partial()
+
+
+def test_continuation_rows_use_frozen_spec_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(audit.pilot, "source_preflight", lambda *_args, **_kwargs: "prompt")
+    row = {
+        "source_id": "source-a",
+        "plan_sha256": "plan-11",
+        "spec_sha256": "spec-11",
+        "source_sha256": "source-hash",
+        "prompt_sha256": hashlib.sha256(b"prompt").hexdigest(),
+        "raw_content": "output",
+        "raw_output_sha256": hashlib.sha256(b"output").hexdigest(),
+        "request_id": "request-a",
+        "accepted_training": False,
+    }
+    artifact = tmp_path / "rows.jsonl"
+    artifact.write_text(json.dumps(row) + "\n")
+    sources = {"source-a": {"authoring_metadata": {"source_sha256": "source-hash"}}}
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    assert (
+        audit._read_artifact(
+            artifact,
+            expected_hash=digest,
+            expected_plan_sha="plan-11",
+            expected_spec_sha="spec-11",
+            sources=sources,
+        )["source-a"]
+        == row
+    )
+    with pytest.raises(ValueError, match="frozen plan or protocol"):
+        audit._read_artifact(
+            artifact,
+            expected_hash=digest,
+            expected_plan_sha="plan-11",
+            expected_spec_sha="wrong-spec",
+            sources=sources,
+        )

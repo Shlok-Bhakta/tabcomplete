@@ -11,6 +11,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import run_one_line_author_continuation as continuation
 import run_one_line_author_pilot_v2 as pilot
 
 from tinycomplete.one_line.context import serialize_state_bounded
@@ -83,6 +84,7 @@ def _read_artifact(
     *,
     expected_hash: object,
     expected_plan_sha: str,
+    expected_spec_sha: str | None = None,
     sources: dict[str, dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
     if not isinstance(expected_hash, str) or pilot.sha_file(path) != expected_hash:
@@ -94,10 +96,12 @@ def _read_artifact(
         source_id = record.get("source_id")
         if source_id not in sources or source_id in rows:
             raise ValueError("unknown or duplicate source ID in public raw artifact")
-        if (
-            record.get("plan_sha256") != expected_plan_sha
-            or record.get("protocol_sha256") != pilot.PROTOCOL_SHA
-        ):
+        identity_matches = (
+            record.get("spec_sha256") == expected_spec_sha
+            if expected_spec_sha is not None
+            else record.get("protocol_sha256") == pilot.PROTOCOL_SHA
+        )
+        if record.get("plan_sha256") != expected_plan_sha or not identity_matches:
             raise ValueError("public raw row has a different frozen plan or protocol")
         prompt = pilot.source_preflight(sources[source_id], synthetic=False)
         if record.get("prompt_sha256") != sha_bytes(prompt.encode("utf-8")):
@@ -141,9 +145,23 @@ def audit() -> tuple[dict[str, Any], list[dict[str, Any]]]:
     )
     if any(pilot.sha_file(path) != digest for path, digest in frozen):
         raise ValueError("frozen protocol, source, smoke, builder, or tokenizer changed")
-    plan11_sha = pilot.sha_file(pilot.PLAN)
-    if json.loads(pilot.PLAN.read_text()).get("plan_revision") != 11:
+    plan11_path = pilot.REPORT / "plan.json"
+    plan11_sha = pilot.sha_file(plan11_path)
+    if (
+        json.loads(plan11_path.read_text()).get("plan_revision") != 11
+        or completed.get("plan_sha256") != plan11_sha
+    ):
         raise ValueError("current plan is not revision 11")
+    spec_path = pilot.ROOT / continuation.SPEC_REL
+    if pilot.sha_file(spec_path) != continuation.SPEC_SHA:
+        raise ValueError("plan-11 continuation spec differs from frozen revision")
+    spec = json.loads(spec_path.read_text())
+    if (
+        spec.get("author_protocol_sha256") != pilot.PROTOCOL_SHA
+        or spec.get("previous_plan_sha256") != pilot.PLAN_SHA
+        or spec.get("source_sha256") != pilot.SOURCE_SHA
+    ):
+        raise ValueError("plan-11 continuation spec does not pin prior identities")
     sources = pilot.load_inputs("public")
     source_by_id = {row["id"]: row for row in sources}
     plan10_path = _artifact_path(completed.get("plan10_raw_artifact"))
@@ -160,6 +178,7 @@ def audit() -> tuple[dict[str, Any], list[dict[str, Any]]]:
         plan11_path,
         expected_hash=completed.get("plan11_raw_artifact_sha256"),
         expected_plan_sha=plan11_sha,
+        expected_spec_sha=continuation.SPEC_SHA,
         sources=source_by_id,
     )
     failed_id = completed.get("failed_source_id")
@@ -174,6 +193,14 @@ def audit() -> tuple[dict[str, Any], list[dict[str, Any]]]:
         or failed_id in raw
     ):
         raise ValueError("combined result does not partition the frozen 100 seeds")
+    if any(
+        row["request_id"] != pilot.request_id("public", source_id)
+        for source_id, row in plan10_rows.items()
+    ) or any(
+        row["request_id"] != continuation.request_id(source_id)
+        for source_id, row in plan11_rows.items()
+    ):
+        raise ValueError("combined result has a request ID outside its frozen phase")
 
     from transformers import AutoTokenizer
 

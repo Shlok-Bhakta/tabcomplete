@@ -19,11 +19,14 @@ runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
 
 
-def test_plan11_frozen_preflight_skips_all_historical_requests() -> None:
+def test_plan11_frozen_preflight_skips_all_historical_requests(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     spec, protocol, sources = runner.verify_frozen()
     assert spec["remaining_source_count"] == 92
     assert protocol["version"] == "one-line-author-text-v2"
     assert len(sources) == 100
+    monkeypatch.setattr(runner, "RAW", tmp_path / "new_rows.jsonl")
     assert runner.run(execute=False) == {
         "phase": "public_continuation",
         "preflight_sources": 92,
@@ -34,8 +37,7 @@ def test_plan11_frozen_preflight_skips_all_historical_requests() -> None:
         {source["id"] for source in sources[8:]}
     )
     assert all(
-        runner.request_id(source["id"]).startswith("author11-public-")
-        for source in sources[8:]
+        runner.request_id(source["id"]).startswith("author11-public-") for source in sources[8:]
     )
     assert all(
         runner.request_id(source["id"]) != runner.previous_request_id("public", source["id"])
@@ -111,8 +113,6 @@ def test_combined_summary_has_auditable_source_and_raw_identities(
     assert summary["failed_source_id"] == sources[7]["id"]
     assert summary["source_sha256"] == runner.SOURCE_SHA
     assert summary["protocol_sha256"] == runner.PROTOCOL_SHA
-    assert summary["plan10_raw_artifact_sha256"] == runner.sha_file(
-        runner.PREVIOUS_RAW["public"]
-    )
+    assert summary["plan10_raw_artifact_sha256"] == runner.sha_file(runner.PREVIOUS_RAW["public"])
     assert summary["plan11_raw_artifact_sha256"] == runner.sha_file(raw)
     assert summary["accepted_training"] == 0

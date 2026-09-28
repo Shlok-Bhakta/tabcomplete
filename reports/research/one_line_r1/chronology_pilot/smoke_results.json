@@ -1,0 +1,28 @@
+{
+  "accepted_training_label_count": 0,
+  "attempted_repo_count": 1,
+  "candidate_artifact": "artifacts/research/one_line_r1/chronology_pilot/unreviewed_candidates.jsonl",
+  "candidate_artifact_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "file_spdx_notice_candidate_count": 0,
+  "max_commits_per_repo": 32,
+  "proxied_transfer_bytes": 27699,
+  "results": [
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "vyahello/pypi-flask-clone",
+      "status": "no_structural_candidate"
+    }
+  ],
+  "selected_seed_count": 1,
+  "source_seed_count": 100,
+  "source_seed_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+  "status_counts": {
+    "no_structural_candidate": 1
+  },
+  "structural_candidate_count": 0,
+  "transfer_cap_bytes": 104857600,
+  "transfer_cap_reached": false,
+  "unattempted_selected_count": 0
+}

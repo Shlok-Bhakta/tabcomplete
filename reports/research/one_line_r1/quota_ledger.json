@@ -926,14 +926,14 @@
     }
   ],
   "session_wall_seconds": 0,
-  "teacher_calls": 81,
+  "teacher_budgeted_input_tokens_including_unsettled": 673239,
+  "teacher_budgeted_output_tokens_including_unsettled": 364149,
+  "teacher_calls": 173,
   "teacher_completed_ignored_overrun_responses": 1,
-  "teacher_input_tokens": 209470,
-  "teacher_output_tokens_including_reasoning": 88612,
-  "teacher_reported_cost_usd": 0.038689986,
+  "teacher_input_tokens": 663239,
+  "teacher_output_tokens_including_reasoning": 355957,
+  "teacher_reported_cost_usd": 0.137599978,
+  "teacher_requests_reserved_total": 174,
   "teacher_reserved_unsettled_requests": 1,
-  "teacher_requests_reserved_total": 82,
-  "teacher_budgeted_input_tokens_including_unsettled": 219470,
-  "teacher_budgeted_output_tokens_including_unsettled": 96804,
   "training_input_tokens": 0
 }

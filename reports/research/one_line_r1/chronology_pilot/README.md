@@ -1,0 +1,9 @@
+# Public Git chronology pilot
+
+This CPU-only pilot used the frozen 100 MIT repository seeds in deterministic language-interleaved order. It fetched pinned commits through a local counting HTTPS CONNECT proxy, used only the existing first-parent chronology miner, allowed at most one structural candidate per repository, and did not execute source code or accept training labels. Temporary checkouts stayed under `artifacts/research/one_line_r1/chronology_pilot/` and were removed after each attempt.
+
+The one-repository smoke completed: `vyahello/pypi-flask-clone` had 33 first-parent commits, no structural candidate, and 27,699 proxied bytes. [Its exact output](smoke_results.json) is preserved.
+
+The full pass then reached seed 26, a generated `.d.ts` path. The existing miner correctly rejected that path, but the wrapper had not caught the constructor error. The first 25 repository outcomes and transfer count were held only in memory and were lost when the process exited. Thus missing-repository count and structural yield for the full pass are **unknown**. The proxy's 100 MiB limit applied to that process; its exact usage was not persisted. Because aggregate remaining transfer could not be proved, no network retry was made. No candidate from the aborted pass is claimed.
+
+The wrapper now excludes generated paths before fetch, catches source-construction errors, and writes a progress record after every repository, plus each candidate as it appears. A future run needs a separately measured transfer budget. The frozen seeds are repository-license verified, but only one of the first 26 has an explicit source-file SPDX notice; repository MIT status alone does not clear every file. Exact Git chronology also cannot establish editor intent or blind inferability. Accepted training labels remain **0**. The route has not yet shown a credible contribution toward 20,000 independently inferable states.

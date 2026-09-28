@@ -1,0 +1,28 @@
+{
+  "status": "aborted_runner_error_no_resume",
+  "source_seed_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+  "source_seed_count": 100,
+  "deterministic_order": "round_robin_python_typescript_rust_go",
+  "unique_seed_repositories_reached_before_abort": 26,
+  "completed_before_abort_without_durable_results": 25,
+  "failing_seed_index_one_based": 26,
+  "failing_seed_repo": "tomicarsk6/material2-docs-content",
+  "failing_seed_path": "material-experimental/column-resize/opt-in-column-resize/opt-in-column-resize-example.d.ts",
+  "failure": "PinnedChronologySource rejected a generated declaration path before the runner wrote its final report.",
+  "known_smoke_result": {
+    "repo": "vyahello/pypi-flask-clone",
+    "first_parent_commits": 33,
+    "structural_candidates": 0,
+    "proxied_transfer_bytes": 27699
+  },
+  "full_pass_structural_candidate_count": null,
+  "full_pass_missing_repo_count": null,
+  "full_pass_proxied_transfer_bytes": null,
+  "full_pass_transfer_upper_bound_exclusive_bytes": 104857600,
+  "aggregate_transfer_under_100_mib_verified": false,
+  "further_network_attempts_stopped": true,
+  "accepted_training_labels": 0,
+  "inferability_reviewed": 0,
+  "candidate_artifact_status": "empty smoke artifact; aborted full pass did not write candidates",
+  "conclusion": "No measured structural or inferability yield beyond the single-repository smoke. The route's contribution to a 20,000-state corpus remains unproven."
+}

@@ -1,0 +1,15 @@
+{
+  "accepted_training": 0,
+  "durable_rows": 99,
+  "failed_source_id": "public-source/b13cc3a6e67cae9e931a9694",
+  "plan10_durable_rows": 7,
+  "plan10_raw_artifact": "artifacts/research/one_line_r1/author_pilot_plan10.jsonl",
+  "plan10_raw_artifact_sha256": "2b0c6ea5af9971f19c1eb73e4808a0895da690d99676328fdbac479def43e167",
+  "plan11_durable_rows": 92,
+  "plan11_raw_artifact": "artifacts/research/one_line_r1/author_pilot_plan11.jsonl",
+  "plan11_raw_artifact_sha256": "cba19d4bb666339f6191f9f21013bdbc1ca29b774450c9575091e4f4336a021d",
+  "plan_sha256": "fb0a76a94d67b1a07a877ad650599da6679eafcb4162c6ac3ab6a9e1b9ca1860",
+  "protocol_sha256": "0ef8ad1633e899bba9982090ad396c450fa0da59c168541181c1d89aa867412e",
+  "source_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+  "spec_sha256": "4de9a435032e7385a2ad8156d0e10d6f94df338292a577c5b85b2f19cd819e57"
+}
