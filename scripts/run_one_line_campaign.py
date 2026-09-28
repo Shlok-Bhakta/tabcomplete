@@ -119,6 +119,30 @@ def freeze(config_path: Path) -> dict[str, Any]:
         for key, path in identities.items():
             if digest(path) != config["teacher"][key]:
                 raise ValueError(f"frozen teacher input identity changed: {key}")
+    if config["plan_revision"] >= 7:
+        fresh32 = {
+            "fresh32_fixture_sha256": REPORT / "calibration_fresh32_cases.json",
+            "fresh32_manifest_sha256": REPORT / "calibration_fresh32_manifest.json",
+        }
+        for key, path in fresh32.items():
+            if digest(path) != teacher[key]:
+                raise ValueError(f"frozen fresh32 input identity changed: {key}")
+    if config["plan_revision"] >= 8:
+        smoke_path = ROOT / teacher["structured_smoke_spec_path"]
+        if digest(smoke_path) != teacher["structured_smoke_spec_sha256"]:
+            raise ValueError("frozen structured-output smoke identity changed")
+    if config["plan_revision"] >= 9:
+        author_path = ROOT / teacher["author_text_protocol_path"]
+        if digest(author_path) != teacher["author_text_protocol_sha256"]:
+            raise ValueError("frozen author text protocol identity changed")
+    if config["plan_revision"] >= 10:
+        indexed_path = ROOT / teacher["author_indexed_protocol_path"]
+        if digest(indexed_path) != teacher["author_indexed_protocol_sha256"]:
+            raise ValueError("frozen indexed author protocol identity changed")
+    if config["plan_revision"] >= 11:
+        continuation_path = ROOT / teacher["author_continuation_path"]
+        if digest(continuation_path) != teacher["author_continuation_sha256"]:
+            raise ValueError("frozen author continuation identity changed")
     files = {name: MODEL / name for name in ("model.safetensors", "tokenizer.json", "config.json")}
     files_record = {
         name: {"path": str(path), "bytes": path.stat().st_size, "sha256": digest(path)}

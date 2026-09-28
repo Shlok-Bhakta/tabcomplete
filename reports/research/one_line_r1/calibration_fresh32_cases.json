@@ -1,0 +1,1024 @@
+{
+  "cases": [
+    {
+      "after_source": "def gross(x): return round(x)\ndef net(x): return round(x)\n",
+      "generator_family": "python-rounding",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "def net(x): return round(x)"
+      },
+      "id": "f01",
+      "mechanism": "rounding-transfer",
+      "objective": {
+        "history_new_fragment": "round(x)",
+        "history_old_fragment": "int(x)",
+        "kind": "history_transfer",
+        "target_new_fragment": "round(x)",
+        "target_old_fragment": "int(x)"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-rounding",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file01.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def gross(x): return round(x)",
+            "old_text": "def gross(x): return int(x)",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "def gross(x): return round(x)\ndef net(x): return int(x)\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "def gross(x): return round(x)\ndef net(x): return int(x)\n",
+      "generator_family": "python-rounding",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f02",
+      "mechanism": "rounding-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-rounding",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file01.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def net(x): return int(x)",
+            "old_text": "def net(x): return round(x)",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "def gross(x): return round(x)\ndef net(x): return int(x)\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "def customer_key(a,b): return f\"{a}:{b}\"\ndef order_key(a,b): return f\"{a}:{b}\"\n",
+      "generator_family": "python-delimiter",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "def order_key(a,b): return f\"{a}:{b}\""
+      },
+      "id": "f03",
+      "mechanism": "delimiter-transfer",
+      "objective": {
+        "history_new_fragment": "f\"{a}:{b}\"",
+        "history_old_fragment": "f\"{a}-{b}\"",
+        "kind": "history_transfer",
+        "target_new_fragment": "f\"{a}:{b}\"",
+        "target_old_fragment": "f\"{a}-{b}\""
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file03.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def customer_key(a,b): return f\"{a}:{b}\"",
+            "old_text": "def customer_key(a,b): return f\"{a}-{b}\"",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "def customer_key(a,b): return f\"{a}:{b}\"\ndef order_key(a,b): return f\"{a}-{b}\"\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "def customer_key(a,b): return f\"{a}:{b}\"\ndef order_key(a,b): return f\"{a}-{b}\"\n",
+      "generator_family": "python-delimiter",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f04",
+      "mechanism": "delimiter-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file03.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def order_key(a,b): return f\"{a}-{b}\"",
+            "old_text": "def order_key(a,b): return f\"{a}:{b}\"",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "def customer_key(a,b): return f\"{a}:{b}\"\ndef order_key(a,b): return f\"{a}-{b}\"\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "def names_for_ui(names):\n    # Display names in case-insensitive order.\n    names.sort(key=str.casefold)\n    return names\n",
+      "generator_family": "python-order",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    names.sort(key=str.casefold)"
+      },
+      "id": "f05",
+      "mechanism": "order-before-return",
+      "objective": {
+        "inserted_line_regex": "\\bnames\\.sort\\(key=str\\.casefold\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "case-insensitive order"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-order",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file05.py",
+        "filetype": "python",
+        "history": [],
+        "relevant": [],
+        "source": "def names_for_ui(names):\n    # Display names in case-insensitive order.\n    return names\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "def save(record, store, events):\n    # Emit a change event after persistence.\n    store.write(record)\n    events.append((\"saved\", record.id))\n    return record.id\n",
+      "generator_family": "python-event",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    events.append((\"saved\", record.id))"
+      },
+      "id": "f06",
+      "mechanism": "event-after-write",
+      "objective": {
+        "inserted_line_regex": "\\bevents\\.append\\(\\(\"saved\",\\s*record\\.id\\)\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "Emit a change event"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-event",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file06.py",
+        "filetype": "python",
+        "history": [],
+        "relevant": [],
+        "source": "def save(record, store, events):\n    # Emit a change event after persistence.\n    store.write(record)\n    return record.id\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "def total(items):\n    # Production path must not print values.\n    return sum(items)\n",
+      "generator_family": "python-debug",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f07",
+      "mechanism": "remove-debug",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "must not print values"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-debug",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file07.py",
+        "filetype": "python",
+        "history": [],
+        "relevant": [],
+        "source": "def total(items):\n    # Production path must not print values.\n    print(items)\n    return sum(items)\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "def normalize(raw):\n    # Return the stripped value.\n    result = raw.strip()\n    return result\n",
+      "generator_family": "python-overwrite",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f08",
+      "mechanism": "remove-overwrite",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "Return the stripped value"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/python-overwrite",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file08.py",
+        "filetype": "python",
+        "history": [],
+        "relevant": [],
+        "source": "def normalize(raw):\n    # Return the stripped value.\n    result = raw.strip()\n    result = raw\n    return result\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "export const gross = (x: number) => Math.round(x);\nexport const net = (x: number) => Math.round(x);\n",
+      "generator_family": "typescript-rounding",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "export const net = (x: number) => Math.round(x);"
+      },
+      "id": "f09",
+      "mechanism": "rounding-transfer",
+      "objective": {
+        "history_new_fragment": "Math.round(x)",
+        "history_old_fragment": "Math.trunc(x)",
+        "kind": "history_transfer",
+        "target_new_fragment": "Math.round(x)",
+        "target_old_fragment": "Math.trunc(x)"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-rounding",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file09.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "export const gross = (x: number) => Math.round(x);",
+            "old_text": "export const gross = (x: number) => Math.trunc(x);",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "export const gross = (x: number) => Math.round(x);\nexport const net = (x: number) => Math.trunc(x);\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "export const gross = (x: number) => Math.round(x);\nexport const net = (x: number) => Math.trunc(x);\n",
+      "generator_family": "typescript-rounding",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f10",
+      "mechanism": "rounding-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-rounding",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file09.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "export const net = (x: number) => Math.trunc(x);",
+            "old_text": "export const net = (x: number) => Math.round(x);",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "export const gross = (x: number) => Math.round(x);\nexport const net = (x: number) => Math.trunc(x);\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "export const primary = (parts: string[]) => parts.join(\"|\");\nexport const secondary = (parts: string[]) => parts.join(\"|\");\n",
+      "generator_family": "typescript-delimiter",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "export const secondary = (parts: string[]) => parts.join(\"|\");"
+      },
+      "id": "f11",
+      "mechanism": "serialization-transfer",
+      "objective": {
+        "history_new_fragment": "join(\"|\")",
+        "history_old_fragment": "join(\",\")",
+        "kind": "history_transfer",
+        "target_new_fragment": "join(\"|\")",
+        "target_old_fragment": "join(\",\")"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file11.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "export const primary = (parts: string[]) => parts.join(\"|\");",
+            "old_text": "export const primary = (parts: string[]) => parts.join(\",\");",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "export const primary = (parts: string[]) => parts.join(\"|\");\nexport const secondary = (parts: string[]) => parts.join(\",\");\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "export const primary = (parts: string[]) => parts.join(\"|\");\nexport const secondary = (parts: string[]) => parts.join(\",\");\n",
+      "generator_family": "typescript-delimiter",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f12",
+      "mechanism": "serialization-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file11.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "export const secondary = (parts: string[]) => parts.join(\",\");",
+            "old_text": "export const secondary = (parts: string[]) => parts.join(\"|\");",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "export const primary = (parts: string[]) => parts.join(\"|\");\nexport const secondary = (parts: string[]) => parts.join(\",\");\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "export function ranked(rows: Row[]): Row[] {\n  // Present records by ascending rank.\n  rows.sort((a, b) => a.rank - b.rank);\n  return rows;\n}\n",
+      "generator_family": "typescript-order",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "  rows.sort((a, b) => a.rank - b.rank);"
+      },
+      "id": "f13",
+      "mechanism": "order-before-return",
+      "objective": {
+        "inserted_line_regex": "\\brows\\.sort\\(\\(a,\\s*b\\)\\s*=>\\s*a\\.rank\\s*-\\s*b\\.rank\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "ascending rank"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-order",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file13.ts",
+        "filetype": "typescript",
+        "history": [],
+        "relevant": [],
+        "source": "export function ranked(rows: Row[]): Row[] {\n  // Present records by ascending rank.\n  return rows;\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "export function save(id: string, cache: Cache, events: Events): string {\n  // Publish a save event after caching.\n  cache.set(id, true);\n  events.emit(\"saved\", id);\n  return id;\n}\n",
+      "generator_family": "typescript-event",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "  events.emit(\"saved\", id);"
+      },
+      "id": "f14",
+      "mechanism": "event-after-cache",
+      "objective": {
+        "inserted_line_regex": "\\bevents\\.emit\\(\"saved\",\\s*id\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "Publish a save event"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-event",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file14.ts",
+        "filetype": "typescript",
+        "history": [],
+        "relevant": [],
+        "source": "export function save(id: string, cache: Cache, events: Events): string {\n  // Publish a save event after caching.\n  cache.set(id, true);\n  return id;\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "export function total(items: number[]): number {\n  // Production path must not log values.\n  return items.reduce((a, b) => a + b, 0);\n}\n",
+      "generator_family": "typescript-debug",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f15",
+      "mechanism": "remove-debug",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "must not log values"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-debug",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file15.ts",
+        "filetype": "typescript",
+        "history": [],
+        "relevant": [],
+        "source": "export function total(items: number[]): number {\n  // Production path must not log values.\n  console.log(items);\n  return items.reduce((a, b) => a + b, 0);\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "export function normalize(raw: string): string {\n  // Return the lowercase value.\n  let result = raw.toLowerCase();\n  return result;\n}\n",
+      "generator_family": "typescript-overwrite",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f16",
+      "mechanism": "remove-overwrite",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "Return the lowercase value"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/typescript-overwrite",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file16.ts",
+        "filetype": "typescript",
+        "history": [],
+        "relevant": [],
+        "source": "export function normalize(raw: string): string {\n  // Return the lowercase value.\n  let result = raw.toLowerCase();\n  result = raw;\n  return result;\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "fn primary(a: u32, b: u32) -> u32 { a.saturating_add(b) }\nfn secondary(a: u32, b: u32) -> u32 { a.saturating_add(b) }\n",
+      "generator_family": "rust-overflow",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "fn secondary(a: u32, b: u32) -> u32 { a.saturating_add(b) }"
+      },
+      "id": "f17",
+      "mechanism": "overflow-policy-transfer",
+      "objective": {
+        "history_new_fragment": "a.saturating_add(b)",
+        "history_old_fragment": "a + b",
+        "kind": "history_transfer",
+        "target_new_fragment": "a.saturating_add(b)",
+        "target_old_fragment": "a + b"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-overflow",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file17.rs",
+        "filetype": "rust",
+        "history": [
+          {
+            "new_text": "fn primary(a: u32, b: u32) -> u32 { a.saturating_add(b) }",
+            "old_text": "fn primary(a: u32, b: u32) -> u32 { a + b }",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "fn primary(a: u32, b: u32) -> u32 { a.saturating_add(b) }\nfn secondary(a: u32, b: u32) -> u32 { a + b }\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn primary(a: u32, b: u32) -> u32 { a.saturating_add(b) }\nfn secondary(a: u32, b: u32) -> u32 { a + b }\n",
+      "generator_family": "rust-overflow",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f18",
+      "mechanism": "overflow-policy-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-overflow",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file17.rs",
+        "filetype": "rust",
+        "history": [
+          {
+            "new_text": "fn secondary(a: u32, b: u32) -> u32 { a + b }",
+            "old_text": "fn secondary(a: u32, b: u32) -> u32 { a.saturating_add(b) }",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "fn primary(a: u32, b: u32) -> u32 { a.saturating_add(b) }\nfn secondary(a: u32, b: u32) -> u32 { a + b }\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn primary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }\nfn secondary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }\n",
+      "generator_family": "rust-delimiter",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "fn secondary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }"
+      },
+      "id": "f19",
+      "mechanism": "delimiter-transfer",
+      "objective": {
+        "history_new_fragment": "format!(\"{a}:{b}\")",
+        "history_old_fragment": "format!(\"{a}-{b}\")",
+        "kind": "history_transfer",
+        "target_new_fragment": "format!(\"{a}:{b}\")",
+        "target_old_fragment": "format!(\"{a}-{b}\")"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file19.rs",
+        "filetype": "rust",
+        "history": [
+          {
+            "new_text": "fn primary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }",
+            "old_text": "fn primary(a: &str, b: &str) -> String { format!(\"{a}-{b}\") }",
+            "row": 0
+          }
+        ],
+        "relevant": [],
+        "source": "fn primary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }\nfn secondary(a: &str, b: &str) -> String { format!(\"{a}-{b}\") }\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn primary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }\nfn secondary(a: &str, b: &str) -> String { format!(\"{a}-{b}\") }\n",
+      "generator_family": "rust-delimiter",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f20",
+      "mechanism": "delimiter-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file19.rs",
+        "filetype": "rust",
+        "history": [
+          {
+            "new_text": "fn secondary(a: &str, b: &str) -> String { format!(\"{a}-{b}\") }",
+            "old_text": "fn secondary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "fn primary(a: &str, b: &str) -> String { format!(\"{a}:{b}\") }\nfn secondary(a: &str, b: &str) -> String { format!(\"{a}-{b}\") }\n",
+        "target_row": 1
+      }
+    },
+    {
+      "after_source": "fn ordered(mut items: Vec<i32>) -> Vec<i32> {\n    // Return values ascending.\n    items.sort_unstable();\n    items\n}\n",
+      "generator_family": "rust-order",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    items.sort_unstable();"
+      },
+      "id": "f21",
+      "mechanism": "order-before-return",
+      "objective": {
+        "inserted_line_regex": "\\bitems\\.sort_unstable\\(\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "Return values ascending"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-order",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file21.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn ordered(mut items: Vec<i32>) -> Vec<i32> {\n    // Return values ascending.\n    items\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "fn store(value: String, log: &mut Vec<String>) -> String {\n    // Keep an audit entry before returning.\n    log.push(value.clone());\n    value\n}\n",
+      "generator_family": "rust-event",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    log.push(value.clone());"
+      },
+      "id": "f22",
+      "mechanism": "event-before-return",
+      "objective": {
+        "inserted_line_regex": "\\blog\\.push\\(value\\.clone\\(\\)\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "Keep an audit entry"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-event",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file22.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn store(value: String, log: &mut Vec<String>) -> String {\n    // Keep an audit entry before returning.\n    value\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "fn total(items: &[i32]) -> i32 {\n    // Production path must not debug-print.\n    items.iter().sum()\n}\n",
+      "generator_family": "rust-debug",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f23",
+      "mechanism": "remove-debug",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "must not debug-print"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-debug",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file23.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn total(items: &[i32]) -> i32 {\n    // Production path must not debug-print.\n    dbg!(items);\n    items.iter().sum()\n}\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "fn normalize(raw: &str) -> String {\n    // Return normalized lowercase text.\n    let result = raw.to_lowercase();\n    result\n}\n",
+      "generator_family": "rust-overwrite",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f24",
+      "mechanism": "remove-overwrite",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "Return normalized lowercase text"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/rust-overwrite",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file24.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn normalize(raw: &str) -> String {\n    // Return normalized lowercase text.\n    let result = raw.to_lowercase();\n    let result = raw.to_string();\n    result\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nfunc primary(n int) int { return max(0, n) }\nfunc secondary(n int) int { return max(0, n) }\n",
+      "generator_family": "go-normalize",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "func secondary(n int) int { return max(0, n) }"
+      },
+      "id": "f25",
+      "mechanism": "nonnegative-policy-transfer",
+      "objective": {
+        "history_new_fragment": "return max(0, n)",
+        "history_old_fragment": "return n",
+        "kind": "history_transfer",
+        "target_new_fragment": "return max(0, n)",
+        "target_old_fragment": "return n"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-normalize",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file25.go",
+        "filetype": "go",
+        "history": [
+          {
+            "new_text": "func primary(n int) int { return max(0, n) }",
+            "old_text": "func primary(n int) int { return n }",
+            "row": 1
+          }
+        ],
+        "relevant": [],
+        "source": "package sample\nfunc primary(n int) int { return max(0, n) }\nfunc secondary(n int) int { return n }\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "package sample\nfunc primary(n int) int { return max(0, n) }\nfunc secondary(n int) int { return n }\n",
+      "generator_family": "go-normalize",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f26",
+      "mechanism": "nonnegative-policy-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-normalize",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file25.go",
+        "filetype": "go",
+        "history": [
+          {
+            "new_text": "func secondary(n int) int { return n }",
+            "old_text": "func secondary(n int) int { return max(0, n) }",
+            "row": 2
+          }
+        ],
+        "relevant": [],
+        "source": "package sample\nfunc primary(n int) int { return max(0, n) }\nfunc secondary(n int) int { return n }\n",
+        "target_row": 2
+      }
+    },
+    {
+      "after_source": "package sample\nimport \"strings\"\nfunc primary(parts []string) string { return strings.Join(parts, \"|\") }\nfunc secondary(parts []string) string { return strings.Join(parts, \"|\") }\n",
+      "generator_family": "go-delimiter",
+      "gold_action": {
+        "kind": "replace_line",
+        "text": "func secondary(parts []string) string { return strings.Join(parts, \"|\") }"
+      },
+      "id": "f27",
+      "mechanism": "serialization-transfer",
+      "objective": {
+        "history_new_fragment": "strings.Join(parts, \"|\")",
+        "history_old_fragment": "strings.Join(parts, \",\")",
+        "kind": "history_transfer",
+        "target_new_fragment": "strings.Join(parts, \"|\")",
+        "target_old_fragment": "strings.Join(parts, \",\")"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file27.go",
+        "filetype": "go",
+        "history": [
+          {
+            "new_text": "func primary(parts []string) string { return strings.Join(parts, \"|\") }",
+            "old_text": "func primary(parts []string) string { return strings.Join(parts, \",\") }",
+            "row": 2
+          }
+        ],
+        "relevant": [],
+        "source": "package sample\nimport \"strings\"\nfunc primary(parts []string) string { return strings.Join(parts, \"|\") }\nfunc secondary(parts []string) string { return strings.Join(parts, \",\") }\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nimport \"strings\"\nfunc primary(parts []string) string { return strings.Join(parts, \"|\") }\nfunc secondary(parts []string) string { return strings.Join(parts, \",\") }\n",
+      "generator_family": "go-delimiter",
+      "gold_action": {
+        "kind": "keep",
+        "text": null
+      },
+      "id": "f28",
+      "mechanism": "serialization-reversal",
+      "objective": {
+        "kind": "latest_reversal"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-delimiter",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file27.go",
+        "filetype": "go",
+        "history": [
+          {
+            "new_text": "func secondary(parts []string) string { return strings.Join(parts, \",\") }",
+            "old_text": "func secondary(parts []string) string { return strings.Join(parts, \"|\") }",
+            "row": 3
+          }
+        ],
+        "relevant": [],
+        "source": "package sample\nimport \"strings\"\nfunc primary(parts []string) string { return strings.Join(parts, \"|\") }\nfunc secondary(parts []string) string { return strings.Join(parts, \",\") }\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nimport \"sort\"\nfunc ordered(values []int) []int {\n    // Return values ascending.\n    sort.Ints(values)\n    return values\n}\n",
+      "generator_family": "go-order",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    sort.Ints(values)"
+      },
+      "id": "f29",
+      "mechanism": "order-before-return",
+      "objective": {
+        "inserted_line_regex": "\\bsort\\.Ints\\(values\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "Return values ascending"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-order",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file29.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "package sample\nimport \"sort\"\nfunc ordered(values []int) []int {\n    // Return values ascending.\n    return values\n}\n",
+        "target_row": 4
+      }
+    },
+    {
+      "after_source": "package sample\nfunc save(value string, events []string) []string {\n    // Record a save event before returning.\n    events = append(events, \"saved:\"+value)\n    return events\n}\n",
+      "generator_family": "go-event",
+      "gold_action": {
+        "kind": "insert_before",
+        "text": "    events = append(events, \"saved:\"+value)"
+      },
+      "id": "f30",
+      "mechanism": "event-before-return",
+      "objective": {
+        "inserted_line_regex": "\\bevents\\s*=\\s*append\\(events,\\s*\"saved:\"\\s*\\+\\s*value\\)",
+        "kind": "ordered_insert",
+        "visible_intent": "Record a save event"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-event",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file30.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "package sample\nfunc save(value string, events []string) []string {\n    // Record a save event before returning.\n    return events\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nfunc total(value int) int {\n    // Production path must not print values.\n    return value\n}\n",
+      "generator_family": "go-debug",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f31",
+      "mechanism": "remove-debug",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "must not print values"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-debug",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file31.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "package sample\nfunc total(value int) int {\n    // Production path must not print values.\n    println(value)\n    return value\n}\n",
+        "target_row": 3
+      }
+    },
+    {
+      "after_source": "package sample\nimport \"strings\"\nfunc normalize(raw string) string {\n    // Return the trimmed value.\n    result := strings.TrimSpace(raw)\n    return result\n}\n",
+      "generator_family": "go-overwrite",
+      "gold_action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "id": "f32",
+      "mechanism": "remove-overwrite",
+      "objective": {
+        "kind": "remove_stale",
+        "visible_intent": "Return the trimmed value"
+      },
+      "source_license": "original-synthetic",
+      "source_repo": "synthetic/fresh32/go-overwrite",
+      "source_revision": "fresh32-v1",
+      "source_type": "synthetic",
+      "split": "development",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "synthetic/fresh32/file32.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "package sample\nimport \"strings\"\nfunc normalize(raw string) string {\n    // Return the trimmed value.\n    result := strings.TrimSpace(raw)\n    result = raw\n    return result\n}\n",
+        "target_row": 5
+      }
+    }
+  ],
+  "purpose": "fresh-development-calibration",
+  "schema": "single-line-edit-v1",
+  "suite": "independent-synthetic-calibration-fresh32-v1",
+  "suite_revision": 3
+}

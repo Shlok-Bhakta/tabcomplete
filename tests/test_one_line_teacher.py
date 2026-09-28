@@ -131,6 +131,66 @@ def test_reasoning_accounting_correction_is_append_only(tmp_path: Path) -> None:
         )
 
 
+def test_persisted_usage_overrun_is_append_only_and_single_use(tmp_path: Path) -> None:
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    digest = "a" * 64
+    ledger.reserve("failed-public", input_tokens=10, max_output_tokens=8)
+    with pytest.raises(teacher.TeacherBudgetError, match="reserved limit"):
+        ledger.settle("failed-public", input_tokens=14, output_tokens=3)
+    ledger.settle_overrun(
+        "failed-public", input_tokens=14, output_tokens=3, evidence_sha256=digest
+    )
+    assert ledger.totals() == teacher.UsageTotals(1, 14, 3)
+    assert [json.loads(line)["kind"] for line in ledger.path.read_text().splitlines()] == [
+        "reserve", "settle_overrun"
+    ]
+    with pytest.raises(teacher.TeacherBudgetError, match="already settled"):
+        ledger.settle_overrun(
+            "failed-public", input_tokens=14, output_tokens=3, evidence_sha256=digest
+        )
+    with pytest.raises(teacher.TeacherBudgetError, match="duplicate"):
+        ledger.reserve("failed-public", input_tokens=10, max_output_tokens=8)
+
+
+def test_overrun_rejects_missing_evidence_nonoverrun_and_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    ledger.reserve("r", input_tokens=10, max_output_tokens=8)
+    with pytest.raises(teacher.TeacherBudgetError, match="evidence hash"):
+        ledger.settle_overrun("r", input_tokens=11, output_tokens=2, evidence_sha256="bad")
+    with pytest.raises(teacher.TeacherBudgetError, match="did not exceed"):
+        ledger.settle_overrun("r", input_tokens=9, output_tokens=2, evidence_sha256="b" * 64)
+    monkeypatch.setattr(teacher, "MAX_INPUT_TOKENS", 12)
+    with pytest.raises(teacher.TeacherBudgetError, match="cap exceeded"):
+        ledger.settle_overrun("r", input_tokens=13, output_tokens=2, evidence_sha256="b" * 64)
+    assert ledger.totals() == teacher.UsageTotals(1, 10, 8)
+    assert [json.loads(line)["kind"] for line in ledger.path.read_text().splitlines()] == [
+        "reserve"
+    ]
+
+
+def test_overrun_replay_rejects_tampered_or_duplicate_events(tmp_path: Path) -> None:
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    ledger.reserve("r", input_tokens=10, max_output_tokens=8)
+    ledger.settle_overrun("r", input_tokens=14, output_tokens=3, evidence_sha256="c" * 64)
+    valid = ledger.path.read_text()
+    event = json.loads(valid.splitlines()[-1])
+    for bad in (
+        {**event, "input_tokens": 9},
+        {**event, "evidence_sha256": "wrong"},
+        {**event, "reason": "other"},
+    ):
+        ledger.path.write_text(valid.splitlines()[0] + "\n" + json.dumps(bad) + "\n")
+        with pytest.raises(teacher.TeacherBudgetError, match="invalid teacher usage ledger"):
+            ledger.totals()
+    ledger.path.write_text(valid + valid.splitlines()[-1] + "\n")
+    with pytest.raises(teacher.TeacherBudgetError, match="invalid teacher usage ledger"):
+        ledger.totals()
+    ledger.path.write_text(valid)
+    assert ledger.totals() == teacher.UsageTotals(1, 14, 3)
+
+
 def test_strict_candidate_parser_rejects_narration_and_bad_shapes() -> None:
     assert teacher.parse_candidate_action('{"action":"keep"}') == {"action": "keep"}
     assert teacher.parse_candidate_action('{"action":"replace_line","text":"λ  "}') == {
@@ -207,6 +267,75 @@ def test_v6_final_action_block_rejects_malformed_multiple_and_unterminated() -> 
         )
 
 
+def test_v7_final_action_block_allows_exact_unique_sentinel_after_prose() -> None:
+    tokenizer = ByteTokenizer()
+    content = "Some prose.<FINAL_ACTION>\nR\tλ  \n</FINAL_ACTION>"
+    parsed = teacher.extract_final_action_block_v7(
+        content, provider_complete=True, tokenizer=tokenizer
+    )
+    assert parsed.wire == "R\tλ  "
+    assert parsed.action.kind == "replace_line"
+    assert parsed.wire_plus_q25_eos_tokens == len(parsed.wire.encode()) + 1
+
+
+def test_v7_final_action_block_rejects_duplicates_incomplete_and_overcap() -> None:
+    tokenizer = ByteTokenizer()
+    bad = (
+        "<FINAL_ACTION>\nN\n</FINAL_ACTION>extra",
+        "<FINAL_ACTION>\nN\n</FINAL_ACTION>\n",
+        "<FINAL_ACTION>\nN\nD\n</FINAL_ACTION>",
+        "<FINAL_ACTION>\nN\r\n</FINAL_ACTION>",
+        "<FINAL_ACTION>\nN\n</FINAL_ACTION><FINAL_ACTION>\nD\n</FINAL_ACTION>",
+        "<FINAL_ACTION>\nN\n</FINAL_ACTION></FINAL_ACTION>",
+        "<FINAL_ACTION>N\n</FINAL_ACTION>",
+        "<FINAL_ACTION>\nR\t" + "a" * 64 + "\n</FINAL_ACTION>",
+    )
+    for content in bad:
+        with pytest.raises(teacher.TeacherCandidateError):
+            teacher.extract_final_action_block_v7(
+                content, provider_complete=True, tokenizer=tokenizer
+            )
+    with pytest.raises(teacher.TeacherCandidateError, match="incomplete"):
+        teacher.extract_final_action_block_v7(
+            "<FINAL_ACTION>\nN\n</FINAL_ACTION>",
+            provider_complete=False,
+            tokenizer=tokenizer,
+        )
+
+
+def test_author_candidate_terminal_block_accepts_one_strict_object() -> None:
+    content = (
+        'Reasoning.<AUTHOR_CANDIDATE>\n{"action":{"kind":"N","text":null}}'
+        "\n</AUTHOR_CANDIDATE>"
+    )
+    extracted = teacher.extract_author_candidate_block(content, provider_complete=True)
+    assert extracted.value == {"action": {"kind": "N", "text": None}}
+    assert extracted.json_text == '{"action":{"kind":"N","text":null}}'
+
+
+def test_author_candidate_terminal_block_rejects_rescue_and_incomplete() -> None:
+    examples = (
+        'answer {"action":1}',
+        '<AUTHOR_CANDIDATE>{"action":1}\n</AUTHOR_CANDIDATE>',
+        '<AUTHOR_CANDIDATE>\n{"action":1}\n</AUTHOR_CANDIDATE> extra',
+        '<AUTHOR_CANDIDATE>\n{"action":1}\n</AUTHOR_CANDIDATE>\n',
+        '<AUTHOR_CANDIDATE>\n{"action":1}\n</AUTHOR_CANDIDATE>' * 2,
+        '<AUTHOR_CANDIDATE>\n{"action":1,"action":2}\n</AUTHOR_CANDIDATE>',
+        '<AUTHOR_CANDIDATE>\n{"action":NaN}\n</AUTHOR_CANDIDATE>',
+        '<AUTHOR_CANDIDATE>\n[1]\n</AUTHOR_CANDIDATE>',
+        '<AUTHOR_CANDIDATE>\n{"action":1}\r\n</AUTHOR_CANDIDATE>',
+        '<AUTHOR_CANDIDATE>\n{"action":1}\n</AUTHOR_CANDIDATE>\n' + "x" * 16_385,
+    )
+    for content in examples:
+        with pytest.raises(teacher.TeacherCandidateError):
+            teacher.extract_author_candidate_block(content, provider_complete=True)
+    with pytest.raises(teacher.TeacherCandidateError, match="incomplete"):
+        teacher.extract_author_candidate_block(
+            '<AUTHOR_CANDIDATE>\n{"action":1}\n</AUTHOR_CANDIDATE>',
+            provider_complete=False,
+        )
+
+
 def test_role_wrapper_uses_exact_model_and_reports_usage(tmp_path: Path) -> None:
     def response(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/session":
@@ -261,3 +390,270 @@ def test_role_wrapper_uses_exact_model_and_reports_usage(tmp_path: Path) -> None
     assert result.input_tokens == 27 and result.output_tokens == 9
     assert result.reasoning_tokens == 4 and result.total_tokens_reported == 40
     assert ledger.totals() == teacher.UsageTotals(1, 27, 13)
+
+
+def test_role_wrapper_reads_v11831_structured_field(tmp_path: Path) -> None:
+    schema = {
+        "type": "object",
+        "properties": {"action": {"type": "string"}},
+        "required": ["action"],
+        "additionalProperties": False,
+    }
+
+    def response(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/session":
+            return httpx.Response(200, json={"id": "session-structured"})
+        body = json.loads(request.content)
+        assert body["format"] == {"type": "json_schema", "schema": schema}
+        return httpx.Response(
+            200,
+            json={
+                "info": {
+                    "id": "message-structured",
+                    "providerID": "opencode-go",
+                    "modelID": "muse-spark-1.3-contributor",
+                    "finish": "stop",
+                    "structured": {"action": "keep"},
+                    "tokens": {
+                        "input": 10,
+                        "output": 5,
+                        "reasoning": 2,
+                        "total": 17,
+                        "cache": {"read": 0, "write": 0},
+                    },
+                    "cost": 0.0,
+                },
+                "parts": [{"type": "text", "text": "unstructured narration"}],
+            },
+        )
+
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    client = teacher.OpenCodeTeacherClient(ledger)
+    client._client = httpx.Client(
+        base_url="http://127.0.0.1:1", transport=httpx.MockTransport(response)
+    )
+    try:
+        result = client.run_role(
+            request_id="structured-1",
+            prompt="synthetic fixture",
+            purpose="calibration",
+            source_class="synthetic",
+            authorization_basis=teacher.AUTHORIZATION_BASIS,
+            output_schema=schema,
+        )
+    finally:
+        client.__exit__(None, None, None)
+    assert result.content == '{"action":"keep"}'
+    assert ledger.totals() == teacher.UsageTotals(1, 10, 7)
+
+
+def test_role_wrapper_does_not_rescue_missing_structured_with_text(tmp_path: Path) -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/session":
+            return httpx.Response(200, json={"id": "session-missing"})
+        return httpx.Response(
+            200,
+            json={
+                "info": {
+                    "id": "message-missing",
+                    "providerID": "opencode-go",
+                    "modelID": "muse-spark-1.3-contributor",
+                    "finish": "stop",
+                    "structured_output": {"action": "keep"},
+                    "tokens": {
+                        "input": 10,
+                        "output": 5,
+                        "reasoning": 2,
+                        "total": 17,
+                        "cache": {"read": 0, "write": 0},
+                    },
+                    "cost": 0.0,
+                },
+                "parts": [{"type": "text", "text": '{"action":"keep"}'}],
+            },
+        )
+
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    client = teacher.OpenCodeTeacherClient(ledger)
+    client._client = httpx.Client(
+        base_url="http://127.0.0.1:1", transport=httpx.MockTransport(response)
+    )
+    try:
+        with pytest.raises(teacher.TeacherTransportError):
+            client.run_role(
+                request_id="structured-missing",
+                prompt="synthetic fixture",
+                purpose="calibration",
+                source_class="synthetic",
+                authorization_basis=teacher.AUTHORIZATION_BASIS,
+                output_schema={"type": "object"},
+            )
+    finally:
+        client.__exit__(None, None, None)
+    assert ledger.totals() == teacher.UsageTotals(1, 100_000, 4_096)
+
+
+def test_structured_mode_is_explicit_and_allows_only_output_tool(tmp_path: Path) -> None:
+    default = json.loads(teacher._isolated_env()["OPENCODE_CONFIG_CONTENT"])
+    assert default["permission"] == "deny"
+    assert default["tools"] == {"*": False}
+    isolated = teacher._isolated_env(
+        structured_output_only=True, config_home=tmp_path / "config"
+    )
+    config = json.loads(isolated["OPENCODE_CONFIG_CONTENT"])
+    assert list(config["permission"].items()) == [
+        ("*", "deny"),
+        ("StructuredOutput", "allow"),
+    ]
+    assert "tools" not in config
+    assert config["plugin"] == [] and config["mcp"] == {}
+    assert isolated["OPENCODE_DISABLE_PROJECT_CONFIG"] == "1"
+    assert isolated["XDG_CONFIG_HOME"] == str(tmp_path / "config")
+    with pytest.raises(teacher.TeacherPolicyError, match="isolated config home"):
+        teacher._isolated_env(structured_output_only=True)
+
+
+def test_structured_mode_request_has_no_per_message_tool_override(tmp_path: Path) -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/session":
+            return httpx.Response(200, json={"id": "session-isolated"})
+        body = json.loads(request.content)
+        assert "tools" not in body
+        assert body["format"]["type"] == "json_schema"
+        return httpx.Response(
+            200,
+            json={
+                "info": {
+                    "id": "message-isolated",
+                    "providerID": "opencode-go",
+                    "modelID": "muse-spark-1.3-contributor",
+                    "finish": "stop",
+                    "structured": {"action": "keep"},
+                    "tokens": {
+                        "input": 10,
+                        "output": 5,
+                        "reasoning": 2,
+                        "total": 17,
+                        "cache": {"read": 0, "write": 0},
+                    },
+                    "cost": 0.0,
+                },
+                "parts": [],
+            },
+        )
+
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    client = teacher.OpenCodeTeacherClient(ledger, structured_output_only=True)
+    client._client = httpx.Client(
+        base_url="http://127.0.0.1:1", transport=httpx.MockTransport(response)
+    )
+    try:
+        with pytest.raises(teacher.TeacherPolicyError, match="requires a JSON schema"):
+            client.run_role(
+                request_id="no-schema",
+                prompt="synthetic fixture",
+                purpose="calibration",
+                source_class="synthetic",
+                authorization_basis=teacher.AUTHORIZATION_BASIS,
+            )
+        result = client.run_role(
+            request_id="with-schema",
+            prompt="synthetic fixture",
+            purpose="calibration",
+            source_class="synthetic",
+            authorization_basis=teacher.AUTHORIZATION_BASIS,
+            output_schema={"type": "object"},
+        )
+    finally:
+        client.__exit__(None, None, None)
+    assert result.content == '{"action":"keep"}'
+    assert ledger.totals() == teacher.UsageTotals(1, 10, 7)
+
+
+def test_api_error_without_optional_total_is_fail_closed(tmp_path: Path) -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/session":
+            return httpx.Response(200, json={"id": "session-error"})
+        return httpx.Response(
+            200,
+            json={
+                "info": {
+                    "id": "message-error",
+                    "providerID": "opencode-go",
+                    "modelID": "muse-spark-1.3-contributor",
+                    "error": {"name": "APIError", "data": {"statusCode": 400}},
+                    "tokens": {
+                        "input": 0,
+                        "output": 0,
+                        "reasoning": 0,
+                        "cache": {"read": 0, "write": 0},
+                    },
+                    "cost": 0,
+                },
+                "parts": [],
+            },
+        )
+
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    client = teacher.OpenCodeTeacherClient(ledger, structured_output_only=True)
+    client._client = httpx.Client(
+        base_url="http://127.0.0.1:1", transport=httpx.MockTransport(response)
+    )
+    try:
+        with pytest.raises(teacher.TeacherTransportError, match="failed or usage was invalid"):
+            client.run_role(
+                request_id="api-error",
+                prompt="synthetic fixture",
+                purpose="calibration",
+                source_class="synthetic",
+                authorization_basis=teacher.AUTHORIZATION_BASIS,
+                output_schema={"type": "object"},
+            )
+    finally:
+        client.__exit__(None, None, None)
+    assert ledger.totals() == teacher.UsageTotals(1, 100_000, 4_096)
+
+
+def test_success_without_optional_total_uses_reported_components(tmp_path: Path) -> None:
+    def response(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/session":
+            return httpx.Response(200, json={"id": "session-success"})
+        return httpx.Response(
+            200,
+            json={
+                "info": {
+                    "id": "message-success",
+                    "providerID": "opencode-go",
+                    "modelID": "muse-spark-1.3-contributor",
+                    "finish": "stop",
+                    "structured": {"action": "keep"},
+                    "tokens": {
+                        "input": 10,
+                        "output": 5,
+                        "reasoning": 2,
+                        "cache": {"read": 0, "write": 0},
+                    },
+                    "cost": 0.0,
+                },
+                "parts": [],
+            },
+        )
+
+    ledger = teacher.TeacherUsageLedger(tmp_path / "usage.jsonl")
+    client = teacher.OpenCodeTeacherClient(ledger, structured_output_only=True)
+    client._client = httpx.Client(
+        base_url="http://127.0.0.1:1", transport=httpx.MockTransport(response)
+    )
+    try:
+        result = client.run_role(
+            request_id="no-total",
+            prompt="synthetic fixture",
+            purpose="calibration",
+            source_class="synthetic",
+            authorization_basis=teacher.AUTHORIZATION_BASIS,
+            output_schema={"type": "object"},
+        )
+    finally:
+        client.__exit__(None, None, None)
+    assert result.total_tokens_reported is None
+    assert ledger.totals() == teacher.UsageTotals(1, 10, 7)

@@ -30,6 +30,10 @@ MAX_INPUT_TOKENS = 60_000_000
 MAX_OUTPUT_TOKENS = 20_000_000
 FINAL_ACTION_OPEN = "<FINAL_ACTION>"
 FINAL_ACTION_CLOSE = "</FINAL_ACTION>"
+AUTHOR_CANDIDATE_OPEN = "<AUTHOR_CANDIDATE>"
+AUTHOR_CANDIDATE_CLOSE = "</AUTHOR_CANDIDATE>"
+MAX_AUTHOR_MESSAGE_BYTES = 16_384
+MAX_AUTHOR_JSON_BYTES = 8_192
 
 
 class TeacherPolicyError(ValueError):
@@ -89,6 +93,59 @@ class ExtractedFinalAction:
     wire_plus_q25_eos_tokens: int
 
 
+@dataclass(frozen=True)
+class ExtractedAuthorCandidate:
+    json_text: str
+    value: dict[str, object]
+
+
+def extract_author_candidate_block(
+    content: str, *, provider_complete: bool
+) -> ExtractedAuthorCandidate:
+    """Read one complete terminal tagged author JSON object with no repair."""
+    if not provider_complete:
+        raise TeacherCandidateError("provider message incomplete")
+    try:
+        content_bytes = content.encode("utf-8")
+    except UnicodeError as exc:
+        raise TeacherCandidateError("author message is not UTF-8") from exc
+    if len(content_bytes) > MAX_AUTHOR_MESSAGE_BYTES:
+        raise TeacherCandidateError("author message exceeds byte cap")
+    if "\r" in content:
+        raise TeacherCandidateError("CR is outside author block protocol")
+    if content.count(AUTHOR_CANDIDATE_OPEN) != 1 or content.count(AUTHOR_CANDIDATE_CLOSE) != 1:
+        raise TeacherCandidateError("author block count invalid")
+    start = content.index(AUTHOR_CANDIDATE_OPEN)
+    opening = AUTHOR_CANDIDATE_OPEN + "\n"
+    closing = "\n" + AUTHOR_CANDIDATE_CLOSE
+    if not content.startswith(opening, start) or not content.endswith(closing):
+        raise TeacherCandidateError("author block incomplete or has trailing text")
+    json_text = content[start + len(opening) : -len(closing)]
+    if not json_text or len(json_text.encode("utf-8")) > MAX_AUTHOR_JSON_BYTES:
+        raise TeacherCandidateError("author JSON exceeds byte cap or is empty")
+
+    def unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise TeacherCandidateError("author JSON contains duplicate keys")
+            result[key] = value
+        return result
+
+    def reject_constant(_: str) -> None:
+        raise TeacherCandidateError("author JSON contains nonfinite value")
+
+    try:
+        value = json.loads(
+            json_text, object_pairs_hook=unique_pairs, parse_constant=reject_constant
+        )
+    except (json.JSONDecodeError, UnicodeError) as exc:
+        raise TeacherCandidateError("author block is not strict JSON") from exc
+    if not isinstance(value, dict):
+        raise TeacherCandidateError("author JSON must be one object")
+    return ExtractedAuthorCandidate(json_text=json_text, value=value)
+
+
 def extract_final_action_block(
     content: str,
     *,
@@ -116,6 +173,40 @@ def extract_final_action_block(
         raise TeacherCandidateError("final action block incomplete or has trailing text")
     wire = content[start + len(opening) : -len(closing)]
     if not wire or "\n" in wire or "\r" in wire:
+        raise TeacherCandidateError("final action must be one LF-free wire line")
+    encode = getattr(tokenizer, "encode", None)
+    if not callable(encode):
+        raise TeacherCandidateError("q25 tokenizer unavailable")
+    token_ids = encode(wire, add_special_tokens=False)
+    if not isinstance(token_ids, list):
+        raise TeacherCandidateError("q25 token count unavailable")
+    count = len(token_ids) + 1
+    parsed = decode_action(wire, terminated=True, generated_tokens=count, max_tokens=64)
+    if parsed.status != "ok" or parsed.action is None:
+        raise TeacherCandidateError(f"final action wire {parsed.status}")
+    return ExtractedFinalAction(wire, parsed.action, count)
+
+
+def extract_final_action_block_v7(
+    content: str,
+    *,
+    provider_complete: bool,
+    tokenizer: object,
+) -> ExtractedFinalAction:
+    """Read the frozen v7 terminal block; prior prose need not end in LF."""
+    if not provider_complete:
+        raise TeacherCandidateError("provider message incomplete")
+    if "\r" in content:
+        raise TeacherCandidateError("CR is outside the final action block protocol")
+    if content.count(FINAL_ACTION_OPEN) != 1 or content.count(FINAL_ACTION_CLOSE) != 1:
+        raise TeacherCandidateError("final action block count invalid")
+    start = content.index(FINAL_ACTION_OPEN)
+    opening = FINAL_ACTION_OPEN + "\n"
+    closing = "\n" + FINAL_ACTION_CLOSE
+    if not content.startswith(opening, start) or not content.endswith(closing):
+        raise TeacherCandidateError("final action block incomplete or has trailing text")
+    wire = content[start + len(opening) : -len(closing)]
+    if not wire or "\n" in wire:
         raise TeacherCandidateError("final action must be one LF-free wire line")
     encode = getattr(tokenizer, "encode", None)
     if not callable(encode):
@@ -202,8 +293,28 @@ class TeacherUsageLedger:
                     and request_id in requests
                     and "input" not in requests[request_id]
                 ):
+                    if (
+                        input_tokens > requests[request_id]["reserved_input"]
+                        or output_tokens > requests[request_id]["reserved_output"]
+                    ):
+                        raise ValueError("settlement exceeds reservation")
                     requests[request_id]["input"] = input_tokens
                     requests[request_id]["output"] = output_tokens
+                elif (
+                    kind == "settle_overrun"
+                    and request_id in requests
+                    and "input" not in requests[request_id]
+                    and (
+                        input_tokens > requests[request_id]["reserved_input"]
+                        or output_tokens > requests[request_id]["reserved_output"]
+                    )
+                    and event.get("reason") == "persisted_provider_usage_exceeded_reservation"
+                    and isinstance(event.get("evidence_sha256"), str)
+                    and re.fullmatch(r"[a-f0-9]{64}", event["evidence_sha256"]) is not None
+                ):
+                    requests[request_id]["input"] = input_tokens
+                    requests[request_id]["output"] = output_tokens
+                    requests[request_id]["overrun"] = 1
                 elif (
                     kind == "correct"
                     and request_id in requests
@@ -312,6 +423,52 @@ class TeacherUsageLedger:
             handle.flush()
             os.fsync(handle.fileno())
 
+    def settle_overrun(
+        self,
+        request_id: str,
+        *,
+        input_tokens: int,
+        output_tokens: int,
+        evidence_sha256: str,
+    ) -> None:
+        """Account for a completed, persisted provider response that exceeded its reservation.
+
+        This is an audit correction for a single failed request, never permission
+        to retry it or to turn its response into a training candidate.
+        """
+        self._positive(input_tokens, "input tokens")
+        self._positive(output_tokens, "output tokens")
+        if re.fullmatch(r"[a-f0-9]{64}", evidence_sha256) is None:
+            raise TeacherBudgetError("invalid overrun evidence hash")
+        with self.path.open("a+", encoding="utf-8") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            requests = self._read(handle)
+            row = requests.get(request_id)
+            if row is None or "input" in row:
+                raise TeacherBudgetError("missing or already settled reservation")
+            if input_tokens <= row["reserved_input"] and output_tokens <= row["reserved_output"]:
+                raise TeacherBudgetError("usage did not exceed reservation")
+            row["input"] = input_tokens
+            row["output"] = output_tokens
+            row["overrun"] = 1
+            self._within_budget(self._totals(requests))
+            handle.seek(0, 2)
+            handle.write(
+                json.dumps(
+                    {
+                        "kind": "settle_overrun",
+                        "request_id": request_id,
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "evidence_sha256": evidence_sha256,
+                        "reason": "persisted_provider_usage_exceeded_reservation",
+                    }
+                )
+                + "\n"
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+
     def correct_output_accounting(
         self,
         request_id: str,
@@ -364,25 +521,39 @@ class TeacherResponse:
     input_tokens: int
     output_tokens: int
     reasoning_tokens: int
-    total_tokens_reported: int
+    total_tokens_reported: int | None
     cached_read_tokens: int
     cached_write_tokens: int
     finish_reason: str | None
     cost_usd_reported: float | None
 
 
-def _isolated_env() -> dict[str, str]:
+def _isolated_env(
+    *, structured_output_only: bool = False, config_home: Path | None = None
+) -> dict[str, str]:
     """Keep only launch essentials and the local OpenCode credential store path."""
     keys = ("PATH", "HOME", "USER", "SHELL", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")
     env = {key: os.environ[key] for key in keys if key in os.environ}
-    env["OPENCODE_CONFIG_CONTENT"] = json.dumps(
-        {
+    config: dict[str, object] = {
+        "model": MODEL_ID,
+        "small_model": MODEL_ID,
+        "permission": "deny",
+        "tools": {"*": False},
+    }
+    if structured_output_only:
+        if config_home is None:
+            raise TeacherPolicyError("structured output mode requires isolated config home")
+        config_home.mkdir(parents=True, exist_ok=True)
+        env["XDG_CONFIG_HOME"] = str(config_home)
+        env["OPENCODE_DISABLE_PROJECT_CONFIG"] = "1"
+        config = {
             "model": MODEL_ID,
             "small_model": MODEL_ID,
-            "permission": "deny",
-            "tools": {"*": False},
+            "permission": {"*": "deny", "StructuredOutput": "allow"},
+            "plugin": [],
+            "mcp": {},
         }
-    )
+    env["OPENCODE_CONFIG_CONTENT"] = json.dumps(config)
     return env
 
 
@@ -394,9 +565,16 @@ class OpenCodeTeacherClient:
     A failed response leaves the full ledger reservation in place.
     """
 
-    def __init__(self, ledger: TeacherUsageLedger, *, startup_seconds: float = 20.0):
+    def __init__(
+        self,
+        ledger: TeacherUsageLedger,
+        *,
+        startup_seconds: float = 20.0,
+        structured_output_only: bool = False,
+    ):
         self.ledger = ledger
         self.startup_seconds = startup_seconds
+        self.structured_output_only = structured_output_only
         self._temporary: tempfile.TemporaryDirectory[str] | None = None
         self._process: subprocess.Popen[bytes] | None = None
         self._client: httpx.Client | None = None
@@ -412,7 +590,10 @@ class OpenCodeTeacherClient:
             self._process = subprocess.Popen(
                 ["opencode", "serve", "--pure", "--hostname", "127.0.0.1", "--port", str(port)],
                 cwd=self._temporary.name,
-                env=_isolated_env(),
+                env=_isolated_env(
+                    structured_output_only=self.structured_output_only,
+                    config_home=Path(self._temporary.name) / "config",
+                ),
                 stdin=subprocess.DEVNULL,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
@@ -491,6 +672,8 @@ class OpenCodeTeacherClient:
         )
         if system_instruction is not None and _SECRET.search(system_instruction):
             raise TeacherPolicyError("possible credential in system instruction")
+        if self.structured_output_only and output_schema is None:
+            raise TeacherPolicyError("structured output mode requires a JSON schema")
         if self._client is None:
             raise TeacherTransportError("OpenCode server is not running")
         self.ledger.reserve(
@@ -509,9 +692,10 @@ class OpenCodeTeacherClient:
                 raise ValueError("session ID")
             message_body: dict[str, object] = {
                 "model": {"providerID": "opencode-go", "modelID": "muse-spark-1.3-contributor"},
-                "tools": {},
                 "parts": [{"type": "text", "text": prompt}],
             }
+            if not self.structured_output_only:
+                message_body["tools"] = {}
             if system_instruction is not None:
                 message_body["system"] = system_instruction
             if output_schema is not None:
@@ -530,17 +714,20 @@ class OpenCodeTeacherClient:
             model_id = f"{info['providerID']}/{info['modelID']}"
             if model_id != MODEL_ID:
                 raise ValueError("unexpected response model")
+            if info.get("error") is not None:
+                raise ValueError("OpenCode assistant reported an error")
             tokens = info["tokens"]
             if not isinstance(tokens, dict):
                 raise ValueError("usage envelope")
             input_tokens = tokens["input"]
             output_tokens = tokens["output"]
             reasoning_tokens = tokens["reasoning"]
-            total_tokens = tokens["total"]
+            total_tokens = tokens.get("total")
             self.ledger._positive(input_tokens, "input tokens")
             self.ledger._positive(output_tokens, "output tokens")
             self.ledger._positive(reasoning_tokens, "reasoning tokens")
-            self.ledger._positive(total_tokens, "total tokens")
+            if total_tokens is not None:
+                self.ledger._positive(total_tokens, "total tokens")
             cache = tokens.get("cache", {})
             if not isinstance(cache, dict):
                 raise ValueError("cache usage envelope")
@@ -555,10 +742,10 @@ class OpenCodeTeacherClient:
                     if not isinstance(value, str):
                         raise ValueError("invalid final text")
                     text_parts.append(value)
-            structured = info.get("structured_output")
-            if structured is not None and not isinstance(structured, dict):
-                raise ValueError("invalid structured output")
-            if structured is not None:
+            structured = info.get("structured")
+            if output_schema is not None:
+                if not isinstance(structured, dict):
+                    raise ValueError("missing structured tool output")
                 content = json.dumps(structured, ensure_ascii=False, separators=(",", ":"))
             elif text_parts:
                 content = "".join(text_parts)

@@ -1,0 +1,82 @@
+[
+  {
+    "authoring_metadata": {
+      "authoring_focus": "First update primary to trim spaces, then construct the corresponding secondary edit.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_aliases": [
+        "synthetic/indexed/python"
+      ],
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/indexed/python",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "673dcfd58f2ac7fe86f04fa50be608015d8dd5422c3384c1c90ce9bde1f37a6e"
+    },
+    "id": "author-indexed-smoke/python",
+    "student_state_seed": {
+      "file_id": "file_python.txt",
+      "filetype": "python",
+      "source": "# Both status functions trim surrounding spaces.\ndef primary(value):\n    return value\n\ndef secondary(value):\n    return value\n"
+    }
+  },
+  {
+    "authoring_metadata": {
+      "authoring_focus": "First update primary to round down with Math.floor, then construct the corresponding secondary edit.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_aliases": [
+        "synthetic/indexed/typescript"
+      ],
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/indexed/typescript",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "6a93deaa051e5267559076d358bd3906d780f5456ef48a12c63762288adaf3d6"
+    },
+    "id": "author-indexed-smoke/typescript",
+    "student_state_seed": {
+      "file_id": "file_typescript.txt",
+      "filetype": "typescript",
+      "source": "// Both score functions round down.\nexport function primary(value: number): number {\n  return Math.trunc(value);\n}\nexport function secondary(value: number): number {\n  return Math.trunc(value);\n}\n"
+    }
+  },
+  {
+    "authoring_metadata": {
+      "authoring_focus": "First update width to clamp at zero, then construct the corresponding height edit.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_aliases": [
+        "synthetic/indexed/rust"
+      ],
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/indexed/rust",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "1b025d76fa7c3221faba380aa7d56ac2f33717e0e9ae18560e1749afd6d78d48"
+    },
+    "id": "author-indexed-smoke/rust",
+    "student_state_seed": {
+      "file_id": "file_rust.txt",
+      "filetype": "rust",
+      "source": "// Both dimensions must be nonnegative.\nfn width(value: i32) -> i32 {\n    value\n}\nfn height(value: i32) -> i32 {\n    value\n}\n"
+    }
+  },
+  {
+    "authoring_metadata": {
+      "authoring_focus": "First update primary to use strings.ToLower, then construct the corresponding secondary edit.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_aliases": [
+        "synthetic/indexed/go"
+      ],
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/indexed/go",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "8a931376210c4a9dcf1b39f0d6b3429aab41f1ffc168ec3d0cd590375dc5ea1f"
+    },
+    "id": "author-indexed-smoke/go",
+    "student_state_seed": {
+      "file_id": "file_go.txt",
+      "filetype": "go",
+      "source": "package labels\nimport \"strings\"\n// Both names must be lower case.\nfunc primary(value string) string {\n    return value\n}\nfunc secondary(value string) string {\n    return value\n}\n"
+    }
+  }
+]

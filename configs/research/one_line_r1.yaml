@@ -1,5 +1,5 @@
 campaign: one_line_r1
-plan_revision: 6
+plan_revision: 11
 schema: single-line-edit-v1
 suite_revision: 3
 source_branch_commit: dda0218f0e92e99668026d1d44928506af2bc24f
@@ -46,10 +46,20 @@ teacher:
   route: documented_open_code_go_responses_api
   starting_concurrency: 2
   maximum_concurrency: 4
-  protocol_path: configs/research/one_line_teacher_protocol_v2.json
-  protocol_sha256: 9ae8db68e6f03aa0a88b14099e613cacb9a5ece04c4307a9dd3726b9363b80dc
+  protocol_path: configs/research/one_line_teacher_protocol_v3.json
+  protocol_sha256: 4f2b6245fd941c05e4e09d63683632611e5f6605b1b92fe7b7fb6ec222ea98a7
   calibration_fixture_sha256: a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e
   calibration_manifest_sha256: 183f151eb8e7bd3a1d214856187a5d75697f376e7516d31880b81c57e0435135
+  fresh32_fixture_sha256: 7ba1b86df983fe30009a10746ba343e38963b034e5300dc77dc4aaa2df634177
+  fresh32_manifest_sha256: 66f61346ba32b618e7814b024e2b63a3a46deaab14e13c957fe6841ac8113689
+  structured_smoke_spec_path: configs/research/one_line_structured_smoke_v1.json
+  structured_smoke_spec_sha256: 3ed3ee4906b7ff4eeda82d6f07a20ac05f3add7087841c50b7051b872b3aa4ef
+  author_text_protocol_path: configs/research/one_line_author_protocol_v1.json
+  author_text_protocol_sha256: 1862934521d0530d3b887a7121f27e057d27f97be92f4365db9cf62f62787c72
+  author_indexed_protocol_path: configs/research/one_line_author_protocol_v2.json
+  author_indexed_protocol_sha256: 0ef8ad1633e899bba9982090ad396c450fa0da59c168541181c1d89aa867412e
+  author_continuation_path: configs/research/one_line_author_continuation_v1.json
+  author_continuation_sha256: 4de9a435032e7385a2ad8156d0e10d6f94df338292a577c5b85b2f19cd819e57
   authoring_source_sha256: f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933
   maximum_completed_calls: 25000
   maximum_uncached_input_tokens: 60000000

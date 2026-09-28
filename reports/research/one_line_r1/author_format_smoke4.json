@@ -1,0 +1,70 @@
+[
+  {
+    "authoring_metadata": {
+      "authoring_focus": "Change the primary label separator, then make secondary obey the visible shared rule.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/python",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "8a374bd8baba225a18fc5a3968607f348b7b01ea56580c0954b91c4964ff4d53"
+    },
+    "id": "author-format-smoke/python",
+    "student_state_seed": {
+      "file_id": "file_python.txt",
+      "filetype": "python",
+      "source": "# Both label functions use the same separator.\ndef primary(value):\n    return \"a-\" + value\n\ndef secondary(value):\n    return \"a-\" + value\n"
+    }
+  },
+  {
+    "authoring_metadata": {
+      "authoring_focus": "Change the primary label separator, then make secondary obey the visible shared rule.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/typescript",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "c48185aec26dd351576703ed3156ceb7fbda2efc286f2a1be0eb339bcce346a0"
+    },
+    "id": "author-format-smoke/typescript",
+    "student_state_seed": {
+      "file_id": "file_typescript.txt",
+      "filetype": "typescript",
+      "source": "// Both label functions use the same separator.\nexport function primary(value: string): string {\n  return \"a-\" + value;\n}\nexport function secondary(value: string): string {\n  return \"a-\" + value;\n}\n"
+    }
+  },
+  {
+    "authoring_metadata": {
+      "authoring_focus": "Change the primary label separator, then make secondary obey the visible shared rule.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/rust",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "6dfc2bf0e0d1e43dfbb9796486385a266c7e0cde934831f8239b5ec980bed474"
+    },
+    "id": "author-format-smoke/rust",
+    "student_state_seed": {
+      "file_id": "file_rust.txt",
+      "filetype": "rust",
+      "source": "// Both label functions use the same separator.\nfn primary(value: &str) -> String {\n    format!(\"a-{value}\")\n}\nfn secondary(value: &str) -> String {\n    format!(\"a-{value}\")\n}\n"
+    }
+  },
+  {
+    "authoring_metadata": {
+      "authoring_focus": "Change the primary label separator, then make secondary obey the visible shared rule.",
+      "license_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_license": "MIT",
+      "source_provenance_verified": true,
+      "source_repo": "synthetic/go",
+      "source_revision": "0000000000000000000000000000000000000000",
+      "source_sha256": "0858ca8fb5e8f74350deeae22417a48969f5beee88ab287c6b73fc044538f834"
+    },
+    "id": "author-format-smoke/go",
+    "student_state_seed": {
+      "file_id": "file_go.txt",
+      "filetype": "go",
+      "source": "package labels\n// Both label functions use the same separator.\nfunc primary(value string) string {\n    return \"a-\" + value\n}\nfunc secondary(value string) string {\n    return \"a-\" + value\n}\n"
+    }
+  }
+]

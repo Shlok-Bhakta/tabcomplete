@@ -1,0 +1,56 @@
+{
+  "accepted_training": 0,
+  "action_counts": {
+    "keep": 1,
+    "replace_line": 6
+  },
+  "excluded_overrun_evidence_sha256": "fdc981278e4cc17c743148167721ab3ecf879a049dbfcc4560716611371f9c0b",
+  "excluded_overrun_request_id": "author10-public-fbd464d6ff93ee68d286cb77",
+  "excluded_overrun_source_id": "public-source/b13cc3a6e67cae9e931a9694",
+  "mechanical_replay_verified": 7,
+  "mechanism_counts_unreviewed": {
+    "unreviewed_teacher_author": 7
+  },
+  "plan10_sha256": "938dbdc96ad025c3a8404b2d6bcb2532d33bb2bb2c6194be3622cb87dc8eb94b",
+  "protocol_sha256": "0ef8ad1633e899bba9982090ad396c450fa0da59c168541181c1d89aa867412e",
+  "python311_ast_parse_before_after": 7,
+  "raw_artifact_sha256": "2b0c6ea5af9971f19c1eb73e4808a0895da690d99676328fdbac479def43e167",
+  "sample_rule": "all seven candidate rows, fixed SHA ordering with plan10-human-audit-v1 salt",
+  "sample_source_ids": [
+    "public-source/79d01114c1afab8e43b2915f",
+    "public-source/44bcb0af2c9940e73ae5442d",
+    "public-source/d50d6e8f61eb543f411e17bb",
+    "public-source/0739697cd94563cccc87f9da",
+    "public-source/c27ecab9687064541446ebe1",
+    "public-source/ee11ee2301a87271b901bc57",
+    "public-source/28dca222a3c362ce27829ec1"
+  ],
+  "scope": "partial_first_seven_only_not_full_pilot",
+  "settled_candidate_rows": 7,
+  "source_repo_counts": {
+    "hosseinmoghimi/waiter": 1,
+    "hulecom/read-GRACE-harmonics": 1,
+    "johntiger1/blog-posts": 1,
+    "mahaarbo/step_to_meshes": 1,
+    "tommy-hartmann/vienna-smartmeter": 1,
+    "vyahello/pypi-flask-clone": 1,
+    "wonook/LimeDictionary": 1
+  },
+  "source_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+  "student_input_tokens": {
+    "count": 7,
+    "max": 1016,
+    "median": 743,
+    "min": 491,
+    "sum": 4951
+  },
+  "target_tokens_including_eos": {
+    "count": 7,
+    "max": 35,
+    "median": 13,
+    "min": 2,
+    "sum": 105
+  },
+  "usage_incident_sha256": "c8b06c1a03c83c4ab0db13e2b080212c64b211f62d1c207904f3014c8ae77140",
+  "warning": "This is a partial candidate audit. The usage-overrun attempt is censored. No student labels have been accepted."
+}

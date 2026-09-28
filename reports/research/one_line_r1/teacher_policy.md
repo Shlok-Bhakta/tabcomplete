@@ -1,5 +1,7 @@
 # Hosted teacher boundary and synthetic calibration
 
+**Current boundary, checked 2026-09-28 UTC:** New Muse calls for systematic student-label collection are paused. The current [OpenCode terms](https://opencode.ai/legal/terms-of-service) restrict output use to develop competing AI models; [Meta's Model API terms](https://dev.meta.ai/legal/terms-of-service), updated September 18, 2026, require prior written Meta authorization for training-data collection for competing models. The user's reported Twitter approval has not been inspected or established as Meta authorization. Evaluation-only use of existing records remains separate from training-label acceptance. [Continuation details](continuation.md) record the last settled calls and the plan-11 dry-run state.
+
 Observed 2026-09-26/27: `opencode --version` returned `1.18.31`; the read-only
 model listing included `opencode-go/muse-spark-1.3-contributor`. The user reports
 direct approval from the provider for this small student campaign. That approval

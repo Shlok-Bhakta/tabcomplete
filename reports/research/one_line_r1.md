@@ -1,5 +1,25 @@
 # One-line edit campaign r1
 
+**Continuation update, 2026-09-28 UTC:** The sections below preserve the plan-6 checkpoint and its historical counts. [The continuation record](one_line_r1/continuation.md) documents plans 7–11, the fresh 32-case calibration, structured-output failure, synthetic author smokes, seven settled public-source author candidates, one accounted-for reservation overrun, and the current provider-output-use pause. The latest accepted train/development/test counts are still **0/0/0**. No LR pilot, main SFT, or new export has run.
+
+## Current decision
+
+| Stage | Measured result | Decision |
+| --- | --- | --- |
+| Fresh synthetic solver calibration, plan 7 | 32/32 terminal actions parsed; 13/24 edit-required cases passed the frozen objective, 8/8 keeps were correct; fixed utility 1 | Passed the narrow engineering gate, but this is synthetic calibration, not broad next-edit quality. |
+| Structured author output, plan 8 | One request failed HTTP 400 because the Go Responses route accepted only `tool_choice=auto` while OpenCode sent `required` | No structured candidate; its reservation remains conservative and unretired. |
+| Synthetic author format, plans 9 and 10 | 0/4 exact source replay under the one-based-row plan 9 prompt; 3/4 under the zero-based-row plan 10 prompt | Plan 10 allowed a bounded public-source pilot, without relaxing exact replay. |
+| Public-source author pilot, plan 10 | Seven settled candidate rows; an eighth completed response exceeded its input reservation and was excluded; all accepted-label flags remain false | The 92 untouched seeds are frozen in plan 11 but no calls were sent after the current terms review. |
+| Student adaptation | 0 accepted train/development/test states; 0 GPU-hours and 0 training tokens | The 20,000-state main-run gate has not been met. No model was trained or exported. |
+
+The seven settled author candidates pass mechanical source-history and action replay. A separate blind context review found three with strong visible support, one with partial support for a narrower edit, two ambiguous, and one conflicting with the blind keep decision. One ambiguous proposal also relies on a variable that may be unbound on another path. This small selected sample does not estimate population yield. It demonstrates why replay alone cannot turn these rows into labels. See the [partial audit](one_line_r1/author_pilot_plan10_partial7_audit.json) and [blind notes](one_line_r1/author_pilot_plan10_partial7_blind_notes.md).
+
+New Muse student-label collection is paused because the current [OpenCode terms](https://opencode.ai/legal/terms-of-service) and [Meta Model API terms](https://dev.meta.ai/legal/terms-of-service) restrict output use for competing model development; Meta's terms require its prior written authorization for systematic training-data collection in that case. Whether this small local service falls under that clause remains unresolved. The user's reported Dax approval has not been inspected or established as Meta authorization. The public-dataset [source audit](one_line_r1/data_route_research.md) found no already cleared 20,000-state, four-language alternative. The live editor and its model remain untouched.
+
+The latest authenticated Kaggle observation was 2026-09-28 02:20:13 UTC: 45 of 45 account GPU-hours remaining, no active jobs, renewal 2026-10-03 00:00 UTC. The append-only teacher ledger records 81 completed responses across 82 reserved requests; one structured-output failure has unknown usage and retains its 10,000-input/8,192-output reservation. Completed responses reported 209,470 input and 88,612 generated tokens including reasoning, with $0.038689986 reported cost. Conservative budget accounting including the unsettled reservation is 219,470 input and 96,804 generated tokens. No additional paid model route was used. The [quota ledger](one_line_r1/quota_ledger.json) retains observation sources and status. The plan-11 runner's dry run identifies 92 untouched sources and skips the seven settled plus one excluded source; it has made zero plan-11 calls.
+
+Final repository verification for this continuation: 400 tests passed, one skipped; Ruff passed; mypy found no errors across 84 source files after a type guard fix; the wheel built; and the real campaign `--execute` entry point stopped at the 0/20,000 accepted-data gate before allocating a GPU. The `uv` environment lacks Torch for some older tests, so the full suite used the existing local CPU Torch environment with this worktree's dependencies. The plan-11 and author-protocol hashes remained unchanged through formatting and verification.
+
 Status: **data-gated; no main model trained or exported**. The contract, public-data pilots, independent synthetic calibration, and training worker were prepared and tested. The user authorized Muse through OpenCode Go based on a reported direct provider conversation; that approval has not been independently verified. The running automatic-feedback editor, its model, SQLite collector, and SigNoz services were left in place.
 
 ## Frozen scope and resources

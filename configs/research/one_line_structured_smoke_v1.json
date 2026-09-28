@@ -1,0 +1,23 @@
+{
+  "version": "one-line-structured-smoke-v1",
+  "source_class": "synthetic",
+  "model": "opencode-go/muse-spark-1.3-contributor",
+  "purpose": "calibration",
+  "request_id": "structured8-synthetic-001",
+  "prompt": "This is a synthetic output-format check. Return the single action keep in the requested JSON schema. No code or repository content is supplied.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["keep"]
+      }
+    },
+    "required": ["action"],
+    "additionalProperties": false
+  },
+  "expected": {"action": "keep"},
+  "maximum_calls": 1,
+  "allow_text_fallback": false,
+  "allow_other_model": false
+}

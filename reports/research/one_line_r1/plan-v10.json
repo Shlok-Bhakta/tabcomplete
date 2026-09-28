@@ -10,7 +10,7 @@
     "paid_overage": false,
     "unknown_quota_initial_session_limit_minutes": 120
   },
-  "config_sha256": "52aa2fcd8b115a9654a041bf017f245224de5448269eaab16ea7bc31c38a0b29",
+  "config_sha256": "3ba937afb0eec791fcda43da9781533472c76245183a8ee20238238dfb98ecb5",
   "data_policy": {
     "final_tracks": [
       "new_repositories",
@@ -74,8 +74,8 @@
     }
   },
   "final_test_opened": false,
-  "frozen_at": "2026-09-28T02:20:36.589570+00:00",
-  "plan_revision": 11,
+  "frozen_at": "2026-09-28T01:53:59.032843+00:00",
+  "plan_revision": 10,
   "protocol": {
     "decoding": "greedy_until_real_eos",
     "default_input_tokens": 1024,
@@ -214,7 +214,7 @@
         "status": "unknown"
       }
     ],
-    "observed_at": "2026-09-28T02:20:13.167704+00:00",
+    "observed_at": "2026-09-28T01:53:35.220200+00:00",
     "remaining": 45.0,
     "renewal": "2026-10-03T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -231,8 +231,6 @@
   "source_commit": "dda0218f0e92e99668026d1d44928506af2bc24f",
   "suite_revision": 3,
   "teacher": {
-    "author_continuation_path": "configs/research/one_line_author_continuation_v1.json",
-    "author_continuation_sha256": "4de9a435032e7385a2ad8156d0e10d6f94df338292a577c5b85b2f19cd819e57",
     "author_indexed_protocol_path": "configs/research/one_line_author_protocol_v2.json",
     "author_indexed_protocol_sha256": "0ef8ad1633e899bba9982090ad396c450fa0da59c168541181c1d89aa867412e",
     "author_text_protocol_path": "configs/research/one_line_author_protocol_v1.json",

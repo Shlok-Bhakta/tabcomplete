@@ -1,0 +1,18 @@
+{
+  "accepted_training": 0,
+  "completed_calls": 4,
+  "counts": {
+    "rejected": 4
+  },
+  "format_gate_passed": false,
+  "phase": "smoke",
+  "plan_sha256": "dce75fba6703b907022184b68266f81bb534823581089266a39e74c19d99aae9",
+  "protocol_sha256": "1862934521d0530d3b887a7121f27e057d27f97be92f4365db9cf62f62787c72",
+  "raw_artifact": "artifacts/research/one_line_r1/author_format_smoke_plan9.jsonl",
+  "raw_artifact_sha256": "b5c8eb798c942f80fc38bf67afc958b70cba79e1dbf9f4251abef1173b81e816",
+  "reported_cost_usd": 0.0025628000000000005,
+  "reported_generated_tokens": 8225,
+  "reported_input_tokens": 9178,
+  "source_sha256": "83cccc484c839ef7268e4e1aa91d57abd6e371024f08207be7a72f27044ae4e1",
+  "structurally_valid_or_candidate_preflight": 0
+}

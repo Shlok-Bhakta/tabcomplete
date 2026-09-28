@@ -1,0 +1,23 @@
+{
+  "accepted_training": 0,
+  "durable_candidates": 7,
+  "durable_generated_tokens": 21963,
+  "durable_input_tokens": 38752,
+  "durable_raw_artifact": "artifacts/research/one_line_r1/author_pilot_plan10.jsonl",
+  "durable_raw_sha256": "2b0c6ea5af9971f19c1eb73e4808a0895da690d99676328fdbac479def43e167",
+  "durable_reported_cost_usd": 0.008272378,
+  "failed_completed_attempts": 1,
+  "failed_evidence_artifact": "artifacts/research/one_line_r1/author_pilot_plan10_unsettled_failure.json",
+  "failed_evidence_sha256": "fdc981278e4cc17c743148167721ab3ecf879a049dbfcc4560716611371f9c0b",
+  "failed_generated_tokens": 2330,
+  "failed_input_tokens": 14288,
+  "failed_raw_output_sha256": "fbaa4046fff5c72beba3346c873eb3b5fcd0f2aff444804e5c43b54d83d17eb5",
+  "failed_reported_cost_usd": 0.0018948,
+  "failed_request_id": "author10-public-fbd464d6ff93ee68d286cb77",
+  "failed_source_id": "public-source/b13cc3a6e67cae9e931a9694",
+  "failed_status": "settled_overrun_not_candidate",
+  "ledger_overrun_recorded": true,
+  "one_call_per_seed": true,
+  "plan_revision": 10,
+  "plan_sha256": "938dbdc96ad025c3a8404b2d6bcb2532d33bb2bb2c6194be3622cb87dc8eb94b"
+}

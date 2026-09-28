@@ -1,0 +1,54 @@
+{
+  "author": {
+    "candidate_source": "artifacts/research/one_line_r1/public_source_authoring_100.jsonl",
+    "candidate_source_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+    "input": "One pinned public-source seed with its source and an author-only focus. The author sees no hidden evaluation answer.",
+    "output": "Exactly one JSON object with keys prior_edit, target_row, action, intent_evidence, objective. prior_edit has row, old_text, new_text and must replace an existing line of the seed exactly. action has canonical kind keep/replace_line/delete_line/insert_before and text only for line actions. The objective must describe a checkable property grounded in the visible source and prior edit. No full source copy, prose wrapper, code fence, or extra keys."
+  },
+  "blind_solver": {
+    "input": "Only the canonical serialized EditState after the validated prior edit; no author focus, gold action, objective, provenance, split, or future state.",
+    "output": "One raw N/D/R/I wire action, complete and within the q25 64-token action scope."
+  },
+  "calibration": {
+    "fixed_instruction": "After reading the supplied editor state, you may reason briefly outside the final block. End your response with exactly these three lines: <FINAL_ACTION> then one N, D, R<TAB>line, or I<TAB>line action, then </FINAL_ACTION>. Use a real tab after R or I. Do not put Markdown, JSON, additional text, or a blank line inside or after the block.",
+    "fixture": "reports/research/one_line_r1/calibration_fresh32_cases.json",
+    "fixture_sha256": "7ba1b86df983fe30009a10746ba343e38963b034e5300dc77dc4aaa2df634177",
+    "historical_v2_fixture_rescored": false,
+    "input": "Exactly single-line-context-v2 serialize_state_bounded output with the pinned q25 tokenizer and 1024 input-token limit for the fresh32 suite. No gold, objective, or extra task instruction.",
+    "manifest": "reports/research/one_line_r1/calibration_fresh32_manifest.json",
+    "manifest_sha256": "66f61346ba32b618e7814b024e2b63a3a46deaab14e13c957fe6841ac8113689",
+    "output": "One unique <FINAL_ACTION> opening tag anywhere after optional prose, immediately followed by LF, one raw N/D/R/I wire line, LF, and </FINAL_ACTION> at end of message. No CR, duplicate tags, extra wire lines, trailing text, incomplete provider finish, or q25 wire-plus-EOS length above 64. The preceding prose need not end in LF. This is a prospective new protocol; historical v2 results stay unchanged.",
+    "pilot_gate": {
+      "case_count": 32,
+      "maximum_keep_false_edit_fraction": 0.1,
+      "minimum_correct_minus_3x_incorrect": 1,
+      "minimum_edit_required_success_fraction": 0.5,
+      "minimum_valid_fraction": 0.95,
+      "one_call_per_case": true
+    }
+  },
+  "initial_pilot": {
+    "candidates": 100,
+    "maximum_calls": 300,
+    "minimum_independent_objective_pass_rate_to_expand": 0.5,
+    "minimum_reviewed_mechanisms_to_expand": 8,
+    "minimum_reviewed_source_groups_to_expand": 20,
+    "minimum_structural_pass_rate_to_expand": 0.95,
+    "training_acceptance": "Byte-exact prior edit replay and target application, in-scope token length, public license provenance, blind solver result, independent objective, and reviewer outcome must all be recorded. Agreement alone is not objective validity."
+  },
+  "model": "opencode-go/muse-spark-1.3-contributor",
+  "reviewer": {
+    "input": "The public candidate state, proposed action, blind-solver action, and objective specification, with no author session context.",
+    "output": "Strict JSON accept/reject with a concise checkable reason and ambiguity flag. It cannot rewrite a failed objective or change the gold action."
+  },
+  "second_pilot": {
+    "allowed_only_after_initial_gate": true,
+    "candidates": 1000
+  },
+  "session_policy": "One fresh session per author, blind solver, or reviewer request; one persistent loopback server; tools and plugins disabled.",
+  "source_classes": [
+    "public",
+    "synthetic"
+  ],
+  "version": "one-line-teacher-protocol-v3"
+}
