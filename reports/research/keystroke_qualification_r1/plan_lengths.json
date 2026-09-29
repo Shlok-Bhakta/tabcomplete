@@ -1,0 +1,81 @@
+{
+  "audit": {
+    "burst_rule": {
+      "cursor_guard": "first target edit starts at the inferred input cursor",
+      "end": "last File.Edit before the following at-least-250-ms gap or end of file",
+      "input_cursor": "end of the preceding valid edit; never inferred from the target burst",
+      "net_no_change_is_not_a_no_edit_label": true,
+      "no_history_or_synthetic_cursor": true,
+      "one_line_guard": "old and new changed spans contain no newline and remain within one source line",
+      "prior_input_prefix_guard": "source before inferred input cursor is unchanged throughout the target burst",
+      "start": "next File.Edit at least 250 ms after prior valid edit in the same subject-assignment-section buffer",
+      "target_diff": "minimal common-prefix/common-suffix change from pre-burst to post-burst source",
+      "target_utf8_bytes_max": 96
+    },
+    "candidate_unit": "one valid source-changing edit after a reconstructable prior state",
+    "first_pass": "aggregate event and field census without source text",
+    "holdout_group": "subject, then assignment; never split a subject across train and evaluation",
+    "length_bucket_rule": [
+      "0",
+      "1",
+      "2-3",
+      "4-7",
+      "8-15",
+      "16-31",
+      "32-63",
+      "64-96"
+    ],
+    "no_edit_labels_from_idle_periods": false,
+    "no_gpu_or_model_run": true,
+    "ordering": [
+      "SubjectID",
+      "AssignmentID",
+      "ClientTimestamp",
+      "EventID"
+    ],
+    "prior_burst_plan_sha256": "45e9b04da3ce229c3264b1bc519301305b2023c4641314cc09c28d126e2f4dc0",
+    "prior_replay_plan_sha256": "d44585f3d1ee872d6a6ecafa7033537c24ae56847aa510b963418c7d4fa1e4b5",
+    "promotion_requires": [
+      "replayable states",
+      "privacy-reviewed source",
+      "participant-disjoint evaluation",
+      "action coverage",
+      "independent next-edit inferability review"
+    ],
+    "revision_reason": "Revision 2 showed 1.25 million pattern-clean candidates but 99% insertions; this revision predeclares target length and source-size diagnostics before any dataset extraction or model run.",
+    "second_pass": "bounded exact event replay with explicit mismatch and gap counts",
+    "source_location_interpretation": "publisher-described linearized character index; verify empirically"
+  },
+  "branch": "research/keystroke-qualification-r1",
+  "campaign": "keystroke-qualification-r1",
+  "plan_revision": 3,
+  "privacy": {
+    "commit_raw_events": false,
+    "external_training_upload": false,
+    "participant_source_review_required_before_training": true,
+    "print_raw_event_text": false,
+    "publisher_warning": "deidentification may have missed identifying keystrokes",
+    "reidentify_subjects": false
+  },
+  "schema": "tabcomplete-keystroke-qualification-plan-v1",
+  "scope": {
+    "language": "beginner Python",
+    "maximum_new_storage_bytes": 2147483648,
+    "natural_ide_chronology": true,
+    "professional_repository_generalization_claim": false
+  },
+  "source": {
+    "bytes": 455078162,
+    "datacite_version": "5.2",
+    "doi": "10.7910/DVN/6BPCXN",
+    "download_url": "https://dataverse.harvard.edu/api/access/datafile/6157950",
+    "file": "keystrokes.csv",
+    "license": "CC0-1.0",
+    "license_evidence": "https://api.datacite.org/dois/10.7910%2FDVN%2F6BPCXN",
+    "raw_logger_file_used": false,
+    "readme_sha256": "c08acb613e2a871074136c4586c151548efba5bef7707d2215a672bbe54cdf61",
+    "readme_url": "https://dataverse.harvard.edu/api/access/datafile/12130010",
+    "sha256": "b54d8cf56b7719ae0ec9ecf19e5b3788168f087bd4a50238dca1e06f6bfe7955",
+    "survey_file_used": false
+  }
+}

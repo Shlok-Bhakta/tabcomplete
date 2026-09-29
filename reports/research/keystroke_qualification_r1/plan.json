@@ -1,0 +1,50 @@
+{
+  "schema": "tabcomplete-keystroke-qualification-plan-v1",
+  "campaign": "keystroke-qualification-r1",
+  "branch": "research/keystroke-qualification-r1",
+  "source": {
+    "doi": "10.7910/DVN/6BPCXN",
+    "datacite_version": "5.2",
+    "license": "CC0-1.0",
+    "license_evidence": "https://api.datacite.org/dois/10.7910%2FDVN%2F6BPCXN",
+    "download_url": "https://dataverse.harvard.edu/api/access/datafile/6157950",
+    "file": "keystrokes.csv",
+    "bytes": 455078162,
+    "sha256": "b54d8cf56b7719ae0ec9ecf19e5b3788168f087bd4a50238dca1e06f6bfe7955",
+    "readme_url": "https://dataverse.harvard.edu/api/access/datafile/12130010",
+    "readme_sha256": "c08acb613e2a871074136c4586c151548efba5bef7707d2215a672bbe54cdf61",
+    "raw_logger_file_used": false,
+    "survey_file_used": false
+  },
+  "privacy": {
+    "publisher_warning": "deidentification may have missed identifying keystrokes",
+    "print_raw_event_text": false,
+    "commit_raw_events": false,
+    "external_training_upload": false,
+    "reidentify_subjects": false,
+    "participant_source_review_required_before_training": true
+  },
+  "audit": {
+    "first_pass": "aggregate event and field census without source text",
+    "second_pass": "bounded exact event replay with explicit mismatch and gap counts",
+    "ordering": ["SubjectID", "AssignmentID", "ClientTimestamp", "EventID"],
+    "source_location_interpretation": "publisher-described linearized character index; verify empirically",
+    "candidate_unit": "one valid source-changing edit after a reconstructable prior state",
+    "holdout_group": "subject, then assignment; never split a subject across train and evaluation",
+    "no_edit_labels_from_idle_periods": false,
+    "no_gpu_or_model_run": true,
+    "promotion_requires": [
+      "replayable states",
+      "privacy-reviewed source",
+      "participant-disjoint evaluation",
+      "action coverage",
+      "independent next-edit inferability review"
+    ]
+  },
+  "scope": {
+    "language": "beginner Python",
+    "natural_ide_chronology": true,
+    "professional_repository_generalization_claim": false,
+    "maximum_new_storage_bytes": 2147483648
+  }
+}

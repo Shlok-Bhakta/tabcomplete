@@ -1,0 +1,80 @@
+{
+  "counts": {
+    "bounded_one_line_targets": 1252623,
+    "bursts": 1925443,
+    "candidate_state_with_email_or_url_pattern": 558,
+    "events_after_invalid_group": 20,
+    "file_edits": 5039755,
+    "first_edit_at_input_cursor": 1342587,
+    "first_edit_not_at_input_cursor": 523767,
+    "known_input_cursor": 1866354,
+    "multiline_diff": 86114,
+    "net_no_change_bursts": 1093,
+    "nonedit_burst_boundaries": 59011,
+    "one_line_diff": 1252866,
+    "pattern_clean_candidates": 1252065,
+    "pattern_clean_length_at_least_four": 287986,
+    "prior_input_prefix_changed": 2514,
+    "replay_failure": 1,
+    "replayed_edits": 5039734,
+    "response_over_96_utf8_bytes": 243,
+    "rows": 5130297,
+    "serving_region_exact": 1252064,
+    "serving_region_mismatch": 1,
+    "unknown_input_cursor": 59089
+  },
+  "limitations": [
+    "Inferred cursor is the end of the prior edit; unlogged movement may still exist.",
+    "A natural next burst is an observed action, not proof that a model could infer it.",
+    "Email/URL pattern screening does not clear privacy or source rights.",
+    "No idle pause is labeled no-edit."
+  ],
+  "pattern_clean_candidate_actions": {
+    "delete": 6107,
+    "insert": 1244159,
+    "replace": 1799
+  },
+  "pattern_clean_candidate_assignments": {
+    "p4f": 63417,
+    "p4s": 66843,
+    "p5f": 99260,
+    "p5s": 102886,
+    "p6f": 156821,
+    "p6s": 117936,
+    "p7f": 221475,
+    "p7s": 176441,
+    "p8f": 140650,
+    "p8s": 106336
+  },
+  "pattern_clean_candidate_length_buckets": {
+    "0": 6107,
+    "1": 636614,
+    "16-31": 10751,
+    "2-3": 321358,
+    "32-63": 2265,
+    "4-7": 218641,
+    "64-96": 748,
+    "8-15": 55581
+  },
+  "pattern_clean_candidate_source_size_buckets": {
+    "at_most_4096": 1229919,
+    "over_4096": 22146
+  },
+  "pattern_clean_candidate_subjects": 482,
+  "pattern_clean_length_at_least_four_subjects": 476,
+  "plan_sha256": "4b999b16a0edcf43704e38b3904e415d4d22ad0e08616da07591ceb58900e65c",
+  "schema": "tabcomplete-keystroke-burst-audit-v1",
+  "serving_region_candidate_subjects": 482,
+  "serving_region_replacement_length_buckets": {
+    "0": 800,
+    "1": 513219,
+    "16-31": 48684,
+    "2-3": 319673,
+    "32-63": 32741,
+    "4-7": 231950,
+    "64-96": 10377,
+    "8-15": 90001,
+    "over_96": 4619
+  },
+  "source_sha256": "b54d8cf56b7719ae0ec9ecf19e5b3788168f087bd4a50238dca1e06f6bfe7955"
+}

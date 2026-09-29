@@ -1,0 +1,68 @@
+{
+  "assignment_counts": {
+    "p4f": 222944,
+    "p4s": 238252,
+    "p5f": 388160,
+    "p5s": 406456,
+    "p6f": 573296,
+    "p6s": 430717,
+    "p7f": 955812,
+    "p7s": 763444,
+    "p8f": 660807,
+    "p8s": 490409
+  },
+  "edit_type_counts": {
+    "Cut": 1880,
+    "Delete": 1032847,
+    "Drag": 398,
+    "Insert": 3961953,
+    "Paste": 18601,
+    "Redo": 424,
+    "Undo": 21396,
+    "X-Checkpoint": 2226,
+    "other": 30
+  },
+  "event_type_counts": {
+    "File.Edit": 5039755,
+    "Run.Program": 75112,
+    "Submit": 3326,
+    "X-SwitchTask": 12104
+  },
+  "file_edit_count": 5039755,
+  "groups_with_email_or_url_pattern": 12,
+  "limitations": [
+    "A replay match proves event consistency, not next-edit inferability.",
+    "Privacy pattern counts are screening signals, not clearance.",
+    "Individual keystrokes are not ready-made one-line completion targets.",
+    "No no-edit labels are derived from idle periods."
+  ],
+  "pause_counts_between_valid_edits": {
+    "at_least_1000ms": 683089,
+    "at_least_250ms": 1922410
+  },
+  "plan_sha256": "d44585f3d1ee872d6a6ecafa7033537c24ae56847aa510b963418c7d4fa1e4b5",
+  "reconstructable_groups_at_end": 3027,
+  "replay_failure_counts": {
+    "after_unreconstructable_state": 20,
+    "delete_text_mismatch_or_missing_initial_state": 1
+  },
+  "rows_read": 5130297,
+  "sampled_prefix_rows": null,
+  "schema": "tabcomplete-keystroke-qualification-result-v1",
+  "source_sha256": "b54d8cf56b7719ae0ec9ecf19e5b3788168f087bd4a50238dca1e06f6bfe7955",
+  "subject_assignment_section_groups": 3028,
+  "subjects": 487,
+  "valid_edit_type_counts": {
+    "Cut": 1880,
+    "Delete": 1032847,
+    "Drag": 398,
+    "Insert": 3961932,
+    "Paste": 18601,
+    "Redo": 424,
+    "Undo": 21396,
+    "X-Checkpoint": 2226,
+    "other": 30
+  },
+  "valid_one_line_events": 4854183,
+  "valid_replayed_edits": 5039734
+}

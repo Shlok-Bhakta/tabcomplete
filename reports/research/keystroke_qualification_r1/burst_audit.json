@@ -1,0 +1,49 @@
+{
+  "counts": {
+    "bounded_one_line_targets": 1255464,
+    "bursts": 1925437,
+    "candidate_state_with_email_or_url_pattern": 558,
+    "events_after_invalid_group": 20,
+    "file_edits": 5039755,
+    "first_edit_at_input_cursor": 1347422,
+    "first_edit_not_at_input_cursor": 574987,
+    "known_input_cursor": 1922409,
+    "multiline_diff": 87905,
+    "net_no_change_bursts": 1103,
+    "one_line_diff": 1255711,
+    "pattern_clean_candidates": 1254906,
+    "prior_input_prefix_changed": 2703,
+    "replay_failure": 1,
+    "replayed_edits": 5039734,
+    "response_over_96_utf8_bytes": 247,
+    "rows": 5130297,
+    "unknown_input_cursor": 3028
+  },
+  "limitations": [
+    "Inferred cursor is the end of the prior edit; unlogged movement may still exist.",
+    "A natural next burst is an observed action, not proof that a model could infer it.",
+    "Email/URL pattern screening does not clear privacy or source rights.",
+    "No idle pause is labeled no-edit."
+  ],
+  "pattern_clean_candidate_actions": {
+    "delete": 6385,
+    "insert": 1246682,
+    "replace": 1839
+  },
+  "pattern_clean_candidate_assignments": {
+    "p4f": 63530,
+    "p4s": 67025,
+    "p5f": 99374,
+    "p5s": 103117,
+    "p6f": 157253,
+    "p6s": 118390,
+    "p7f": 221777,
+    "p7s": 176808,
+    "p8f": 141014,
+    "p8s": 106618
+  },
+  "pattern_clean_candidate_subjects": 482,
+  "plan_sha256": "45e9b04da3ce229c3264b1bc519301305b2023c4641314cc09c28d126e2f4dc0",
+  "schema": "tabcomplete-keystroke-burst-audit-v1",
+  "source_sha256": "b54d8cf56b7719ae0ec9ecf19e5b3788168f087bd4a50238dca1e06f6bfe7955"
+}

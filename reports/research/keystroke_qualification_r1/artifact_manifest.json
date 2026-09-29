@@ -1,0 +1,74 @@
+{
+  "artifacts": {
+    "burst_audit.json": {
+      "bytes": 1579,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/burst_audit.json",
+      "sha256": "a022293bb754b600f1b7062e9c7397adfba19e56f40bd6a5e3dd39f964509c0e"
+    },
+    "burst_lengths.json": {
+      "bytes": 1987,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/burst_lengths.json",
+      "sha256": "d75bd7d713feec73dc88801ebb030aca9acd3f96f31c1ae7e51e983aeeed2337"
+    },
+    "full_census.json": {
+      "bytes": 1842,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/full_census.json",
+      "sha256": "568b41d03c0100d32d032bc043d622149e6c9b38b654c4dfef2f1c8e6af2ced7"
+    },
+    "plan.json": {
+      "bytes": 2142,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/plan.json",
+      "sha256": "d44585f3d1ee872d6a6ecafa7033537c24ae56847aa510b963418c7d4fa1e4b5"
+    },
+    "plan_bursts.json": {
+      "bytes": 3483,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/plan_bursts.json",
+      "sha256": "45e9b04da3ce229c3264b1bc519301305b2023c4641314cc09c28d126e2f4dc0"
+    },
+    "plan_lengths.json": {
+      "bytes": 3609,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/plan_lengths.json",
+      "sha256": "9e8341b8a49ca5ab00993603173f6c9c492899fdbab5fadd7faaf36bc7d19e7c"
+    },
+    "plan_serving.json": {
+      "bytes": 4390,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/plan_serving.json",
+      "sha256": "4b999b16a0edcf43704e38b3904e415d4d22ad0e08616da07591ceb58900e65c"
+    },
+    "prefix_100k.json": {
+      "bytes": 1642,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/prefix_100k.json",
+      "sha256": "2df516cd5cfbd01ad6f121ded142c3b894d8d6d6d1e659140ae3ddd28b1ea464"
+    },
+    "serving_audit.json": {
+      "bytes": 2364,
+      "committed": true,
+      "location": "reports/research/keystroke_qualification_r1/serving_audit.json",
+      "sha256": "bf66964ac3fe5c4290a655524bd942ffd0cb3ccf81faf1025c434af7be7567dd"
+    },
+    "source_csv": {
+      "bytes": 455078162,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-keystroke-qualification-r1/raw/keystrokes.csv",
+      "sha256": "b54d8cf56b7719ae0ec9ecf19e5b3788168f087bd4a50238dca1e06f6bfe7955"
+    },
+    "source_readme": {
+      "bytes": 3474,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-keystroke-qualification-r1/raw/readme.txt",
+      "sha256": "c08acb613e2a871074136c4586c151548efba5bef7707d2215a672bbe54cdf61"
+    }
+  },
+  "branch": "research/keystroke-qualification-r1",
+  "model_training_performed": false,
+  "raw_text_committed": false,
+  "schema": "tabcomplete-keystroke-qualification-artifacts-v1"
+}
