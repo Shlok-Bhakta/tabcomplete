@@ -675,7 +675,7 @@ def prepare_bundle(
         kernel_dir / "kernel-metadata.json",
         {
             "id": kernel_id,
-            "title": "tabcomplete-one-line-instinct-pilot-r1",
+            "title": kernel_id.split("/", 1)[1],
             "code_file": "run.py",
             "language": "python",
             "kernel_type": "script",

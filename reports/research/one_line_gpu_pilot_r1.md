@@ -43,6 +43,12 @@ slug was 51 characters; Kaggle permits at most 50. Plan revision 4 shortens
 only that private slug and adds a pre-upload validation check. It consumed no
 additional GPU time or training tokens.
 
+Kaggle rejected the first retry kernel push because its metadata title did
+not resolve to the retry kernel ID. The staged private metadata title was
+corrected to the exact kernel slug; the same quota checked submission path
+then started the retry notebook. The scientific worker code and input manifest
+were unchanged. The builder now derives the title from the kernel ID.
+
 The converter accepts a state only when the marked editable region and the
 assistant replacement reconstruct a cursor-aligned, one-line edit byte for
 byte. It also requires a uniquely located earlier same-file edit in the
