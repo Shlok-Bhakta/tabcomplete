@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "frozen_utc_date": "2026-09-28",
+  "prior_plan": "zeta_mapping_plan_v1.json",
+  "reason_for_revision": "V1 checked exact one-line region replay but omitted the model's actual cursor constraint. V2 requires one input cursor marker and measures whether the target line is at that cursor.",
+  "dataset": "zed-industries/zeta",
+  "revision": "0f41422bc56fa0f9a5b3096e7e6f42905497d793",
+  "split": "train",
+  "offset": 0,
+  "rows": 100,
+  "maximum_response_bytes": 4194304,
+  "maximum_recorded_examples": 20,
+  "runner_sha256": "80970db303bb84f1bd4d3f2a1ccb6aa1721cd794a44e24315e8eba51c10caf70",
+  "new_metric": "For exact one-line actions, count a target as directly serveable only when its physical line equals the input cursor line; no cursor repositioning to rescue it",
+  "success_gate_for_current_editor": "At least 20 directly serveable one-line actions in 100 rows; source rights and grouping still unresolved",
+  "accepted_training_labels": 0,
+  "model_calls_or_gpu": false
+}

@@ -1,0 +1,643 @@
+{
+  "accepted_training_labels": 0,
+  "attempted_repositories": 4,
+  "elapsed_seconds": 851.1190070470329,
+  "plan": "reports/research/one_line_r1/active_git_sequence_plan_v1.json",
+  "results": [
+    {
+      "checkout_bytes": 1460809,
+      "counts": {
+        "commit_pairs": 128,
+        "eligible_changed_files": 274,
+        "files_inspected": 274,
+        "files_with_pair": 9,
+        "structural_pairs": 20
+      },
+      "examples": [
+        {
+          "accepted_training_label": false,
+          "child": "dae3788547fa8c7c3c78d28d284d3f669ad8c1d3",
+          "id": "active-git/cadbf34cc87b56cce37bb7bc",
+          "parent": "0384c970e37a59b344e75161eb106ea9996378ba",
+          "path": "pydantic/_internal/_config.py",
+          "prior_row": 180,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "config_dict",
+            "effective_config"
+          ],
+          "target_row": 198
+        },
+        {
+          "accepted_training_label": false,
+          "child": "f543f06749b5c0adba7c9a1d31ff229b3d045d1a",
+          "id": "active-git/e5f877ebe1121ecc594dcb77",
+          "parent": "ec71b0323a84bda8b2c1fb4b88f2f0ff801ebe7b",
+          "path": "pydantic/config.py",
+          "prior_row": 1198,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "http",
+            "https"
+          ],
+          "target_row": 1200
+        },
+        {
+          "accepted_training_label": false,
+          "child": "78a5c4c6e27e18c2bcd18cb56d931d508571ef0d",
+          "id": "active-git/560c53b840d7d5797c3bb1d6",
+          "parent": "6b470f4cfabb3d8ba27dc020c71b3b24720b3155",
+          "path": "pydantic/experimental/pipeline.py",
+          "prior_row": 30,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "type",
+            "TypeForm"
+          ],
+          "target_row": 36
+        },
+        {
+          "accepted_training_label": false,
+          "child": "78a5c4c6e27e18c2bcd18cb56d931d508571ef0d",
+          "id": "active-git/0dcd4c4166f0ddbd08e7b8dd",
+          "parent": "6b470f4cfabb3d8ba27dc020c71b3b24720b3155",
+          "path": "pydantic/experimental/pipeline.py",
+          "prior_row": 36,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "type",
+            "TypeForm"
+          ],
+          "target_row": 39
+        },
+        {
+          "accepted_training_label": false,
+          "child": "c5af602863565eac3e1e4e2ed4aafe9ade8fdd3e",
+          "id": "active-git/199602314afa72e020ee66da",
+          "parent": "af0e0a6a3288a22185528cb214ae43e7910999db",
+          "path": "pydantic/_internal/_validators.py",
+          "prior_row": 449,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "allowed_default_types",
+            "_defaultdict_allowed_default_types"
+          ],
+          "target_row": 457
+        },
+        {
+          "accepted_training_label": false,
+          "child": "d098ddce8c5ab0c53b89094a3a5e3822fa39da02",
+          "id": "active-git/0c4f7767d4a5df836de929b3",
+          "parent": "efec1bb51c7a95813d85f1ef5543b4225013d20e",
+          "path": "pydantic/main.py",
+          "prior_row": 1139,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "None",
+            "_ATTRIBUTE_MISSING"
+          ],
+          "target_row": 1159
+        },
+        {
+          "accepted_training_label": false,
+          "child": "9a8429701a327cb1218517cc43b2c01606938c2f",
+          "id": "active-git/8b104de34e168d5c2a1bce41",
+          "parent": "7d8e596aeab128b54d12d9b0e4799ac8d975544e",
+          "path": "pydantic-core/python/pydantic_core/core_schema.py",
+          "prior_row": 2763,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Hashable",
+            "Any"
+          ],
+          "target_row": 2764
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8affe9bacade6713774fccbff11cb5264c3b1c7b",
+          "id": "active-git/8e953d345d1210143d03574d",
+          "parent": "c67a1397327c6abc1a2e2e921af01aebbbeedf1c",
+          "path": "pydantic-core/tests/test_garbage_collection.py",
+          "prior_row": 31,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "__schema__",
+            "__pydantic_core_schema__"
+          ],
+          "target_row": 34
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8affe9bacade6713774fccbff11cb5264c3b1c7b",
+          "id": "active-git/31dbdbaaa5a1d841eecefc06",
+          "parent": "c67a1397327c6abc1a2e2e921af01aebbbeedf1c",
+          "path": "pydantic-core/tests/test_garbage_collection.py",
+          "prior_row": 60,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "__validator__",
+            "__pydantic_validator__"
+          ],
+          "target_row": 63
+        },
+        {
+          "accepted_training_label": false,
+          "child": "111c942fa87f68d36006095e9881de9049de8556",
+          "id": "active-git/bb234358091a8b551b1ab506",
+          "parent": "b348cf0dce91e1cf1a3e918402e4bb8e4e6203b2",
+          "path": "pydantic/_internal/_model_construction.py",
+          "prior_row": 465,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "NameError",
+            "PydanticUserError"
+          ],
+          "target_row": 470
+        },
+        {
+          "accepted_training_label": false,
+          "child": "111c942fa87f68d36006095e9881de9049de8556",
+          "id": "active-git/f650786399b1c2e5ebe6c0c5",
+          "parent": "b348cf0dce91e1cf1a3e918402e4bb8e4e6203b2",
+          "path": "pydantic/_internal/_model_construction.py",
+          "prior_row": 470,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "NameError",
+            "PydanticUserError"
+          ],
+          "target_row": 478
+        },
+        {
+          "accepted_training_label": false,
+          "child": "53b39c38c0628fc75010d24c198cf9bcfbe3698e",
+          "id": "active-git/a40d4001160272a96ba21dcb",
+          "parent": "98a08d3e4bd2a493bd3a779cd4591e196cdf1334",
+          "path": "docs/plugins/conversion_table.py",
+          "prior_row": 912,
+          "repo": "pydantic/pydantic",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "CallSchema",
+            "NamedTupleSchema"
+          ],
+          "target_row": 926
+        }
+      ],
+      "head": "bb6da4cfbb1f559885ea2fa207ec93853bfeac64",
+      "license_path": "LICENSE",
+      "license_sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3",
+      "repo": "pydantic/pydantic"
+    },
+    {
+      "checkout_bytes": 880896,
+      "counts": {
+        "commit_pairs": 128,
+        "eligible_changed_files": 207,
+        "files_inspected": 207,
+        "files_with_pair": 2,
+        "structural_pairs": 2
+      },
+      "examples": [
+        {
+          "accepted_training_label": false,
+          "child": "cd1974562357dd73101d048f207a694a4e5310ec",
+          "id": "active-git/d3f50da41cadd3c5a24bdde7",
+          "parent": "8654f35118a1165ac30fd398ceaff8849c44d9d5",
+          "path": "packages/runtime-core/src/components/Suspense.ts",
+          "prior_row": 671,
+          "repo": "vuejs/core",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "fallbackVNode",
+            "latestFallback"
+          ],
+          "target_row": 680
+        },
+        {
+          "accepted_training_label": false,
+          "child": "20c9d263d3bfafdfbcc1921f259fd8f711e18659",
+          "id": "active-git/405e9d389446f7513c13f520",
+          "parent": "7da6334f6162927cd41f9f369145722509540990",
+          "path": "packages/runtime-core/src/helpers/renderSlot.ts",
+          "prior_row": 45,
+          "repo": "vuejs/core",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "props",
+            "slotProps"
+          ],
+          "target_row": 51
+        }
+      ],
+      "head": "4ab865a848a1da3d10fb674f857e5fff13094644",
+      "license_path": "LICENSE",
+      "license_sha256": "49190d1f742dd61e47fe816df4963e5186a2a62100d9122f9883a60ea32973ac",
+      "repo": "vuejs/core"
+    },
+    {
+      "checkout_bytes": 2217854,
+      "counts": {
+        "commit_pairs": 128,
+        "eligible_changed_files": 479,
+        "files_inspected": 434,
+        "files_with_pair": 16,
+        "structural_pairs": 35
+      },
+      "examples": [
+        {
+          "accepted_training_label": false,
+          "child": "30df32a13f9cf5f129b913b967ff6f137c5511d6",
+          "id": "active-git/52c9e587866c53b903b8d250",
+          "parent": "e800714ad714f1d996ddd56265b550d879349c0a",
+          "path": "tokio/src/blocking.rs",
+          "prior_row": 4,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "cfg_fs",
+            "cfg_io_blocking"
+          ],
+          "target_row": 60
+        },
+        {
+          "accepted_training_label": false,
+          "child": "0469d47fcc891a7e1e7339c9bcb0fdd27eab47df",
+          "id": "active-git/ceb0eb69af1bc977cd75f2a2",
+          "parent": "ce2399a718b51cb69d5ff39fb6a7d9c850ef100b",
+          "path": "tokio/src/runtime/mod.rs",
+          "prior_row": 462,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Instant",
+            "u64"
+          ],
+          "target_row": 474
+        },
+        {
+          "accepted_training_label": false,
+          "child": "0469d47fcc891a7e1e7339c9bcb0fdd27eab47df",
+          "id": "active-git/a70a5be5ec200a39027da737",
+          "parent": "ce2399a718b51cb69d5ff39fb6a7d9c850ef100b",
+          "path": "tokio/src/runtime/mod.rs",
+          "prior_row": 474,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Instant",
+            "u64"
+          ],
+          "target_row": 496
+        },
+        {
+          "accepted_training_label": false,
+          "child": "0469d47fcc891a7e1e7339c9bcb0fdd27eab47df",
+          "id": "active-git/7edecba1fdfc308439c917ea",
+          "parent": "ce2399a718b51cb69d5ff39fb6a7d9c850ef100b",
+          "path": "tokio/src/runtime/time/entry.rs",
+          "prior_row": 485,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "tick",
+            "deadline"
+          ],
+          "target_row": 530
+        },
+        {
+          "accepted_training_label": false,
+          "child": "0469d47fcc891a7e1e7339c9bcb0fdd27eab47df",
+          "id": "active-git/eba1d3f0a350050c67a026df",
+          "parent": "ce2399a718b51cb69d5ff39fb6a7d9c850ef100b",
+          "path": "tokio/src/runtime/time_alt/timer.rs",
+          "prior_row": 33,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "tick",
+            "deadline"
+          ],
+          "target_row": 41
+        },
+        {
+          "accepted_training_label": false,
+          "child": "0469d47fcc891a7e1e7339c9bcb0fdd27eab47df",
+          "id": "active-git/ad415738d82371cb2bc4880b",
+          "parent": "ce2399a718b51cb69d5ff39fb6a7d9c850ef100b",
+          "path": "tokio/src/time/sleep.rs",
+          "prior_row": 357,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "tick",
+            "deadline"
+          ],
+          "target_row": 416
+        },
+        {
+          "accepted_training_label": false,
+          "child": "4fcaed994cef343d9a60fefab1aaf826259f6c1f",
+          "id": "active-git/ac5f59704997cc93016ae31a",
+          "parent": "0e25691ea096b99c4e06b365c5e16ee1c5863789",
+          "path": "tokio/src/net/tcp/listener.rs",
+          "prior_row": 168,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "new",
+            "new_accepted"
+          ],
+          "target_row": 184
+        },
+        {
+          "accepted_training_label": false,
+          "child": "4fcaed994cef343d9a60fefab1aaf826259f6c1f",
+          "id": "active-git/eca70ade2271bd1b0fce8549",
+          "parent": "0e25691ea096b99c4e06b365c5e16ee1c5863789",
+          "path": "tokio/src/net/unix/listener.rs",
+          "prior_row": 216,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "new",
+            "new_accepted"
+          ],
+          "target_row": 229
+        },
+        {
+          "accepted_training_label": false,
+          "child": "103d29f8084c8a162fab88561b75f039dfcc7117",
+          "id": "active-git/f7d5b372db43db68713fc3b8",
+          "parent": "89f4d133ba376834bba9dce016b4414dc8aaaf43",
+          "path": "tokio/src/sync/semaphore.rs",
+          "prior_row": 443,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "u32",
+            "usize"
+          ],
+          "target_row": 456
+        },
+        {
+          "accepted_training_label": false,
+          "child": "192ef9a1c10f68e4f0303f18bed191303813f1f0",
+          "id": "active-git/5aa6797e2fefbf82d91a0f29",
+          "parent": "6858348ad2e576f1b5380bf3ec5cac1d19bd4608",
+          "path": "tokio/src/runtime/io/driver.rs",
+          "prior_row": 74,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "u8",
+            "u16"
+          ],
+          "target_row": 99
+        },
+        {
+          "accepted_training_label": false,
+          "child": "192ef9a1c10f68e4f0303f18bed191303813f1f0",
+          "id": "active-git/e12eceaec0ac66beb0063833",
+          "parent": "6858348ad2e576f1b5380bf3ec5cac1d19bd4608",
+          "path": "tokio/src/runtime/io/scheduled_io.rs",
+          "prior_row": 291,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "u8",
+            "u16"
+          ],
+          "target_row": 334
+        },
+        {
+          "accepted_training_label": false,
+          "child": "192ef9a1c10f68e4f0303f18bed191303813f1f0",
+          "id": "active-git/c1a6ce753098f60f79b3971f",
+          "parent": "6858348ad2e576f1b5380bf3ec5cac1d19bd4608",
+          "path": "tokio/src/runtime/io/scheduled_io.rs",
+          "prior_row": 334,
+          "repo": "tokio-rs/tokio",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "u8",
+            "u16"
+          ],
+          "target_row": 342
+        }
+      ],
+      "head": "30df32a13f9cf5f129b913b967ff6f137c5511d6",
+      "license_path": "LICENSE",
+      "license_sha256": "253cd04c6714889df2d32f3f64d669179a1c95c76ac43c40882c52eb06bc3552",
+      "repo": "tokio-rs/tokio"
+    },
+    {
+      "checkout_bytes": 406593,
+      "counts": {
+        "commit_pairs": 128,
+        "eligible_changed_files": 156,
+        "files_inspected": 156,
+        "files_with_pair": 2,
+        "structural_pairs": 12
+      },
+      "examples": [
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/c2cd928d5830411a2309f096",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 24,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 54
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/2efce0bb55b1cb10d8a6673d",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 54,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 61
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/a6306aea5caba874e9f54e88",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 61,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 82
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/b2524cf2c32980c83e727e57",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 164,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 171
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/7984469903594a75eee04857",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 171,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 183
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/723d37b1f76bc16bbb228b5b",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 183,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 199
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/d63b70560e94eea0aa8a0343",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 199,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 206
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/191f1a185615206de1fbfc5c",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 206,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 218
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/4e27cf1d51c3d06e9af5cb24",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 218,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 234
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/0abfea78271f0a432dd51005",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 234,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 241
+        },
+        {
+          "accepted_training_label": false,
+          "child": "8e07d37c63e5536eb25f4af4c91eabeee4011fba",
+          "id": "active-git/82ec7c7bd7b3a299ab872039",
+          "parent": "d7776de7d444935ea4385999711bd6331a98fecb",
+          "path": "recovery_test.go",
+          "prior_row": 241,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "Oupps",
+            "Oops"
+          ],
+          "target_row": 253
+        },
+        {
+          "accepted_training_label": false,
+          "child": "93ff771e6dbf10e432864b30f3719ac5c84a4d4a",
+          "id": "active-git/0edb71ff03a2723afaf397d6",
+          "parent": "58135f06cf206a9ff713eb14150ef04a05b031d4",
+          "path": "tree.go",
+          "prior_row": 82,
+          "repo": "gin-gonic/gin",
+          "source_type": "git_within_commit_synthetic_order",
+          "substitution": [
+            "uint16",
+            "safeUint16"
+          ],
+          "target_row": 86
+        }
+      ],
+      "head": "1bd0ecf2d3e08da37efa270bb7be20c1eddb0d68",
+      "license_path": "LICENSE",
+      "license_sha256": "b104efb2c7700691650f27034e8541c5ae0ed9af54d884287f19a7467ca2fe7f",
+      "repo": "gin-gonic/gin"
+    }
+  ],
+  "total_structural_pairs": 69
+}

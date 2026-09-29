@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "purpose": "Fixed blind inferability audit of structural Git candidates; not training or quality evidence",
+  "source_result": "reports/research/one_line_r1/active_git_sequence_results_v1.json",
+  "selection_rule": "Up to three examples per repository, at most one per commit/path/substitution when possible; include an apparent string-literal false positive and the only Go code-identifier example",
+  "ids": [
+    "active-git/cadbf34cc87b56cce37bb7bc",
+    "active-git/e5f877ebe1121ecc594dcb77",
+    "active-git/199602314afa72e020ee66da",
+    "active-git/d3f50da41cadd3c5a24bdde7",
+    "active-git/405e9d389446f7513c13f520",
+    "active-git/52c9e587866c53b903b8d250",
+    "active-git/7edecba1fdfc308439c917ea",
+    "active-git/ac5f59704997cc93016ae31a",
+    "active-git/0edb71ff03a2723afaf397d6"
+  ],
+  "blind_protocol": "Show filetype, 15 lines each side of target, target row, and one synthetic prior one-line edit. Hide child line, substitution summary, and result file. Reviewer may abstain. Ask for exact target line and whether evidence justifies the edit, independently of syntax plausibility.",
+  "source_constraints": "MIT repository licenses are pinned in the source plan; verify historical child license and per-file notices before any training decision.",
+  "acceptance_policy": "This audit does not accept a training label. Real editor ordering, user intent, and group-disjoint objective checks remain absent."
+}

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "frozen_utc_date": "2026-09-28",
+  "purpose": "Map a fixed Zeta train prefix to the one-line action contract; diagnostic only",
+  "dataset": "zed-industries/zeta",
+  "revision": "0f41422bc56fa0f9a5b3096e7e6f42905497d793",
+  "dataset_license": "Apache-2.0 metadata, with original source-file rights unresolved per row",
+  "split": "train",
+  "offset": 0,
+  "rows": 100,
+  "maximum_response_bytes": 4194304,
+  "maximum_recorded_examples": 20,
+  "runner_sha256": "4882e0d2c05a09dffa93594d04470abd28ff400837dd8d650f1633944971ba66",
+  "rule": "Require one marked editable region, same path and byte-exact outside-region content, a single physical-line insert/replace/delete, and exact action replay; no repair or target truncation",
+  "acceptance": "No training label can be accepted without source repository and file-license resolution, history reconstruction, group split, and independent task objective",
+  "success_gate_for_further_work": "At least 40 exact one-line mappings in 100 rows and at least one mapping in each of Python, TypeScript, Rust, Go; even a pass is insufficient to train",
+  "model_calls_or_gpu": false
+}

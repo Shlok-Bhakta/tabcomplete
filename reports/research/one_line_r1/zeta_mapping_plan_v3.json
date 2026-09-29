@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "frozen_utc_date": "2026-09-28",
+  "prior_plan": "zeta_mapping_plan_v2.json",
+  "reason_for_revision": "A same-row target may still change text before the original cursor. The installed prototype can only replace the suffix of the current line starting at its cursor, so V3 checks that the unchanged prefix is preserved.",
+  "dataset": "zed-industries/zeta",
+  "revision": "0f41422bc56fa0f9a5b3096e7e6f42905497d793",
+  "split": "train",
+  "offset": 0,
+  "rows": 100,
+  "maximum_response_bytes": 4194304,
+  "maximum_recorded_examples": 20,
+  "runner_sha256": "71df1e45e2680957861b6275229f5b9053e9e1ba02c94b9d9650130aa8611ecc",
+  "new_metric": "Count one-line replacements whose target is on the original cursor row and whose replacement preserves all text preceding that cursor",
+  "success_gate_for_current_editor": "At least 20 directly applicable suffix replacements in 100 rows; source rights and grouping still unresolved",
+  "accepted_training_labels": 0,
+  "model_calls_or_gpu": false
+}

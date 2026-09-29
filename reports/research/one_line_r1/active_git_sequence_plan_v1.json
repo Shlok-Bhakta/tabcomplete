@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "frozen_utc_date": "2026-09-28",
+  "purpose": "Bounded yield test for same-commit repeated one-line identifier changes across active public projects; not training or accepted labels",
+  "base_commit": "c145c24ccfc2799fdee231987624279a7afa55df",
+  "runner_sha256": "e0826eac2d9421ea13548cfbb87981018a31e445a265fbee92328d7700eece01",
+  "python": "3.11.15",
+  "selection": "Four active MIT repositories selected before seeing recent commit diff outcomes, one per target language",
+  "repositories": [
+    {"alias": "pydantic", "name": "pydantic/pydantic", "language": "python", "suffix": ".py", "head": "bb6da4cfbb1f559885ea2fa207ec93853bfeac64", "license_path": "LICENSE", "license_sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3"},
+    {"alias": "vue_core", "name": "vuejs/core", "language": "typescript", "suffix": ".ts", "head": "4ab865a848a1da3d10fb674f857e5fff13094644", "license_path": "LICENSE", "license_sha256": "49190d1f742dd61e47fe816df4963e5186a2a62100d9122f9883a60ea32973ac"},
+    {"alias": "tokio", "name": "tokio-rs/tokio", "language": "rust", "suffix": ".rs", "head": "30df32a13f9cf5f129b913b967ff6f137c5511d6", "license_path": "LICENSE", "license_sha256": "253cd04c6714889df2d32f3f64d669179a1c95c76ac43c40882c52eb06bc3552"},
+    {"alias": "gin", "name": "gin-gonic/gin", "language": "go", "suffix": ".go", "head": "1bd0ecf2d3e08da37efa270bb7be20c1eddb0d68", "license_path": "LICENSE", "license_sha256": "b104efb2c7700691650f27034e8541c5ae0ed9af54d884287f19a7467ca2fe7f"}
+  ],
+  "limits": {
+    "commits": 128,
+    "files_per_commit": 50,
+    "source_file_bytes": 262144,
+    "recorded_examples_per_repo": 12,
+    "per_repo_bytes": 536870912,
+    "total_checkout_bytes": 2147483648,
+    "wall_seconds": 1200
+  },
+  "rule": "Two changed one-line source rows in the same file and commit substitute the same whole identifier within 80 rows; proposed edit order is synthetic and disclosed",
+  "success_gate_for_further_source_work": "At least 30 structural pairs across four repositories and at least one in each language; independent source, split, objective, and blind inferability checks still required before accepting any label",
+  "accepted_training_labels": 0,
+  "gpu_or_model_calls": false
+}

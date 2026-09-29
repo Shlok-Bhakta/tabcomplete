@@ -1,0 +1,15 @@
+{
+  "reviewer": "fresh gpt-6-luna max-reasoning subagent; only blind prompt artifact was provided",
+  "prompt_sha256": "1ff47c88775171284f39558b0f4af91ddffe602796d34ad9dacbf54cc8513c54",
+  "predictions": [
+    {"id": "active-git/cadbf34cc87b56cce37bb7bc", "line": "        config = self.effective_config", "inferable": true, "kind": "code"},
+    {"id": "active-git/e5f877ebe1121ecc594dcb77", "line": "    #> https://example.com", "inferable": true, "kind": "string/comment"},
+    {"id": "active-git/199602314afa72e020ee66da", "line": "        return _defaultdict_allowed_default_types[values_type]", "inferable": true, "kind": "code"},
+    {"id": "active-git/d3f50da41cadd3c5a24bdde7", "line": "        setActiveBranch(suspense, latestFallback)", "inferable": true, "kind": "code"},
+    {"id": "active-git/405e9d389446f7513c13f520", "line": "        [createVNode('slot', slotProps, fallback && fallback())],", "inferable": true, "kind": "code"},
+    {"id": "active-git/52c9e587866c53b903b8d250", "line": "    cfg_io_blocking! {", "inferable": true, "kind": "code"},
+    {"id": "active-git/7edecba1fdfc308439c917ea", "line": "                .reregister(&self.driver.driver().io, deadline, (&self.inner).into());", "inferable": true, "kind": "code"},
+    {"id": "active-git/ac5f59704997cc93016ae31a", "line": "                    let io = TcpStream::new_accepted(io)?;", "inferable": true, "kind": "code"},
+    {"id": "active-git/0edb71ff03a2723afaf397d6", "line": "\treturn safeUint16(strings.Count(path, \"/\"))", "inferable": true, "kind": "code"}
+  ]
+}
