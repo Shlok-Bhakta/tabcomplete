@@ -21,6 +21,7 @@ from tinycomplete.one_line.chronology import (
     MineLimits,
     PinnedChronologySource,
     mine_cross_commit_candidates,
+    mine_within_commit_repeated_identifiers,
 )
 
 EXPECTED_SEEDS_SHA256 = "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933"
@@ -139,6 +140,9 @@ def _ordered_seeds(path: Path) -> list[dict]:
 
 def run(args: argparse.Namespace) -> dict:
     seeds = _ordered_seeds(args.seeds)
+    candidate_mode = getattr(args, "candidate_mode", "cross_commit")
+    if candidate_mode not in {"cross_commit", "within_commit_repeated_identifier"}:
+        raise ValueError("unsupported public Git candidate mode")
     args.artifact_dir.mkdir(parents=True, exist_ok=True)
     args.report_dir.mkdir(parents=True, exist_ok=True)
     budget = TransferBudget(args.transfer_cap_bytes)
@@ -241,7 +245,12 @@ def run(args: argparse.Namespace) -> dict:
                         license_sha256=metadata["license_sha256"],
                         aliases=tuple(metadata["source_aliases"]),
                     )
-                    candidates = mine_cross_commit_candidates(
+                    miner = (
+                        mine_cross_commit_candidates
+                        if candidate_mode == "cross_commit"
+                        else mine_within_commit_repeated_identifiers
+                    )
+                    candidates = miner(
                         pinned,
                         limits=MineLimits(
                             max_commits=args.max_commits,
@@ -277,6 +286,7 @@ def run(args: argparse.Namespace) -> dict:
     status_counts = Counter(result["status"] for result in results)
     report = {
         "source_seed_sha256": EXPECTED_SEEDS_SHA256,
+        "candidate_mode": candidate_mode,
         "source_seed_count": len(seeds),
         "selected_seed_count": min(args.max_repos, len(seeds)),
         "attempted_repo_count": len(results),
@@ -319,6 +329,11 @@ if __name__ == "__main__":
     parser.add_argument("--transfer-cap-bytes", type=int, default=100 * 1024 * 1024)
     parser.add_argument("--per-repo-seconds", type=int, default=30)
     parser.add_argument("--max-total-seconds", type=int, default=900)
+    parser.add_argument(
+        "--candidate-mode",
+        choices=("cross_commit", "within_commit_repeated_identifier"),
+        default="cross_commit",
+    )
     options = parser.parse_args()
     if not 1 <= options.max_repos <= 100 or not 3 <= options.max_commits <= 32:
         parser.error("repository or commit cap outside pilot bounds")

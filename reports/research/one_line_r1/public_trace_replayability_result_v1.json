@@ -1,0 +1,16 @@
+{
+  "accepted_training_labels": 0,
+  "caveat": "A shell-free call still needs pinned base state, tool-success verification, license, and inferability review.",
+  "counts": {
+    "bash_calls": 6235,
+    "one_line_calls": 24,
+    "one_line_with_prior_editor_and_bash": 15,
+    "one_line_with_prior_editor_same_file": 15,
+    "rows": 100
+  },
+  "optimistic_shell_free_row_indices": [],
+  "reconstructed_states": 0,
+  "response_bytes": 28594303,
+  "revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef",
+  "source_plan": "reports/research/one_line_r1/public_trace_replayability_plan_v1.json"
+}

@@ -1,0 +1,302 @@
+{
+  "accepted_training_label_count": 0,
+  "attempted_repo_count": 40,
+  "candidate_artifact": "artifacts/research/one_line_r1/public_git_sequence_v1/unreviewed_candidates.jsonl",
+  "candidate_artifact_sha256": "dd902f4cd2c56399185bcbdf20693addb6cb44e9e81fe3665cfa9a1eea38f020",
+  "file_spdx_notice_candidate_count": 0,
+  "max_commits_per_repo": 32,
+  "proxied_transfer_bytes": 2982311,
+  "results": [
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "vyahello/pypi-flask-clone",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 31,
+      "language": "typescript",
+      "repo": "kairos666/mbp-uppler-sdk",
+      "status": "no_structural_candidate"
+    },
+    {
+      "first_parent_commits": 2,
+      "language": "rust",
+      "repo": "DomonkosSuranyi/imperators_wish",
+      "status": "insufficient_history"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 13,
+      "language": "go",
+      "repo": "yangchenOS/rongcloud2-sdk-server-go",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 4,
+      "language": "python",
+      "repo": "hosseinmoghimi/waiter",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "typescript",
+      "repo": "mmis1000/Youtube-dl-chat",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "rust",
+      "repo": "mwerezak/rlo-interpeter",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "go",
+      "repo": "vasjaj/modem",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "wonook/LimeDictionary",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 12,
+      "language": "typescript",
+      "repo": "ionic-team/ionic-app-generators",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 1,
+      "candidate_id": "git-chronology/dc31d0a65a526d5a0867de97",
+      "file_spdx_notice": null,
+      "first_parent_commits": 19,
+      "language": "rust",
+      "repo": "theflakes/MimeType",
+      "status": "structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "go",
+      "repo": "NovikovRoman/blizzard",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "hulecom/read-GRACE-harmonics",
+      "status": "no_structural_candidate"
+    },
+    {
+      "first_parent_commits": 2,
+      "language": "typescript",
+      "repo": "Rush-YL/ng-hotel",
+      "status": "insufficient_history"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 8,
+      "language": "rust",
+      "repo": "dwuid/advent-of-code-2016",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "go",
+      "repo": "Nerzal/swag",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "tommy-hartmann/vienna-smartmeter",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 9,
+      "language": "typescript",
+      "repo": "kduenke/vsts-total-story-points",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 16,
+      "language": "rust",
+      "repo": "ryanpbrewster/advent-of-code-2021",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 4,
+      "language": "go",
+      "repo": "networkteam/uuid-cli",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 15,
+      "language": "python",
+      "repo": "mahaarbo/step_to_meshes",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "typescript",
+      "repo": "witty-services/ts-serializer",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "rust",
+      "repo": "aa51513/midori",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "go",
+      "repo": "CybelAngel/wireguard-ui",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "johntiger1/blog-posts",
+      "status": "no_structural_candidate"
+    },
+    {
+      "language": "typescript",
+      "repo": "tomicarsk6/material2-docs-content",
+      "status": "excluded_generated_path"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "rust",
+      "repo": "andrew-ld/RustPython",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 10,
+      "language": "go",
+      "repo": "daystram/audit",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 15,
+      "language": "python",
+      "repo": "Madjura/klang-thesis",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "typescript",
+      "repo": "khmseu/Mechanic",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 19,
+      "language": "rust",
+      "repo": "e1ectr0n-ai/pr0t0n-orchestrator",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "go",
+      "repo": "go-zepto/zepto",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "aysuavci/ose-data-science-course-project-aysuavci",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "typescript",
+      "repo": "iracoon/U.S.-Gun-Crime",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "rust",
+      "repo": "Kineolyan/project-tz-io",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 3,
+      "language": "go",
+      "repo": "78182648/blibli-go",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 33,
+      "language": "python",
+      "repo": "OSU-CS419/FinalProject",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 6,
+      "language": "typescript",
+      "repo": "otavioaugusto1/Learning-Typescript",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 16,
+      "language": "rust",
+      "repo": "project-ela/ela",
+      "status": "no_structural_candidate"
+    },
+    {
+      "candidate_count": 0,
+      "first_parent_commits": 5,
+      "language": "go",
+      "repo": "mic90/flowcontrol-ng",
+      "status": "no_structural_candidate"
+    }
+  ],
+  "selected_seed_count": 40,
+  "source_seed_count": 100,
+  "source_seed_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+  "status_counts": {
+    "excluded_generated_path": 1,
+    "insufficient_history": 2,
+    "no_structural_candidate": 36,
+    "structural_candidate": 1
+  },
+  "structural_candidate_count": 1,
+  "transfer_cap_bytes": 83886080,
+  "transfer_cap_reached": false,
+  "unattempted_selected_count": 0
+}

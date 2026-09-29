@@ -12,6 +12,7 @@ from tinycomplete.one_line.chronology import (
     MineLimits,
     PinnedChronologySource,
     mine_cross_commit_candidates,
+    mine_within_commit_repeated_identifiers,
 )
 from tinycomplete.one_line.contract import EditAction, EditState, apply_action
 
@@ -158,6 +159,38 @@ def test_read_cap_stops_cleanly(tmp_path: Path) -> None:
             _source(repo, base, tip),
             limits=MineLimits(max_blob_bytes=100, max_total_read_bytes=150),
         )
+
+
+def test_repeated_identifier_from_one_commit_discloses_synthetic_order(tmp_path: Path) -> None:
+    repo, base = _repo(tmp_path)
+    before = "source_val = 1\ntarget_val = 2\na = source_val\nb = source_val\n"
+    after = "source_val = 1\ntarget_val = 2\na = target_val\nb = target_val\n"
+    (repo / "main.py").write_text(before)
+    parent = _commit(repo, "add repeated uses")
+    (repo / "main.py").write_text(after)
+    tip = _commit(repo, "change both uses")
+    rows = mine_within_commit_repeated_identifiers(_source(repo, base, tip))
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["source_type"] == "git_within_commit_synthetic_order"
+    assert row["provenance"]["parent_commit"] == parent
+    assert row["provenance"]["substitution"] == ["source_val", "target_val"]
+    assert row["provenance"]["intermediate_buffer_observed"] is False
+    assert row["validation"]["accepted"] is False
+    state = EditState.from_mapping(row["state"])
+    assert state.history[0].old_text == "a = source_val"
+    assert state.history[0].new_text == "a = target_val"
+    assert state.source == before.replace("a = source_val", "a = target_val")
+    assert apply_action(state, EditAction(**row["action"])) == after
+
+
+def test_formatting_only_commit_is_not_identifier_sequence(tmp_path: Path) -> None:
+    repo, base = _repo(tmp_path)
+    (repo / "main.py").write_text("\tfirst = 1\n\tsecond = 2\n")
+    _commit(repo, "add lines")
+    (repo / "main.py").write_text("    first = 1\n    second = 2\n")
+    tip = _commit(repo, "format lines")
+    assert mine_within_commit_repeated_identifiers(_source(repo, base, tip)) == []
 
 
 def test_conflicting_file_spdx_is_not_mined(tmp_path: Path) -> None:

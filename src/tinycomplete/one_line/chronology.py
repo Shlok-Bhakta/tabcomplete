@@ -340,3 +340,173 @@ def mine_cross_commit_candidates(
         if len(rows) >= limits.max_candidates:
             break
     return rows
+
+
+def _identifier_replacement(old: str, new: str) -> tuple[str, str] | None:
+    """Return a single whole-identifier substitution, excluding format-only edits."""
+    token_pattern = re.compile(r"[A-Za-z_][A-Za-z_0-9]*|\s+|.")
+    old_tokens = token_pattern.findall(old)
+    new_tokens = token_pattern.findall(new)
+    if len(old_tokens) != len(new_tokens):
+        return None
+    changes = [
+        (before, after)
+        for before, after in zip(old_tokens, new_tokens, strict=True)
+        if before != after
+    ]
+    if len(changes) != 1:
+        return None
+    removed, inserted = changes[0]
+    identifier = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\Z")
+    if (
+        len(removed) < 2
+        or len(inserted) < 2
+        or not identifier.fullmatch(removed)
+        or not identifier.fullmatch(inserted)
+        or removed == inserted
+    ):
+        return None
+    if old_tokens.count(removed) != 1:
+        return None
+    return removed, inserted
+
+
+def mine_within_commit_repeated_identifiers(
+    source: PinnedChronologySource, *, limits: MineLimits | None = None
+) -> list[dict[str, Any]]:
+    """Find two real same-commit identifier changes with disclosed synthetic order.
+
+    The intermediate buffer is constructed by applying only the first observed
+    patch atom. It was not an observed editor state. No network or code execution
+    occurs here; every result remains unreviewed.
+    """
+    limits = limits or MineLimits()
+    git = _LocalGit(source.checkout, limits)
+    for rev in (source.base_rev, source.tip_rev):
+        if git.run("rev-parse", "--verify", f"{rev}^{{commit}}").strip().decode() != rev:
+            raise ValueError("revision does not resolve to its pinned commit")
+    chain = (
+        git.run(
+            "rev-list", "--first-parent", f"--max-count={limits.max_commits + 1}", source.tip_rev
+        )
+        .decode()
+        .splitlines()
+    )
+    if source.base_rev not in chain:
+        raise ValueError("base is outside the bounded first-parent range")
+    commits = chain[: chain.index(source.base_rev) + 1]
+    license_blob = git.blob(source.tip_rev, source.license_path)
+    if license_blob is None or _sha(license_blob[1]) != source.license_sha256:
+        raise ValueError("pinned license blob mismatch")
+    filetype = _LANGUAGES[Path(source.file_path).suffix.lower()]
+    file_id = f"{source.repo_id}/{source.file_path}"
+    rows: list[dict[str, Any]] = []
+    for child, parent in zip(commits, commits[1:], strict=False):
+        if len(git.run("rev-list", "--parents", "-n", "1", child).decode().split()) != 2:
+            continue
+        child_license = git.blob(child, source.license_path)
+        if child_license is None or _sha(child_license[1]) != source.license_sha256:
+            continue
+        old_blob = git.blob(parent, source.file_path)
+        new_blob = git.blob(child, source.file_path)
+        if old_blob is None or new_blob is None or old_blob[0] == new_blob[0]:
+            continue
+        try:
+            before = old_blob[1].decode("utf-8")
+            committed_after = new_blob[1].decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        if "\0" in before or "\0" in committed_after:
+            continue
+        try:
+            _file_notice(before, source.license_spdx)
+            _file_notice(committed_after, source.license_spdx)
+        except ValueError:
+            continue
+        old_lines = before.splitlines(keepends=True)
+        new_lines = committed_after.splitlines(keepends=True)
+        atoms: list[tuple[int, str, str, tuple[str, str]]] = []
+        for tag, a0, a1, b0, b1 in difflib.SequenceMatcher(
+            None, old_lines, new_lines, autojunk=False
+        ).get_opcodes():
+            if tag != "replace" or a1 - a0 != b1 - b0 or a1 - a0 > 20:
+                continue
+            for offset in range(a1 - a0):
+                old_line, new_line = old_lines[a0 + offset], new_lines[b0 + offset]
+                if len(old_line.encode()) > 512 or len(new_line.encode()) > 512:
+                    continue
+                old_text = old_line.removesuffix("\n").removesuffix("\r")
+                new_text = new_line.removesuffix("\n").removesuffix("\r")
+                if old_line[len(old_text) :] != new_line[len(new_text) :]:
+                    continue
+                substitution = _identifier_replacement(old_text, new_text)
+                if substitution:
+                    atoms.append((a0 + offset, old_text, new_text, substitution))
+        for prior_index, prior in enumerate(atoms):
+            for target in atoms[prior_index + 1 :]:
+                if prior[3] != target[3] or target[0] - prior[0] > 80:
+                    continue
+                prior_action = EditAction("replace_line", prior[2])
+                target_action = EditAction("replace_line", target[2])
+                try:
+                    initial_state = EditState(file_id, filetype, before, prior[0], 0)
+                    state_source = apply_action(initial_state, prior_action)
+                    history = (RecentEdit(prior[0], prior[1], prior[2]),)
+                    state = EditState(file_id, filetype, state_source, target[0], 0, history)
+                    after_source = apply_action(state, target_action)
+                except ValueError:
+                    continue
+                identity = _sha(
+                    json.dumps(
+                        [source.repo_id, source.file_path, child, prior[0], target[0]]
+                    ).encode()
+                )
+                rows.append(
+                    {
+                        "id": f"git-synthetic-order/{identity[:24]}",
+                        "state": asdict(state),
+                        "action": asdict(target_action),
+                        "after_source": after_source,
+                        "source_type": "git_within_commit_synthetic_order",
+                        "source_repo": source.repo_id,
+                        "source_aliases": list(source.aliases),
+                        "source_revision": child,
+                        "source_license": source.license_spdx,
+                        "session_or_commit": child,
+                        "mechanism": "unreviewed_repeated_identifier_change",
+                        "generator_family": f"public_git_repeated_identifier_v1/{source.repo_id}",
+                        "template_id": f"git/{source.repo_id}/{child}/{source.file_path}",
+                        "status": "unreviewed",
+                        "provenance": {
+                            "public_url": source.public_url,
+                            "path": source.file_path,
+                            "parent_commit": parent,
+                            "child_commit": child,
+                            "parent_git_blob": old_blob[0],
+                            "child_git_blob": new_blob[0],
+                            "license_path": source.license_path,
+                            "license_sha256": source.license_sha256,
+                            "file_spdx_notice": _file_notice(before, source.license_spdx),
+                            "prior_row": prior[0],
+                            "target_row": target[0],
+                            "substitution": list(prior[3]),
+                            "commit_order_observed": True,
+                            "editor_edit_order_observed": False,
+                            "within_commit_order_synthetic": True,
+                            "intermediate_buffer_observed": False,
+                            "commit_may_contain_other_changes": True,
+                        },
+                        "validation": {
+                            "history_replays_to_state": True,
+                            "target_apply_replays": True,
+                            "source_before_sha256": _sha(state_source.encode()),
+                            "source_after_sha256": _sha(after_source.encode()),
+                            "committed_after_sha256": _sha(committed_after.encode()),
+                            "inferability_reviewed": False,
+                            "accepted": False,
+                        },
+                    }
+                )
+                if len(rows) >= limits.max_candidates:
+                    return rows
+    return rows

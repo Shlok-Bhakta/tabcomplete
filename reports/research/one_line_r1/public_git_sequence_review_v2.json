@@ -1,0 +1,53 @@
+{
+  "accepted_training_label_count": 0,
+  "audits": [
+    {
+      "accepted_training_label": false,
+      "action_replays_to_recorded_after": true,
+      "blind_inferability_reviewed": false,
+      "candidate_id": "git-synthetic-order/bbe15642613715a197f1366b",
+      "editor_order_observed": false,
+      "filetype": "go",
+      "included_history_count": 1,
+      "independent_objective_tested": false,
+      "input_tokens": 804,
+      "intermediate_state_observed": false,
+      "license_sha256_matches": true,
+      "output_tokens_including_eos": 15,
+      "output_within_64_token_cap": true,
+      "post_action_state_parses": true,
+      "pre_state_parses": true,
+      "repository": "vasjaj/modem",
+      "source_file_sha256": "f65146b654d22c7ff2c8b2b76e49154dc432ad1713cea429b968be5c9b3b2f16",
+      "source_git_blob_matches": true,
+      "source_revision": "62038d758711ba16363c425ddf3b1f96893a6026",
+      "wire_action_absent_from_prompt": true
+    },
+    {
+      "accepted_training_label": false,
+      "action_replays_to_recorded_after": true,
+      "blind_inferability_reviewed": false,
+      "candidate_id": "git-synthetic-order/48403a0996470ce64c69c714",
+      "editor_order_observed": false,
+      "filetype": "typescript",
+      "included_history_count": 1,
+      "independent_objective_tested": false,
+      "input_tokens": 770,
+      "intermediate_state_observed": false,
+      "license_sha256_matches": true,
+      "output_tokens_including_eos": 16,
+      "output_within_64_token_cap": true,
+      "post_action_state_parses": true,
+      "pre_state_parses": true,
+      "repository": "khmseu/Mechanic",
+      "source_file_sha256": "bdfa25ce638dcc10523fd0995ee240064af8edda5039b92ed452355e7eebdabf",
+      "source_git_blob_matches": true,
+      "source_revision": "5dd7cb460253939849e94a4a850580eb94faa791",
+      "wire_action_absent_from_prompt": true
+    }
+  ],
+  "candidate_artifact": "artifacts/research/one_line_r1/public_git_sequence_v2/unreviewed_candidates.jsonl",
+  "candidate_artifact_sha256": "e4dc592d56782571a2fd4f47bbbaa3ad34655d16fc62d6f3fe4d6be35e0b068a",
+  "mechanically_verified_count": 2,
+  "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301"
+}

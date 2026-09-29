@@ -1,0 +1,26 @@
+{
+  "plan": "public_trace_reconstruction_plan_v1.json",
+  "status": "not_reconstructable_under_frozen_policy",
+  "trace_revision_verified": true,
+  "selected_row_index": 324,
+  "selected_instance_id": "firecracker-microvm__firecracker-containerd-308",
+  "repository": "firecracker-microvm/firecracker-containerd",
+  "repository_license_from_trace": "Apache-2.0",
+  "trace_block_response_bytes": 5515230,
+  "trace_block_response_sha256": "56520513004a64aa875bd10a23f141f48dbae7189f3bcd0c7369f5454949776a",
+  "message_count": 185,
+  "same_file_str_replace_calls": 4,
+  "one_line_target_call_message_index": 128,
+  "prior_bash_calls": 43,
+  "observed_mutation_risks": [
+    "git checkout and restore calls before the one-line target",
+    "gofmt -w call before the one-line target",
+    "other arbitrary shell calls whose full effects are not replayed"
+  ],
+  "base_dataset_revision_verified": true,
+  "base_dataset_file_bytes": 428839266,
+  "base_dataset_lookup": "viewer filter and search returned HTTP 500; full Parquet file exceeds the frozen 16 MiB transfer cap",
+  "reconstructed_pre_states": 0,
+  "accepted_training_labels": 0,
+  "interpretation": "The ordered tool list alone does not establish the one-line edit's exact pre-state. The target must not be labeled from the final patch or a guessed base commit."
+}

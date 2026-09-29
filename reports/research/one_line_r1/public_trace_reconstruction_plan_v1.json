@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "created_utc_date": "2026-09-28",
+  "purpose": "Bounded exact-prestate feasibility check for one previously screened ordered agent trajectory; no accepted training labels",
+  "trace_dataset": "nvidia/Open-SWE-Traces",
+  "trace_revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef",
+  "trace_config": "v1.0",
+  "trace_split": "sweagent",
+  "offset": 313,
+  "rows": 20,
+  "base_dataset": "nebius/SWE-rebench-V2",
+  "base_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+  "maximum_transfer_bytes": 16777216,
+  "maximum_one_response_bytes": 8388608,
+  "maximum_source_file_bytes": 262144,
+  "selection": "First row in this block with at least two successful str_replace_editor calls on one file, including a later one-line call",
+  "mutation_policy": "Never execute trace tools or shell commands; replay only explicit successful str_replace_editor old/new substitutions against a pinned base file, refusing ambiguous or unmatched text",
+  "acceptance_policy": "Feasibility evidence only. A mechanically reconstructed state is not an accepted next-edit label; student-view inferability, source license, split, and independent objective review are separate requirements"
+}

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "created_utc_date": "2026-09-28",
+  "purpose": "Bounded public-project chronology pilot; candidates are not training labels",
+  "source_seed_sha256": "f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933",
+  "runner_sha256": "d4181c64c94d9239f06955571015b9a9b764474c286f6d27121afa70f1168f07",
+  "miner_sha256": "03641d2e010a8704b86a041db77b8ec79eb4faa4b63d6be9c669ae8858f8354b",
+  "selection": "First 40 frozen public seeds in round-robin Python, TypeScript, Rust, Go order; 10 per language; no replacement of failed sources",
+  "source_license_policy": "Pinned MIT repository license and no conflicting file SPDX notice; source-file scope requires later review",
+  "history_policy": "First-parent commit order observed; one prior same-file one-line replacement and one later same-file one-line target; no invented within-commit order",
+  "max_repositories": 40,
+  "max_commits_per_repository": 32,
+  "max_proxied_transfer_bytes": 83886080,
+  "max_repository_seconds": 30,
+  "max_total_seconds": 900,
+  "max_new_persistent_bytes": 83886080,
+  "output_artifact_dir": "artifacts/research/one_line_r1/public_git_sequence_v1",
+  "output_report_dir": "reports/research/one_line_r1/public_git_sequence_v1",
+  "acceptance": "No candidate accepted without exact replay, source-file rights, prompt-budget check, blind inferability review, and independent objective check",
+  "expansion_gate": "At least 24 independently accepted candidates among 40 attempted repositories, with at least 5 per target language and no unresolved license or split violation",
+  "training_or_gpu_allocation": false
+}

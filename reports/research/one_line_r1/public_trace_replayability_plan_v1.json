@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "created_utc_date": "2026-09-28",
+  "purpose": "Count one-line agent edit calls for which prior visible tool history can be replayed without interpreting arbitrary shell commands",
+  "source_plan": "public_trace_probe_plan.json",
+  "dataset": "nvidia/Open-SWE-Traces",
+  "revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef",
+  "config": "v1.0",
+  "split": "sweagent",
+  "offsets": [313, 7531, 17831, 36971, 60211],
+  "rows_per_offset": 20,
+  "maximum_total_response_bytes": 41943040,
+  "maximum_one_response_bytes": 8388608,
+  "strict_rule": "One-line str_replace_editor action has a prior successful explicit str_replace_editor action in the same file and no preceding bash tool call, because bash commands may mutate state and are not replayed",
+  "quality_interpretation": "Structural replayability screen only; no accepted labels or permission to scale"
+}
