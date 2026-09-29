@@ -307,3 +307,14 @@ def test_kaggle_submission_cli_flags_match_installed_cli() -> None:
     assert "--accelerator ACC" in kernels
     assert "NvidiaTeslaT4" not in kernels  # values are validated by the server, not local choices
     assert "-t TIMEOUT" in kernels
+
+
+def test_dataset_slug_is_checked_before_private_upload() -> None:
+    builder.validate_kaggle_refs(
+        "shlokbhakta/tc-oline-instinct-r1-retry-inputs", "shlokbhakta/tc-oline-instinct-r1-retry"
+    )
+    with pytest.raises(ValueError, match="between 6 and 50"):
+        builder.validate_kaggle_refs(
+            "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry-inputs",
+            "shlokbhakta/tc-oline-instinct-r1-retry",
+        )

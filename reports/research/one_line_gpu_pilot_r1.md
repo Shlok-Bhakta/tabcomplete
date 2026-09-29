@@ -38,6 +38,11 @@ from the repository lockfile, records the failure evidence, refreshes quota,
 and assigns distinct private retry IDs. The model, data, prompt, and scoring
 rules are unchanged.
 
+The first retry upload stopped before dataset creation because its dataset
+slug was 51 characters; Kaggle permits at most 50. Plan revision 4 shortens
+only that private slug and adds a pre-upload validation check. It consumed no
+additional GPU time or training tokens.
+
 The converter accepts a state only when the marked editable region and the
 assistant replacement reconstruct a cursor-aligned, one-line edit byte for
 byte. It also requires a uniquely located earlier same-file edit in the

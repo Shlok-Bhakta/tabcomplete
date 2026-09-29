@@ -60,11 +60,11 @@
   },
   "frozen_at": "2026-09-29T06:23:24.604186+00:00",
   "kaggle": {
-    "dataset_id": "shlokbhakta/tc-oline-instinct-r1-retry-inputs",
+    "dataset_id": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry-inputs",
     "kernel_id": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry"
   },
   "plan_note": "Before comparison output, two historical Kaggle notebook references returned authenticated HTTP 404 when status was re-queried; they have no running session. Other unknown statuses remain blocking.",
-  "plan_revision": 4,
+  "plan_revision": 3,
   "quota_at_freeze": {
     "active_jobs": [],
     "job_statuses": [
@@ -174,7 +174,7 @@
         "reference": "shlokbhakta/exercise-functions-and-getting-help",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-09-29T06:55:48.311941+00:00"
+        "verified_at": "2026-09-29T06:52:07.651503+00:00"
       },
       {
         "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
@@ -198,10 +198,10 @@
         "reference": "shlokbhakta/notebookd2edcfa65c",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-09-29T06:55:48.311941+00:00"
+        "verified_at": "2026-09-29T06:52:07.651503+00:00"
       }
     ],
-    "observed_at": "2026-09-29T06:55:24.509694+00:00",
+    "observed_at": "2026-09-29T06:51:43.815464+00:00",
     "remaining": 44.86,
     "renewal": "2026-10-03T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -209,8 +209,8 @@
     "units": "Kaggle account GPU-hours",
     "used": 0.14
   },
-  "revised_at": "2026-09-29T06:55:49.777470+00:00",
-  "revision_reason": "Retry dataset upload stopped before creation because its frozen slug was 51 characters; Kaggle accepts 6..50. Revision 4 shortens only the private dataset slug and adds a pre-upload length check. No GPU allocation, model result, data, training, prompt, or scoring change followed revision 3.",
+  "revised_at": "2026-09-29T06:52:09.060457+00:00",
+  "revision_reason": "Attempt 1 completed the fixed 210-case baseline generation but failed during fixed synthetic calibration because the Kaggle worker omitted tree-sitter-language-pack. It performed zero training updates. Revision 3 pins the lockfile package, gives the retry new private Kaggle dataset/kernel identities, and refreshes quota. Data, model, prompt, suite, and metrics are unchanged; no baseline result was written or viewed.",
   "schema": "one-line-instinct-pilot-plan-v1",
   "selection_and_scope": {
     "development_metrics": [
@@ -236,7 +236,7 @@
     "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
   },
   "suite_revision": 3,
-  "supersedes_plan_sha256": "d626a090ad4f6acba4472a62860d98497a487aae283d0dd85477a3d0e1f942d7",
+  "supersedes_plan_sha256": "844ea1ffcd8b2f16350ac6faaf766c15939d33da682e8f024e3d6b4a955d4791",
   "training": {
     "compute_precision": "FP16",
     "cosine_floor_fraction": 0.1,

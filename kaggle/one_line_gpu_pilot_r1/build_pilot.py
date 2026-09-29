@@ -67,6 +67,13 @@ HEX_SHA1 = re.compile(r"[a-f0-9]{40}\Z")
 KAGGLE_REF = re.compile(r"[a-z0-9_-]+/[a-z0-9_-]+\Z")
 
 
+def validate_kaggle_refs(dataset_id: str, kernel_id: str) -> None:
+    if KAGGLE_REF.fullmatch(dataset_id) is None or KAGGLE_REF.fullmatch(kernel_id) is None:
+        raise ValueError("invalid frozen Kaggle references")
+    if not 6 <= len(dataset_id.split("/", 1)[1]) <= 50:
+        raise ValueError("Kaggle dataset slug must be between 6 and 50 characters")
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -588,8 +595,7 @@ def prepare_bundle(
 
     dataset_id = plan.get("kaggle", {}).get("dataset_id", DATASET_ID)
     kernel_id = plan.get("kaggle", {}).get("kernel_id", KERNEL_ID)
-    if KAGGLE_REF.fullmatch(dataset_id) is None or KAGGLE_REF.fullmatch(kernel_id) is None:
-        raise ValueError("invalid frozen Kaggle references")
+    validate_kaggle_refs(dataset_id, kernel_id)
     temporary = output.with_name(output.name + ".incomplete")
     if temporary.exists():
         raise FileExistsError("incomplete pilot bundle already exists; inspect it first")
