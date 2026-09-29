@@ -1,0 +1,103 @@
+{
+  "artifacts": {
+    "adapted_evaluation": {
+      "bytes": 114985,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-small/one_line_gpu_pilot_r1/adapted-evaluation.json",
+      "sha256": "77f6f97061a88c68de697fec62e1093ba412dafb17c45cc4cd059b8e203b2fdb"
+    },
+    "checkpoint_marker": {
+      "bytes": 176,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-small/one_line_gpu_pilot_r1/training/resume-step-000023.pt.complete.json",
+      "sha256": "ef29ed5502a08fb2c6221998edf2b37ccb7ed1fc8c5d78352a57216201ccb36c"
+    },
+    "checkpoint_reload_verification": {
+      "bytes": 668,
+      "committed": true,
+      "location": "reports/research/one_line_gpu_pilot_r1/checkpoint_reload_verification.json",
+      "sha256": "52e3d762a3423bea74b4540bde3a580bf67f8a08245bc0f8cb1b6bceb831f933"
+    },
+    "data_manifest": {
+      "bytes": 2194,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/prepared/instinct-v1-formatted/manifest.json",
+      "sha256": "7c3ca7875159d6ff712608c9d4918f5e2d84eaf91cb8b4fc7acbcf56a7c86878"
+    },
+    "development_shard": {
+      "bytes": 1037607,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/prepared/instinct-v1-formatted/dev.jsonl",
+      "sha256": "c5f0a8260060530666693c57128a68e763661757c67665a286fa6a509301dbe1"
+    },
+    "export_tokenizer": {
+      "bytes": 11421892,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-small/one_line_gpu_pilot_r1/training/inference-f16/tokenizer.json",
+      "sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8"
+    },
+    "frozen_plan": {
+      "bytes": 11634,
+      "committed": true,
+      "location": "reports/research/one_line_gpu_pilot_r1/plan.json",
+      "sha256": "cd796a2efb535bea32c64e98d82dbb38b297b51173d22319083201c6c7654c20"
+    },
+    "inference_export_f16": {
+      "bytes": 1260367152,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-artifacts/one_line_gpu_pilot_r1/training/inference-f16/model.safetensors",
+      "sha256": "128e9bce231d82ee6ac075cae60895da3464e5a5cfe7e4377aa8dea932032ea1"
+    },
+    "quota_after": {
+      "bytes": 6642,
+      "committed": true,
+      "location": "reports/research/one_line_gpu_pilot_r1/quota_after.json",
+      "sha256": "90f7ca13d06c80b8dba3eea804f66be365d867ea2301a271c9bece230e924125"
+    },
+    "resumable_checkpoint": {
+      "bytes": 2980477490,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-artifacts/one_line_gpu_pilot_r1/training/resume-step-000023.pt",
+      "sha256": "e6479970c6f11cf5e568b6a238f893d6f1ac98ade4729671928852b4d5aecc0d"
+    },
+    "summary": {
+      "bytes": 3836,
+      "committed": true,
+      "location": "reports/research/one_line_gpu_pilot_r1/result_summary.json",
+      "sha256": "1379f24aac465df74d35f45f6c4e2bea2f32e19030d25d2db76e3c1411d62c3f"
+    },
+    "tokenizer_parity": {
+      "bytes": 862,
+      "committed": true,
+      "location": "reports/research/one_line_gpu_pilot_r1/tokenizer_parity.json",
+      "sha256": "2be5c78940c5295f60619b6c3f283596f035debf6edeb33eb038dbd2d23e1710"
+    },
+    "trainer_result": {
+      "bytes": 3429,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-small/one_line_gpu_pilot_r1/training/run_result.json",
+      "sha256": "1d6060560a540a75fb26ec7407b1cffa2fef817266e0540ebc8cedd2e7e704db"
+    },
+    "training_shard": {
+      "bytes": 3637690,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/prepared/instinct-v1-formatted/train.jsonl",
+      "sha256": "4047c3f4f0c2f73dcc29f916076f56cbf0be600c6f5f8ce722b0ca8fc4a10767"
+    },
+    "untouched_baseline_evaluation": {
+      "bytes": 150349,
+      "committed": false,
+      "location": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/output-attempt2-small/one_line_gpu_pilot_r1/baseline-evaluation.json",
+      "sha256": "5a7c65053d82222a37aacf24ce243623ee1aa6a87d156e8592fac6066cf8db25"
+    }
+  },
+  "branch": "research/one-line-gpu-pilot-r1",
+  "live_editor_changed": false,
+  "model_weights_committed_or_published": false,
+  "private_kaggle_dataset": "shlokbhakta/tc-oline-instinct-r1-retry-inputs",
+  "private_kaggle_kernel": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry",
+  "raw_edit_shards_committed_or_published": false,
+  "schema": "one-line-gpu-pilot-artifact-manifest-v1",
+  "source_model_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+  "worker_commit": "cb4b18872416a6ee1ccae31d3e35703d9c9f8ab9"
+}

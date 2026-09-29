@@ -1,0 +1,16 @@
+{
+  "adapted_observed_wire_decoding_equal": 210,
+  "adapted_observed_wire_encoding_equal": 210,
+  "adapted_observed_wires_compared": 210,
+  "compared_development_prompts": 210,
+  "development_sha256": "c5f0a8260060530666693c57128a68e763661757c67665a286fa6a509301dbe1",
+  "eos_token_id_equal": true,
+  "export_json_sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8",
+  "prompt_text_or_token_id_mismatches": 0,
+  "schema": "one-line-gpu-pilot-tokenizer-parity-v1",
+  "scope": "full vocabulary ID map and special token map; all 210 frozen development prompts and 210 observed adapted wire strings; not every possible decode sequence",
+  "source_json_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+  "special_tokens_map_identical": true,
+  "vocabulary_id_map_identical": true,
+  "vocabulary_size_equal": true
+}

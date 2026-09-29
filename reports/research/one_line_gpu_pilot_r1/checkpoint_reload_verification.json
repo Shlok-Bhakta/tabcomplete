@@ -1,0 +1,23 @@
+{
+  "attempted_updates": 23,
+  "checkpoint_sha256": "e6479970c6f11cf5e568b6a238f893d6f1ac98ade4729671928852b4d5aecc0d",
+  "completed_updates": 23,
+  "epoch": 1,
+  "fingerprint_matches_result_and_marker": true,
+  "model_tensors": 291,
+  "next_example_index": 720,
+  "optimizer_state_entries": 290,
+  "rng_state_keys_present": [
+    "rng_python",
+    "rng_numpy",
+    "rng_torch_cpu",
+    "rng_torch_cuda"
+  ],
+  "scaler_state_present": true,
+  "scheduler_state_present": true,
+  "schema": "one-line-gpu-pilot-checkpoint-reload-v1",
+  "skipped_updates": 0,
+  "supervised_target_tokens": 9405,
+  "torch_load_mmap_cpu_succeeded": true,
+  "training_input_tokens": 538275
+}

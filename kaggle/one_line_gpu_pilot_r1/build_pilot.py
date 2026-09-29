@@ -816,6 +816,20 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
         raise ValueError("pilot resumable checkpoint failed hash or identity verification")
     if status.get("training_status") != result.get("status"):
         raise ValueError("pilot worker and trainer terminal statuses disagree")
+    worker_state = status.get("state")
+    if worker_state == "failed":
+        if status.get("failure_stage") != "adapted_evaluation":
+            raise ValueError("failed pilot worker did not finish both quality evaluations")
+    elif worker_state == "verified_complete":
+        parity = status.get("export_tokenizer_equivalence", {})
+        if parity.get("development_prompts_with_identical_token_ids") != status.get(
+            "development_count"
+        ):
+            raise ValueError("complete worker lacks export tokenizer parity evidence")
+    elif worker_state == "partial_checkpoint_preserved" and result.get("status") == "deadline_stop":
+        pass
+    else:
+        raise ValueError("pilot worker has an unrecognized final state")
 
     if result.get("status") == "complete":
         export = result.get("inference_export")
@@ -846,6 +860,9 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
         raise ValueError("pilot output has an unrecognized terminal training status")
     return {
         "status": result["status"],
+        "worker_state": worker_state,
+        "worker_failure_type": status.get("failure_type") if worker_state == "failed" else None,
+        "artifact_integrity_verified": True,
         "plan_sha256": status["plan_sha256"],
         "checkpoint_sha256": checkpoint_sha,
         "training_input_tokens": result.get("cursor", {}).get("training_input_tokens"),

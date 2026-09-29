@@ -398,14 +398,56 @@ def _output_bytes() -> int:
     )
 
 
-def _verify_evaluation(path: Path, *, model_sha: str) -> dict[str, Any]:
+def _verify_export_tokenizer(source: Path, export: Path, development: Path) -> dict[str, Any]:
+    """Check the export's tokenizer behavior even if save_pretrained rewrites JSON bytes."""
+    from transformers import AutoTokenizer
+
+    sys.path.insert(0, str(REPO / "src"))
+    from tinycomplete.one_line.context import serialize_state_bounded
+    from tinycomplete.one_line.contract import EditState
+
+    original = AutoTokenizer.from_pretrained(source, local_files_only=True, trust_remote_code=False)
+    adapted = AutoTokenizer.from_pretrained(export, local_files_only=True, trust_remote_code=False)
+    if (
+        original.eos_token_id != adapted.eos_token_id
+        or original.special_tokens_map != adapted.special_tokens_map
+        or original.get_vocab() != adapted.get_vocab()
+    ):
+        raise ValueError("export tokenizer special-token or vocabulary identity changed")
+    cases = 0
+    with development.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            state = EditState.from_mapping(json.loads(line)["state"])
+            original_context = serialize_state_bounded(state, original, max_input_tokens=1024)
+            adapted_context = serialize_state_bounded(state, adapted, max_input_tokens=1024)
+            if original_context.text != adapted_context.text or original.encode(
+                original_context.text, add_special_tokens=True
+            ) != adapted.encode(adapted_context.text, add_special_tokens=True):
+                raise ValueError("export tokenizer changes the frozen development prompts")
+            cases += 1
+    if cases != SESSION["development_count"]:
+        raise ValueError("export tokenizer parity checked the wrong development count")
+    return {
+        "source_tokenizer_sha256": sha(source / "tokenizer.json"),
+        "export_tokenizer_sha256": sha(export / "tokenizer.json"),
+        "development_prompts_with_identical_token_ids": cases,
+        "vocabulary_id_map_identical": True,
+        "special_tokens_map_identical": True,
+        "eos_token_id": original.eos_token_id,
+        "vocabulary_size": len(original),
+    }
+
+
+def _verify_evaluation(path: Path, *, model_sha: str, tokenizer_sha: str) -> dict[str, Any]:
     result = load(path)
     identity = result.get("identity", {})
     if (
         identity.get("model_weight_sha256") != model_sha
         or identity.get("source_weight_sha256") != SESSION["model_weight_sha256"]
         or identity.get("development_sha256") != SESSION["development_sha256"]
-        or identity.get("tokenizer_sha256") != SESSION["tokenizer_sha256"]
+        or identity.get("tokenizer_sha256") != tokenizer_sha
         or result.get("cases") != SESSION["development_count"]
         or "synthetic_calibration" not in result
     ):
@@ -472,6 +514,7 @@ def main() -> int:
             timeout=8 * 60,
         )
         _clone_frozen_commit()
+        status = load(OUT / "worker-status.json")
         env = _offline_environment()
         runtime = _check_t4_and_logits_support()
         status.update(runtime)
@@ -490,8 +533,11 @@ def main() -> int:
             cwd=REPO,
             env=env,
         )
+        status = load(OUT / "worker-status.json")
         status["baseline"] = _verify_evaluation(
-            OUT / "baseline-evaluation.json", model_sha=SESSION["model_weight_sha256"]
+            OUT / "baseline-evaluation.json",
+            model_sha=SESSION["model_weight_sha256"],
+            tokenizer_sha=SESSION["tokenizer_sha256"],
         )
         save(OUT / "worker-status.json", status)
 
@@ -535,6 +581,7 @@ def main() -> int:
             cwd=REPO,
             env=env,
         )
+        status = load(OUT / "worker-status.json")
         result, checkpoint = _verify_training_output()
         status["training_status"] = result["status"]
         status["training_result_fingerprint"] = result["fingerprint"]
@@ -574,6 +621,9 @@ def main() -> int:
             raise ValueError("inference export source identity mismatch")
         export_sha = sha(export_dir / "model.safetensors")
         status["export_weight_sha256"] = export_sha
+        status["export_tokenizer_equivalence"] = _verify_export_tokenizer(
+            dataset, export_dir, dataset / "development.jsonl"
+        )
         status["state"] = "adapted_evaluation"
         save(OUT / "worker-status.json", status)
         stage(
@@ -590,8 +640,11 @@ def main() -> int:
             env=env,
             finalization=True,
         )
+        status = load(OUT / "worker-status.json")
         status["adapted"] = _verify_evaluation(
-            OUT / "adapted-evaluation.json", model_sha=export_sha
+            OUT / "adapted-evaluation.json",
+            model_sha=export_sha,
+            tokenizer_sha=status["export_tokenizer_equivalence"]["export_tokenizer_sha256"],
         )
         status["output_bytes"] = _output_bytes()
         if status["output_bytes"] > 12 * 1024**3:
@@ -618,6 +671,9 @@ def main() -> int:
         # Error messages from commands can contain source or credentials. Keep
         # only a type code and stage in public notebook logs; details remain in
         # private bounded stage logs where available.
+        persisted = OUT / "worker-status.json"
+        if persisted.is_file():
+            status = load(persisted)
         status["failure_stage"] = status.get("state_before_failure") or status.get("state")
         status["state"] = "failed"
         status["failure_type"] = type(error).__name__

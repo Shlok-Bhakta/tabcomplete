@@ -1,0 +1,111 @@
+{
+  "adapted": {
+    "actions": {
+      "replace_line": 210
+    },
+    "cases": 210,
+    "exact_after": 9,
+    "exact_after_rate": 0.04285714285714286,
+    "explicit_termination": 210,
+    "generated_token_median": 13.0,
+    "generated_token_p95": 20,
+    "generation_only_completed_action_median_ms": 443.1444829999691,
+    "generation_only_completed_action_p95_ms": 684.1286200000241,
+    "peak_cuda_allocated_bytes": 1152890880,
+    "retained_cuda_allocated_bytes": 1005903872,
+    "retained_process_rss_bytes": 1773137920,
+    "synthetic_calibration": {
+      "cases": 16,
+      "false_positive_edits": 4,
+      "keep_cases": 4,
+      "keep_correct": 0,
+      "valid_actions": 16,
+      "verified_edit_success": 1
+    },
+    "valid_actions": 210
+  },
+  "artifact_integrity_verified": true,
+  "baseline": {
+    "actions": {
+      "invalid": 210
+    },
+    "cases": 210,
+    "exact_after": 0,
+    "exact_after_rate": 0.0,
+    "explicit_termination": 0,
+    "generated_token_median": 64.0,
+    "generated_token_p95": 64,
+    "generation_only_completed_action_median_ms": 1921.3986269999737,
+    "generation_only_completed_action_p95_ms": 1980.9470299999816,
+    "peak_cuda_allocated_bytes": 1152890880,
+    "retained_cuda_allocated_bytes": 1005904384,
+    "retained_process_rss_bytes": 2473439232,
+    "synthetic_calibration": {
+      "cases": 16,
+      "false_positive_edits": 0,
+      "keep_cases": 4,
+      "keep_correct": 0,
+      "valid_actions": 0,
+      "verified_edit_success": 0
+    },
+    "valid_actions": 0
+  },
+  "behavior": {
+    "direct_same_row_reversal_of_latest_edit": 1,
+    "replace_with_current_line": 29
+  },
+  "checkpoint_sha256": "e6479970c6f11cf5e568b6a238f893d6f1ac98ade4729671928852b4d5aecc0d",
+  "development_by_gold_action": {
+    "delete_line": {
+      "adapted_exact": 0,
+      "cases": 19
+    },
+    "insert_before": {
+      "adapted_exact": 0,
+      "cases": 9
+    },
+    "replace_line": {
+      "adapted_exact": 9,
+      "cases": 182
+    }
+  },
+  "development_sha256": "c5f0a8260060530666693c57128a68e763661757c67665a286fa6a509301dbe1",
+  "export_tokenizer_semantic_parity_development_cases": 210,
+  "export_tokenizer_sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8",
+  "export_weight_sha256": "128e9bce231d82ee6ac075cae60895da3464e5a5cfe7e4377aa8dea932032ea1",
+  "file_group_bootstrap": {
+    "groups": 20,
+    "paired_exact_rate_difference_95pct_interval": [
+      0.016666666666666666,
+      0.07758620689655173
+    ],
+    "replicates": 10000,
+    "seed": 271828
+  },
+  "interpretation": "Format learned; edit accuracy remains low; all adapted development actions are replacements and all four synthetic keep cases receive false-positive edits. No live deployment.",
+  "paired_exact_after": {
+    "adapted_only": 9,
+    "neither": 201
+  },
+  "plan_sha256": "cd796a2efb535bea32c64e98d82dbb38b297b51173d22319083201c6c7654c20",
+  "schema": "one-line-gpu-pilot-result-summary-v1",
+  "scientific_file_sha256": {
+    "adapted": "77f6f97061a88c68de697fec62e1093ba412dafb17c45cc4cd059b8e203b2fdb",
+    "baseline": "5a7c65053d82222a37aacf24ce243623ee1aa6a87d156e8592fac6066cf8db25"
+  },
+  "source_model_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+  "source_tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+  "source_weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+  "training": {
+    "attempted_updates": 23,
+    "completed_updates": 23,
+    "distinct_states": 718,
+    "elapsed_seconds": 233.383315401,
+    "examples": 720,
+    "optimizer": "bitsandbytes.AdamW8bit",
+    "supervised_target_tokens": 9405,
+    "training_input_tokens": 538275
+  },
+  "worker_commit": "cb4b18872416a6ee1ccae31d3e35703d9c9f8ab9",
+  "worker_state": "failed_after_evaluation_due_to_export_tokenizer_byte_hash_check"
+}

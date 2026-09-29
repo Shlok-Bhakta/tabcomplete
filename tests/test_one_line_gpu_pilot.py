@@ -276,6 +276,34 @@ def test_worker_verifies_frozen_input_bundle_and_rejects_extra_weights(tmp_path:
         module._safe_input_manifest(source.parent)
 
 
+def test_worker_evaluation_uses_the_export_tokenizer_hash(tmp_path: Path) -> None:
+    session, _source = _write_worker_fixture(tmp_path)
+    module = _worker_module(tmp_path, session)
+    evaluation = tmp_path / "adapted-evaluation.json"
+    evaluation.write_text(
+        json.dumps(
+            {
+                "identity": {
+                    "model_weight_sha256": "export-weight",
+                    "source_weight_sha256": session["model_weight_sha256"],
+                    "development_sha256": session["development_sha256"],
+                    "tokenizer_sha256": "export-tokenizer",
+                },
+                "cases": session["development_count"],
+                "synthetic_calibration": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    module._verify_evaluation(
+        evaluation, model_sha="export-weight", tokenizer_sha="export-tokenizer"
+    )
+    with pytest.raises(ValueError, match="evaluation identity"):
+        module._verify_evaluation(
+            evaluation, model_sha="export-weight", tokenizer_sha=session["tokenizer_sha256"]
+        )
+
+
 def test_worker_template_is_syntax_valid_and_trainer_owns_output_creation(tmp_path: Path) -> None:
     session, _source = _write_worker_fixture(tmp_path)
     module = _worker_module(tmp_path, session)
