@@ -41,4 +41,38 @@ describe("prediction projection", () => {
       .toBe("rejected_implicit_typing");
     db.close();
   });
+  test("review confirmation requires the exact outcome event and survives rebuild", () => {
+    const db = openDatabase(":memory:");
+    const stamp = "2026-09-25T00:00:00Z";
+    db.prepare("INSERT INTO machines(machine_id,first_seen_at,last_seen_at) VALUES (?,?,?)")
+      .run("machine", stamp, stamp);
+    db.prepare("INSERT INTO sessions(session_id,machine_id,started_at) VALUES (?,?,?)")
+      .run("session", "machine", stamp);
+    const insert = db.prepare(`INSERT INTO events
+      (event_id,session_id,sequence_number,event_type,timestamp_ms,payload_json)
+      VALUES (?,?,?,?,?,?)`);
+    const add = (id: string, seq: number, type: string, payload: object) =>
+      insert.run(id, "session", seq, type, seq * 1000, JSON.stringify({ prediction_id: "p", ...payload }));
+    add("request", 1, "prediction_requested", { synthetic: false });
+    add("shown", 2, "prediction_shown", { active_buffer: true, focused: true });
+    add("accepted", 3, "prediction_accepted", {});
+    add("review", 4, "prediction_reviewed", {
+      synthetic: false, human_verified: true, review_source: "explicit_editor_confirmation",
+      resolution_event_id: "accepted", outcome: "accepted",
+    });
+    rebuildPrediction(db, "session", "p");
+    const read = () => db.query<{review_status: string;review_event_id: string | null}, []>(
+      "SELECT review_status,review_event_id FROM prediction_projection",
+    ).get();
+    expect(read()).toEqual({ review_status: "confirmed", review_event_id: "review" });
+    expect(rebuildAllPredictions(db)).toBe(1);
+    expect(read()).toEqual({ review_status: "confirmed", review_event_id: "review" });
+    add("review-conflict", 5, "prediction_reviewed", {
+      synthetic: false, human_verified: true, review_source: "explicit_editor_confirmation",
+      resolution_event_id: "accepted", outcome: "accepted",
+    });
+    rebuildPrediction(db, "session", "p");
+    expect(read()).toEqual({ review_status: "ambiguous", review_event_id: null });
+    db.close();
+  });
 });

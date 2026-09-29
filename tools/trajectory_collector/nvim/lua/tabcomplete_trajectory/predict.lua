@@ -31,6 +31,7 @@ local last_fingerprint = nil
 local last_status = "idle"
 local last_error = nil
 local last_latency_ms = nil
+local last_decision = nil
 local consecutive_failures, backoff_until_ms = 0, 0
 local counters = { requested = 0, displayed = 0, accepted = 0, cancelled_unseen = 0,
   rejected_explicit = 0, rejected_implicit_typing = 0, typed_match = 0,
@@ -40,6 +41,7 @@ local mapping_key = nil
 local lock_path = "/tmp/tabcomplete-predictor-19093.lock"
 M._request_impl = nil -- deterministic test seam
 M._tokenize_impl = nil -- deterministic test seam
+M._confirm_impl = nil -- deterministic test seam; production uses vim.fn.confirm
 
 local function now() return util.now_ms() end
 local function utf8_boundary(line, col)
@@ -267,7 +269,7 @@ local function dismiss(reason, delta, envelope)
   elseif reason == "mode_off" or reason == "mode_changed" then outcome = "cancelled_by_mode"
   else outcome = "dismissed_navigation" end
   visible_ms = visible_ms or math.max(0, now() - state.shown_at_ms)
-  emit(state, "prediction_dismissed", { outcome = outcome,
+  local dismissed = emit(state, "prediction_dismissed", { outcome = outcome,
     outcome_source = key and "key_correlated_buffer_delta" or "editor_observation",
     shown_at_ms = state.shown_at_ms, dismissed_at_ms = now(), visible_duration_ms = visible_ms,
     low_exposure = visible_ms < 150,
@@ -282,6 +284,10 @@ local function dismiss(reason, delta, envelope)
     focused = not vim.g.tabcomplete_predictor_focus_lost })
   if outcome == "rejected_explicit" then
     emit(state, "prediction_rejected", { finish_reason = "explicit_user_reject", rejected_at_ms = now() })
+    if dismissed then
+      last_decision = { state = state, outcome = outcome, event_id = dismissed.event_id,
+        session_id = collector.session_id, synthetic = opts.synthetic, reviewed = false }
+    end
   end
   counters[outcome] = (counters[outcome] or 0) + 1
   close_preview()
@@ -551,10 +557,14 @@ function M.accept()
   vim.api.nvim_buf_set_text(state.bufnr, state.row, state.start_col, state.row, state.end_col, replacement)
   accepted_tick[state.bufnr] = vim.api.nvim_buf_get_changedtick(state.bufnr)
   local delta_sequence = collector.seq
-  emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
+  local accepted = emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
     accepted_chars = vim.fn.strchars(state.action.text), accepted_lines = #replacement,
     total_chars = vim.fn.strchars(state.action.text), applied_through_sequence = delta_sequence,
     visible_duration_ms = now() - state.shown_at_ms })
+  if accepted then
+    last_decision = { state = state, outcome = "accepted", event_id = accepted.event_id,
+      session_id = collector.session_id, synthetic = opts.synthetic, reviewed = false }
+  end
   applying = false
   counters.accepted = counters.accepted + 1
   close_preview()
@@ -567,6 +577,29 @@ end
 function M.reject()
   if not active then return false, "no active proposal" end
   dismiss("explicit")
+  return true
+end
+function M.review_last()
+  local decision = last_decision
+  if not decision or decision.reviewed then return false, "no unreviewed explicit decision" end
+  if decision.synthetic or opts.synthetic then
+    return false, "synthetic decisions cannot be human-reviewed"
+  end
+  if decision.session_id ~= collector.session_id then return false, "decision belongs to another session" end
+  local confirm = M._confirm_impl or vim.fn.confirm
+  local label = decision.outcome == "accepted" and "accepted" or "explicitly rejected"
+  local answer = confirm("Confirm you personally reviewed the " .. label
+    .. " TabComplete proposal " .. decision.state.prediction_id:sub(1, 8) .. "?",
+    "&Confirm\n&Cancel", 2)
+  if answer ~= 1 then return false, "review cancelled" end
+  local event = emit(decision.state, "prediction_reviewed", {
+    resolution_event_id = decision.event_id, outcome = decision.outcome,
+    review_source = "explicit_editor_confirmation", human_verified = true,
+    reviewed_at_ms = now(),
+  })
+  if not event then return false, "collector unavailable; review not recorded" end
+  decision.reviewed = true
+  last_status = "decision review recorded"
   return true
 end
 function M.set_mode(next_mode)

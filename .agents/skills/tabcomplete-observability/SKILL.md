@@ -83,6 +83,13 @@ in the existing trajectory collector SQLite database. Rebuild query projections
 from those raw events. Keep explicit rejection, divergent typing, typed match,
 partial match, unseen cancellation, navigation, expiration, shadow, no-edit, and
 transport failure distinct. `synthetic=false` does not prove human review.
+An optional `prediction_reviewed` event must name the exact accepted or
+explicitly dismissed outcome event and follow a visible, focused display.
+Treat missing, mismatched, duplicated, synthetic, or gap-affected confirmations
+as unverified. The editor's review command is an explicit local assertion;
+keymap origin alone cannot prove a physical human action. Deploy collector
+support for a new event type before enabling its Neovim client, since an old
+server rejects a whole batch containing an unknown type.
 Do not start automatic training or turn ambiguous later edits into rewards.
 
 Measure same-prompt cache repeats separately from changed editor states. Report

@@ -1103,6 +1103,33 @@ describe("WAL mode assertions", () => {
 });
 
 describe("prediction projection ingestion", () => {
+  test("review event ingests once and links to the exact accepted outcome", async () => {
+    expect((await post("/v1/session/start", SESSION_BASE)).status).toBe(201);
+    const event = (id: string, seq: number, eventType: string, payload: object) => ({
+      protocol_version: 1, event_id: id, session_id: "sess-1", sequence_number: seq,
+      timestamp_ms: 1790000000000 + seq, event_type: eventType,
+      file_id: "repo:synthetic:main.py", cursor: { row: 0, col: 0 }, mode: "i",
+      payload: { prediction_id: "prediction-reviewed", ...payload },
+    });
+    const rows = [
+      event("request", 1, "prediction_requested", { synthetic: false }),
+      event("shown", 2, "prediction_shown", { active_buffer: true, focused: true }),
+      event("accepted", 3, "prediction_accepted", {}),
+      event("review", 4, "prediction_reviewed", {
+        synthetic: false, human_verified: true, review_source: "explicit_editor_confirmation",
+        resolution_event_id: "accepted", outcome: "accepted",
+      }),
+    ];
+    const batch = { protocol_version: 1, events: rows };
+    expect((await post("/v1/events/batch", batch)).status).toBe(200);
+    const retry = await bodyJson(await post("/v1/events/batch", batch));
+    expect(retry.ingested).toBe(0);
+    const row = app!.db.query<{review_status: string;review_event_id: string | null}, []>(
+      "SELECT review_status,review_event_id FROM prediction_projection " +
+      "WHERE prediction_id='prediction-reviewed'",
+    ).get();
+    expect(row).toEqual({ review_status: "confirmed", review_event_id: "review" });
+  });
   test("out-of-order retry batches update one projection row", async () => {
     expect((await post("/v1/session/start", SESSION_BASE)).status).toBe(201);
     const event = (id: string, seq: number, eventType: string, payload: object) => ({

@@ -1,7 +1,7 @@
 /** Rebuildable, compact prediction query rows. Raw events remain authoritative. */
 import type { Database } from "bun:sqlite";
 
-const VERSION = 1;
+const VERSION = 2;
 type Row = {
   event_id: string; session_id: string; sequence_number: number;
   event_type: string; timestamp_ms: number; file_id: number | null;
@@ -39,11 +39,13 @@ export function rebuildPrediction(db: Database, sessionId: string, predictionId:
   let outcome: string | null = null;
   let source: string | null = null;
   let terminalRecorded = false;
+  const reviews: Row[] = [];
   for (const row of rows) {
     const payload = object(row.payload_json);
     if (row.event_type === "prediction_requested" && !request) request = row;
     if (row.event_type === "prediction_generated") action = row;
     if (row.event_type === "prediction_shown" && !shown) shown = row;
+    if (row.event_type === "prediction_reviewed") reviews.push(row);
     if (row.event_type === "prediction_accepted" && !terminalRecorded) {
       outcome = "accepted"; source = "explicit_acceptance"; lastOutcome = row;
       terminalRecorded = true;
@@ -71,6 +73,20 @@ export function rebuildPrediction(db: Database, sessionId: string, predictionId:
   const req = request ? object(request.payload_json) : {};
   const display = shown ? object(shown.payload_json) : {};
   const generated = action ? object(action.payload_json) : {};
+  const reviewPayload = reviews.length === 1 ? object(reviews[0]!.payload_json) : {};
+  const reviewConfirmed = reviews.length === 1 && request !== null && shown !== null
+    && lastOutcome !== null && reviews[0]!.sequence_number > lastOutcome.sequence_number
+    && request.sequence_number < shown.sequence_number
+    && shown.sequence_number < lastOutcome.sequence_number
+    && display["active_buffer"] === true && display["focused"] === true
+    && req["synthetic"] === false && reviewPayload["synthetic"] === false
+    && reviewPayload["human_verified"] === true
+    && reviewPayload["review_source"] === "explicit_editor_confirmation"
+    && reviewPayload["resolution_event_id"] === lastOutcome.event_id
+    && reviewPayload["outcome"] === outcome
+    && (outcome === "accepted" || outcome === "rejected_explicit");
+  const reviewStatus = reviewConfirmed ? "confirmed"
+    : reviews.length > 0 ? "ambiguous" : "unreviewed";
   // The editor's `repo:<root-name>:<relative-path>` is a client identity,
   // while files.file_id is an integer. Resolve through the session's repo;
   // never reinterpret the text stored in events.file_id as an integer FK.
@@ -91,8 +107,9 @@ export function rebuildPrediction(db: Database, sessionId: string, predictionId:
        file_identity,resolved_file_id,model_revision,model_gguf_sha256,
        runtime_config_hash,context_policy_version,pre_state_hash,pre_state_sequence,
        context_blob_hash,action_blob_hash,requested_at,shown_at,closed_at,
-       outcome,outcome_source,projection_version,updated_through_sequence)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       outcome,outcome_source,projection_version,updated_through_sequence,
+       review_event_id,review_status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(session_id,prediction_id) DO UPDATE SET
        request_event_id=excluded.request_event_id,shown_event_id=excluded.shown_event_id,
        last_outcome_event_id=excluded.last_outcome_event_id,file_identity=excluded.file_identity,
@@ -103,7 +120,8 @@ export function rebuildPrediction(db: Database, sessionId: string, predictionId:
        action_blob_hash=excluded.action_blob_hash,requested_at=excluded.requested_at,
        shown_at=excluded.shown_at,closed_at=excluded.closed_at,outcome=excluded.outcome,
        outcome_source=excluded.outcome_source,projection_version=excluded.projection_version,
-       updated_through_sequence=excluded.updated_through_sequence`,
+       updated_through_sequence=excluded.updated_through_sequence,
+       review_event_id=excluded.review_event_id,review_status=excluded.review_status`,
   ).run(
     sessionId, predictionId, request?.event_id ?? null, shown?.event_id ?? null,
     lastOutcome?.event_id ?? null, fileIdentity, resolved,
@@ -114,6 +132,7 @@ export function rebuildPrediction(db: Database, sessionId: string, predictionId:
       ?? string(display["action_blob_hash"]), request?.timestamp_ms ?? null,
     shown?.timestamp_ms ?? null, lastOutcome?.timestamp_ms ?? null,
     outcome, source, VERSION, lastSeq,
+    reviewConfirmed ? reviews[0]!.event_id : null, reviewStatus,
   );
 }
 

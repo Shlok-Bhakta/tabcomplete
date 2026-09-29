@@ -29,6 +29,7 @@ local VALID_TYPES = {
   prediction_rejected = true,
   prediction_generated = true,
   prediction_dismissed = true,
+  prediction_reviewed = true,
 }
 
 function M.is_valid_type(t)

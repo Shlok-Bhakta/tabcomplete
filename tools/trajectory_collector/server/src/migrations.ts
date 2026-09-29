@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { DDL_INDEXES, DDL_TABLES } from "./schema";
 import { rebuildAllPredictions } from "./projection";
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 interface Migration {
   version: number;
@@ -52,6 +52,8 @@ export const MIGRATIONS: Migration[] = [
           outcome_source TEXT,
           projection_version INTEGER NOT NULL,
           updated_through_sequence INTEGER NOT NULL,
+          review_event_id TEXT,
+          review_status TEXT NOT NULL DEFAULT 'unreviewed',
           PRIMARY KEY (session_id, prediction_id)
         );
         CREATE INDEX IF NOT EXISTS idx_prediction_projection_session_time
@@ -65,6 +67,24 @@ export const MIGRATIONS: Migration[] = [
           WHERE json_valid(payload_json)
             AND (event_type LIKE 'prediction_%' OR event_type = 'heartbeat');
       `);
+      rebuildAllPredictions(db);
+    },
+  },
+  {
+    version: 3,
+    description: "review provenance for prediction projections",
+    up: (db: Database) => {
+      const columns = new Set(db.query<{ name: string }, []>(
+        "PRAGMA table_info(prediction_projection)",
+      ).all().map((row) => row.name));
+      if (!columns.has("review_event_id")) {
+        db.exec("ALTER TABLE prediction_projection ADD COLUMN review_event_id TEXT;");
+      }
+      if (!columns.has("review_status")) {
+        db.exec("ALTER TABLE prediction_projection ADD COLUMN review_status TEXT NOT NULL DEFAULT 'unreviewed';");
+      }
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_prediction_projection_review_status
+        ON prediction_projection(review_status, closed_at);`);
       rebuildAllPredictions(db);
     },
   },

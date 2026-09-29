@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION = "personalization-feedback-evidence-v3"
+SCHEMA_VERSION = "personalization-feedback-evidence-v4"
 PREDICTION_TYPES = {
     "prediction_requested",
     "prediction_shown",
@@ -24,6 +24,7 @@ PREDICTION_TYPES = {
     "prediction_rejected",
     "prediction_generated",
     "prediction_dismissed",
+    "prediction_reviewed",
 }
 LIFECYCLE_EVENT_TYPE = "heartbeat"
 RESOLVED = {
@@ -195,6 +196,7 @@ def extract(db_path: Path) -> dict:
         if not primary:
             primary = [event for event in resolutions if event["type"] == "prediction_rejected"]
         resolution = primary[0] if len(primary) == 1 else None
+        reviews = [event for event in events if event["type"] == "prediction_reviewed"]
         lifecycle_events = [event for event in events if event["type"] == LIFECYCLE_EVENT_TYPE]
         flags = []
         if not requested:
@@ -227,8 +229,46 @@ def extract(db_path: Path) -> dict:
                     valid_anchor = True
             if not valid_anchor:
                 flags.append("missing_pre_state_anchor")
-        if payload.get("synthetic") is not False or payload.get("human_verified") is not True:
+        review_gap = bool(
+            len(reviews) == 1 and resolution
+            and any(
+                gap["session_id"] == proposal["session_id"]
+                and gap["after"] >= resolution["sequence"]
+                and gap["before"] <= reviews[0]["sequence"]
+                for gap in sequence_gaps
+            )
+        )
+        verified_review = (
+            len(reviews) == 1
+            and resolution is not None
+            and requested is not None
+            and shown is not None
+            and requested["sequence"] < shown["sequence"] < resolution["sequence"]
+            and shown["payload"].get("active_buffer") is True
+            and shown["payload"].get("focused") is True
+            and not review_gap
+            and payload.get("synthetic") is False
+            and reviews[0]["sequence"] > resolution["sequence"]
+            and reviews[0]["payload"].get("synthetic") is False
+            and reviews[0]["payload"].get("human_verified") is True
+            and reviews[0]["payload"].get("review_source")
+            == "explicit_editor_confirmation"
+            and reviews[0]["payload"].get("resolution_event_id")
+            == resolution["event_id"]
+            and reviews[0]["payload"].get("outcome")
+            == (
+                "accepted" if resolution["type"] == "prediction_accepted"
+                else "rejected_explicit" if resolution["type"] == "prediction_dismissed"
+                and resolution["payload"].get("outcome") == "rejected_explicit"
+                else None
+            )
+        )
+        if not verified_review:
             flags.append("human_provenance_unverified")
+        if len(reviews) > 1:
+            flags.append("multiple_review_events")
+        if review_gap:
+            flags.append("review_interval_sequence_gap")
         if not payload.get("context_hash") or not payload.get("pre_state_hash"):
             flags.append("pre_state_unverified")
         if payload.get("context_blob_hash") and payload["context_blob_hash"] not in blob_hashes:
@@ -317,6 +357,9 @@ def extract(db_path: Path) -> dict:
             "request_event_id": requested["event_id"] if requested else None,
             "display_event_id": shown["event_id"] if shown else None,
             "resolution_event_id": resolution["event_id"] if resolution else None,
+            "review_event_id": reviews[0]["event_id"] if verified_review else None,
+            "review_event_count": len(reviews),
+            "human_review_confirmed": bool(verified_review),
             "request_id": payload.get("request_id"),
             "pre_state_sequence": payload.get("pre_state_sequence"),
             "context_blob_hash": payload.get("context_blob_hash"),
