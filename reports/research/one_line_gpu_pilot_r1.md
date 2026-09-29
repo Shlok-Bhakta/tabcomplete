@@ -29,6 +29,15 @@ because formatting and a type annotation changed source bytes. The earlier
 plan is retained as `plan_preformat_audit.json`; no model result was inspected
 when the revision was made.
 
+Attempt 1 ran on a Tesla T4 for 506 seconds and failed during the fixed
+synthetic calibration part of the untouched baseline. The Kaggle environment
+was missing `tree-sitter-language-pack`; the private log identifies the import
+failure. The evaluator had not written a baseline result, and training had
+zero updates and zero input-token exposure. Plan revision 3 pins the package
+from the repository lockfile, records the failure evidence, refreshes quota,
+and assigns distinct private retry IDs. The model, data, prompt, and scoring
+rules are unchanged.
+
 The converter accepts a state only when the marked editable region and the
 assistant replacement reconstruct a cursor-aligned, one-line edit byte for
 byte. It also requires a uniquely located earlier same-file edit in the

@@ -283,6 +283,7 @@ def test_worker_template_is_syntax_valid_and_trainer_owns_output_creation(tmp_pa
     assert module.SESSION["development_count"] == 64
     text = (PILOT / "run.py").read_text(encoding="utf-8")
     assert '"HF_HUB_OFFLINE": "1"' in text
+    assert '"tree-sitter-language-pack==1.20.0"' in text
     assert '"--phase",\n            "pilot"' in text
     assert '"HF_HUB_OFFLINE"' in text
     assert "TRAIN_OUT.mkdir(parents=True, exist_ok=False)" not in text

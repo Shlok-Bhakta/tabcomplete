@@ -59,22 +59,14 @@
     "worker_transformers": "5.17.0"
   },
   "frozen_at": "2026-09-29T06:23:24.604186+00:00",
-  "kaggle": {
-    "dataset_id": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry-inputs",
-    "kernel_id": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry"
-  },
   "plan_note": "Before comparison output, two historical Kaggle notebook references returned authenticated HTTP 404 when status was re-queried; they have no running session. Other unknown statuses remain blocking.",
-  "plan_revision": 3,
+  "plan_revision": 2,
   "quota_at_freeze": {
     "active_jobs": [],
     "job_statuses": [
       {
         "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
         "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\""
-      },
-      {
-        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1",
-        "status": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1 has status \"KernelWorkerStatus.ERROR\""
       },
       {
         "reference": "shlokbhakta/tabcomplete-r1-conversion",
@@ -174,7 +166,7 @@
         "reference": "shlokbhakta/exercise-functions-and-getting-help",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-09-29T06:52:07.651503+00:00"
+        "verified_at": "2026-09-29T06:26:11.209323+00:00"
       },
       {
         "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
@@ -198,19 +190,19 @@
         "reference": "shlokbhakta/notebookd2edcfa65c",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-09-29T06:52:07.651503+00:00"
+        "verified_at": "2026-09-29T06:26:11.209346+00:00"
       }
     ],
-    "observed_at": "2026-09-29T06:51:43.815464+00:00",
-    "remaining": 44.86,
+    "observed_at": "2026-09-29T06:23:01.283476+00:00",
+    "remaining": 45.0,
     "renewal": "2026-10-03T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
     "total": 45.0,
     "units": "Kaggle account GPU-hours",
-    "used": 0.14
+    "used": 0.0
   },
-  "revised_at": "2026-09-29T06:52:09.060457+00:00",
-  "revision_reason": "Attempt 1 completed the fixed 210-case baseline generation but failed during fixed synthetic calibration because the Kaggle worker omitted tree-sitter-language-pack. It performed zero training updates. Revision 3 pins the lockfile package, gives the retry new private Kaggle dataset/kernel identities, and refreshes quota. Data, model, prompt, suite, and metrics are unchanged; no baseline result was written or viewed.",
+  "revised_at": "2026-09-29T06:30:52.116011+00:00",
+  "revision_reason": "Before any model comparison output, Ruff formatting and a mypy-only annotation changed converter source bytes. Rebuilt data has identical train/dev hashes, counts, filters, and tokenizer exposure; only converter and manifest hashes changed. A frozen preformat audit is retained.",
   "schema": "one-line-instinct-pilot-plan-v1",
   "selection_and_scope": {
     "development_metrics": [
@@ -236,7 +228,7 @@
     "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
   },
   "suite_revision": 3,
-  "supersedes_plan_sha256": "844ea1ffcd8b2f16350ac6faaf766c15939d33da682e8f024e3d6b4a955d4791",
+  "supersedes_plan_sha256": "a963e473677a5c8b98549eda17f0a53bf8e8c17aa74de43075c0050fc80a8b70",
   "training": {
     "compute_precision": "FP16",
     "cosine_floor_fraction": 0.1,

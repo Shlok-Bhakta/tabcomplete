@@ -466,6 +466,7 @@ def main() -> int:
                 "transformers==5.17.0",
                 "bitsandbytes==0.50.2",
                 "PyYAML==6.0.2",
+                "tree-sitter-language-pack==1.20.0",
             ],
             "setup",
             timeout=8 * 60,

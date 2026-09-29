@@ -1,0 +1,16 @@
+{
+  "commit": "3db1b3a6f72a69167b583689262f9f66d0f69ad3",
+  "device": "Tesla T4",
+  "elapsed_seconds": 505.812852272,
+  "failure_stage": "baseline_evaluation",
+  "failure_type": "RuntimeError",
+  "kernel_id": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1",
+  "plan_sha256": "844ea1ffcd8b2f16350ac6faaf766c15939d33da682e8f024e3d6b4a955d4791",
+  "private_baseline_log_sha256": "3e28ee4e5403de5ccd1de2294ef6e0f8b6cca50d41067581c822892c83bdf944",
+  "raw_log_location": "private Kaggle output; not committed",
+  "schema": "one-line-gpu-pilot-attempt-failure-v1",
+  "specific_cause": "missing tree-sitter-language-pack package in Kaggle worker setup",
+  "training_input_tokens": 0,
+  "training_updates": 0,
+  "worker_status_sha256": "0c99a056db0876edf999f1487face59cb5fc3dcf690e6272ff0204149157a015"
+}
