@@ -618,7 +618,7 @@ def prepare_bundle(
     }
     write_json(dataset_dir / "input-manifest.json", input_manifest)
     write_json(
-        dataset_dir / "datasets-metadata.json",
+        dataset_dir / "dataset-metadata.json",
         {
             "title": "TabComplete Instinct One-Line Pilot R1 (Private)",
             "id": dataset_id,

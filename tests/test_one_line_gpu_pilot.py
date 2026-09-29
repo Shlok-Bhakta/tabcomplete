@@ -298,7 +298,10 @@ def test_kaggle_submission_cli_flags_match_installed_cli() -> None:
     kernels = subprocess.run(
         ["kaggle", "kernels", "push", "--help"], capture_output=True, text=True, check=True
     ).stdout
+    # CLI help names the older plural file, but the installed create command
+    # rejected it and explicitly requires the singular filename.
     assert "datasets-metadata.json" in datasets
+    assert 'dataset_dir / "dataset-metadata.json"' in (PILOT / "build_pilot.py").read_text()
     assert "-u, --public" in datasets and "default is private" in datasets
     assert "--accelerator ACC" in kernels
     assert "NvidiaTeslaT4" not in kernels  # values are validated by the server, not local choices
