@@ -1,0 +1,57 @@
+{
+  "accepted_training_labels": 0,
+  "backend": "existing resident llama-server CPU-only",
+  "blind_prompt_sha256": "1ff47c88775171284f39558b0f4af91ddffe602796d34ad9dacbf54cc8513c54",
+  "cursor_policy": "identifier_start",
+  "decoding": {
+    "cache_prompt": false,
+    "maximum_output_tokens": 96,
+    "n_keep": 0,
+    "slot": 0,
+    "stream": false,
+    "temperature": 0,
+    "valid_stop_type": "eos"
+  },
+  "filetypes": {
+    ".go": "go",
+    ".py": "python",
+    ".rs": "rust",
+    ".ts": "typescript"
+  },
+  "gpu_or_paid_calls": false,
+  "ids": [
+    "active-git/cadbf34cc87b56cce37bb7bc",
+    "active-git/e5f877ebe1121ecc594dcb77",
+    "active-git/199602314afa72e020ee66da",
+    "active-git/d3f50da41cadd3c5a24bdde7",
+    "active-git/405e9d389446f7513c13f520",
+    "active-git/52c9e587866c53b903b8d250",
+    "active-git/7edecba1fdfc308439c917ea",
+    "active-git/ac5f59704997cc93016ae31a",
+    "active-git/0edb71ff03a2723afaf397d6"
+  ],
+  "maximum_prompt_tokens": 2048,
+  "maximum_requests": 9,
+  "model_file": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+  "model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "prior_plan": "active_git_q25_diagnostic_plan_v3.json",
+  "prompt_parity_bytes": 5280,
+  "prompt_parity_case": "active-git/cadbf34cc87b56cce37bb7bc",
+  "prompt_parity_python_and_lua_sha256": "72006fc6b845a422ede0d3711370d799a439db71c00f134c98ce51c20f819869",
+  "prompt_policy": "Mirror installed compact-next-edit-context-v1 with cursor at start byte of the sole changed identifier, 80 prior and 40 later lines, exact synthetic prior byte-span history, and unchanged target suffix. Absolute path prefix is /tmp/public-edit-replay/{alias}/{relative_path}.",
+  "purpose": "Narrow local diagnostic: can the already-deployed adapted q25 Q4 exploit a synthetic earlier same-commit edit? No training, selection, or general quality claim.",
+  "repo_aliases": {
+    "gin-gonic/gin": "gin",
+    "pydantic/pydantic": "pydantic",
+    "tokio-rs/tokio": "tokio",
+    "vuejs/core": "vue_core"
+  },
+  "request_timeout_seconds": 30,
+  "revision_reason": "A byte-for-byte Neovim prompt parity check found that v2/v3 Python omitted the oldest of 80 previous source lines. V4 fixes only that window start; v2/v3 outputs remain historical approximate-prompt results.",
+  "runner_sha256": "a73a1d84d0a79bbe8d97f5669e8b231a89f06a25f3cdc25719f505ed9c98966a",
+  "score": "Exact byte-equal target suffix after complete compact R header and EOS; N, truncation, malformed wire, and prompt overflow are separate failures or skips.",
+  "selection_plan": "reports/research/one_line_r1/active_git_blind_review_plan_v2.json",
+  "server_url": "http://127.0.0.1:19093",
+  "source_scan": "reports/research/one_line_r1/active_git_sequence_results_v1.json",
+  "version": 4
+}

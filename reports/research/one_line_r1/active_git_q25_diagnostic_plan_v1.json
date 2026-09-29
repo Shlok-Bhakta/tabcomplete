@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "purpose": "Narrow local diagnostic: can the already-deployed adapted q25 Q4 exploit a synthetic earlier same-commit edit? No training, selection, or general quality claim.",
+  "model_file": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+  "model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "server_url": "http://127.0.0.1:19093",
+  "backend": "existing resident llama-server CPU-only",
+  "source_scan": "reports/research/one_line_r1/active_git_sequence_results_v1.json",
+  "selection_plan": "reports/research/one_line_r1/active_git_blind_review_plan_v2.json",
+  "blind_prompt_sha256": "1ff47c88775171284f39558b0f4af91ddffe602796d34ad9dacbf54cc8513c54",
+  "runner_sha256": "e4d49f94d7b1289d04c8e63f7b399d3c95ae3bf10db72cee3f118aa650abb3d7",
+  "ids": [
+    "active-git/cadbf34cc87b56cce37bb7bc",
+    "active-git/e5f877ebe1121ecc594dcb77",
+    "active-git/199602314afa72e020ee66da",
+    "active-git/d3f50da41cadd3c5a24bdde7",
+    "active-git/405e9d389446f7513c13f520",
+    "active-git/52c9e587866c53b903b8d250",
+    "active-git/7edecba1fdfc308439c917ea",
+    "active-git/ac5f59704997cc93016ae31a",
+    "active-git/0edb71ff03a2723afaf397d6"
+  ],
+  "repo_aliases": {"pydantic/pydantic": "pydantic", "vuejs/core": "vue_core", "tokio-rs/tokio": "tokio", "gin-gonic/gin": "gin"},
+  "filetypes": {".py": "python", ".ts": "typescript", ".rs": "rust", ".go": "go"},
+  "prompt_policy": "Mirror installed compact-next-edit-context-v1 at cursor byte column 0 using 80 prior and 40 later lines, exact synthetic prior byte-span history, and the unchanged target line. Absolute path prefix is /tmp/public-edit-replay/{alias}/{relative_path}.",
+  "decoding": {"temperature": 0, "maximum_output_tokens": 96, "stream": false, "cache_prompt": false, "slot": 0, "n_keep": 0, "valid_stop_type": "eos"},
+  "maximum_prompt_tokens": 2048,
+  "request_timeout_seconds": 30,
+  "score": "Exact byte-equal target replacement after complete compact R header and EOS; N, truncation, malformed wire, and prompt overflow are separate failures or skips.",
+  "maximum_requests": 9,
+  "accepted_training_labels": 0,
+  "gpu_or_paid_calls": false
+}
