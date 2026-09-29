@@ -51,7 +51,7 @@ After restart it was healthy, the active database passed integrity check,
 schema 3 was applied, and its historical 70 projections remained. The stable
 LazyVim path stayed
 `/home/crabcake/Projects/tabcomplete-automatic-feedback-r1/tools/trajectory_collector/nvim`;
-that clean branch was fast-forwarded to commit `7b3e768`. A fresh Neovim
+that clean branch was fast-forwarded to commit `c0e9f3d`. A fresh Neovim
 startup reported `mode=automatic`, experimental opt-in true, quality validated
 false, personalization training false, acceptance key `<M-l>`, and the review
 command present.
