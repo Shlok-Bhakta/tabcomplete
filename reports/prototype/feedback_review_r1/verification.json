@@ -1,0 +1,38 @@
+{
+  "date_utc": "2026-09-29",
+  "code_commit_before_report": "7b3e768",
+  "server_image_id": "b53fc7236837f451051e658fb12ed7b197dafe072b9040d957696b6b60a405bc",
+  "rollback_image_tag": "localhost/tabcomplete-trajectory-collector:rollback-20260929T051244Z",
+  "database": "/mnt/ssd/collector-data/collector.sqlite",
+  "database_backup": "/mnt/ssd/collector-data/backups/collector-before-feedback-review-20260929T051244Z.sqlite",
+  "schema_before": 2,
+  "schema_after": 3,
+  "migration_copy_counts": {"events_before": 4833, "events_after": 4833, "projections_before": 70, "projections_after": 70},
+  "live_final_counts": {"events": 4871, "projections": 74, "review_events": 1, "confirmed_reviews": 0},
+  "live_protocol_smoke": {
+    "session_id": "b6aa798e-5666-4ca8-8790-edabea3c0886",
+    "prediction_id": "8af82b36-6149-4ff9-b886-c100ed2453f7",
+    "synthetic": true,
+    "first_ingested": 4,
+    "retry_ingested": 0,
+    "projection_review_status": "ambiguous"
+  },
+  "real_model_editor_smoke": {
+    "session_id": "8ab91346-7f02-4952-a9c5-1a5dbefb31ca",
+    "synthetic": true,
+    "requests": 3,
+    "displayed": 3,
+    "accepted": 1,
+    "typing_dismissed": 1,
+    "typed_match": 1,
+    "replay_anchors": 10,
+    "replay_deltas": 7,
+    "replay_mismatches": 0,
+    "replay_byte_match": true
+  },
+  "model_gguf_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "installed_mode": "automatic experimental",
+  "acceptance_key": "<M-l>",
+  "automatic_personalization_enabled": false,
+  "tests": {"python_passed": 241, "python_skipped": 1, "bun_passed": 58, "collector_lua_passed": 56, "automatic_lua_passed": true, "review_lua_passed": true, "typecheck_passed": true, "ruff_passed": true, "mypy_source_files": 63}
+}
