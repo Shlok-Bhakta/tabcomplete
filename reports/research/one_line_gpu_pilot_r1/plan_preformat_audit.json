@@ -1,0 +1,245 @@
+{
+  "base_commit": "dc6f32d491d6325ddb10a18970cac27bb4764d9c",
+  "branch": "research/one-line-gpu-pilot-r1",
+  "budgets": {
+    "max_new_storage_bytes": 12884901888,
+    "max_session_seconds": 7200,
+    "no_automatic_renewal": true,
+    "one_active_allocation": true,
+    "paid_compute": false,
+    "quota_gpu_hours_multiplier": 2,
+    "reserve_seconds": 1200
+  },
+  "campaign": "one-line-gpu-pilot-r1",
+  "config_sha256": "52aa2fcd8b115a9654a041bf017f245224de5448269eaab16ea7bc31c38a0b29",
+  "context_and_decoding": {
+    "action_contract": "single-line-edit-v1",
+    "calibration_fixture_sha256": "a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e",
+    "calibration_manifest_sha256": "183f151eb8e7bd3a1d214856187a5d75697f376e7516d31880b81c57e0435135",
+    "context_policy_version": "single-line-context-v2",
+    "greedy": true,
+    "input_token_limit": 1024,
+    "response_token_limit_including_eos": 64,
+    "termination": "actual_eos_required",
+    "total_sequence_limit": 2048
+  },
+  "data": {
+    "converter_sha256": "b192908e7e65e6f1d7dddc329c02611ee56f85b6595218599799067066c02f73",
+    "dataset_id": "continuedev/instinct-data",
+    "dataset_license": "Apache-2.0",
+    "dataset_revision": "e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29",
+    "dev_count": 210,
+    "development_sha256": "c5f0a8260060530666693c57128a68e763661757c67665a286fa6a509301dbe1",
+    "file_group_counts": {
+      "development": 20,
+      "intersection": 0,
+      "train": 47
+    },
+    "file_groups_disjoint": true,
+    "inferability_reviewed": false,
+    "manifest_sha256": "50582c7cc14219b40608cb87c43c5a81da4bfe8eb1c5e585cc328abb7e8c3b8c",
+    "native_test_split": "sealed_not_fetched",
+    "schema": "one-line-instinct-pilot-v1",
+    "source_file_license_status": "unverified",
+    "source_sha256": "29b21939a3f1abc242a4b461105ba2444e310547755211117a82c397c53f3c3d",
+    "split_policy_id": "pilot-v1-sha256-path-byte0-lt-64",
+    "train_count": 720,
+    "train_input_tokens": 528870,
+    "train_sha256": "4047c3f4f0c2f73dcc29f916076f56cbf0be600c6f5f8ce722b0ca8fc4a10767",
+    "train_supervised_response_and_eos_tokens": 9405
+  },
+  "environment": {
+    "exact_worker_versions_recorded_at_runtime": true,
+    "preparation_host": "crabcake",
+    "preparation_python": "3.11.15",
+    "preparation_transformers": "5.17.0",
+    "target_accelerator": "NvidiaTeslaT4",
+    "worker_bitsandbytes": "0.50.2",
+    "worker_pyyaml": "6.0.2",
+    "worker_transformers": "5.17.0"
+  },
+  "frozen_at": "2026-09-29T06:23:24.604186+00:00",
+  "plan_note": "Before comparison output, two historical Kaggle notebook references returned authenticated HTTP 404 when status was re-queried; they have no running session. Other unknown statuses remain blocking.",
+  "quota_at_freeze": {
+    "active_jobs": [],
+    "job_statuses": [
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-r1-conversion has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-heldout",
+        "status": "shlokbhakta/tabcomplete-r1-heldout has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+        "status": "shlokbhakta/tabcomplete-r1-lfm-q4-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-context",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-context has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-evaluation",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-evaluation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-baseline has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "unknown",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-09-29T06:26:11.209323+00:00"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/notebookd2edcfa65c",
+        "status": "unknown",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-09-29T06:26:11.209346+00:00"
+      }
+    ],
+    "observed_at": "2026-09-29T06:23:01.283476+00:00",
+    "remaining": 45.0,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 0.0
+  },
+  "schema": "one-line-instinct-pilot-plan-v1",
+  "selection_and_scope": {
+    "development_metrics": [
+      "valid_action",
+      "actual_eos_termination",
+      "exact_after_state",
+      "synthetic_keep_guard"
+    ],
+    "no_live_editor_change": true,
+    "no_main_campaign_gate_bypass": true,
+    "no_model_publication": true,
+    "one_publisher_reported_project": true,
+    "promotion_requires_independent_evidence": true,
+    "selection_before_sealed_test": true
+  },
+  "student": {
+    "config_sha256": "e6bf24d1cf58278dcb4ded7e885b71cb1c56299b34c8046b1b64395d17b1891f",
+    "initializer": "untouched_pretrained",
+    "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+    "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+  },
+  "suite_revision": 3,
+  "training": {
+    "compute_precision": "FP16",
+    "cosine_floor_fraction": 0.1,
+    "effective_batch_examples": 32,
+    "epochs": 1,
+    "gradient_clip_norm": 1.0,
+    "master_precision": "FP32",
+    "max_nonpadding_input_tokens": 2000000,
+    "microbatch_examples": 2,
+    "optimizer": "AdamW8bit_if_supported",
+    "peak_learning_rate": 1e-05,
+    "phase": "pilot",
+    "planned_nonpadding_input_tokens": 538275,
+    "response_only": true,
+    "warmup_fraction": 0.03,
+    "weight_decay": 0.01
+  }
+}

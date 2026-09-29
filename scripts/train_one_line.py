@@ -136,6 +136,11 @@ def load_training_rows(
                 raise ValueError("training action does not reconstruct its after-state")
             if phase == "main" and not row.get("validation", {}).get("inferability_reviewed"):
                 raise ValueError("main training requires inferability-reviewed states")
+            if phase == "pilot" and (
+                row.get("source_type") != "continue_instinct_observed"
+                or not row.get("validation", {}).get("replay_verified")
+            ):
+                raise ValueError("pilot requires replay-verified Continue edit rows")
             rows.append(row)
     if phase == "main" and len(rows) < minimum_main_train:
         raise ValueError("main training has fewer than 20,000 accepted states")
@@ -143,6 +148,8 @@ def load_training_rows(
         raise ValueError("LR probes require the same first 2,048 accepted states")
     if phase == "fixture" and len(rows) < 64:
         raise ValueError("disposable fixture requires 64 states")
+    if phase == "pilot" and not 128 <= len(rows) <= 1024:
+        raise ValueError("pilot requires 128 to 1,024 distinct edit states")
     return rows
 
 
@@ -161,6 +168,8 @@ def peak_learning_rate(phase: str, selection_path: Path | None) -> float:
         return 3e-5
     if phase == "fixture":
         return 1e-4
+    if phase == "pilot":
+        return 1e-5
     if selection_path is None:
         raise ValueError("main training requires a locked development LR selection")
     selection = json.loads(selection_path.read_text(encoding="utf-8"))
@@ -247,7 +256,7 @@ def main() -> None:
     parser.add_argument("--data-manifest", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument(
-        "--phase", choices=("fixture", "probe_1e-5", "probe_3e-5", "main"), required=True
+        "--phase", choices=("fixture", "probe_1e-5", "probe_3e-5", "pilot", "main"), required=True
     )
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--microbatch", type=int, default=2)
@@ -269,12 +278,30 @@ def main() -> None:
         raise ValueError("at most two frozen training epochs are permitted")
     if args.phase.startswith("probe") and args.epochs != 1:
         raise ValueError("LR probes have one fixed pass")
+    if args.phase == "pilot" and args.epochs != 1:
+        raise ValueError("pilot has one fixed pass")
     if args.microbatch < 1 or args.microbatch > config["training"]["effective_batch_examples"]:
         raise ValueError("invalid microbatch")
     if args.session_minutes <= 0 or args.reserve_minutes < 15:
         raise ValueError("session deadline requires at least 15 minutes for finalization")
     if args.external_campaign_tokens < 0:
         raise ValueError("invalid prior campaign token count")
+    if args.phase == "pilot":
+        if (
+            plan.get("schema") != "one-line-instinct-pilot-plan-v1"
+            or plan.get("training", {}).get("phase") != "pilot"
+            or plan.get("training", {}).get("epochs") != 1
+            or plan.get("training", {}).get("peak_learning_rate") != 1e-5
+            or plan.get("training", {}).get("max_nonpadding_input_tokens") != 2_000_000
+            or plan.get("budgets", {}).get("max_session_seconds") != 7200
+            or plan.get("budgets", {}).get("reserve_seconds") != 1200
+            or plan.get("student", {}).get("weight_sha256") != config["student"]["weight_sha256"]
+            or plan.get("student", {}).get("tokenizer_sha256")
+            != config["student"]["tokenizer_sha256"]
+            or args.session_minutes > 120
+            or args.reserve_minutes < 20
+        ):
+            raise ValueError("pilot plan or session budget differs from the frozen contract")
     source_identity = verify_artifacts(args.model, config)
     if sha256_file(args.config) != plan["config_sha256"]:
         raise ValueError("frozen configuration hash mismatch")
@@ -284,16 +311,27 @@ def main() -> None:
         phase=args.phase,
         minimum_main_train=config["data"]["minimum_main_train"],
     )
-    if args.phase == "main":
+    if args.phase in ("main", "pilot"):
         if args.data_manifest is None:
-            raise ValueError("main run needs the frozen grouped data manifest")
+            raise ValueError("main/pilot run needs a frozen data manifest")
         data_manifest = json.loads(args.data_manifest.read_text(encoding="utf-8"))
-        if (
-            data_manifest.get("accepted_train", 0) < config["data"]["minimum_main_train"]
+        if args.phase == "main":
+            if (
+                data_manifest.get("accepted_train", 0) < config["data"]["minimum_main_train"]
+                or data_manifest.get("train_sha256") != args.data_sha256
+                or not data_manifest.get("split_manifest_sha256")
+            ):
+                raise ValueError("main data diversity/split manifest gate failed")
+        elif (
+            data_manifest.get("schema") != "one-line-instinct-pilot-v1"
             or data_manifest.get("train_sha256") != args.data_sha256
-            or not data_manifest.get("split_manifest_sha256")
+            or data_manifest.get("train_count") != len(rows)
+            or data_manifest.get("dev_count", 0) < 64
+            or not data_manifest.get("file_groups_disjoint")
+            or plan.get("data", {}).get("train_sha256") != args.data_sha256
+            or plan.get("data", {}).get("manifest_sha256") != sha256_file(args.data_manifest)
         ):
-            raise ValueError("main data diversity/split manifest gate failed")
+            raise ValueError("pilot data manifest gate failed")
     chosen_rows = phase_rows(rows, args.phase)
     peak_lr = peak_learning_rate(args.phase, args.selection)
     output_cap = config["budget"]["maximum_new_persistent_local_research_bytes"]
@@ -328,6 +366,12 @@ def main() -> None:
     )
     counts = token_counts(encoded)
     planned_tokens = counts["nonpadding_training_input_tokens"] * args.epochs
+    if args.phase == "pilot" and planned_tokens > 2_000_000:
+        raise ValueError("pilot planned input exposure exceeds 2,000,000 tokens")
+    if args.phase == "pilot" and planned_tokens != plan["training"].get(
+        "planned_nonpadding_input_tokens"
+    ):
+        raise ValueError("pilot tokenizer exposure differs from the frozen plan")
     if (
         args.external_campaign_tokens + planned_tokens
         > config["budget"]["maximum_nonpadding_training_input_tokens"]

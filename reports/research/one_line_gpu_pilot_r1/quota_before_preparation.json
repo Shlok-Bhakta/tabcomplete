@@ -1,0 +1,10 @@
+{
+  "active_jobs": [],
+  "observed_at": "2026-09-29T06:00:25.469906+00:00",
+  "remaining": 45.0,
+  "renewal": "2026-10-03T00:00:00",
+  "source": "authenticated kaggle quota --format json and kernel statuses",
+  "total": 45.0,
+  "units": "Kaggle account GPU-hours",
+  "used": 0.0
+}
