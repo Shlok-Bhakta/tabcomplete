@@ -9,6 +9,7 @@ requires ``--execute`` after the local plan has been frozen.
 from __future__ import annotations
 
 import argparse
+import ast
 import asyncio
 import hashlib
 import importlib.util
@@ -23,6 +24,7 @@ import sys
 import threading
 import time
 import uuid
+from collections import Counter
 from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -66,6 +68,7 @@ SERVER_SETTINGS = {
     "speculative_decoding": "none",
     "gpu_layers": 0,
     "warmup": False,
+    "log_verbosity": 4,
 }
 REQUEST_SETTINGS = {
     "cache_prompt": True,
@@ -102,6 +105,31 @@ EXPECTED_CASE_IDS = (
     "c/stable_17",
     "synthetic/delete-javascript-debug",
     "synthetic/delete-rust-debug",
+)
+TRANSITION_PLAN_SCHEMA = "sweep-local-changing-state-plan-v1"
+TRANSITION_SUITE_MODE = "changing_editor_state"
+PUBLISHER_PROMPT_EXACT_POLICY = "publisher_prompt_exact_v1"
+PUBLISHER_HEADER_LF_INPUT_POLICY = "publisher-header-lf-input-v2"
+TRANSITION_TYPES = {
+    "fresh_file_open",
+    "append_chars",
+    "near_cursor_replace",
+    "explicit_reject_then_divergent_typing",
+    "typed_matching_prefix",
+    "file_switch",
+    "file_switch_return",
+    "earlier_edit_invalidation",
+}
+PROMPT_BUILDER_ARCHIVE_COMMIT = "a681d5c4ba88388742b4217a838d840ed5c257a5"
+BASELINE_SUMMARY_SHA256 = "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465"
+BASELINE_SUMMARY_PATH = (
+    "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/"
+    "20260930T090103Z-00540772e0/summary.json"
+)
+CONTEXT_PROVENANCE = "synthetic_repo_tabcomplete_editor_r1"
+CONTEXT_RATIONALE = (
+    "fixed synthetic adjacent editor modules; per-bucket modules are frozen in plan "
+    "and retain their shared ordering"
 )
 OBSERVABILITY_CAMPAIGN = "sweep-local-replay-crabcake-r1"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
@@ -146,36 +174,548 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _function_source_sha256(source: str, name: str) -> str:
+    tree = ast.parse(source)
+    matches = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"publisher source must define exactly one {name}")
+    segment = ast.get_source_segment(source, matches[0])
+    if segment is None:
+        raise ValueError(f"could not extract publisher function {name}")
+    return digest_bytes(segment.encode("utf-8"))
+
+
+def validate_trajectory_fixtures(rows: list[dict[str, Any]], replay: dict[str, Any]) -> None:
+    """Validate a fixed synthetic state sequence without changing publisher prompts."""
+    fixture_order = replay.get("fixture_order")
+    if not isinstance(fixture_order, list) or len(fixture_order) != 24:
+        raise ValueError("changing-state replay must bind exactly 24 ordered transition states")
+    if [row.get("case_id") for row in rows] != fixture_order:
+        raise ValueError("changing-state fixture order differs from the frozen plan")
+    if len({row.get("case_id") for row in rows}) != 24:
+        raise ValueError("changing-state fixture IDs must be unique")
+    expected_bucket_counts = {"512": 8, "1024": 8, "2048": 8}
+    bucket_counts = Counter(str(row.get("nominal_context_bucket")) for row in rows)
+    if dict(bucket_counts) != expected_bucket_counts:
+        raise ValueError(
+            "changing-state fixtures must contain eight states per nominal context bucket"
+        )
+    transition_counts = Counter(str(row.get("transition_type")) for row in rows)
+    if dict(transition_counts) != replay.get("transition_type_counts"):
+        raise ValueError("changing-state transition counts differ from the frozen plan")
+    if not set(transition_counts).issubset(TRANSITION_TYPES):
+        raise ValueError("changing-state fixture contains an unsupported transition type")
+    context_modules_by_bucket = replay.get("context_modules_by_bucket")
+    expected_context_hashes = replay.get("context_file_sha256")
+    if not isinstance(context_modules_by_bucket, dict) or not isinstance(
+        expected_context_hashes, dict
+    ):
+        raise ValueError("changing-state plan lacks fixed context provenance")
+
+    trajectory_previous: dict[str, dict[str, Any]] = {}
+    state_by_id: dict[str, dict[str, Any]] = {}
+    closed_trajectories: set[str] = set()
+    active_trajectory: str | None = None
+    for row in rows:
+        trajectory_id = row.get("trajectory_id")
+        state_id = row.get("state_id")
+        transition_type = row.get("transition_type")
+        if not isinstance(trajectory_id, str) or not trajectory_id:
+            raise ValueError("changing-state fixture lacks a trajectory identity")
+        if active_trajectory != trajectory_id:
+            if trajectory_id in closed_trajectories:
+                raise ValueError("trajectory states must remain contiguous in request order")
+            if active_trajectory is not None:
+                closed_trajectories.add(active_trajectory)
+            active_trajectory = trajectory_id
+        if not isinstance(state_id, str) or not state_id or state_id in state_by_id:
+            raise ValueError("changing-state state identities must be unique strings")
+        if transition_type not in TRANSITION_TYPES:
+            raise ValueError("changing-state fixture has an unknown transition type")
+        if row.get("synthetic_only") is not True:
+            raise ValueError("changing-state editor events must be explicitly marked synthetic")
+        file_path = row.get("file_path")
+        current = row.get("current_content")
+        original = row.get("original_content")
+        context_files = row.get("context_files")
+        recent_diffs = row.get("recent_diffs")
+        if (
+            not isinstance(file_path, str)
+            or not isinstance(current, str)
+            or not isinstance(original, str)
+        ):
+            raise ValueError(f"changing-state fixture {state_id} has malformed full-file content")
+        if not isinstance(context_files, dict) or any(
+            not isinstance(path, str) or not isinstance(content, str)
+            for path, content in context_files.items()
+        ):
+            raise ValueError(
+                f"changing-state fixture {state_id} has malformed nearby context files"
+            )
+        bucket = str(row.get("nominal_context_bucket"))
+        if list(context_files) != context_modules_by_bucket.get(bucket):
+            raise ValueError(
+                f"changing-state fixture {state_id} has a different nearby-context module set"
+            )
+        if (
+            row.get("context_provenance") != CONTEXT_PROVENANCE
+            or row.get("context_rationale") != CONTEXT_RATIONALE
+        ):
+            raise ValueError(f"changing-state fixture {state_id} has unpinned context provenance")
+        context_hashes = row.get("context_file_sha256")
+        expected_hashes = {path: expected_context_hashes.get(path) for path in context_files}
+        if not isinstance(context_hashes, dict) or context_hashes != expected_hashes:
+            raise ValueError(
+                f"changing-state fixture {state_id} context hashes differ from the plan"
+            )
+        if any(
+            digest_bytes(content.encode("utf-8")) != context_hashes.get(path)
+            for path, content in context_files.items()
+        ):
+            raise ValueError(
+                f"changing-state fixture {state_id} context bytes differ from their hashes"
+            )
+        if not isinstance(recent_diffs, list):
+            raise ValueError(f"changing-state fixture {state_id} has malformed edit history")
+        previous_content: str | None = None
+        for diff in recent_diffs:
+            if not isinstance(diff, dict) or diff.get("file_path") != file_path:
+                raise ValueError(
+                    f"changing-state fixture {state_id} has a cross-file history delta"
+                )
+            old = diff.get("original")
+            new = diff.get("updated")
+            if not isinstance(old, str) or not isinstance(new, str):
+                raise ValueError(f"changing-state fixture {state_id} has malformed history text")
+            if previous_content is not None and old != previous_content:
+                raise ValueError(f"changing-state fixture {state_id} history is not contiguous")
+            previous_content = new
+        if recent_diffs and previous_content != current:
+            raise ValueError(
+                f"changing-state fixture {state_id} history does not reconstruct current source"
+            )
+        if not recent_diffs and current != original:
+            raise ValueError(
+                f"unchanged/open fixture {state_id} must use identical original/current source"
+            )
+        source_bytes = current.encode("utf-8")
+        editable_start = row.get("editable_start_byte")
+        editable_end = row.get("editable_end_byte")
+        cursor_offset = row.get("cursor_byte_offset")
+        if (
+            not isinstance(editable_start, int)
+            or not isinstance(editable_end, int)
+            or not isinstance(cursor_offset, int)
+        ):
+            raise ValueError(
+                f"changing-state fixture {state_id} lacks cursor/editable byte positions"
+            )
+        if not 0 <= editable_start <= editable_end <= len(
+            source_bytes
+        ) or not 0 <= cursor_offset <= len(source_bytes):
+            raise ValueError(
+                f"changing-state fixture {state_id} editable byte range is out of bounds"
+            )
+        for offset in (editable_start, editable_end, cursor_offset):
+            try:
+                source_bytes[:offset].decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ValueError(
+                    f"changing-state fixture {state_id} splits a UTF-8 codepoint"
+                ) from exc
+        expected_start = source_bytes.rfind(b"\n", 0, cursor_offset) + 1
+        expected_end = source_bytes.find(b"\n", cursor_offset)
+        if expected_end < 0:
+            expected_end = len(source_bytes)
+        if (editable_start, editable_end) != (expected_start, expected_end):
+            raise ValueError(
+                f"changing-state fixture {state_id} editable range is not the cursor line"
+            )
+
+        previous = trajectory_previous.get(trajectory_id)
+        if transition_type == "fresh_file_open":
+            if previous is not None or row.get("from_state_id") is not None or recent_diffs:
+                raise ValueError(
+                    "fresh file opens must begin a trajectory with no preceding edit history"
+                )
+            if original != current:
+                raise ValueError("fresh file opens must start from an unchanged file state")
+        elif previous is None:
+            raise ValueError("every changing-state trajectory must begin with a fresh file open")
+        else:
+            if row.get("from_state_id") != previous["state_id"]:
+                raise ValueError(
+                    f"changing-state fixture {state_id} does not follow its declared predecessor"
+                )
+            if transition_type in {
+                "append_chars",
+                "near_cursor_replace",
+                "explicit_reject_then_divergent_typing",
+                "typed_matching_prefix",
+                "earlier_edit_invalidation",
+            }:
+                if (
+                    row.get("file_id") != previous.get("file_id")
+                    or file_path != previous["file_path"]
+                ):
+                    raise ValueError("text-edit transitions must remain in the same file")
+                if original != previous["current_content"]:
+                    raise ValueError(
+                        "edit transition original source differs from its predecessor state"
+                    )
+                if len(recent_diffs) != len(previous["recent_diffs"]) + 1:
+                    raise ValueError("edit transition must append exactly one reconstructed delta")
+                if recent_diffs[:-1] != previous["recent_diffs"]:
+                    raise ValueError("edit transition dropped or changed earlier history")
+                last = recent_diffs[-1]
+                if last != {"file_path": file_path, "original": original, "updated": current}:
+                    raise ValueError(
+                        "edit transition delta does not exactly match its before/after states"
+                    )
+                event = row.get("synthetic_event")
+                if not isinstance(event, dict):
+                    raise ValueError("synthetic edit transition lacks event evidence")
+                start = event.get("start_byte")
+                end = event.get("end_byte")
+                cursor = event.get("cursor_byte_offset")
+                result_cursor = event.get("result_cursor_byte_offset")
+                replacement = event.get("replacement_text")
+                original_bytes = original.encode("utf-8")
+                if (
+                    not isinstance(start, int)
+                    or not isinstance(end, int)
+                    or not isinstance(cursor, int)
+                    or not isinstance(result_cursor, int)
+                    or not isinstance(replacement, str)
+                    or not 0 <= start <= end <= len(original_bytes)
+                    or not 0 <= cursor <= len(original_bytes)
+                    or not 0 <= result_cursor <= len(current.encode("utf-8"))
+                ):
+                    raise ValueError("synthetic edit lacks an exact byte-range and cursor record")
+                for offset in (start, end, cursor):
+                    try:
+                        original_bytes[:offset].decode("utf-8")
+                    except UnicodeDecodeError as exc:
+                        raise ValueError("synthetic edit range splits a UTF-8 codepoint") from exc
+                reconstructed = (
+                    original_bytes[:start] + replacement.encode("utf-8") + original_bytes[end:]
+                )
+                if reconstructed.decode("utf-8") != current:
+                    raise ValueError("synthetic byte delta does not reproduce the resulting source")
+                current_bytes = current.encode("utf-8")
+                try:
+                    current_bytes[:result_cursor].decode("utf-8")
+                except UnicodeDecodeError as exc:
+                    raise ValueError("post-edit cursor splits a UTF-8 codepoint") from exc
+                if result_cursor != row.get("cursor_byte_offset"):
+                    raise ValueError("fixture cursor does not match its last edit event")
+                event_line = original_bytes[:start].count(b"\n")
+                edit_cursor_line = original_bytes[:cursor].count(b"\n")
+                result_cursor_line = current_bytes[:result_cursor].count(b"\n")
+                if transition_type == "append_chars":
+                    typed = event.get("typed_text")
+                    if not isinstance(typed, str) or not typed or typed != replacement:
+                        raise ValueError("append transition lacks exact appended text")
+                    if (
+                        start != len(original_bytes)
+                        or end != start
+                        or cursor != start
+                        or result_cursor != start + len(replacement.encode("utf-8"))
+                    ):
+                        raise ValueError("append transition text does not match the source delta")
+                elif transition_type in {
+                    "explicit_reject_then_divergent_typing",
+                    "typed_matching_prefix",
+                }:
+                    proposal = event.get("stub_proposal_text")
+                    typed = event.get("typed_text")
+                    if not isinstance(proposal, str) or not isinstance(typed, str) or not typed:
+                        raise ValueError(
+                            "typed-decision transition lacks its synthetic stub evidence"
+                        )
+                    if transition_type == "explicit_reject_then_divergent_typing":
+                        if (
+                            event.get("explicitly_rejected") is not True
+                            or proposal.startswith(typed)
+                            or typed != replacement
+                            or result_cursor != start + len(replacement.encode("utf-8"))
+                        ):
+                            raise ValueError(
+                                "divergent typing control is not an explicit rejected non-prefix"
+                            )
+                    else:
+                        if not (proposal.startswith(typed) and len(typed) < len(proposal)):
+                            raise ValueError("typed-match control is not a strict proposal prefix")
+                        if not replacement.endswith(typed):
+                            raise ValueError(
+                                "typed-match text is not the exact inserted source suffix"
+                            )
+                        if result_cursor != start + len(replacement.encode("utf-8")):
+                            raise ValueError(
+                                "typed-match post-edit cursor differs from the inserted delta"
+                            )
+                elif transition_type == "near_cursor_replace":
+                    if (
+                        event_line != edit_cursor_line
+                        or event_line != result_cursor_line
+                        or event.get("edited_line_index") != event_line
+                        or event.get("cursor_line_index") != result_cursor_line
+                        or event.get("distance_lines") != 0
+                        or result_cursor != start + len(replacement.encode("utf-8"))
+                    ):
+                        raise ValueError("near-cursor replacement is not bound to the cursor line")
+                elif transition_type == "earlier_edit_invalidation":
+                    before_line = event.get("edited_line_index")
+                    declared_cursor_line = event.get("cursor_line_index")
+                    if not isinstance(before_line, int) or not isinstance(
+                        declared_cursor_line, int
+                    ):
+                        raise ValueError("earlier-edit transition lacks line-position evidence")
+                    if (
+                        before_line != event_line
+                        or declared_cursor_line != result_cursor_line
+                        or before_line >= result_cursor_line
+                    ):
+                        raise ValueError("earlier-edit invalidation must precede the cursor line")
+            elif transition_type == "file_switch":
+                if row.get("file_id") == previous.get("file_id"):
+                    raise ValueError("file-switch transition did not change file identity")
+                if original != current or recent_diffs:
+                    raise ValueError(
+                        "first open of a switched-to file must start from its exact current state"
+                    )
+            elif transition_type == "file_switch_return":
+                target_id = row.get("return_to_state_id")
+                if not isinstance(target_id, str):
+                    raise ValueError("A-to-B-to-A return lacks a target state ID")
+                target = state_by_id.get(target_id)
+                if target is None or target.get("file_id") != row.get("file_id"):
+                    raise ValueError(
+                        "A-to-B-to-A return does not refer to an earlier state of file A"
+                    )
+                if previous.get("file_id") == row.get("file_id"):
+                    raise ValueError("A-to-B-to-A return must follow a different active file")
+                for field in (
+                    "file_id",
+                    "language",
+                    "file_path",
+                    "original_content",
+                    "current_content",
+                    "context_files",
+                    "context_file_sha256",
+                    "context_provenance",
+                    "context_rationale",
+                    "recent_diffs",
+                    "editable_start_byte",
+                    "editable_end_byte",
+                    "cursor_byte_offset",
+                    "nominal_context_bucket",
+                    "prompt_sha256",
+                ):
+                    if row.get(field) != target.get(field):
+                        raise ValueError(
+                            f"file-switch return changed preserved file state field {field}"
+                        )
+        trajectory_previous[trajectory_id] = row
+        state_by_id[state_id] = row
+
+
+def validate_input_token_buckets(
+    fixtures: list[dict[str, Any]], token_rows: list[dict[str, Any]], replay: dict[str, Any]
+) -> None:
+    windows = replay.get("input_bucket_windows")
+    if not isinstance(windows, dict):
+        raise ValueError("changing-state plan lacks frozen actual-token bucket windows")
+    tokens_by_case = {row["case_id"]: row["input_tokens"] for row in token_rows}
+    prompt_hashes_by_case = {
+        row["case_id"]: row.get("effective_input_prompt_sha256") for row in token_rows
+    }
+    if len(tokens_by_case) != len(fixtures):
+        raise ValueError("tokenizer response count differs from changing-state fixture count")
+    expected_prompt_hashes = replay.get("effective_input_prompt_sha256_by_case")
+    if isinstance(expected_prompt_hashes, dict) and prompt_hashes_by_case != expected_prompt_hashes:
+        raise ValueError("effective model input prompt hashes differ from the frozen plan")
+    expected_token_counts = replay.get("input_tokens_by_case")
+    if isinstance(expected_token_counts, dict) and tokens_by_case != expected_token_counts:
+        raise ValueError("actual model input token counts differ from the frozen plan")
+    for fixture in fixtures:
+        bucket = str(fixture.get("nominal_context_bucket"))
+        window = windows.get(bucket)
+        actual = tokens_by_case[fixture["case_id"]]
+        if (
+            not isinstance(window, list)
+            or len(window) != 2
+            or not isinstance(window[0], int)
+            or not isinstance(window[1], int)
+            or not window[0] <= actual <= window[1]
+        ):
+            raise ValueError(
+                f"actual GGUF token count for {fixture['case_id']} is outside its frozen bucket"
+            )
+
+
 def validate_plan_policy(plan: dict[str, Any]) -> None:
-    if plan.get("runtime", {}).get("server_settings") != SERVER_SETTINGS:
-        raise ValueError("server configuration differs from the frozen local replay plan")
     replay = plan.get("replay", {})
+    suite_mode = replay.get("suite_mode", "fixed_snapshot")
+    input_prompt_policy = replay.get("input_prompt_policy", PUBLISHER_PROMPT_EXACT_POLICY)
+    if input_prompt_policy not in {
+        PUBLISHER_PROMPT_EXACT_POLICY,
+        PUBLISHER_HEADER_LF_INPUT_POLICY,
+    }:
+        raise ValueError("local replay has an unsupported input prompt policy")
+    if (
+        suite_mode == TRANSITION_SUITE_MODE
+        and input_prompt_policy == PUBLISHER_HEADER_LF_INPUT_POLICY
+    ):
+        prompt_hashes = replay.get("effective_input_prompt_sha256_by_case")
+        token_counts = replay.get("input_tokens_by_case")
+        if not isinstance(prompt_hashes, dict) or len(prompt_hashes) != 24:
+            raise ValueError("header-LF input policy lacks per-case effective prompt hashes")
+        if not isinstance(token_counts, dict) or len(token_counts) != 24:
+            raise ValueError("header-LF input policy lacks per-case actual token counts")
+        if any(
+            not isinstance(key, str) or not isinstance(value, str)
+            for key, value in prompt_hashes.items()
+        ):
+            raise ValueError("header-LF prompt hash map is malformed")
+        if any(
+            not isinstance(key, str)
+            or not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < 0
+            for key, value in token_counts.items()
+        ):
+            raise ValueError("header-LF tokenizer count map is malformed")
+    expected_server_settings = dict(SERVER_SETTINGS)
+    actual_server_settings = plan.get("runtime", {}).get("server_settings")
+    allowed_server_settings: tuple[dict[str, Any], ...]
+    if suite_mode == "fixed_snapshot":
+        # Historical v1 plans predate the explicit bounded log verbosity flag.
+        legacy_server_settings = dict(expected_server_settings)
+        legacy_server_settings.pop("log_verbosity")
+        allowed_server_settings = (expected_server_settings, legacy_server_settings)
+    else:
+        allowed_server_settings = (expected_server_settings,)
+    if actual_server_settings not in allowed_server_settings:
+        raise ValueError("server configuration differs from the frozen local replay plan")
     if replay.get("request_settings") != REQUEST_SETTINGS:
         raise ValueError("request configuration differs from the frozen local replay plan")
     if replay.get("precision_order") != ["q4_k_m", "q8_0"]:
         raise ValueError("local replay must run Q4_K_M then Q8_0, one model at a time")
     if replay.get("repetitions") != 2:
         raise ValueError("local replay must use exactly two repetitions")
-    if replay.get("fixture_count") != len(EXPECTED_CASE_IDS):
-        raise ValueError("local replay plan must contain the frozen 24 source states")
-    if replay.get("fixture_order") != list(EXPECTED_CASE_IDS):
-        raise ValueError("local replay fixture order differs from the frozen source states")
-    if replay.get("expected_requests") != len(EXPECTED_CASE_IDS) * 2 * 2 * 2:
-        raise ValueError("local replay request count must bind both precisions and cache repeats")
-    if replay.get("request_order_per_fixture_per_repetition") != [
-        "changed_state",
-        "immediate_same_prompt_repeat",
-    ]:
-        raise ValueError("local replay cache-repeat ordering differs from the frozen plan")
+    if replay.get("fixture_count") != 24:
+        raise ValueError("local replay plan must contain exactly 24 frozen states")
+    if suite_mode == "fixed_snapshot":
+        if replay.get("fixture_order") != list(EXPECTED_CASE_IDS):
+            raise ValueError("local replay fixture order differs from the frozen source states")
+        if replay.get("expected_requests") != len(EXPECTED_CASE_IDS) * 2 * 2 * 2:
+            raise ValueError("snapshot replay request count must bind both models and cache probes")
+        if replay.get("request_order_per_fixture_per_repetition") != [
+            "changed_state",
+            "immediate_same_prompt_repeat",
+        ]:
+            raise ValueError("local replay cache-repeat ordering differs from the frozen plan")
+    elif suite_mode == TRANSITION_SUITE_MODE:
+        if plan.get("schema") != TRANSITION_PLAN_SCHEMA:
+            raise ValueError("changing-state replay plan schema is invalid")
+        fixture_order = replay.get("fixture_order")
+        if not isinstance(fixture_order, list) or len(fixture_order) != 24:
+            raise ValueError("changing-state replay must bind 24 ordered transitions")
+        if len(set(fixture_order)) != 24:
+            raise ValueError("changing-state plan fixture IDs must be unique")
+        if replay.get("expected_requests") != 24 * 2 * 2:
+            raise ValueError("changing-state replay must run 24 transitions twice on both models")
+        if replay.get("request_order_per_fixture_per_repetition") != ["changed_state"]:
+            raise ValueError("changing-state replay must not add baseline duplicate cache probes")
+        if replay.get("input_bucket_windows") != {
+            "512": [384, 768],
+            "1024": [900, 1450],
+            "2048": [1728, 2304],
+        }:
+            raise ValueError("changing-state input-token windows differ from the frozen plan")
+        if replay.get("input_bucket_case_counts") != {"512": 8, "1024": 8, "2048": 8}:
+            raise ValueError("changing-state replay must freeze eight states per token bucket")
+    else:
+        raise ValueError("local replay plan has an unsupported suite mode")
     limits = plan.get("limits", {})
-    if limits.get("max_wall_seconds_including_preflight_and_finalization") != MAX_WALL_SECONDS:
-        raise ValueError("local replay wall budget differs from the 90-minute campaign cap")
     if limits.get("finalization_reserve_seconds") != FINALIZATION_RESERVE_SECONDS:
         raise ValueError("local replay finalization reserve must remain ten minutes")
+    max_wall = limits.get("max_wall_seconds_including_preflight_and_finalization")
+    if (
+        not isinstance(max_wall, int)
+        or not FINALIZATION_RESERVE_SECONDS < max_wall <= MAX_WALL_SECONDS
+    ):
+        raise ValueError("local replay wall budget exceeds the remaining bounded campaign cap")
     if limits.get("request_work_deadline_seconds_from_invocation_start") != (
-        MAX_WALL_SECONDS - FINALIZATION_RESERVE_SECONDS
+        max_wall - FINALIZATION_RESERVE_SECONDS
     ):
         raise ValueError("local replay request deadline does not reserve finalization time")
+    campaign_budget = plan.get("campaign_budget", {})
+    if suite_mode == TRANSITION_SUITE_MODE:
+        if campaign_budget.get("previous_run_wall_seconds") != 1696.506838:
+            raise ValueError("changing-state replay must bind the completed baseline wall usage")
+        if campaign_budget.get("previous_run_summary_path") != BASELINE_SUMMARY_PATH:
+            raise ValueError("changing-state replay must bind the measured baseline summary")
+        if campaign_budget.get("previous_run_summary_sha256") != BASELINE_SUMMARY_SHA256:
+            raise ValueError("changing-state replay baseline summary hash differs")
+        if campaign_budget.get("campaign_cap_seconds") != MAX_WALL_SECONDS:
+            raise ValueError("changing-state replay campaign cap must remain 90 minutes")
+        interrupted_run_seconds = campaign_budget.get("interrupted_run_wall_seconds", 0)
+        if (
+            not isinstance(interrupted_run_seconds, (int, float))
+            or isinstance(interrupted_run_seconds, bool)
+            or interrupted_run_seconds < 0
+        ):
+            raise ValueError("changing-state interrupted-run budget must be nonnegative")
+        if interrupted_run_seconds > 0 and not isinstance(
+            campaign_budget.get("interrupted_attempt"), dict
+        ):
+            raise ValueError("interrupted inference time must bind its preserved run artifacts")
+        plan_validation_seconds = campaign_budget.get("pre_run_plan_validation_wall_seconds", 0)
+        if (
+            not isinstance(plan_validation_seconds, (int, float))
+            or isinstance(plan_validation_seconds, bool)
+            or plan_validation_seconds < 0
+        ):
+            raise ValueError("pre-run plan validation budget must be nonnegative")
+        if campaign_budget.get("max_wall_seconds_including_finalization", max_wall) != max_wall:
+            raise ValueError("campaign budget max wall value differs from the active plan limit")
+        if campaign_budget.get("request_work_deadline_seconds", max_wall - 600) != (
+            max_wall - FINALIZATION_RESERVE_SECONDS
+        ):
+            raise ValueError("campaign budget request deadline differs from the active plan limit")
+        tokenizer_preflight_seconds = campaign_budget.get("tokenizer_preflight_wall_seconds")
+        if (
+            not isinstance(tokenizer_preflight_seconds, (int, float))
+            or tokenizer_preflight_seconds <= 0
+        ):
+            raise ValueError("changing-state replay must account for tokenizer-only preflights")
+        remaining_seconds = (
+            MAX_WALL_SECONDS
+            - campaign_budget["previous_run_wall_seconds"]
+            - tokenizer_preflight_seconds
+            - interrupted_run_seconds
+            - plan_validation_seconds
+        )
+        if (
+            abs(campaign_budget.get("remaining_seconds_before_new_run", -1) - remaining_seconds)
+            > 0.001
+        ):
+            raise ValueError("changing-state replay remaining budget does not reconcile")
+        if max_wall != math.floor(remaining_seconds) or (
+            campaign_budget["previous_run_wall_seconds"]
+            + tokenizer_preflight_seconds
+            + interrupted_run_seconds
+            + plan_validation_seconds
+            + max_wall
+            > MAX_WALL_SECONDS
+        ):
+            raise ValueError("changing-state replay exceeds remaining campaign wall time")
     if limits.get("minimum_available_ram_bytes") != 4 * 1024 * 1024 * 1024:
         raise ValueError("local replay minimum available RAM safety floor differs")
     if limits.get("candidate_predictor_memory_bytes") != int(1.5 * 1024**3):
@@ -193,15 +733,65 @@ def _sweep_runner_module() -> ModuleType:
     return module
 
 
+def build_model_input_prompt(
+    sweep: ModuleType, fixture: dict[str, Any], policy: str
+) -> tuple[str, str]:
+    """Build the frozen publisher prompt and apply only the declared input policy."""
+    publisher_prompt = sweep.build_sweep_prompt(fixture)
+    if digest_bytes(publisher_prompt.encode("utf-8")) != fixture.get("prompt_sha256"):
+        raise ValueError(f"publisher prompt hash differs for {fixture.get('case_id')}")
+    if policy == PUBLISHER_PROMPT_EXACT_POLICY:
+        return publisher_prompt, digest_bytes(publisher_prompt.encode("utf-8"))
+    if policy != PUBLISHER_HEADER_LF_INPUT_POLICY:
+        raise ValueError("local replay has an unsupported input prompt policy")
+    updated_header = f"<|file_sep|>updated/{fixture.get('file_path')}"
+    if publisher_prompt.endswith("\n") or not publisher_prompt.endswith(updated_header):
+        raise ValueError("publisher prompt does not end at the expected updated-file header")
+    model_input = publisher_prompt + "\n"
+    return model_input, digest_bytes(model_input.encode("utf-8"))
+
+
 def load_and_verify_inputs(
     plan_path: Path, upstream_plan_path: Path, fixtures_path: Path
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
-    if plan.get("schema") != "sweep-local-replay-plan-v1" or plan_digest(plan) != plan.get(
-        "plan_sha256"
-    ):
+    if plan.get("schema") not in {
+        "sweep-local-replay-plan-v1",
+        TRANSITION_PLAN_SCHEMA,
+    } or plan_digest(plan) != plan.get("plan_sha256"):
         raise ValueError("local replay plan schema or self-hash mismatch")
     validate_plan_policy(plan)
+    if plan["replay"].get("suite_mode") == TRANSITION_SUITE_MODE:
+        baseline_path = Path(plan["campaign_budget"]["previous_run_summary_path"])
+        if digest_file(baseline_path) != BASELINE_SUMMARY_SHA256:
+            raise ValueError("completed baseline summary no longer matches its frozen budget hash")
+        predecessor_path = plan["inputs"].get("predecessor_plan_path")
+        predecessor_sha = plan["inputs"].get("predecessor_plan_file_sha256")
+        interrupted_attempt = plan["campaign_budget"].get("interrupted_attempt")
+        if predecessor_path is not None:
+            predecessor_file = ROOT / predecessor_path
+            if not predecessor_file.is_file() or digest_file(predecessor_file) != predecessor_sha:
+                raise ValueError("previous local replay plan bytes differ from the frozen identity")
+            predecessor_plan = json.loads(predecessor_file.read_text(encoding="utf-8"))
+            if (
+                plan_digest(predecessor_plan) != predecessor_plan.get("plan_sha256")
+                or not isinstance(interrupted_attempt, dict)
+                or predecessor_plan.get("plan_sha256") != interrupted_attempt.get("plan_sha256")
+            ):
+                raise ValueError(
+                    "interrupted attempt does not reference its frozen predecessor plan"
+                )
+        superseded_path = plan["inputs"].get("superseded_unrun_plan_path")
+        superseded_sha = plan["inputs"].get("superseded_unrun_plan_file_sha256")
+        if superseded_path is not None:
+            superseded_file = ROOT / superseded_path
+            if not superseded_file.is_file() or digest_file(superseded_file) != superseded_sha:
+                raise ValueError("superseded unrun plan bytes differ from the frozen identity")
+            superseded_plan = json.loads(superseded_file.read_text(encoding="utf-8"))
+            if plan_digest(superseded_plan) != superseded_plan.get("plan_sha256"):
+                raise ValueError("superseded unrun plan self-hash is invalid")
+        if isinstance(interrupted_attempt, dict):
+            _verify_interrupted_attempt(interrupted_attempt, plan)
     upstream = json.loads(upstream_plan_path.read_text(encoding="utf-8"))
     if upstream.get("plan_sha256") != plan["inputs"]["upstream_plan_sha256"]:
         raise ValueError("upstream Sweep plan identity differs")
@@ -210,30 +800,124 @@ def load_and_verify_inputs(
     if digest_file(fixtures_path) != plan["inputs"]["prompt_bundle_sha256"]:
         raise ValueError("frozen prompt-only bundle identity differs")
     sweep = _sweep_runner_module()
-    if (
-        digest_file(ROOT / "scripts/run_sweep_comparison.py")
-        != plan["inputs"]["prompt_builder_source_sha256"]
-    ):
-        raise ValueError("publisher prompt builder source differs from the frozen plan")
-    runner_sha = digest_file(ROOT / "scripts/run_sweep_comparison.py")
-    if runner_sha != upstream["code"]["runner_sha256"]:
-        raise ValueError("upstream Sweep plan does not bind the serving prompt implementation")
+    if plan["replay"].get("suite_mode") == TRANSITION_SUITE_MODE:
+        inputs = plan["inputs"]
+        archived_commit = inputs.get("prompt_builder_source_commit")
+        if archived_commit != PROMPT_BUILDER_ARCHIVE_COMMIT:
+            raise ValueError("changing-state prompt builder must use the pinned archive commit")
+        archived_bytes = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(ROOT),
+                "show",
+                f"{archived_commit}:scripts/run_sweep_comparison.py",
+            ]
+        )
+        archived_sha = digest_bytes(archived_bytes)
+        if (
+            archived_sha != inputs.get("prompt_builder_source_sha256")
+            or archived_sha != upstream["code"]["runner_sha256"]
+        ):
+            raise ValueError("pinned publisher source archive differs from the frozen plan")
+        archived_source = archived_bytes.decode("utf-8")
+        archived_function_sha = _function_source_sha256(archived_source, "build_sweep_prompt")
+        current_function_sha = _function_source_sha256(
+            (ROOT / "scripts/run_sweep_comparison.py").read_text(encoding="utf-8"),
+            "build_sweep_prompt",
+        )
+        expected_function_sha = inputs.get("prompt_builder_function_sha256")
+        if (
+            archived_function_sha != expected_function_sha
+            or current_function_sha != expected_function_sha
+        ):
+            raise ValueError(
+                "active publisher prompt function differs from the archived implementation"
+            )
+    else:
+        if (
+            digest_file(ROOT / "scripts/run_sweep_comparison.py")
+            != plan["inputs"]["prompt_builder_source_sha256"]
+        ):
+            raise ValueError("publisher prompt builder source differs from the frozen plan")
+        runner_sha = digest_file(ROOT / "scripts/run_sweep_comparison.py")
+        if runner_sha != upstream["code"]["runner_sha256"]:
+            raise ValueError("upstream Sweep plan does not bind the serving prompt implementation")
     if digest_file(Path(__file__).resolve()) != plan["code"]["measurement_script_sha256"]:
         raise ValueError("local measurement script differs from the frozen plan")
     if digest_file(ROOT / "tests/test_measure_sweep_local.py") != plan["code"]["test_sha256"]:
         raise ValueError("local measurement tests differ from the frozen plan")
     rows = read_jsonl(fixtures_path)
-    if tuple(row.get("case_id") for row in rows) != EXPECTED_CASE_IDS:
+    if plan["replay"].get("suite_mode") == TRANSITION_SUITE_MODE:
+        validate_trajectory_fixtures(rows, plan["replay"])
+    elif tuple(row.get("case_id") for row in rows) != EXPECTED_CASE_IDS:
         raise ValueError("prompt bundle case order or identity differs")
+    input_prompt_policy = plan["replay"].get("input_prompt_policy", PUBLISHER_PROMPT_EXACT_POLICY)
+    effective_prompt_hashes: dict[str, str] = {}
     for row in rows:
-        prompt = sweep.build_sweep_prompt(row)
-        if digest_bytes(prompt.encode("utf-8")) != row.get("prompt_sha256"):
-            raise ValueError(f"publisher prompt hash differs for {row.get('case_id')}")
+        _, effective_prompt_hash = build_model_input_prompt(sweep, row, input_prompt_policy)
+        effective_prompt_hashes[row["case_id"]] = effective_prompt_hash
         if digest_bytes(row["current_content"].encode("utf-8")) != row.get("current_sha256"):
             raise ValueError(f"current source hash differs for {row.get('case_id')}")
         if digest_bytes(row["original_content"].encode("utf-8")) != row.get("original_sha256"):
             raise ValueError(f"original source hash differs for {row.get('case_id')}")
+    expected_prompt_hashes = plan["replay"].get("effective_input_prompt_sha256_by_case")
+    if expected_prompt_hashes is not None and effective_prompt_hashes != expected_prompt_hashes:
+        raise ValueError("effective input prompt hashes differ from the frozen plan")
+    expected_token_counts = plan["replay"].get("input_tokens_by_case")
+    if expected_token_counts is not None and set(expected_token_counts) != set(
+        effective_prompt_hashes
+    ):
+        raise ValueError("actual tokenizer counts do not cover the frozen fixture states")
     return plan, upstream, rows
+
+
+def _verify_interrupted_attempt(reference: dict[str, Any], plan: dict[str, Any]) -> None:
+    """Verify preserved metadata and charge the interrupted invocation wall time."""
+    run_dir = Path(reference.get("run_directory", ""))
+    artifacts = {
+        "metadata": run_dir / "metadata.json",
+        "failure": run_dir / "failure.json",
+        "q4_predictions": run_dir / "predictions-q4_k_m.jsonl",
+    }
+    expected_hashes = reference.get("artifact_sha256")
+    if not isinstance(expected_hashes, dict):
+        raise ValueError("interrupted attempt lacks its artifact hash ledger")
+    for name, path in artifacts.items():
+        if not path.is_file() or digest_file(path) != expected_hashes.get(name):
+            raise ValueError(f"interrupted attempt artifact hash differs: {name}")
+    metadata = json.loads(artifacts["metadata"].read_text(encoding="utf-8"))
+    failure = json.loads(artifacts["failure"].read_text(encoding="utf-8"))
+    prior_plan_sha = reference.get("plan_sha256")
+    if (
+        metadata.get("plan_sha256") != prior_plan_sha
+        or failure.get("plan_sha256") != prior_plan_sha
+        or prior_plan_sha != reference.get("prior_plan_sha256")
+    ):
+        raise ValueError("interrupted attempt metadata is bound to another plan")
+    if failure.get("error_type") != "KeyboardInterrupt":
+        raise ValueError("interrupted attempt termination reason differs from the plan")
+    if failure.get("completed_requests") != reference.get("completed_q4_records"):
+        raise ValueError("interrupted attempt request count differs from its failure record")
+    if failure.get("completed_requests") != 7 or reference.get("q8_request_count") != 0:
+        raise ValueError("interrupted attempt is not the recorded seven-request Q4 subset")
+    with artifacts["q4_predictions"].open(encoding="utf-8") as stream:
+        if sum(1 for line in stream if line.strip()) != 7:
+            raise ValueError("interrupted Q4 record count differs from its artifact")
+    if (run_dir / "predictions-q8_0.jsonl").exists():
+        raise ValueError("interrupted attempt unexpectedly created a Q8 prediction file")
+    started = datetime.fromisoformat(
+        metadata["invocation_deadline_started_at_utc"].replace("Z", "+00:00")
+    )
+    failed = datetime.fromisoformat(failure["failure_at_utc"].replace("Z", "+00:00"))
+    measured_seconds = (failed - started).total_seconds()
+    if abs(measured_seconds - reference.get("wall_seconds", -1)) > 0.001:
+        raise ValueError("interrupted attempt wall time differs from preserved timestamps")
+    if (
+        abs(measured_seconds - plan["campaign_budget"].get("interrupted_run_wall_seconds", -1))
+        > 0.001
+    ):
+        raise ValueError("interrupted attempt wall time is not charged to the campaign budget")
 
 
 def verify_static_identity(plan: dict[str, Any], runtime: Path) -> dict[str, Any]:
@@ -307,6 +991,8 @@ def build_server_argv(binary: Path, model: Path, port: int) -> list[str]:
         "--n-gpu-layers",
         "0",
         "--no-warmup",
+        "--log-verbosity",
+        "4",
         "--no-webui",
     ]
 
@@ -345,6 +1031,8 @@ async def _capture_stream_async(
     first_chunk_ms: float | None = None
     first_token_ms: float | None = None
     response_bytes = 0
+    time_to_8_output_token_ids_ms: float | None = None
+    time_to_16_output_token_ids_ms: float | None = None
     async with asyncio.timeout_at(deadline):
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(timeout_seconds, connect=min(10.0, timeout_seconds))
@@ -390,6 +1078,10 @@ async def _capture_stream_async(
                     if tokens and first_token_ms is None:
                         first_token_ms = elapsed_ms
                     output_ids.extend(tokens)
+                    if len(output_ids) >= 8 and time_to_8_output_token_ids_ms is None:
+                        time_to_8_output_token_ids_ms = elapsed_ms
+                    if len(output_ids) >= 16 and time_to_16_output_token_ids_ms is None:
+                        time_to_16_output_token_ids_ms = elapsed_ms
                     if event.get("stop") is True:
                         final = event
                         break
@@ -414,6 +1106,8 @@ async def _capture_stream_async(
         "stream_terminal_event_observed": bool(final),
         "first_content_chunk_ms": first_chunk_ms,
         "first_token_ids_ms": first_token_ms,
+        "time_to_8_output_token_ids_ms": time_to_8_output_token_ids_ms,
+        "time_to_16_output_token_ids_ms": time_to_16_output_token_ids_ms,
         "completed_response_ms": completed_ms,
         "server_timings": final.get("timings", {}),
         "server_tokens_cached": final.get("tokens_cached"),
@@ -1077,7 +1771,9 @@ class MemorySampler:
         }
 
 
-def _tokenize(server_url: str, prompt: str, *, timeout_seconds: float = 60.0) -> tuple[int, float]:
+def _tokenize(
+    server_url: str, prompt: str, *, timeout_seconds: float = 60.0
+) -> tuple[list[int], float]:
     import httpx
 
     started = time.perf_counter()
@@ -1088,9 +1784,20 @@ def _tokenize(server_url: str, prompt: str, *, timeout_seconds: float = 60.0) ->
     )
     response.raise_for_status()
     tokens = response.json().get("tokens")
-    if not isinstance(tokens, list) or any(not isinstance(token, int) for token in tokens):
+    if not isinstance(tokens, list) or any(
+        not isinstance(token, int) or isinstance(token, bool) for token in tokens
+    ):
         raise ValueError("runtime tokenizer endpoint returned invalid token IDs")
-    return len(tokens), (time.perf_counter() - started) * 1000
+    return tokens, (time.perf_counter() - started) * 1000
+
+
+def _common_token_prefix(left: Sequence[int], right: Sequence[int]) -> int:
+    shared = 0
+    for left_token, right_token in zip(left, right, strict=False):
+        if left_token != right_token:
+            break
+        shared += 1
+    return shared
 
 
 def _wait_server(process: subprocess.Popen[str], url: str, timeout_seconds: float = 300.0) -> float:
@@ -1158,6 +1865,42 @@ def _summarize(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "requests": len(group),
             "latency_ms_median": statistics_median(latency),
             "latency_ms_p95_nearest_rank": nearest_rank(latency, 0.95),
+            "completed_file_output_count": sum(
+                row.get("completed_file_output") is True for row in group
+            ),
+            "completed_file_output_latency_ms_median": statistics_median(
+                [
+                    float(row["completed_file_output_latency_ms"])
+                    for row in group
+                    if isinstance(row.get("completed_file_output_latency_ms"), (int, float))
+                ]
+            ),
+            "completed_file_output_latency_ms_p95_nearest_rank": nearest_rank(
+                [
+                    float(row["completed_file_output_latency_ms"])
+                    for row in group
+                    if isinstance(row.get("completed_file_output_latency_ms"), (int, float))
+                ],
+                0.95,
+            ),
+            "valid_canonical_action_count": sum(
+                row.get("valid_canonical_action") is True for row in group
+            ),
+            "valid_canonical_action_latency_ms_median": statistics_median(
+                [
+                    float(row["valid_canonical_action_latency_ms"])
+                    for row in group
+                    if isinstance(row.get("valid_canonical_action_latency_ms"), (int, float))
+                ]
+            ),
+            "valid_canonical_action_latency_ms_p95_nearest_rank": nearest_rank(
+                [
+                    float(row["valid_canonical_action_latency_ms"])
+                    for row in group
+                    if isinstance(row.get("valid_canonical_action_latency_ms"), (int, float))
+                ],
+                0.95,
+            ),
             "actual_terminal_count": sum(bool(row["actual_terminal_observed"]) for row in group),
             "cap_count": sum(bool(row["hit_output_cap"]) for row in group),
             "same_prompt_output_hash_equal_to_primary_count": sum(
@@ -1168,6 +1911,37 @@ def _summarize(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "backend_cache_counters_missing": len(group) - min(len(cached), len(evaluated)),
         }
     return summary
+
+
+def response_action_measurements(
+    result: dict[str, Any], output_file_mapping: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep terminal full-file latency separate from a range-valid edit action."""
+    completed = bool(result.get("actual_terminal_observed") and not result.get("hit_output_cap"))
+    action = output_file_mapping.get("action")
+    valid = bool(
+        completed
+        and output_file_mapping.get("mapping") == "within_editable_range"
+        and action in {"no_edit", "replace"}
+    )
+    canonical_action = None
+    if valid:
+        canonical_action = {"action": action}
+        if action == "replace":
+            text = output_file_mapping.get("replacement")
+            if not isinstance(text, str):
+                valid = False
+                canonical_action = None
+            else:
+                canonical_action["text"] = text
+    request_ms = result.get("client_request_ms")
+    return {
+        "completed_file_output": completed,
+        "completed_file_output_latency_ms": request_ms if completed else None,
+        "valid_canonical_action": valid,
+        "canonical_action": canonical_action if valid else None,
+        "valid_canonical_action_latency_ms": request_ms if valid else None,
+    }
 
 
 def statistics_median(values: Sequence[float]) -> float | None:
@@ -1251,16 +2025,22 @@ def _server_run(
             token_rows = []
             prompts = []
             sweep = _sweep_runner_module()
+            input_prompt_policy = plan["replay"].get(
+                "input_prompt_policy", PUBLISHER_PROMPT_EXACT_POLICY
+            )
             for fixture in fixtures:
                 tokenization_remaining = campaign_deadline - time.monotonic()
                 if tokenization_remaining <= 0:
                     raise TimeoutError(
                         "local replay finalization reserve reached during tokenization"
                     )
-                prompt = sweep.build_sweep_prompt(fixture)
-                input_tokens, tokenize_ms = _tokenize(
+                prompt, effective_input_prompt_sha256 = build_model_input_prompt(
+                    sweep, fixture, input_prompt_policy
+                )
+                token_ids, tokenize_ms = _tokenize(
                     url, prompt, timeout_seconds=min(60.0, tokenization_remaining)
                 )
+                input_tokens = len(token_ids)
                 if input_tokens + OUTPUT_TOKENS > CONTEXT_TOKENS:
                     raise ValueError(
                         f"frozen case {fixture['case_id']} exceeds input-plus-output context"
@@ -1269,28 +2049,51 @@ def _server_run(
                     {
                         "case_id": fixture["case_id"],
                         "prompt_sha256": fixture["prompt_sha256"],
+                        "effective_input_prompt_sha256": effective_input_prompt_sha256,
                         "input_tokens": input_tokens,
+                        "token_ids": token_ids,
+                        "input_token_ids_sha256": digest_bytes(
+                            json.dumps(token_ids, separators=(",", ":")).encode("ascii")
+                        ),
                         "tokenization_ms": tokenize_ms,
                     }
                 )
                 prompts.append(prompt)
-            if len(token_rows) != 24:
-                raise ValueError("local replay requires all 24 frozen source states")
+            if len(token_rows) != len(fixtures):
+                raise ValueError("local replay tokenizer did not cover every frozen source state")
+            if plan["replay"].get("suite_mode") == TRANSITION_SUITE_MODE:
+                validate_input_token_buckets(fixtures, token_rows, plan["replay"])
             process_memory_before = _proc_memory(process.pid)
             prediction_path = run_dir / f"predictions-{precision}.jsonl"
             primary_output_hashes: dict[tuple[int, str], str] = {}
+            request_kinds = plan["replay"]["request_order_per_fixture_per_repetition"]
+            repetitions = int(plan["replay"]["repetitions"])
+            suite_version = plan["replay"].get("suite_version", "sweep-local-replay-r1")
+            previous_request_token_ids: list[int] | None = None
+            previous_request_case_id: str | None = None
             with prediction_path.open("x", encoding="utf-8") as output:
-                for repetition in range(2):
+                for repetition in range(repetitions):
                     for fixture, prompt, token_row in zip(
                         fixtures, prompts, token_rows, strict=True
                     ):
                         if time.monotonic() >= campaign_deadline:
-                            raise TimeoutError("local replay reached its frozen four-hour cap")
+                            raise TimeoutError("local replay reached its frozen request deadline")
                         input_tokens = token_row["input_tokens"]
-                        for kind in ("changed_state", "immediate_same_prompt_repeat"):
+                        input_token_ids = token_row["token_ids"]
+                        common_prefix_previous_request = (
+                            _common_token_prefix(previous_request_token_ids, input_token_ids)
+                            if previous_request_token_ids is not None
+                            else None
+                        )
+                        for kind in request_kinds:
                             sample_start = sampler.sample()
                             request_context = (
-                                run_context or RunContext.new(campaign_id=OBSERVABILITY_CAMPAIGN)
+                                run_context
+                                or RunContext.new(
+                                    campaign_id=plan.get("observability", {}).get(
+                                        "campaign_id", OBSERVABILITY_CAMPAIGN
+                                    )
+                                )
                             ).for_case(fixture["case_id"])
                             request_started_utc = datetime.now(UTC).isoformat()
                             metrics_labels = {
@@ -1329,7 +2132,7 @@ def _server_run(
                                         "tabcomplete.quantization": metrics_labels["quantization"],
                                         "tabcomplete.request.context_tokens": input_tokens,
                                         "tabcomplete.cache.condition": kind,
-                                        "tabcomplete.suite_version": "sweep-local-replay-r1",
+                                        "tabcomplete.suite_version": suite_version,
                                     },
                                 ) as span:
                                     with model_metrics(metrics_labels):
@@ -1395,35 +2198,58 @@ def _server_run(
                                     )
                             sample_end = sampler.sample()
                             request_index = len(records)
+                            output_file_mapping = (
+                                sweep.map_full_file(
+                                    fixture["current_content"],
+                                    result["raw_output"],
+                                    fixture["editable_start_byte"],
+                                    fixture["editable_end_byte"],
+                                )
+                                if result["actual_terminal_observed"]
+                                else {
+                                    "mapping": "incomplete_or_unterminated_output_not_scored",
+                                    "out_of_range": None,
+                                }
+                            )
+                            action_measurements = response_action_measurements(
+                                result, output_file_mapping
+                            )
                             result.update(
-                                schema="sweep-local-replay-record-v1",
+                                schema=(
+                                    "sweep-local-changing-state-record-v1"
+                                    if plan["replay"].get("suite_mode") == TRANSITION_SUITE_MODE
+                                    else "sweep-local-replay-record-v1"
+                                ),
                                 plan_sha256=plan["plan_sha256"],
                                 precision=precision,
                                 model_sha256=model_info["sha256"],
                                 case_id=fixture["case_id"],
+                                state_id=fixture.get("state_id"),
+                                trajectory_id=fixture.get("trajectory_id"),
+                                transition_type=fixture.get("transition_type"),
+                                from_state_id=fixture.get("from_state_id"),
+                                nominal_context_bucket=fixture.get("nominal_context_bucket"),
                                 repetition=repetition,
                                 request_kind=kind,
                                 prompt_sha256=fixture["prompt_sha256"],
+                                publisher_prompt_sha256=fixture["prompt_sha256"],
+                                effective_input_prompt_sha256=token_row[
+                                    "effective_input_prompt_sha256"
+                                ],
                                 input_tokens=input_tokens,
+                                input_token_ids_sha256=token_row["input_token_ids_sha256"],
+                                previous_request_case_id=previous_request_case_id,
+                                common_prefix_tokens_with_previous_request=(
+                                    common_prefix_previous_request
+                                ),
                                 input_plus_output_ceiling=input_tokens + OUTPUT_TOKENS,
                                 tokenization_ms=token_row["tokenization_ms"],
+                                **action_measurements,
                                 editable_range={
                                     "start_byte": fixture["editable_start_byte"],
                                     "end_byte": fixture["editable_end_byte"],
                                 },
-                                output_file_mapping=(
-                                    sweep.map_full_file(
-                                        fixture["current_content"],
-                                        result["raw_output"],
-                                        fixture["editable_start_byte"],
-                                        fixture["editable_end_byte"],
-                                    )
-                                    if result["actual_terminal_observed"]
-                                    else {
-                                        "mapping": "incomplete_or_unterminated_output_not_scored",
-                                        "out_of_range": None,
-                                    }
-                                ),
+                                output_file_mapping=output_file_mapping,
                                 request_started_at_utc=request_started_utc,
                                 measurement_order=request_index,
                                 measurement_memory=sampler.window_summary(sample_start, sample_end),
@@ -1432,7 +2258,7 @@ def _server_run(
                                 primary_output_hashes[(repetition, fixture["case_id"])] = result[
                                     "output_sha256"
                                 ]
-                            else:
+                            elif kind == "immediate_same_prompt_repeat":
                                 result["repeat_output_matches_primary"] = (
                                     result["output_sha256"]
                                     == primary_output_hashes[(repetition, fixture["case_id"])]
@@ -1443,6 +2269,8 @@ def _server_run(
                             output.write(encoded_result)
                             output.flush()
                             records.append(result)
+                            previous_request_token_ids = input_token_ids
+                            previous_request_case_id = fixture["case_id"]
                             if (
                                 sum(
                                     len(row.get("raw_output", "").encode("utf-8"))
@@ -1503,8 +2331,18 @@ def _server_run(
                 },
                 "server_exit_verified": False,
                 "case_count": len(fixtures),
-                "repetitions": 2,
-                "primary_and_cache_repeat_requests": len(fixtures) * 2 * 2,
+                "repetitions": repetitions,
+                "request_count": len(fixtures) * repetitions * len(request_kinds),
+                "request_kind_counts": {
+                    kind: len(fixtures) * repetitions * request_kinds.count(kind)
+                    for kind in set(request_kinds)
+                },
+                "same_prompt_repeat_requests": (
+                    len(fixtures)
+                    * repetitions
+                    * request_kinds.count("immediate_same_prompt_repeat")
+                ),
+                "suite_mode": plan["replay"].get("suite_mode", "fixed_snapshot"),
                 "quality_evidence": False,
                 "process_tree_memory_included": True,
                 "background_q25_processes_before": before_host["background_model_processes"],
@@ -1598,7 +2436,8 @@ def execute(args: argparse.Namespace) -> Path:
     }
     _atomic_json(run_dir / "metadata.json", metadata)
     try:
-        with run_scope(run_dir / "observability-run.json", OBSERVABILITY_CAMPAIGN) as run:
+        campaign_id = plan.get("observability", {}).get("campaign_id", OBSERVABILITY_CAMPAIGN)
+        with run_scope(run_dir / "observability-run.json", campaign_id) as run:
             for precision in plan["replay"]["precision_order"]:
                 if precision not in {"q4_k_m", "q8_0"}:
                     raise ValueError("local replay precision order contains an unauthorized value")
@@ -1629,12 +2468,21 @@ def execute(args: argparse.Namespace) -> Path:
             "VmHWM_bytes", 0
         )
         q8_peak = max(q8_memory, q8_highwater)
+        expected_requests = int(plan["replay"]["expected_requests"])
         report = {
-            "schema": "sweep-local-replay-summary-v1",
+            "schema": (
+                "sweep-local-changing-state-summary-v1"
+                if plan["replay"].get("suite_mode") == TRANSITION_SUITE_MODE
+                else "sweep-local-replay-summary-v1"
+            ),
+            "suite_mode": plan["replay"].get("suite_mode", "fixed_snapshot"),
             "plan_sha256": plan["plan_sha256"],
             "run_directory": str(run_dir),
             "completed_requests": len(records),
-            "expected_requests": 24 * 2 * 2 * 2,
+            "expected_requests": expected_requests,
+            "same_prompt_repeat_requests": sum(
+                model["same_prompt_repeat_requests"] for model in model_measurements
+            ),
             "results": summary,
             "models": model_measurements,
             "q8_deployment_classification": (
@@ -1671,6 +2519,7 @@ def execute(args: argparse.Namespace) -> Path:
                     "run_directory": str(run_dir),
                     "completed_requests": len(records),
                     "expected_requests": report["expected_requests"],
+                    "suite_mode": report["suite_mode"],
                     "q8_deployment_classification": report["q8_deployment_classification"],
                 },
                 sort_keys=True,

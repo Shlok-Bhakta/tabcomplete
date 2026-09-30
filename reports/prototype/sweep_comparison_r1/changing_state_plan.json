@@ -1,0 +1,458 @@
+{
+  "cache_policy": {
+    "active_sequence_state": "retained by llama.cpp within its single slot; natural prompts change through ordered editor transitions",
+    "context_checkpoints": 0,
+    "idle_slot_snapshots": false,
+    "optional_cache_ram_mib": 0,
+    "request_prompt_cache": true,
+    "state_policy": "no context shifting; actual input token ID hashes and previous-request common-prefix counts are recorded alongside native server timing counters"
+  },
+  "campaign": "sweep-local-changing-state-crabcake-r1",
+  "campaign_budget": {
+    "campaign_cap_seconds": 5400,
+    "max_wall_seconds_including_finalization": 3700,
+    "previous_run_summary_path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/summary.json",
+    "previous_run_summary_sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465",
+    "previous_run_wall_seconds": 1696.506838,
+    "remaining_seconds_before_new_run": 3700.197162,
+    "request_work_deadline_seconds": 3100,
+    "tokenizer_preflight_outputs_generated": false,
+    "tokenizer_preflight_passes": 3,
+    "tokenizer_preflight_wall_seconds": 3.296
+  },
+  "code": {
+    "httpx": "0.28.1",
+    "measurement_script_path": "scripts/measure_sweep_local.py",
+    "measurement_script_sha256": "e60205041da1f49cd2368d14dc18037e990ad171c1ad64dd69ca71abc9f2fb9b",
+    "opentelemetry_api": "1.44.0",
+    "opentelemetry_sdk": "1.44.0",
+    "python": "3.11.15",
+    "test_path": "tests/test_measure_sweep_local.py",
+    "test_sha256": "d2b7a85870ea1ba46e45da0801e14c1efe69fd93da48468f66f17c92a420b73d",
+    "uv": "0.12.3",
+    "uv_lock_sha256": "c304a2a892a76261b286ac4b0da4be52ab77944add671908c63da85664f69c42"
+  },
+  "frozen_at_utc": "2026-09-30T11:04:09.993751+00:00",
+  "hardware": {
+    "background_model_processes": [
+      {
+        "cpu_system_seconds": 0.68,
+        "cpu_user_seconds": 1.41,
+        "memory": {
+          "Anonymous_bytes": 113971200,
+          "Pss_Anon_bytes": 113971200,
+          "Pss_File_bytes": 354139136,
+          "Pss_bytes": 468110336,
+          "RssAnon_bytes": 113971200,
+          "RssFile_bytes": 358109184,
+          "Swap_bytes": 0,
+          "VmHWM_bytes": 518078464,
+          "VmRSS_bytes": 472080384,
+          "VmSwap_bytes": 0
+        },
+        "model_filename": "q25-coder-adapted-Q4_K_M.gguf",
+        "pid": 3343901,
+        "process_name": "llama-server",
+        "role": "background_q25_predictor"
+      }
+    ],
+    "cpu_frequency_mhz_per_core": [
+      3788.988,
+      1400.0,
+      1400.0,
+      1400.0,
+      3792.341,
+      1446.88,
+      1437.36,
+      1517.195
+    ],
+    "cpu_temperature_celsius": {
+      "hwmon:k10temp:Tctl": 38.875
+    },
+    "host": "crabcake",
+    "io_pressure": {
+      "full": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 1435221305
+      },
+      "some": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 1551369223
+      }
+    },
+    "load_average_1_5_15": [
+      0.36083984375,
+      0.2626953125,
+      0.26025390625
+    ],
+    "logical_cpu_count": 8,
+    "memory_pressure": {
+      "full": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 46600620
+      },
+      "some": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 49028794
+      }
+    },
+    "observed_at_utc": "2026-09-30T11:04:10.083798+00:00",
+    "other_temperature_sensors_celsius": {
+      "hwmon:amdgpu:edge": 38.0,
+      "hwmon:iwlwifi_1:temp1_input": 37.0,
+      "hwmon:nvme:Composite": 39.85,
+      "hwmon:nvme:Sensor 1": 39.85,
+      "hwmon:nvme:Sensor 2": 38.85,
+      "thermal:iwlwifi_1": 40.0
+    },
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "ram_available_bytes": 11677184000,
+    "ram_total_bytes": 14580572160,
+    "swap_activity_pages": {
+      "pswpin": 2009001,
+      "pswpout": 6381575
+    },
+    "swap_occupancy": {
+      "total_bytes": 4294963200,
+      "used_bytes": 1810259968
+    },
+    "system_cpu_ticks": [
+      719331614,
+      618135555
+    ],
+    "workload_processes": [
+      {
+        "cpu_seconds": 33990.67,
+        "pid": 1314,
+        "process_name": "node",
+        "rss_bytes": 529596416,
+        "start_time_ticks": 1194
+      },
+      {
+        "cpu_seconds": 11925.81,
+        "pid": 972236,
+        "process_name": "node",
+        "rss_bytes": 183480320,
+        "start_time_ticks": 10349735
+      },
+      {
+        "cpu_seconds": 4461.83,
+        "pid": 938724,
+        "process_name": "npm exec t3@0.0",
+        "rss_bytes": 15548416,
+        "start_time_ticks": 10121465
+      },
+      {
+        "cpu_seconds": 906.41,
+        "pid": 2456997,
+        "process_name": "bun",
+        "rss_bytes": 33521664,
+        "start_time_ticks": 79575981
+      },
+      {
+        "cpu_seconds": 797.06,
+        "pid": 2273982,
+        "process_name": "bun",
+        "rss_bytes": 8978432,
+        "start_time_ticks": 24396403
+      },
+      {
+        "cpu_seconds": 587.09,
+        "pid": 3356863,
+        "process_name": "codex",
+        "rss_bytes": 333639680,
+        "start_time_ticks": 88272311
+      },
+      {
+        "cpu_seconds": 59.89,
+        "pid": 3366571,
+        "process_name": "codex",
+        "rss_bytes": 223625216,
+        "start_time_ticks": 88291698
+      },
+      {
+        "cpu_seconds": 36.6,
+        "pid": 3357424,
+        "process_name": "codex-code-mode",
+        "rss_bytes": 27480064,
+        "start_time_ticks": 88274383
+      },
+      {
+        "cpu_seconds": 27.15,
+        "pid": 2207,
+        "process_name": "goa-identity-se",
+        "rss_bytes": 5799936,
+        "start_time_ticks": 1458
+      },
+      {
+        "cpu_seconds": 10.16,
+        "pid": 3344104,
+        "process_name": "codex",
+        "rss_bytes": 195108864,
+        "start_time_ticks": 88143850
+      },
+      {
+        "cpu_seconds": 1.71,
+        "pid": 3344178,
+        "process_name": "codex",
+        "rss_bytes": 111210496,
+        "start_time_ticks": 88143871
+      },
+      {
+        "cpu_seconds": 1.32,
+        "pid": 3368015,
+        "process_name": "codex-code-mode",
+        "rss_bytes": 24559616,
+        "start_time_ticks": 88292872
+      },
+      {
+        "cpu_seconds": 0.14,
+        "pid": 2117,
+        "process_name": "goa-daemon",
+        "rss_bytes": 9342976,
+        "start_time_ticks": 1447
+      },
+      {
+        "cpu_seconds": 0.02,
+        "pid": 3761963,
+        "process_name": "uv",
+        "rss_bytes": 34799616,
+        "start_time_ticks": 90320260
+      },
+      {
+        "cpu_seconds": 0.01,
+        "pid": 2348,
+        "process_name": "gvfs-goa-volume",
+        "rss_bytes": 4575232,
+        "start_time_ticks": 1482
+      }
+    ]
+  },
+  "inputs": {
+    "baseline_summary_path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/summary.json",
+    "baseline_summary_sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465",
+    "context_file_sha256": {
+      "src/editor/context.py": "6e7633f60fdc769c62bf62e72b12ccf0a85d48598c84e7bc16864e2293495bd2",
+      "src/editor/history.py": "a421066fb0b8ccbae78f325a8ec5aa7ca7b11eb0628d05efc6aff5abe3fb262f",
+      "src/editor/ranges.py": "8706563c42fb9791b1052734cc655f7780451c3cd85ab756b8853476013cc90b",
+      "src/editor/shadow.py": "b51ec9c452932182c57800a16fe72da840cb19b0cc8502061444c3eab42ad78a",
+      "src/editor/transactions.py": "7325d5f5ddefcd86b97075f5b39a336a087d6f44b0faac6bc23137dee30d32b9"
+    },
+    "context_policy": "fixed synthetic adjacent editor modules; exact module bytes and per-bucket ordered sets are pinned; no filler, truncation, or prompt-field reorder",
+    "fixture_path": "reports/prototype/sweep_comparison_r1/changing_state_inputs.jsonl",
+    "prompt_builder_function_sha256": "93ce49cd6fa2dc79d27bbfd71118b487a109eb89b83ae798ebd52fe6d05a66f5",
+    "prompt_builder_source_commit": "a681d5c4ba88388742b4217a838d840ed5c257a5",
+    "prompt_builder_source_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+    "prompt_bundle_sha256": "3056d31b499277fcc188c0f9cb68ec93d02028c96a69c985ae62f8de24cdddcc",
+    "upstream_plan_file_sha256": "8b6f781d153b58284c3c994774cc5cc82bbb9cfbc1615a51f0079080e7573a97",
+    "upstream_plan_path": "reports/prototype/sweep_comparison_r1/plan-v2.json",
+    "upstream_plan_sha256": "53256921e9135b432ed029e7a083c3ee12c27619ce200c4be4c5b91dc5200b51"
+  },
+  "limits": {
+    "candidate_predictor_memory_bytes": 1610612736,
+    "finalization_reserve_seconds": 600,
+    "max_individual_request_timeout_seconds": 600,
+    "max_response_bytes": 2097152,
+    "max_total_raw_prediction_bytes": 536870912,
+    "max_wall_seconds_including_preflight_and_finalization": 3700,
+    "minimum_available_ram_bytes": 4294967296,
+    "no_conversion": true,
+    "no_live_service_changes": true,
+    "no_model_downloads": true,
+    "no_paid_compute": true,
+    "no_training": true,
+    "request_work_deadline_seconds_from_invocation_start": 3100
+  },
+  "model_quality_claims_allowed": false,
+  "models": {
+    "active_q25_service": {
+      "handling": "record resident service and CPU deltas; never stop; report overlap",
+      "known_pid_at_plan_freeze": 3343901
+    },
+    "q4_k_m": {
+      "bytes": 883289056,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+      "provenance": "requantized from the pinned Q8_0 artifact using llama.cpp; not F16-to-Q4",
+      "quantization": "Q4_K_M",
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+    },
+    "q8_0": {
+      "bytes": 1537269856,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+      "provenance": "publisher-revision artifact, already staged locally",
+      "quantization": "Q8_0",
+      "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+    },
+    "simultaneous_candidate_model_limit": 1
+  },
+  "observability": {
+    "campaign_id": "sweep-local-changing-state-crabcake-r1",
+    "capture_content": false,
+    "existing_hooks_and_metric_labels": "bounded, existing hooks; no prompts, paths, UUIDs, or model hashes as metric labels",
+    "mode": "offline"
+  },
+  "outputs": {
+    "raw_prediction_bytes_ceiling": 536870912,
+    "root": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/changing_state_replay"
+  },
+  "plan_sha256": "a1e5037540f18f0fdc0eaded8c4c25ed657e43ac4907fc9de0f5991cd590c1f6",
+  "purpose": "CPU-only actual changed-editor-state latency, memory, and prompt-prefix diagnostic; not a quality evaluation",
+  "quality_evidence": false,
+  "replay": {
+    "context_file_sha256": {
+      "src/editor/context.py": "6e7633f60fdc769c62bf62e72b12ccf0a85d48598c84e7bc16864e2293495bd2",
+      "src/editor/history.py": "a421066fb0b8ccbae78f325a8ec5aa7ca7b11eb0628d05efc6aff5abe3fb262f",
+      "src/editor/ranges.py": "8706563c42fb9791b1052734cc655f7780451c3cd85ab756b8853476013cc90b",
+      "src/editor/shadow.py": "b51ec9c452932182c57800a16fe72da840cb19b0cc8502061444c3eab42ad78a",
+      "src/editor/transactions.py": "7325d5f5ddefcd86b97075f5b39a336a087d6f44b0faac6bc23137dee30d32b9"
+    },
+    "context_modules_by_bucket": {
+      "1024": [
+        "src/editor/ranges.py",
+        "src/editor/shadow.py",
+        "src/editor/transactions.py"
+      ],
+      "2048": [
+        "src/editor/ranges.py",
+        "src/editor/shadow.py",
+        "src/editor/history.py",
+        "src/editor/context.py",
+        "src/editor/transactions.py"
+      ],
+      "512": [
+        "src/editor/ranges.py"
+      ]
+    },
+    "context_tokens": 3072,
+    "expected_requests": 96,
+    "fixture_count": 24,
+    "fixture_order": [
+      "b512-files/01-open",
+      "b512-files/02-append",
+      "b512-files/03-switch",
+      "b512-files/04-return-A",
+      "b512-edits/01-open",
+      "b512-edits/02-replace",
+      "b512-edits/03-divergent",
+      "b512-edits/04-match",
+      "b1024-files/01-open",
+      "b1024-files/02-append",
+      "b1024-files/03-switch",
+      "b1024-files/04-return-A",
+      "b1024-edits/01-open",
+      "b1024-edits/02-replace",
+      "b1024-edits/03-divergent",
+      "b1024-edits/04-match",
+      "b2048-files/01-open",
+      "b2048-files/02-earlier",
+      "b2048-files/03-switch",
+      "b2048-files/04-return-A",
+      "b2048-edits/01-open",
+      "b2048-edits/02-replace",
+      "b2048-edits/03-divergent",
+      "b2048-edits/04-match"
+    ],
+    "input_bucket_case_counts": {
+      "1024": 8,
+      "2048": 8,
+      "512": 8
+    },
+    "input_bucket_windows": {
+      "1024": [
+        900,
+        1450
+      ],
+      "2048": [
+        1728,
+        2304
+      ],
+      "512": [
+        384,
+        768
+      ]
+    },
+    "input_plus_output_rule": "actual GGUF token count + 512 <= 3072; fail before first generation, never truncate or shift",
+    "output_tokens": 512,
+    "precision_order": [
+      "q4_k_m",
+      "q8_0"
+    ],
+    "quality_evidence": false,
+    "repetitions": 2,
+    "request_order_per_fixture_per_repetition": [
+      "changed_state"
+    ],
+    "request_settings": {
+      "cache_prompt": true,
+      "id_slot": 0,
+      "n_predict": 512,
+      "return_tokens": true,
+      "seed": 1,
+      "stop": [
+        "<|file_sep|>",
+        "</s>"
+      ],
+      "stream": true,
+      "temperature": 0
+    },
+    "same_prompt_repeats": "none in this suite; historical same-prompt repeat is separate and preserved",
+    "suite_mode": "changing_editor_state",
+    "suite_version": "sweep-local-changing-state-r1",
+    "synthetic_decisions": "rejection and matching-prefix events are synthetic UI controls only; model-generated output does not determine subsequent states",
+    "tokenizer": "resident pinned llama.cpp /tokenize endpoint, add_special=true and parse_special=true; IDs hashed, not stored raw",
+    "transition_history_policy": "each synthetic source delta is replayed from exact UTF-8 byte range/replacement; file switches and return preserve exact earlier state",
+    "transition_type_counts": {
+      "append_chars": 2,
+      "earlier_edit_invalidation": 2,
+      "explicit_reject_then_divergent_typing": 3,
+      "file_switch": 3,
+      "file_switch_return": 3,
+      "fresh_file_open": 6,
+      "near_cursor_replace": 2,
+      "typed_matching_prefix": 3
+    }
+  },
+  "revision": 2,
+  "revision_reason": "Preflight caught a schema-location mismatch before any completion request; bind context-module order and hashes in replay validation inputs, with fixture, prompt, runtime, model, and schedule identities unchanged.",
+  "runtime": {
+    "binary_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+    "binary_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+    "execution_topology": "one loopback llama-server process per precision, sequential; process group owned and stopped by runner",
+    "explicit_backend": "CPU; --n-gpu-layers 0; per-run runtime log evidence is retained",
+    "health_timeout_seconds": 300,
+    "server_settings": {
+      "batch_tokens": 256,
+      "cache_idle_slots": false,
+      "cache_ram_mib": 0,
+      "context_checkpoints": 0,
+      "context_shift": false,
+      "context_tokens": 3072,
+      "gpu_layers": 0,
+      "kv_cache_k": "f16",
+      "kv_cache_v": "f16",
+      "log_verbosity": 4,
+      "microbatch_tokens": 64,
+      "parallel_slots": 1,
+      "speculative_decoding": "none",
+      "threads": 4,
+      "threads_batch": 4,
+      "warmup": false,
+      "weight_repacking": false
+    },
+    "source_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp",
+    "source_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "version_output": [
+      "version: 0.4.1-dev (build 1, commit f072b10)",
+      "built with GNU 13.3.0 for Linux x86_64"
+    ]
+  },
+  "schema": "sweep-local-changing-state-plan-v1"
+}

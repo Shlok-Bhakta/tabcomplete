@@ -1,0 +1,548 @@
+{
+  "cache_policy": {
+    "active_sequence_state": "retained by llama.cpp within its single slot; natural prompts change through ordered editor transitions",
+    "context_checkpoints": 0,
+    "idle_slot_snapshots": false,
+    "optional_cache_ram_mib": 0,
+    "request_prompt_cache": true,
+    "state_policy": "no context shifting; actual input token ID hashes and previous-request common-prefix counts are recorded alongside native server timing counters"
+  },
+  "campaign": "sweep-local-changing-state-prompt-boundary-r2",
+  "campaign_budget": {
+    "campaign_cap_seconds": 5400,
+    "max_wall_seconds_including_finalization": 3700,
+    "previous_run_summary_path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/summary.json",
+    "previous_run_summary_sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465",
+    "previous_run_wall_seconds": 1696.506838,
+    "remaining_seconds_before_new_run": 3694.8865819999996,
+    "request_work_deadline_seconds": 3100,
+    "tokenizer_preflight_components_seconds": {
+      "conservative_unmetered_identity_check_allowance_seconds": 1.0,
+      "header_lf_early_preflight_measured_seconds": 1.164356,
+      "header_lf_full_preflight_seconds": 3.146224,
+      "historical_v2_three_tokenizer_preflights_seconds": 3.296
+    },
+    "tokenizer_preflight_outputs_generated": false,
+    "tokenizer_preflight_passes": 3,
+    "tokenizer_preflight_wall_seconds": 8.606580000000001
+  },
+  "code": {
+    "httpx": "0.28.1",
+    "measurement_script_path": "scripts/measure_sweep_local.py",
+    "measurement_script_sha256": "4fd543cb056d83c322f6e501bf2bbce438ca3fd61d65b5456e228d560e7b4eb7",
+    "opentelemetry_api": "1.44.0",
+    "opentelemetry_sdk": "1.44.0",
+    "python": "3.11.15",
+    "test_path": "tests/test_measure_sweep_local.py",
+    "test_sha256": "9ac12c0f8b63cf6276cea1cea81c8af790534f71e845a94beb49e8de1856796a",
+    "uv": "0.12.3",
+    "uv_lock_sha256": "c304a2a892a76261b286ac4b0da4be52ab77944add671908c63da85664f69c42"
+  },
+  "frozen_at_utc": "2026-09-30T11:29:32.961483+00:00",
+  "hardware": {
+    "background_model_processes": [
+      {
+        "cpu_system_seconds": 0.68,
+        "cpu_user_seconds": 1.41,
+        "memory": {
+          "Anonymous_bytes": 113971200,
+          "Pss_Anon_bytes": 113971200,
+          "Pss_File_bytes": 354139136,
+          "Pss_bytes": 468110336,
+          "RssAnon_bytes": 113971200,
+          "RssFile_bytes": 358109184,
+          "Swap_bytes": 0,
+          "VmHWM_bytes": 518078464,
+          "VmRSS_bytes": 472080384,
+          "VmSwap_bytes": 0
+        },
+        "model_filename": "q25-coder-adapted-Q4_K_M.gguf",
+        "pid": 3343901,
+        "process_name": "llama-server",
+        "role": "background_q25_predictor"
+      }
+    ],
+    "cpu_frequency_mhz_per_core": [
+      3788.988,
+      1400.0,
+      1400.0,
+      1400.0,
+      3792.341,
+      1446.88,
+      1437.36,
+      1517.195
+    ],
+    "cpu_temperature_celsius": {
+      "hwmon:k10temp:Tctl": 38.875
+    },
+    "host": "crabcake",
+    "io_pressure": {
+      "full": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 1435221305
+      },
+      "some": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 1551369223
+      }
+    },
+    "load_average_1_5_15": [
+      0.36083984375,
+      0.2626953125,
+      0.26025390625
+    ],
+    "logical_cpu_count": 8,
+    "memory_pressure": {
+      "full": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 46600620
+      },
+      "some": {
+        "avg10": 0.0,
+        "avg300": 0.0,
+        "avg60": 0.0,
+        "total": 49028794
+      }
+    },
+    "observed_at_utc": "2026-09-30T11:04:10.083798+00:00",
+    "other_temperature_sensors_celsius": {
+      "hwmon:amdgpu:edge": 38.0,
+      "hwmon:iwlwifi_1:temp1_input": 37.0,
+      "hwmon:nvme:Composite": 39.85,
+      "hwmon:nvme:Sensor 1": 39.85,
+      "hwmon:nvme:Sensor 2": 38.85,
+      "thermal:iwlwifi_1": 40.0
+    },
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "ram_available_bytes": 11677184000,
+    "ram_total_bytes": 14580572160,
+    "swap_activity_pages": {
+      "pswpin": 2009001,
+      "pswpout": 6381575
+    },
+    "swap_occupancy": {
+      "total_bytes": 4294963200,
+      "used_bytes": 1810259968
+    },
+    "system_cpu_ticks": [
+      719331614,
+      618135555
+    ],
+    "workload_processes": [
+      {
+        "cpu_seconds": 33990.67,
+        "pid": 1314,
+        "process_name": "node",
+        "rss_bytes": 529596416,
+        "start_time_ticks": 1194
+      },
+      {
+        "cpu_seconds": 11925.81,
+        "pid": 972236,
+        "process_name": "node",
+        "rss_bytes": 183480320,
+        "start_time_ticks": 10349735
+      },
+      {
+        "cpu_seconds": 4461.83,
+        "pid": 938724,
+        "process_name": "npm exec t3@0.0",
+        "rss_bytes": 15548416,
+        "start_time_ticks": 10121465
+      },
+      {
+        "cpu_seconds": 906.41,
+        "pid": 2456997,
+        "process_name": "bun",
+        "rss_bytes": 33521664,
+        "start_time_ticks": 79575981
+      },
+      {
+        "cpu_seconds": 797.06,
+        "pid": 2273982,
+        "process_name": "bun",
+        "rss_bytes": 8978432,
+        "start_time_ticks": 24396403
+      },
+      {
+        "cpu_seconds": 587.09,
+        "pid": 3356863,
+        "process_name": "codex",
+        "rss_bytes": 333639680,
+        "start_time_ticks": 88272311
+      },
+      {
+        "cpu_seconds": 59.89,
+        "pid": 3366571,
+        "process_name": "codex",
+        "rss_bytes": 223625216,
+        "start_time_ticks": 88291698
+      },
+      {
+        "cpu_seconds": 36.6,
+        "pid": 3357424,
+        "process_name": "codex-code-mode",
+        "rss_bytes": 27480064,
+        "start_time_ticks": 88274383
+      },
+      {
+        "cpu_seconds": 27.15,
+        "pid": 2207,
+        "process_name": "goa-identity-se",
+        "rss_bytes": 5799936,
+        "start_time_ticks": 1458
+      },
+      {
+        "cpu_seconds": 10.16,
+        "pid": 3344104,
+        "process_name": "codex",
+        "rss_bytes": 195108864,
+        "start_time_ticks": 88143850
+      },
+      {
+        "cpu_seconds": 1.71,
+        "pid": 3344178,
+        "process_name": "codex",
+        "rss_bytes": 111210496,
+        "start_time_ticks": 88143871
+      },
+      {
+        "cpu_seconds": 1.32,
+        "pid": 3368015,
+        "process_name": "codex-code-mode",
+        "rss_bytes": 24559616,
+        "start_time_ticks": 88292872
+      },
+      {
+        "cpu_seconds": 0.14,
+        "pid": 2117,
+        "process_name": "goa-daemon",
+        "rss_bytes": 9342976,
+        "start_time_ticks": 1447
+      },
+      {
+        "cpu_seconds": 0.02,
+        "pid": 3761963,
+        "process_name": "uv",
+        "rss_bytes": 34799616,
+        "start_time_ticks": 90320260
+      },
+      {
+        "cpu_seconds": 0.01,
+        "pid": 2348,
+        "process_name": "gvfs-goa-volume",
+        "rss_bytes": 4575232,
+        "start_time_ticks": 1482
+      }
+    ]
+  },
+  "inputs": {
+    "baseline_summary_path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/summary.json",
+    "baseline_summary_sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465",
+    "context_file_sha256": {
+      "src/editor/context.py": "6e7633f60fdc769c62bf62e72b12ccf0a85d48598c84e7bc16864e2293495bd2",
+      "src/editor/history.py": "a421066fb0b8ccbae78f325a8ec5aa7ca7b11eb0628d05efc6aff5abe3fb262f",
+      "src/editor/ranges.py": "8706563c42fb9791b1052734cc655f7780451c3cd85ab756b8853476013cc90b",
+      "src/editor/shadow.py": "b51ec9c452932182c57800a16fe72da840cb19b0cc8502061444c3eab42ad78a",
+      "src/editor/transactions.py": "7325d5f5ddefcd86b97075f5b39a336a087d6f44b0faac6bc23137dee30d32b9"
+    },
+    "context_policy": "fixed synthetic adjacent editor modules; exact module bytes and per-bucket ordered sets are pinned; no filler, truncation, or prompt-field reorder",
+    "fixture_path": "reports/prototype/sweep_comparison_r1/changing_state_inputs.jsonl",
+    "prior_unrun_plan_file_sha256": "34c2d176d6bf4abd1b3efcb803429ffa359ba69c8acaadee01b95dd0224dc74c",
+    "prior_unrun_plan_path": "reports/prototype/sweep_comparison_r1/changing_state_plan.json",
+    "prompt_builder_function_sha256": "93ce49cd6fa2dc79d27bbfd71118b487a109eb89b83ae798ebd52fe6d05a66f5",
+    "prompt_builder_source_commit": "a681d5c4ba88388742b4217a838d840ed5c257a5",
+    "prompt_builder_source_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+    "prompt_bundle_sha256": "3056d31b499277fcc188c0f9cb68ec93d02028c96a69c985ae62f8de24cdddcc",
+    "upstream_plan_file_sha256": "8b6f781d153b58284c3c994774cc5cc82bbb9cfbc1615a51f0079080e7573a97",
+    "upstream_plan_path": "reports/prototype/sweep_comparison_r1/plan-v2.json",
+    "upstream_plan_sha256": "53256921e9135b432ed029e7a083c3ee12c27619ce200c4be4c5b91dc5200b51"
+  },
+  "limits": {
+    "candidate_predictor_memory_bytes": 1610612736,
+    "finalization_reserve_seconds": 600,
+    "max_individual_request_timeout_seconds": 600,
+    "max_response_bytes": 2097152,
+    "max_total_raw_prediction_bytes": 536870912,
+    "max_wall_seconds_including_preflight_and_finalization": 3694,
+    "minimum_available_ram_bytes": 4294967296,
+    "no_conversion": true,
+    "no_live_service_changes": true,
+    "no_model_downloads": true,
+    "no_paid_compute": true,
+    "no_training": true,
+    "request_work_deadline_seconds_from_invocation_start": 3094
+  },
+  "model_quality_claims_allowed": false,
+  "models": {
+    "active_q25_service": {
+      "handling": "record resident service and CPU deltas; never stop; report overlap",
+      "known_pid_at_plan_freeze": 3343901
+    },
+    "q4_k_m": {
+      "bytes": 883289056,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+      "provenance": "requantized from the pinned Q8_0 artifact using llama.cpp; not F16-to-Q4",
+      "quantization": "Q4_K_M",
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+    },
+    "q8_0": {
+      "bytes": 1537269856,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+      "provenance": "publisher-revision artifact, already staged locally",
+      "quantization": "Q8_0",
+      "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+    },
+    "simultaneous_candidate_model_limit": 1
+  },
+  "observability": {
+    "campaign_id": "sweep-local-changing-state-crabcake-r1",
+    "capture_content": false,
+    "existing_hooks_and_metric_labels": "bounded, existing hooks; no prompts, paths, UUIDs, or model hashes as metric labels",
+    "mode": "offline"
+  },
+  "outputs": {
+    "raw_prediction_bytes_ceiling": 536870912,
+    "root": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/changing_state_replay_v3"
+  },
+  "plan_sha256": "a5f9d9dfd21cf5d5d2bce12da700d429c0b4930f46d3104fbf957f2fbc61c405",
+  "purpose": "CPU-only changed-state latency and prompt-boundary diagnostic using one input LF after the frozen updated-file header; raw model output is never repaired and this is not quality evidence",
+  "quality_evidence": false,
+  "replay": {
+    "context_file_sha256": {
+      "src/editor/context.py": "6e7633f60fdc769c62bf62e72b12ccf0a85d48598c84e7bc16864e2293495bd2",
+      "src/editor/history.py": "a421066fb0b8ccbae78f325a8ec5aa7ca7b11eb0628d05efc6aff5abe3fb262f",
+      "src/editor/ranges.py": "8706563c42fb9791b1052734cc655f7780451c3cd85ab756b8853476013cc90b",
+      "src/editor/shadow.py": "b51ec9c452932182c57800a16fe72da840cb19b0cc8502061444c3eab42ad78a",
+      "src/editor/transactions.py": "7325d5f5ddefcd86b97075f5b39a336a087d6f44b0faac6bc23137dee30d32b9"
+    },
+    "context_modules_by_bucket": {
+      "1024": [
+        "src/editor/ranges.py",
+        "src/editor/shadow.py",
+        "src/editor/transactions.py"
+      ],
+      "2048": [
+        "src/editor/ranges.py",
+        "src/editor/shadow.py",
+        "src/editor/history.py",
+        "src/editor/context.py",
+        "src/editor/transactions.py"
+      ],
+      "512": [
+        "src/editor/ranges.py"
+      ]
+    },
+    "context_tokens": 3072,
+    "effective_input_prompt_sha256_by_case": {
+      "b1024-edits/01-open": "8325f1e5c273bdc5e3f4aa7d63a766b5b4cfabfdaa6dcebcab9c958b89d96d2f",
+      "b1024-edits/02-replace": "e116b032f4e20934a97cd2dd46c68c001dc1d5cb03fbef0563cf7a6ae46ab064",
+      "b1024-edits/03-divergent": "722aa9616527ea5542b57bf8747fd9a0a3c9c07ed4424d31fc26b90d2872ee5d",
+      "b1024-edits/04-match": "17b1ebea9d3e7023cdfd32ec63f9a5bc51e29d843343c3b74c043b2534be6675",
+      "b1024-files/01-open": "4b2329c92af6f8acd0335a0dac6f62374cea0355ce2b3c5004e5f4312478653d",
+      "b1024-files/02-append": "290119a52aaa47096df7444c6c7542e071af9005e268c94ac0df48837a341056",
+      "b1024-files/03-switch": "7b563c3259b1ebfa3fe22990ad23bb6af3758f2509bd7bf9ca8c6592ff2b0de3",
+      "b1024-files/04-return-A": "290119a52aaa47096df7444c6c7542e071af9005e268c94ac0df48837a341056",
+      "b2048-edits/01-open": "93310369d472720c4cf10ff9af65dec1a9b5116e5e8c3b4e111e8fa7f51c88fb",
+      "b2048-edits/02-replace": "9845fa7a9dcb0ff1de49dcc875976d0607465d522e713c167ccd104bb2fb5f66",
+      "b2048-edits/03-divergent": "67b34c6a02c23e09ae2dd0540d1a7e539b96c42410fc3860705f70b82f6d823e",
+      "b2048-edits/04-match": "1a82b19297423a0f72b9c4647b688bdf3e3362c1ea9020bb1f86f53197b1738c",
+      "b2048-files/01-open": "396327ebb3ea977f9c574432e2bf48b4867cd9af02af84635a8226979b1acab8",
+      "b2048-files/02-earlier": "3cbe4cae506b5e77b0f3277064fbeb976bdb2a084b7e0b561c3784ff6de584e2",
+      "b2048-files/03-switch": "124968ad09aabc672be871f3c806965061d86204a01d1f66e46abffb852a4ab2",
+      "b2048-files/04-return-A": "3cbe4cae506b5e77b0f3277064fbeb976bdb2a084b7e0b561c3784ff6de584e2",
+      "b512-edits/01-open": "07559abbfd99ca471e292ddad3257ca58c4f6e2d51724bef197e920708d3a948",
+      "b512-edits/02-replace": "0969c804d7d4ebcbb4dc0e6c1da564b8cdb229830e9a11978610f8a9a1bd26eb",
+      "b512-edits/03-divergent": "bc3e645f2b4f1a63ea6a31c80bc638426f1d263345a1f6d5745ba679d08fb922",
+      "b512-edits/04-match": "b4ba07e9f1789c4b79e5669deb936fa7cbc898da5b81829a09ee3d0d063f94d4",
+      "b512-files/01-open": "86e6e6a7b4000a5e8186631196b70c05a1181b8dcaadc37ce13c414f2120c1c0",
+      "b512-files/02-append": "ef8f7ce26f2a9465fac0d2769452a7b33d38152e6af3398ba3c7760592a43386",
+      "b512-files/03-switch": "305085da5f6f2e73d80fab3895584bc9c2c918de50511ece0191f7a3786f3621",
+      "b512-files/04-return-A": "ef8f7ce26f2a9465fac0d2769452a7b33d38152e6af3398ba3c7760592a43386"
+    },
+    "expected_requests": 96,
+    "fixture_count": 24,
+    "fixture_order": [
+      "b512-files/01-open",
+      "b512-files/02-append",
+      "b512-files/03-switch",
+      "b512-files/04-return-A",
+      "b512-edits/01-open",
+      "b512-edits/02-replace",
+      "b512-edits/03-divergent",
+      "b512-edits/04-match",
+      "b1024-files/01-open",
+      "b1024-files/02-append",
+      "b1024-files/03-switch",
+      "b1024-files/04-return-A",
+      "b1024-edits/01-open",
+      "b1024-edits/02-replace",
+      "b1024-edits/03-divergent",
+      "b1024-edits/04-match",
+      "b2048-files/01-open",
+      "b2048-files/02-earlier",
+      "b2048-files/03-switch",
+      "b2048-files/04-return-A",
+      "b2048-edits/01-open",
+      "b2048-edits/02-replace",
+      "b2048-edits/03-divergent",
+      "b2048-edits/04-match"
+    ],
+    "input_bucket_case_counts": {
+      "1024": 8,
+      "2048": 8,
+      "512": 8
+    },
+    "input_bucket_windows": {
+      "1024": [
+        900,
+        1450
+      ],
+      "2048": [
+        1728,
+        2304
+      ],
+      "512": [
+        384,
+        768
+      ]
+    },
+    "input_plus_output_rule": "actual GGUF token count + 512 <= 3072; fail before first generation, never truncate or shift",
+    "input_prompt_policy": "publisher-header-lf-input-v2",
+    "input_prompt_policy_scope": "Append one literal LF to the unchanged publisher prompt immediately after the updated-file header; do not change field order, fixture bytes, recent-edit history, region coordinates, or output bytes.",
+    "input_token_counts_verified_by": "pinned llama.cpp /tokenize endpoint with Q4_K_M tokenizer, add_special=true, parse_special=true; all 24 states tokenized before completion requests",
+    "input_tokens_by_case": {
+      "b1024-edits/01-open": 1105,
+      "b1024-edits/02-replace": 1191,
+      "b1024-edits/03-divergent": 1284,
+      "b1024-edits/04-match": 1399,
+      "b1024-files/01-open": 1187,
+      "b1024-files/02-append": 1353,
+      "b1024-files/03-switch": 1131,
+      "b1024-files/04-return-A": 1353,
+      "b2048-edits/01-open": 1740,
+      "b2048-edits/02-replace": 1826,
+      "b2048-edits/03-divergent": 1919,
+      "b2048-edits/04-match": 2034,
+      "b2048-files/01-open": 1832,
+      "b2048-files/02-earlier": 2000,
+      "b2048-files/03-switch": 1766,
+      "b2048-files/04-return-A": 2000,
+      "b512-edits/01-open": 435,
+      "b512-edits/02-replace": 520,
+      "b512-edits/03-divergent": 612,
+      "b512-edits/04-match": 726,
+      "b512-files/01-open": 517,
+      "b512-files/02-append": 682,
+      "b512-files/03-switch": 461,
+      "b512-files/04-return-A": 682
+    },
+    "output_tokens": 512,
+    "precision_order": [
+      "q4_k_m",
+      "q8_0"
+    ],
+    "publisher_prompt_sha256_by_case": {
+      "b1024-edits/01-open": "93d58085fb08e1984cca4887616eabae6ce0fec75de0ab4028251fe2fd0b2426",
+      "b1024-edits/02-replace": "575968b8b04a1ad3b606d49009f64b52844e68214a6cfa8c7d8b80e80e3a4105",
+      "b1024-edits/03-divergent": "8ed25cd9cdcf38ee797075dbc9f3bf7661d443536f98a309a8b2a958ec0df0ab",
+      "b1024-edits/04-match": "63e92f51fba986a301aca30402a581cbc3a8b8808e7eafb535f82968dbb8b1ed",
+      "b1024-files/01-open": "9be85f762ccf419b6db37d4cf1aee507c5307e20ba37afa6d8719f752d9dfb23",
+      "b1024-files/02-append": "0659313034ce0c954d8bd396920c88846214e635f84fedad1816398553d538fc",
+      "b1024-files/03-switch": "6dbe1a4e071aaccabcadd7a817b4c7d280b786cba026dabe902f14f36cbf6502",
+      "b1024-files/04-return-A": "0659313034ce0c954d8bd396920c88846214e635f84fedad1816398553d538fc",
+      "b2048-edits/01-open": "91524e6f1c46d4356d6fcd09b44e3bf5100841c6c4e0404400932aecc62116a0",
+      "b2048-edits/02-replace": "b33d6c2f725b5b2b31f5a86854bdadf966d8059278276fd53afb3185fa3d9295",
+      "b2048-edits/03-divergent": "3df8d537fe7c2f9edf2ec4e97b7f88fc663aeb7242899b1b527183573ec0940e",
+      "b2048-edits/04-match": "353de7425fb4c0487a9ad3a7531b34b9f67df78444e2707c63dc360761db2e06",
+      "b2048-files/01-open": "dbb86bbb6dbec19137ed12db28a8792dec96f574ba5611526b054eb03e6586c5",
+      "b2048-files/02-earlier": "e37c7376af3e3d370a398afc92d353dc377bad892d6937a0f06ee4393f7f4fa8",
+      "b2048-files/03-switch": "9cc416a29ae0627e43bda9f5f879da029509e616c6d7e911f2d0f6a926f62a69",
+      "b2048-files/04-return-A": "e37c7376af3e3d370a398afc92d353dc377bad892d6937a0f06ee4393f7f4fa8",
+      "b512-edits/01-open": "dac95a8f1e57566ba9633080c61dd7721933fd786014486e315c5b1bc5af6c49",
+      "b512-edits/02-replace": "db58ce4e4f900778deb4759632766a2b8c1e56e08c1b22d3a6911f9f99268754",
+      "b512-edits/03-divergent": "7dbb151eced232d62e08764c0bf7e0382f8496dc83dd8c1431c928c8ad5b1afa",
+      "b512-edits/04-match": "fd3c59c84fdf15e37cbe4fc5cae3a4812c58b185dff683cc3376c5a8a0ab39eb",
+      "b512-files/01-open": "992fe8c7f51a39b2ed201dca5f6d06a0bf62319119469e8e113302450711b1b2",
+      "b512-files/02-append": "15e2c3e4df6867dd9b02520c5267f79f53cda4bdc25a953cee10e5b631df2831",
+      "b512-files/03-switch": "68a90dd5865c313df68d8521ea169aaae2ac16da4119d51377cd636b3c02fdb7",
+      "b512-files/04-return-A": "15e2c3e4df6867dd9b02520c5267f79f53cda4bdc25a953cee10e5b631df2831"
+    },
+    "quality_evidence": false,
+    "repetitions": 2,
+    "request_order_per_fixture_per_repetition": [
+      "changed_state"
+    ],
+    "request_settings": {
+      "cache_prompt": true,
+      "id_slot": 0,
+      "n_predict": 512,
+      "return_tokens": true,
+      "seed": 1,
+      "stop": [
+        "<|file_sep|>",
+        "</s>"
+      ],
+      "stream": true,
+      "temperature": 0
+    },
+    "response_handling": "No response normalization or LF stripping. Record raw response and exact terminal; completed full-file output latency is distinct from valid range-mapped canonical-action latency. Unterminated, capped, malformed, and out-of-range output is not a valid action.",
+    "same_prompt_repeats": "none in this suite; historical same-prompt repeat is separate and preserved",
+    "suite_mode": "changing_editor_state",
+    "suite_version": "sweep-local-changing-state-r2-header-lf-input",
+    "synthetic_decisions": "All editor transitions, rejections, and typed-match histories are deterministic synthetic controls. No model-generated output determines the next state; these outcomes are not human feedback or model-quality evidence.",
+    "tokenizer": "resident pinned llama.cpp /tokenize endpoint, add_special=true and parse_special=true; IDs hashed, not stored raw",
+    "transition_history_policy": "each synthetic source delta is replayed from exact UTF-8 byte range/replacement; file switches and return preserve exact earlier state",
+    "transition_type_counts": {
+      "append_chars": 2,
+      "earlier_edit_invalidation": 2,
+      "explicit_reject_then_divergent_typing": 3,
+      "file_switch": 3,
+      "file_switch_return": 3,
+      "fresh_file_open": 6,
+      "near_cursor_replace": 2,
+      "typed_matching_prefix": 3
+    }
+  },
+  "revision": 3,
+  "revision_reason": "The preserved v2 run remains unexecuted. In a separate frozen baseline, all 48 outputs per precision had a leading LF and body/suffix mapping failures; a hypothetical LF strip would map only 2/24 states and is not an allowed repair. This revision changes only the model input by appending exactly one LF after the existing updated-file header. It makes no quality or deployment claim.",
+  "runtime": {
+    "binary_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+    "binary_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+    "execution_topology": "one loopback llama-server process per precision, sequential; process group owned and stopped by runner",
+    "explicit_backend": "CPU; --n-gpu-layers 0; per-run runtime log evidence is retained",
+    "health_timeout_seconds": 300,
+    "server_settings": {
+      "batch_tokens": 256,
+      "cache_idle_slots": false,
+      "cache_ram_mib": 0,
+      "context_checkpoints": 0,
+      "context_shift": false,
+      "context_tokens": 3072,
+      "gpu_layers": 0,
+      "kv_cache_k": "f16",
+      "kv_cache_v": "f16",
+      "log_verbosity": 4,
+      "microbatch_tokens": 64,
+      "parallel_slots": 1,
+      "speculative_decoding": "none",
+      "threads": 4,
+      "threads_batch": 4,
+      "warmup": false,
+      "weight_repacking": false
+    },
+    "source_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp",
+    "source_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "version_output": [
+      "version: 0.4.1-dev (build 1, commit f072b10)",
+      "built with GNU 13.3.0 for Linux x86_64"
+    ]
+  },
+  "schema": "sweep-local-changing-state-plan-v1"
+}
