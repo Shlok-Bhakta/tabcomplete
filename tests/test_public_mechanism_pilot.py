@@ -22,6 +22,13 @@ SPEC = importlib.util.spec_from_file_location("public_mechanism_pilot", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 pilot = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(pilot)
+BUILDER_SCRIPT = ROOT / "scripts/prepare_two_seed_synthetic_pilot.py"
+BUILDER_SPEC = importlib.util.spec_from_file_location(
+    "prepare_two_seed_synthetic_pilot", BUILDER_SCRIPT
+)
+assert BUILDER_SPEC is not None and BUILDER_SPEC.loader is not None
+builder = importlib.util.module_from_spec(BUILDER_SPEC)
+BUILDER_SPEC.loader.exec_module(builder)
 
 
 class ByteTokenizer:
@@ -336,6 +343,205 @@ def test_completed_overrun_is_durable_terminal_event_and_opens_breaker(
     assert pilot._has_new_role_blocker(no_historical_failures, event_sets)
 
 
+def test_frozen_capture_uses_exact_request_id_and_packet_local_durable_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    packet_run = tmp_path / "execution-v5"
+    packet_run.mkdir(mode=0o700)
+    monkeypatch.setattr(pilot, "client_prompt_tokens", lambda _prompt: [1])
+    response = TeacherResponse(
+        content="<FINAL_ACTION>\nN\n</FINAL_ACTION>",
+        session_id="session-frozen-test",
+        response_id="response-frozen-test",
+        model_id=pilot.MODEL_ID,
+        input_tokens=42,
+        output_tokens=3,
+        reasoning_tokens=0,
+        total_tokens_reported=45,
+        cached_read_tokens=0,
+        cached_write_tokens=0,
+        finish_reason="stop",
+        cost_usd_reported=0.0,
+    )
+    call: dict[str, Any] = {}
+
+    class PersistingClient:
+        def run_role(self, **kwargs: Any) -> TeacherResponse:
+            call.update(kwargs)
+            kwargs["persist_completed_response"](response)
+            return response
+
+    event = pilot._capture_response(
+        client=PersistingClient(),  # type: ignore[arg-type]
+        ledger=object(),  # type: ignore[arg-type]
+        plan={"plan_sha256": "a" * 64},
+        role="solver",
+        item={"source_id": "synthetic-a"},
+        prompt="Public source with synthetic state.",
+        purpose="student_label",
+        system_instruction="Return one action.",
+        request_id_override="two-seed-source-grounded-v1-solver-frozen-test",
+        run_dir=packet_run,
+        source_class="public",
+    )
+
+    request_id = "two-seed-source-grounded-v1-solver-frozen-test"
+    assert call["request_id"] == request_id
+    assert call["source_class"] == "public"
+    assert call["reserve_input_tokens"] == pilot.RESERVE_INPUT_TOKENS
+    assert call["reserve_output_tokens"] == pilot.RESERVE_OUTPUT_TOKENS
+    assert event["output_available"] is True
+    assert event["client_mode"] == "isolated_no_tools"
+    response_path = pilot._response_path(request_id, packet_run)
+    evidence_path = pilot._completed_response_evidence_path(request_id, packet_run)
+    prompt_path = pilot._prompt_path(request_id, packet_run)
+    assert response_path.read_text(encoding="utf-8") == response.content
+    assert json.loads(evidence_path.read_text(encoding="utf-8"))["request_id"] == request_id
+    assert prompt_path.read_text(encoding="utf-8") == "Public source with synthetic state."
+    event_path = pilot._event_path("solver", packet_run)
+    saved_event = json.loads(event_path.read_text(encoding="utf-8"))
+    assert saved_event["output_sha256"] == event["output_sha256"]
+    assert response.content not in event_path.read_text(encoding="utf-8")
+
+
+def test_frozen_two_seed_schedule_is_exactly_six_unique_calls() -> None:
+    case_ids = ("synthetic-a", "synthetic-b")
+    request_ids = {
+        f"{case_id}:{role}": (
+            f"two-seed-source-grounded-v1-{role}-"
+            + hashlib.sha256(case_id.encode()).hexdigest()[:20]
+        )
+        for case_id in case_ids
+        for role in ("author", "solver", "reviewer")
+    }
+    plan = {
+        "cases": {case_id: {} for case_id in case_ids},
+        "provider": {"max_calls": 6, "request_ids": request_ids},
+    }
+    schedule = pilot._frozen_two_seed_schedule(plan)
+    assert len(schedule) == 6
+    assert len({request_id for _case, _role, request_id in schedule}) == 6
+    assert [role for _case, role, _request in schedule] == [
+        "author",
+        "solver",
+        "reviewer",
+        "author",
+        "solver",
+        "reviewer",
+    ]
+
+    plan["provider"]["request_ids"]["synthetic-b:reviewer"] = request_ids[
+        "synthetic-a:reviewer"
+    ]
+    with pytest.raises(ValueError, match="six role slots"):
+        pilot._frozen_two_seed_schedule(plan)
+
+
+def test_solver_prompt_has_cue_and_reviewer_uses_actual_outputs() -> None:
+    candidate = _candidate()
+    candidate["state"]["relevant"] = [
+        "Synthetic task context: Keep the result consistent with the visible declaration."
+    ]
+    solver_prompt = pilot.build_blind_solver_prompt(candidate, ByteTokenizer())
+    assert candidate["state"]["relevant"][0] in solver_prompt
+    assert "author_action_wire" not in solver_prompt
+    assert "objective" not in solver_prompt
+
+    candidate["provenance"]["objective"] = {
+        "kind": "visible_consistency",
+        "description": "Use the visible declaration consistently.",
+        "checks": [],
+    }
+    actual_wire = "R\t    return y.new"
+    reviewer_prompt = pilot._two_seed_reviewer_prompt(candidate, actual_wire)
+    assert json.dumps(actual_wire) in reviewer_prompt
+    assert "visible_consistency" in reviewer_prompt
+    assert "<CAPTURED_BLIND_SOLVER_ACTION_WIRE>" not in reviewer_prompt
+    assert "<redacted-name>" not in reviewer_prompt
+
+
+def test_two_seed_author_must_reproduce_frozen_history_and_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parent = "def f():\n    return 1\n"
+    current = "def f(x):\n    return 1\n"
+    cue = ["Synthetic task context: use the visible parameter at the return site."]
+    row = {
+        "case_id": "synthetic-a",
+        "author_source_text": parent,
+        "author_source_sha256": hashlib.sha256(parent.encode()).hexdigest(),
+        "source_text": current,
+        "prompt_source_sha256": hashlib.sha256(current.encode()).hexdigest(),
+        "visible_intent_cue": cue,
+        "state": {
+            "file_id": "example/repo/f.py",
+            "filetype": "python",
+            "source": current,
+            "target_row": 1,
+            "cursor_col": 0,
+            "history": [{"row": 0, "old_text": "def f():", "new_text": "def f(x):"}],
+            "relevant": cue,
+        },
+    }
+    plan = {
+        "cases": {
+            "synthetic-a": {
+                "source_case": "public-source/synthetic-a",
+                "repo": "example/repo",
+                "path": "f.py",
+                "parent": "a" * 40,
+                "root_license_sha256": "b" * 64,
+            }
+        }
+    }
+    author_response = {
+        "prior_edit": {"row": 0, "old_text": "def f():", "new_text": "def f(x):"},
+        "target_row": 1,
+        "action": {"kind": "R", "text": "    return x"},
+        "intent_evidence": "The signature adds x and the return can use it.",
+        "objective": {
+            "kind": "parameter_forwarding",
+            "description": "Return the visible parameter.",
+            "checks": [],
+        },
+    }
+    text = (
+        "<AUTHOR_CANDIDATE>\n"
+        + json.dumps(author_response)
+        + "\n</AUTHOR_CANDIDATE>"
+    )
+    monkeypatch.setattr(pilot, "_output", lambda *_args: text)
+    event = {"output_available": True, "finish_reason": "stop", "request_id": "author"}
+    candidate, reason = pilot._two_seed_author_candidate(
+        Path("."), "synthetic-a", plan, row, event, ByteTokenizer()
+    )
+    assert reason is None
+    assert candidate is not None
+    assert candidate["state"]["relevant"] == cue
+    assert candidate["state"]["source"] == current
+
+    wrong_history = dict(author_response)
+    wrong_history["prior_edit"] = {
+        "row": 0,
+        "old_text": "def f():",
+        "new_text": "def f(y):",
+    }
+    wrong_text = (
+        "<AUTHOR_CANDIDATE>\n"
+        + json.dumps(wrong_history)
+        + "\n</AUTHOR_CANDIDATE>"
+    )
+    monkeypatch.setattr(pilot, "_output", lambda *_args: wrong_text)
+    candidate, reason = pilot._two_seed_author_candidate(
+        Path("."), "synthetic-a", plan, row, event, ByteTokenizer()
+    )
+    assert candidate is None
+    assert reason in {
+        "author_validation_failed",
+        "author_changed_frozen_history_or_target",
+    }
+
+
 def test_reviewer_uses_separate_structured_only_client(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -439,3 +645,120 @@ def test_missing_reviewer_payload_is_reported_without_loading_or_accepting_it(
     assert unreviewed_summary["parsed_author_candidates"] == 1
     assert unreviewed_summary["valid_solver_actions"] == 1
     assert unreviewed_summary["by_source"][source_id]["status"] == "reviewer_not_called"
+
+
+def test_two_seed_author_source_transform_replays_and_cue_is_one_sentence() -> None:
+    source = "def f(x):\n    return x\n"
+    history = {"row": 0, "old_text": "def f():", "new_text": "def f(x):"}
+    source_hash = hashlib.sha256(source.encode()).hexdigest()
+    transform = {
+        "kind": "synthetic_single_line_prestate_from_public_source",
+        "row": 0,
+        "public_snapshot_line_sha256": hashlib.sha256(history["new_text"].encode()).hexdigest(),
+        "synthetic_author_line_sha256": hashlib.sha256(history["old_text"].encode()).hexdigest(),
+    }
+    task_case = {
+        "history": history,
+        "source_parent_snapshot_sha256": source_hash,
+        "author_source_transform": transform,
+    }
+    author_source = pilot._reconstruct_two_seed_author_source(task_case, source)
+    replayed = pilot.replay_replacement_history(
+        author_source,
+        (pilot.RecentEdit(**history),),
+        file_id="public/example.py",
+        filetype="python",
+    )
+    assert author_source == "def f():\n    return x\n"
+    assert replayed == source
+
+    specs = builder._case_specs()
+    cue = specs["synthetic-b"]["visible_intent_cue"]
+    assert isinstance(cue, tuple) and len(cue) == 1
+    assert cue[0] == pilot.TWO_SEED_TOOLTIP_CUE
+    pilot._validate_two_seed_visible_cue("synthetic-b", [cue[0]], [cue[0]])
+    with pytest.raises(ValueError, match="cue"):
+        pilot._validate_two_seed_visible_cue("synthetic-b", list(cue[0]), list(cue[0]))
+
+
+def test_two_seed_preflight_guard_checks_positive_wrong_and_no_edit_hashes(tmp_path: Path) -> None:
+    state = {
+        "file_id": "public/example.py",
+        "filetype": "python",
+        "source": "def f(x):\n    return x\n",
+        "target_row": 1,
+        "cursor_col": 0,
+        "history": [],
+        "relevant": [],
+    }
+    gold = {"kind": "replace_line", "text": "    return x + 1"}
+    no_edit = {"kind": "keep"}
+    state_sha = hashlib.sha256(pilot.canonical_json(state)).hexdigest()
+    image = "pinned/test@sha256:" + "e" * 64
+    plan = {
+        "plan_sha256": "a" * 64,
+        "input_bundle": {"sha256": "b" * 64},
+        "oracle_bundle": {"sha256": "c" * 64},
+        "code_hashes": {"oracle_preflight": "d" * 64},
+        "cases": {
+            "synthetic-a": {
+                "runtime_image": image,
+                "gold_action_sha256": hashlib.sha256(pilot.canonical_json(gold)).hexdigest(),
+                "wrong_controls": [
+                    {
+                        "name": "no_edit",
+                        "action_sha256": hashlib.sha256(pilot.canonical_json(no_edit)).hexdigest(),
+                    }
+                ],
+            }
+        },
+    }
+    records = []
+    for action_id, action, expected in (
+        ("synthetic-a:gold", gold, "pass"),
+        ("synthetic-a:wrong:no_edit", no_edit, "fail"),
+    ):
+        records.append(
+            {
+                "case_action_id": action_id,
+                "action_sha256": hashlib.sha256(pilot.canonical_json(action)).hexdigest(),
+                "state_sha256": state_sha,
+                "functional_status": expected,
+                "parse_status": "pass",
+                "test_status": expected,
+                "execution_backend": "container",
+                "container_image": image,
+                "working_tree_sha256": "f" * 64,
+            }
+        )
+    doc: dict[str, Any] = {
+        "schema": "two-seed-oracle-preflight-v1",
+        "status": "complete",
+        "plan_sha256": plan["plan_sha256"],
+        "input_sha256": plan["input_bundle"]["sha256"],
+        "oracle_sha256": plan["oracle_bundle"]["sha256"],
+        "preflight_script_sha256": plan["code_hashes"]["oracle_preflight"],
+        "execution_backend": "existing pinned code_benchmark sandbox",
+        "provider_calls": 0,
+        "training_started": False,
+        "case_count": len(records),
+        "cases": records,
+        "recorded_at_unix_ns": 1,
+    }
+    doc["result_sha256"] = hashlib.sha256(pilot.canonical_json(doc)).hexdigest()
+    result_path = tmp_path / "oracle_preflight_result.json"
+    result_path.write_text(json.dumps(doc), encoding="utf-8")
+    result_path.chmod(0o600)
+    verified = pilot._validate_two_seed_oracle_preflight(
+        tmp_path, plan, {"synthetic-a": {"state": state}}
+    )
+    assert verified["case_count"] == 2
+
+    records[1]["test_status"] = "pass"
+    doc.pop("result_sha256")
+    doc["result_sha256"] = hashlib.sha256(pilot.canonical_json(doc)).hexdigest()
+    result_path.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ValueError, match="oracle outcome"):
+        pilot._validate_two_seed_oracle_preflight(
+            tmp_path, plan, {"synthetic-a": {"state": state}}
+        )

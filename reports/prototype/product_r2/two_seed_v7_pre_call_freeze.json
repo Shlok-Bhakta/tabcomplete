@@ -1,0 +1,30 @@
+{
+  "campaign_call_cap": 36,
+  "history_origin": "explicitly synthetic, reconstructed from declared public-source transform",
+  "manifest_sha256": "5f2de62976b00833600a80272ac7d615d5126f0b3a604adcca5ead1f92dfd8b8",
+  "maximum_calls": 6,
+  "mypy": "passed",
+  "observed_at": "2026-09-30T16:02:18.139072+00:00",
+  "pending_before_provider_calls": [
+    "actual pinned sandbox positive/wrong controls",
+    "independent frozen-packet review"
+  ],
+  "plan_identity_sha256": "3e5c6e6524472c283ab721dedc6062ffde221881314ad89b179c35f3cb674fd6",
+  "plan_sha256": "98cc9d09e5aa5df82de93a511cf3cb08d111e82c9d5534eb56a15525a316df78",
+  "prior_invalid_freezes": [
+    "v5 cue-character serialization",
+    "v6 prior-history reconstruction"
+  ],
+  "private_packet": "/mnt/ssd/tabcomplete-product-r2/next-pilot-frozen-v7",
+  "provider_calls_at_freeze": 0,
+  "ruff": "passed",
+  "schema": "public-source-two-seed-pre-call-verification-v1",
+  "sources": {
+    "scripts/prepare_two_seed_synthetic_pilot.py": "08706545a881f39e0e742c2971f63722ab1f9fcce42d922b1c7250412df61111",
+    "scripts/run_public_mechanism_pilot.py": "9b6a1b0578e1f41a89edfbd986cd84cd2c2e722819cf94c250ddbc4d3493d6b8",
+    "scripts/verify_two_seed_oracle_preflight.py": "f07dc5b4c9c4b47f212a5bb3fd2c651fc2bc984275997cb5bfbbddf748e9fd96",
+    "tests/test_public_mechanism_pilot.py": "47bd50e3f804d3e8a12853db58d7fb71a70cd2c91871cc7df489a7a67ef409bb"
+  },
+  "targeted_tests_passed": 15,
+  "training_ready": false
+}
