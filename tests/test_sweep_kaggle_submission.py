@@ -90,6 +90,8 @@ def test_records_unknown_push_outcome_before_command_and_refuses_retry(tmp_path,
             state = json.loads((path / "submission-state.json").read_text())
             assert state["state"] == "submission_started"
             raise RuntimeError("simulated ambiguous transport failure")
+        if argv[:3] == ["kaggle", "datasets", "status"]:
+            return "ready"
         return "[]"
 
     monkeypatch.setattr(preparer, "cli", fake_cli)
@@ -121,3 +123,71 @@ def test_full_plan_identity_checked_without_gpu_setup(tmp_path):
     plan["schema"] = "changed"
     with pytest.raises(ValueError, match="intact"):
         preparer.validate_plan(plan, runner, fixtures)
+
+
+@pytest.mark.parametrize("status", ["KernelWorkerStatus.RUNNING", "KernelWorkerStatus.QUEUED"])
+def test_retry_rejects_unfinished_initial_allocation(tmp_path, monkeypatch, status):
+    (tmp_path / "submission-state.json").write_text(json.dumps({
+        "state": "kernel_pushed", "kernel_id": preparer.KERNEL_ID,
+    }))
+    monkeypatch.setattr(preparer, "cli", lambda argv: status)
+    with pytest.raises(RuntimeError, match="terminal ERROR"):
+        preparer.validate_failed_attempt(tmp_path)
+
+
+def test_retry_requires_reconciled_push_and_terminal_failure(tmp_path, monkeypatch):
+    state = tmp_path / "submission-state.json"
+    state.write_text(json.dumps({"state": "submission_started", "kernel_id": preparer.KERNEL_ID}))
+    monkeypatch.setattr(preparer, "cli", lambda argv: pytest.fail("unknown push cannot retry"))
+    with pytest.raises(RuntimeError, match="reconciled"):
+        preparer.validate_failed_attempt(tmp_path)
+    state.write_text(json.dumps({"state": "kernel_pushed", "kernel_id": preparer.KERNEL_ID}))
+    from datetime import UTC, datetime, timedelta
+    state.write_text(json.dumps({
+        "state": "kernel_pushed", "kernel_id": preparer.KERNEL_ID,
+        "quota_before": {"observed_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat()},
+    }))
+    monkeypatch.setattr(preparer, "cli", lambda argv: "KernelWorkerStatus.ERROR")
+    preparer.validate_failed_attempt(tmp_path)
+    assert json.loads((tmp_path / "terminal-observation.json").read_text())["state"] == "ERROR"
+
+
+def test_retry_versions_private_dataset_and_preserves_old_version(tmp_path, monkeypatch):
+    path = bundle(tmp_path)
+    manifest_path = path / "bundle-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest.update(kernel_id=preparer.KERNEL_ID + "-retry", retry_after="previous")
+    manifest_path.write_text(json.dumps(manifest))
+    monkeypatch.setattr(preparer, "validate_failed_attempt", lambda previous: None)
+    monkeypatch.setattr(preparer, "checked_quota", lambda renewal: {"remaining": 44.5})
+    calls = []
+
+    def fake_cli(argv):
+        calls.append(argv)
+        if argv[:3] == ["kaggle", "datasets", "list"]:
+            return json.dumps([{"ref": preparer.DATASET_ID}])
+        if argv[:3] == ["kaggle", "datasets", "status"]:
+            return "ready"
+        return "[]"
+
+    monkeypatch.setattr(preparer, "cli", fake_cli)
+    preparer.submit(path)
+    assert any(a[:3] == ["kaggle", "datasets", "version"] for a in calls)
+    assert not any("--delete-old-versions" in a or "-d" in a for a in calls)
+    state = json.loads((path / "submission-state.json").read_text())
+    assert state["state"] == "kernel_pushed"
+    assert state["kernel_id"] == preparer.KERNEL_ID + "-retry"
+
+
+def test_retry_stops_when_conservative_aggregate_wall_bound_is_too_large(tmp_path, monkeypatch):
+    (tmp_path / "submission-state.json").write_text(json.dumps({
+        "state": "kernel_pushed", "kernel_id": preparer.KERNEL_ID,
+        "quota_before": {"observed_at": "2026-09-30T00:00:00+00:00"},
+    }))
+    (tmp_path / "terminal-observation.json").write_text(json.dumps({
+        "kernel_id": preparer.KERNEL_ID, "state": "ERROR",
+        "observed_at": "2026-09-30T03:00:00+00:00",
+    }))
+    monkeypatch.setattr(preparer, "cli", lambda argv: "KernelWorkerStatus.ERROR")
+    with pytest.raises(RuntimeError, match="aggregate"):
+        preparer.validate_failed_attempt(tmp_path)

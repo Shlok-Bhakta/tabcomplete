@@ -144,6 +144,26 @@ def stage_canonical_q4(input_dir: Path, scratch: Path) -> None:
         raise ValueError("worker Q4 staging hash mismatch")
 
 
+def cuda_driver_configuration() -> tuple[list[str], dict]:
+    """Locate the mounted driver; use supported non-VMM CUDA if it is absent."""
+    try:
+        value = subprocess.run(["ldconfig", "-p"], capture_output=True, text=True, timeout=10)
+        for line in value.stdout.splitlines():
+            if line.strip().startswith("libcuda.so") and " => " in line:
+                path = Path(line.split(" => ", 1)[1].strip())
+                if path.is_file():
+                    return ["-DCUDA_cuda_driver_LIBRARY=" + str(path)], {
+                        "driver_library": str(path), "virtual_memory_management": True,
+                    }
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return ["-DGGML_CUDA_NO_VMM=ON"], {
+        "driver_library": "not resolved through ldconfig",
+        "virtual_memory_management": False,
+        "reason": "Use the pinned runtime's supported cudaMalloc allocation path",
+    }
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     status = {
@@ -193,9 +213,15 @@ def main() -> None:
         run(["git", "clone", "--filter=blob:none", "https://github.com/ggml-org/llama.cpp.git",
              str(RUNTIME)], "runtime-clone")
         run(["git", "checkout", RUNTIME_REVISION], "runtime-checkout", RUNTIME)
+        driver_flags, driver_configuration = cuda_driver_configuration()
+        driver_configuration["cmake_driver_flags"] = driver_flags
+        (OUT / "cuda-driver-configuration.json").write_text(
+            json.dumps(driver_configuration, indent=2) + "\n"
+        )
         run(["cmake", "-S", str(RUNTIME), "-B", str(RUNTIME / "build"),
              "-DCMAKE_BUILD_TYPE=Release", "-DGGML_CUDA=ON", "-DGGML_NATIVE=OFF",
-             "-DLLAMA_CURL=OFF", "-DLLAMA_BUILD_TESTS=OFF", "-DCMAKE_CUDA_ARCHITECTURES=75"],
+             "-DLLAMA_CURL=OFF", "-DLLAMA_BUILD_TESTS=OFF", "-DCMAKE_CUDA_ARCHITECTURES=75",
+             *driver_flags],
             "runtime-configure")
         run(["cmake", "--build", str(RUNTIME / "build"), "--target", "llama-server",
              "llama-quantize", "-j", "2"], "runtime-build")
@@ -204,8 +230,11 @@ def main() -> None:
             "compiler": ["c++", "--version"], "cuda": ["nvcc", "--version"],
             "cmake": ["cmake", "--version"], "packages": [sys.executable, "-m", "pip", "freeze"],
         }.items():
-            value = subprocess.run(command, capture_output=True, text=True, timeout=30)
-            versions[label] = value.stdout.strip() if value.returncode == 0 else "unavailable"
+            try:
+                value = subprocess.run(command, capture_output=True, text=True, timeout=30)
+                versions[label] = value.stdout.strip() if value.returncode == 0 else "unavailable"
+            except (OSError, subprocess.TimeoutExpired):
+                versions[label] = "unavailable"
         (OUT / "runtime-environment.json").write_text(json.dumps(versions, indent=2) + "\n")
         stage = "canonical_q4_staging"
         stage_canonical_q4(input_dir, Path("/kaggle/temp/sweep-artifacts"))

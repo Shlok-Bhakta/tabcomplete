@@ -1,0 +1,12 @@
+{
+  "data": [],
+  "last_event_at": null,
+  "last_ingested_at": null,
+  "page": {
+    "limit": 100,
+    "next_cursor": null
+  },
+  "queried_at": 1790756511498,
+  "schema_version": 1,
+  "state": "no_runs"
+}

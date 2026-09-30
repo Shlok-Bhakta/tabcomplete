@@ -127,3 +127,22 @@ def test_storage_budget_accounts_existing_files_before_more_work(tmp_path, monke
     with pytest.raises(RuntimeError, match="cap"):
         worker.check_storage(21)
     worker.check_storage(20)
+
+
+def test_existing_cuda_driver_library_is_used_without_installation(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    driver = tmp_path / "libcuda.so.1"
+    driver.write_bytes(b"existing driver")
+    monkeypatch.setattr(worker.subprocess, "run", lambda *a, **k: SimpleNamespace(
+        stdout=f"libcuda.so.1 (libc6,x86-64) => {driver}\n"))
+    flags, evidence = worker.cuda_driver_configuration()
+    assert flags == [f"-DCUDA_cuda_driver_LIBRARY={driver}"]
+    assert evidence["virtual_memory_management"] is True
+
+
+def test_missing_driver_uses_supported_non_vmm_cuda_path(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(worker.subprocess, "run", lambda *a, **k: SimpleNamespace(stdout=""))
+    flags, evidence = worker.cuda_driver_configuration()
+    assert flags == ["-DGGML_CUDA_NO_VMM=ON"]
+    assert evidence["virtual_memory_management"] is False

@@ -1,0 +1,9 @@
+{
+  "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1",
+  "state": "kernel_pushed",
+  "submitted_at": "2026-09-30T08:17:42.592904+00:00",
+  "source_commit": "8bcbbeedafff1e64dc938898708b3f90d432ec09",
+  "private_dataset": "shlokbhakta/tabcomplete-sweep-comparison-inputs-r1",
+  "session_seconds": 7200,
+  "finalization_reserve_seconds": 1200
+}

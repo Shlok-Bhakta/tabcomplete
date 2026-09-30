@@ -1,0 +1,510 @@
+{
+  "allocation_amendment": {
+    "attempt_001": {
+      "attempt_number": 1,
+      "comparison_predictions_produced": false,
+      "elapsed_worker_session_seconds": 54.99166828800003,
+      "evidence_directory": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/gpu-output-001/sweep_comparison_r1",
+      "evidence_manifest": [
+        {
+          "bytes": 9882,
+          "path": "dependencies.log",
+          "sha256": "48069d9f2d3c969bad67304f940e133c71961ce58b1ba99cc060a1da7789fe68"
+        },
+        {
+          "bytes": 249,
+          "path": "ensurepip.log",
+          "sha256": "209a9f2c04d95699da93d57374ac9899b2be969e2ad82e8d0b5d2e4d4ee604f4"
+        },
+        {
+          "bytes": 433,
+          "path": "install-uv.log",
+          "sha256": "8115145b279a989abc4cfff2fb2a713a8748d7c2adb6b77f092ef7bfaf760be9"
+        },
+        {
+          "bytes": 431,
+          "path": "python311.log",
+          "sha256": "638bd8f7ead196d936ad2fb7cc2d10d04c14ac2cd99f167744c3d116f1e5f913"
+        },
+        {
+          "bytes": 676,
+          "path": "repo-checkout.log",
+          "sha256": "669398eb9ce01206c0cd1bd8e9198179ba9c1b730270cb593d39dd754a719eda"
+        },
+        {
+          "bytes": 49,
+          "path": "repo-clone.log",
+          "sha256": "33d16f2a6e0927abc642f49c8cc2dcb6b24fc43163c49eddb3b0af3bfae3a6b4"
+        },
+        {
+          "bytes": 654,
+          "path": "runtime-checkout.log",
+          "sha256": "e92fa7ee4caed8ab536b62772fca8e6083a1acfc5a25d646995664fc9ee240f9"
+        },
+        {
+          "bytes": 3417,
+          "path": "runtime-clone.log",
+          "sha256": "aeaf87cf11503a44bceb0d828d96c386e2477b611aaa7f25e106cb302a655c38"
+        },
+        {
+          "bytes": 2786,
+          "path": "runtime-configure.log",
+          "sha256": "b3734c847d651c8c6e392a0ad1e502c32451a3a617e898c1049e15688d7236ef"
+        },
+        {
+          "bytes": 364,
+          "path": "worker-status.json",
+          "sha256": "0303d8420ac0a7ca47488101e1374ef7a0d1cbfaa566d3eacd800c9b0db808b8"
+        }
+      ],
+      "evidence_manifest_algorithm": "SHA-256 of compact UTF-8 JSON (sorted object keys; sorted path entries; no trailing newline) containing each output file path, byte size, and SHA-256.",
+      "evidence_manifest_sha256": "2793525842a0ee1e61628e2f1505e316c04eb317baceed0b3d78823843524c02",
+      "failure_stage": "runtime_build",
+      "failure_summary": "CUDA toolkit 12.8.93 and CUDA architecture 75 were detected, but the pinned llama.cpp CUDA configure step could not resolve the CUDA::cuda_driver imported target.",
+      "model_inference_started": false,
+      "provider_allocation_wall_note": "Kaggle-side start/stop duration is not present in worker output; worker elapsed time is not substituted for it.",
+      "provider_allocation_wall_seconds": null,
+      "runtime_configure_log_sha256": "b3734c847d651c8c6e392a0ad1e502c32451a3a617e898c1049e15688d7236ef",
+      "state": "failed_before_inference",
+      "worker_input_spec_sha256": "6d44605f2e91ba821d7b35123dcbf8c8e1f3db48aca929378f0c49dedfcef0f6",
+      "worker_status_sha256": "0303d8420ac0a7ca47488101e1374ef7a0d1cbfaa566d3eacd800c9b0db808b8"
+    },
+    "attempt_limits": {
+      "additional_attempts_remaining": 1,
+      "aggregate_includes": [
+        "attempt 001 failure",
+        "Kaggle setup",
+        "dependency preparation",
+        "checkout",
+        "compilation",
+        "inference",
+        "evaluation",
+        "artifact saving",
+        "all other failed stages"
+      ],
+      "attempts_already_used": 1,
+      "automatic_retry": false,
+      "campaign_aggregate_gpu_session_wall_seconds_max": 14400,
+      "finalization_reserve_seconds_per_session": 1200,
+      "maximum_active_gpu_jobs": 1,
+      "maximum_total_attempts": 2,
+      "per_attempt_session_wall_seconds_max": 7200,
+      "retry_must_be_sequential": true,
+      "retry_session_wall_seconds_must_not_exceed": "min(7200, 14400 - provider-verified cumulative session wall seconds before retry)",
+      "stop_if_cumulative_wall_or_quota_cannot_be_reconciled": true,
+      "third_attempt_allowed": false,
+      "worker_reserve_is_not_extra_time": true
+    },
+    "authorization": {
+      "additional_model_downloads": false,
+      "automatic_renewal_consumption": false,
+      "basis": "The user explicitly authorized free Kaggle use for this model comparison.",
+      "paid_compute": false,
+      "training": false
+    },
+    "build_prerequisite": {
+      "paired_precision_requirement": "Build one runtime once per retry attempt and use that identical binary/configuration for Q8 and Q4; record actual configuration and versions.",
+      "pinned_source_evidence": {
+        "lines": "168-171",
+        "path": "ggml/src/ggml-cuda/CMakeLists.txt",
+        "sha256": "8810366d36247b5e4f923f58f92a340ba6071ad5700ef4e5af7eb0cb7f7bc67a",
+        "verified_behavior": "The pinned source links CUDA::cuda_driver unless GGML_CUDA_NO_VMM is enabled; with that option it skips the direct driver link."
+      },
+      "resolution_policy": [
+        "Inspect ldconfig -p for an already-installed CUDA driver library. If a resolved existing file is found, pass that exact path as -DCUDA_cuda_driver_LIBRARY=<resolved-path>. Do not install or replace drivers.",
+        "If no usable existing driver library is found, use the pinned source supported option -DGGML_CUDA_NO_VMM=ON. This avoids the unavailable direct CUDA::cuda_driver link and keeps the build on the CUDA backend.",
+        "Do not fall back to CPU, change llama.cpp revision, change CUDA architecture 75, or change the selected model/artifacts.",
+        "Record the chosen branch, resolved library (if any), and actual CMake flags in cuda-driver-configuration.json before comparison inference."
+      ],
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "worker_source": {
+        "path": "kaggle/sweep_comparison_r1/run.py",
+        "prepare_source_path": "kaggle/sweep_comparison_r1/prepare.py",
+        "prepare_source_sha256": "028985c7e5ac7907a57a4c03e41f2a442e0540ff507ec8d6faad28bb28da9502",
+        "sha256": "c98124dd556ef880cfeb9d2a1e6a4e7070eaa49162e337bcfab152e4bca82e54"
+      }
+    },
+    "comparison_plan_sha256": "53256921e9135b432ed029e7a083c3ee12c27619ce200c4be4c5b91dc5200b51",
+    "comparison_revision": 2,
+    "frozen_at_utc": "2026-09-30T08:35:13.583201+00:00",
+    "frozen_comparison_identity": {
+      "line_suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "model_revision": "409016591c6c1a94f545f22328a85a3516118f34",
+      "next_edit_fixture_sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+      "runner_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+      "strict_causal_suite_sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+      "test_sha256": "8402b086b8e63144ab9968464adef4a88d6a1163b788a36e311d85a7885ad63b"
+    },
+    "number": 3,
+    "quota_revalidation": {
+      "do_not_consume_renewed_allocation_automatically": true,
+      "fail_closed_if_kaggle_wall_or_quota_delta_is_unknown": true,
+      "historical_observation_sha256": "8f937c74d4c53773b45e4adbbef95928e7314754223891ea52cd8ebc4a862331",
+      "minimum_remaining_gpu_hours_for_one_maximum_session": 2.0,
+      "record_observation_time_remaining_units_renewal_and_source": true,
+      "refresh_source": "Authenticated current Kaggle quota plus verification of all relevant kernel/job statuses.",
+      "require_all_job_statuses_verified": true,
+      "require_no_active_gpu_jobs": true,
+      "required_before_retry": true,
+      "v2_quota_observation_is_historical_only": true
+    },
+    "schema": "sweep-comparison-allocation-amendment-v1",
+    "scientific_comparison_unchanged": true,
+    "supersedes_plan_sha256": "53256921e9135b432ed029e7a083c3ee12c27619ce200c4be4c5b91dc5200b51"
+  },
+  "allocation_amendment_v4": {
+    "attempt_001_accounting": {
+      "conservative_wall_upper_bound": {
+        "end_at_utc": "2026-09-30T08:39:46.187999+00:00",
+        "end_basis": "Authenticated Kaggle kernel status observed terminal ERROR.",
+        "method": "Elapsed UTC interval from pre-submit quota observation through terminal observation. This deliberately includes time before launch, queue/setup, worker execution, and terminal-status observation; it is an upper bound, not measured provider allocation time.",
+        "seconds": 1352.229974,
+        "start_at_utc": "2026-09-30T08:17:13.958025+00:00",
+        "start_basis": "Authenticated quota snapshot captured before kernel submission; earlier than the recorded push time."
+      },
+      "provider_exact_session_wall_seconds": null,
+      "provider_exact_session_wall_status": "unknown; not inferred from worker elapsed time or rounded quota values",
+      "quota_before_submission": {
+        "embedded_observation_path": "submission-state.json:quota_before",
+        "observed_at": "2026-09-30T08:17:13.958025+00:00",
+        "remaining_gpu_hours": 44.59,
+        "renewal": "2026-10-03T00:00:00",
+        "source": "authenticated kaggle quota --format json and kernel statuses",
+        "source_file": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/gpu-bundle-001/submission-state.json",
+        "source_file_sha256": "4fde6a7327e3ceb51d42dda931a1ce589b81ce5887edccd6c883feb70e99c9ce",
+        "total_gpu_hours": 45.0,
+        "units": "Kaggle account GPU-hours",
+        "used_gpu_hours": 0.41
+      },
+      "quota_delta_observation": {
+        "active_jobs_count": 0,
+        "after_failure_file": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/quota_retry_preparation.json",
+        "after_failure_file_sha256": "464309bf24e4fec893b2acb86c756ad5cf5e459f4ee2c156e7d9ca62fafa9463",
+        "after_failure_observed_at": "2026-09-30T08:34:03.962691+00:00",
+        "after_failure_remaining_gpu_hours": 44.57,
+        "after_failure_used_gpu_hours": 0.43,
+        "baseline_file": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/quota_submission.json",
+        "baseline_file_sha256": "9f154d6589de45ff797c8a2cf3b7debd7d0fcd5cf18f98db112a4340323e6fcc",
+        "baseline_observed_at": "2026-09-30T08:17:13.958025+00:00",
+        "baseline_used_gpu_hours": 0.41,
+        "interpretation": "Reported quota values are rounded to 0.01 GPU-hour and are a separate provider-accounting observation, not an exact elapsed-wall measurement.",
+        "job_status_entry_count": 33,
+        "observed_delta_gpu_hours": 0.02,
+        "units": "Kaggle account GPU-hours",
+        "unknown_statuses_all_verified_404": true,
+        "unknown_statuses_verified_as_authenticated_404_count": 2
+      },
+      "terminal_error_observation": {
+        "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1",
+        "observed_at": "2026-09-30T08:39:46.187999+00:00",
+        "sha256": "426beee54fee516804e37fb96583b2f2b473166b58656ab7f43a6e9074fd4e35",
+        "source": "authenticated kaggle kernels status",
+        "source_file": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/gpu-bundle-001/terminal-observation.json",
+        "state": "ERROR"
+      },
+      "worker_elapsed_is_not_provider_wall": true,
+      "worker_elapsed_seconds": 54.99166828800003
+    },
+    "comparison_plan_sha256": "53256921e9135b432ed029e7a083c3ee12c27619ce200c4be4c5b91dc5200b51",
+    "comparison_revision": 2,
+    "frozen_at_utc": "2026-09-30T08:48:47.565782+00:00",
+    "number": 4,
+    "preserves_v3_amendment_verbatim": true,
+    "remaining_retry_budget": {
+      "aggregate_cap_includes_failures_and_setup": true,
+      "aggregate_wall_seconds_cap": 14400,
+      "attempt_001_conservative_upper_bound_seconds": 1352.229974,
+      "attempts_used": 1,
+      "automatic_renewal_consumption": false,
+      "finalization_reserve_seconds": 1200,
+      "maximum_active_work_seconds_in_retry": 6000,
+      "maximum_total_attempts": 2,
+      "one_active_gpu_job_at_a_time": true,
+      "remaining_aggregate_margin_seconds": 5847.770026,
+      "retries_remaining": 1,
+      "retry_session_wall_seconds_max": 7200,
+      "third_attempt_allowed": false,
+      "worst_case_total_upper_bound_seconds": 8552.229974
+    },
+    "retry_gate": {
+      "conservative_bound_required": true,
+      "exact_provider_wall_required": false,
+      "fail_closed_if_conservative_bound_or_current_quota_gate_is_missing_inconsistent_or_over_budget": true,
+      "fresh_authenticated_quota_and_all_job_statuses_required_immediately_before_retry": true,
+      "minimum_remaining_gpu_hours": 4.0,
+      "require_no_active_gpu_jobs": true,
+      "require_renewal_matches_current_observation": true
+    },
+    "retry_orchestration_identity": {
+      "next_edit_fixture_sha256_unchanged": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+      "runner_sha256_unchanged": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+      "runner_test_sha256_unchanged": "8402b086b8e63144ab9968464adef4a88d6a1163b788a36e311d85a7885ad63b",
+      "source_path": "kaggle/sweep_comparison_r1/prepare.py",
+      "source_sha256": "882ef00fe0c8f457c921d08a6578521a69636653a797cea6cb054720da43b050",
+      "tests": [
+        {
+          "path": "tests/test_sweep_kaggle_submission.py",
+          "sha256": "0695b926948173db81914611c5f28055e32e313b5d743cc3d15f42fa37374d79"
+        },
+        {
+          "path": "tests/test_sweep_kaggle_worker.py",
+          "sha256": "0d8acc31000234f868b0827da87a32fe58f5a39eac66e79c8e6662a410ba2065"
+        }
+      ],
+      "verification_command": "uv run --frozen --no-sync pytest -q tests/test_sweep_kaggle_submission.py tests/test_sweep_kaggle_worker.py",
+      "verification_result": "39 passed in 0.67s",
+      "worker_path": "kaggle/sweep_comparison_r1/run.py",
+      "worker_sha256": "c98124dd556ef880cfeb9d2a1e6a4e7070eaa49162e337bcfab152e4bca82e54"
+    },
+    "schema": "sweep-comparison-allocation-amendment-v1",
+    "supersedes_plan_file_sha256": "ecaada053a6c407c354562208c969b19c22ee54aa282b7d2296635550d3e5511",
+    "supersedes_plan_sha256": "26781d965031fa3c486a771d4b75f8a08851b8aa4b82eaa095e87ad22e89bdb6",
+    "v3_gate_correction": {
+      "new_rule": "Require the conservative interval and the authenticated quota/job checks to be present and consistent. Exact provider wall time may remain unknown; that fact alone does not block retry when the conservative bound plus the maximum retry fits the cap.",
+      "reason": "Exact provider allocation wall time is unavailable. An authenticated quota delta and a conservative time interval from the pre-submit quota observation through the authenticated terminal error provide a defensible bound without claiming exact provider wall time.",
+      "superseded_v3_clause": "fail_closed_if_kaggle_wall_or_quota_delta_is_unknown"
+    }
+  },
+  "budget": {
+    "active_gpu_jobs": 1,
+    "additional_model_downloads": false,
+    "additional_training_tokens": 0,
+    "deadline_enforced_by": "TABCOMPLETE_SWEEP_DEADLINE checked per stage and request",
+    "finalization_reserve_seconds": 1200,
+    "gpu_device": "GPU 0 only; no model split",
+    "inference_token_ceiling_across_campaign": 2000000,
+    "kaggle_session_seconds_max": 7200,
+    "minimum_filesystem_reserve_bytes": 2147483648,
+    "paid_compute": false,
+    "storage_cap_bytes": 12884901888,
+    "training": false
+  },
+  "campaign": "sweep-q8-q4-r1",
+  "code": {
+    "no_model_generated_code_execution": true,
+    "python": "3.11",
+    "runner_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+    "test_sha256": "8402b086b8e63144ab9968464adef4a88d6a1163b788a36e311d85a7885ad63b"
+  },
+  "comparison": {
+    "cache": "cache_prompt=false; cache-ram=0; no idle snapshots",
+    "input_budget": "Exact runtime token count plus output ceiling <=8192; otherwise skip without truncation",
+    "next_edit": {
+      "decoding": {
+        "stop": [
+          "<|file_sep|>",
+          "</s>"
+        ],
+        "temperature": 0
+      },
+      "diagnostic_plan_sha256": "efa0bf5c245b5edca14df2722b19c6e086e790a3da256656eec1e8db2ed34c34",
+      "diagnostic_revision": "153f2211be603f0c51a9abbe8086ecaaffa6198eda543859d704b512e7bbb03a",
+      "fixture_count": 24,
+      "fixture_ids": [
+        "python/stable_11",
+        "python/stable_12",
+        "python/stable_13",
+        "python/100",
+        "javascript/500",
+        "javascript/501",
+        "javascript/502",
+        "javascript/509",
+        "typescript/0",
+        "typescript/1",
+        "typescript/2",
+        "typescript/3",
+        "rust/1",
+        "rust/5",
+        "rust/6",
+        "rust/8",
+        "java/5",
+        "java/7",
+        "java/8",
+        "csharp/3",
+        "c/stable_12",
+        "c/stable_17",
+        "synthetic/delete-javascript-debug",
+        "synthetic/delete-rust-debug"
+      ],
+      "fixture_input_path": "next_edit_inputs.jsonl",
+      "fixture_input_sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+      "gold_labels_excluded_from_worker_inputs": true,
+      "history": "Original/current and the full-file recent diff use only exact reversible recent_delta; no gold-derived state",
+      "input_order": [
+        "context_files",
+        "recent_diffs",
+        "original",
+        "current",
+        "updated header"
+      ],
+      "mapping": "Require byte-identical text outside the editable range; otherwise mark out-of-range without repair",
+      "max_output_tokens": 512,
+      "model_card_sha256": "f1495e987e82ea2497ea711ffd3d9a8db8a6610dce82396839609140bb1fe559",
+      "protocol": "Pinned Sweep run_model.py build_prompt, whole-file output; no action codec",
+      "repetitions": 2,
+      "run_model_py_sha256": "9eef7df11518d2b3f091aebb07a3f92560d5a2da15711598ecd87cf07b273fc2",
+      "source_suite": {
+        "path": "data/benchmarks/next_edit_v2.jsonl",
+        "sha256": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff"
+      },
+      "target_groups_counts": {
+        "ambiguous_requirement": 6,
+        "clear_functional_intent": 11,
+        "explicit_synthetic_target": 2,
+        "no_edit_plausible": 5
+      }
+    },
+    "precision_pairing": "Exact Q8_0 and Q4_K_M artifacts use identical prompts, runtime source, flags, context, cache, output ceilings, and order",
+    "prompt_layout_changes": "none; official Sweep prompt retained",
+    "quality_controls": {
+      "causal_line": {
+        "cases": 180,
+        "max_output_tokens": 96,
+        "path": "causal_line_v1-r3.jsonl",
+        "prompt": "exact fixture prompt, raw causal completion",
+        "purpose": "line continuation task-mismatch control, not next-edit quality",
+        "sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
+      },
+      "strict_causal": {
+        "cases": 200,
+        "max_output_tokens": 96,
+        "path": "data/benchmarks/code_completion_v2.jsonl",
+        "prompt": "raw source prefix; no chat template",
+        "purpose": "causal continuation task-mismatch control, not next-edit quality",
+        "sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4"
+      }
+    },
+    "single_runtime_for_both_precisions": true,
+    "tokenizer": "Resident llama.cpp /tokenize endpoint, add_special and parse_special; no second tokenizer stack"
+  },
+  "frozen_at_utc": "2026-09-30T08:14:10.404125+00:00",
+  "host_preparation": {
+    "host": "crabcake",
+    "local_cuda": false,
+    "local_timed_inference": false,
+    "note": "crabcake has no NVIDIA GPU; Q8/Q4 quality comparison uses Kaggle T4"
+  },
+  "inputs": {
+    "artifact_preparation_plan_sha256": "b8090328b12d33c29bd81cc263f1ab34df69c98211115952a757aa6edfe6c366",
+    "diagnostic_plan_sha256": "efa0bf5c245b5edca14df2722b19c6e086e790a3da256656eec1e8db2ed34c34",
+    "download_manifest_sha256": "76efae54e19d0f44256b003aa691fab08602acc6efac5fd9432e24ce54b2cd0a",
+    "quantization_manifest_sha256": "856be1ea89966d138d5707a539dc1a252558cbb0390994caa3ece6aad162ea22",
+    "quota_preparation_sha256": "8f937c74d4c53773b45e4adbbef95928e7314754223891ea52cd8ebc4a862331"
+  },
+  "model": {
+    "architecture": "qwen2",
+    "artifacts": {
+      "q4_k_m": {
+        "bytes": 883289056,
+        "file": "sweep-next-edit-1.5b.q4_k_m.gguf",
+        "provenance": "Q8_0 requantized to Q4_K_M, not F16/F32-to-Q4",
+        "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+        "source_sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+      },
+      "q8_0": {
+        "bytes": 1537269856,
+        "file": "sweep-next-edit-1.5b.q8_0.v2.gguf",
+        "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+      }
+    },
+    "context_discrepancy": "Hub GGUF says 32768; card says 8192; this plan uses 8192.",
+    "context_tokens_used": 8192,
+    "eos_token": "<|endoftext|>",
+    "hub_gguf_context_tokens": 32768,
+    "license": "apache-2.0",
+    "publisher_context_tokens": 8192,
+    "repository": "sweepai/sweep-next-edit-1.5B",
+    "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+    "total_parameters": 1445014016
+  },
+  "observability": {
+    "capture": "ArtifactStore captures public/synthetic requests and raw responses; prompts are not metric labels.",
+    "domain_ids": [
+      "campaign_id",
+      "run_id",
+      "run_attempt_id",
+      "case_id",
+      "case_attempt_id",
+      "request_id",
+      "trace_id"
+    ],
+    "required_max_payload_bytes": 8388608,
+    "required_offline_bundle_max_bytes": 134217728,
+    "required_public_synthetic_content_capture": true,
+    "required_worker_enabled": true,
+    "required_worker_mode": "offline",
+    "revision": 2,
+    "sdk_versions": {
+      "opentelemetry-api": "1.44.0",
+      "opentelemetry-sdk": "1.44.0"
+    },
+    "spans": [
+      "run.start",
+      "run.heartbeat",
+      "run.summary",
+      "eval.case",
+      "model.generate"
+    ]
+  },
+  "plan_sha256": "c340bb87b64c3af927be00f02497d43459a7f417a2fbc82eb1c5feccf5f5eb4b",
+  "quota_observation": {
+    "active_jobs": [],
+    "observed_at": "2026-09-30T06:38:37.458097+00:00",
+    "remaining": 44.59,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "source_sha256": "8f937c74d4c53773b45e4adbbef95928e7314754223891ea52cd8ebc4a862331",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours"
+  },
+  "revision": {
+    "number": 2,
+    "reason": "Adds offline OTel run/case/request correlation and actual ArtifactStore prompt/response capture, strict-suite fingerprint verification, cached per-model hashes without per-case rehashing, and SDK shutdown; model, prompts, fixtures, decoding, caps, and scoring are unchanged.",
+    "scientific_inputs_unchanged": true,
+    "supersedes_plan_sha256": "51be22ecadd96081ae38aa2c34dc30d03e98477b5ddc887ce3a821cdff4487bf"
+  },
+  "runtime": {
+    "batch_tokens": 256,
+    "build": "llama.cpp f072b103714dfa1eee531f80b24512faf38e3dd2; Kaggle CUDA_ARCHITECTURES=75; local compatibility smoke is separate",
+    "cache_ram_bytes": 0,
+    "context_shift": false,
+    "context_tokens": 8192,
+    "gpu_layers": 99,
+    "idle_slot_cache": false,
+    "kv_cache_precision": "f16",
+    "main_gpu": 0,
+    "microbatch_tokens": 64,
+    "one_model_loaded_at_a_time": true,
+    "parallel_slots": 1,
+    "prompt_cache": false,
+    "repository_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "server_flags": [
+      "--ctx-size",
+      "8192",
+      "--batch-size",
+      "256",
+      "--ubatch-size",
+      "64",
+      "--parallel",
+      "1",
+      "--cache-ram",
+      "0",
+      "--no-cache-idle-slots",
+      "--no-context-shift",
+      "--cache-type-k",
+      "f16",
+      "--cache-type-v",
+      "f16",
+      "--split-mode",
+      "none",
+      "--main-gpu",
+      "0",
+      "--n-gpu-layers",
+      "99"
+    ],
+    "speculative_decoding": false,
+    "split_mode": "none"
+  },
+  "schema": "sweep-comparison-plan-v1"
+}

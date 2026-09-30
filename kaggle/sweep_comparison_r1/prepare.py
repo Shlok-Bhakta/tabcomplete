@@ -9,6 +9,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -62,8 +63,12 @@ def validate_plan(plan: dict, runner: Path, fixtures: Path) -> None:
 
 
 def prepare(
-    plan: Path, line_suite: Path, next_edit_fixtures: Path, output: Path, q4_artifact: Path
+    plan: Path, line_suite: Path, next_edit_fixtures: Path, output: Path, q4_artifact: Path,
+    retry_after: Path | None = None
 ) -> None:
+    if retry_after is not None:
+        validate_failed_attempt(retry_after)
+    kernel_id = KERNEL_ID + "-retry" if retry_after is not None else KERNEL_ID
     if output.exists():
         raise FileExistsError("Sweep bundle already exists; inspect before resuming")
     if worker.digest(line_suite) != LINE_SHA:
@@ -128,7 +133,7 @@ def prepare(
     })
     shutil.copyfile(Path(__file__).with_name("run.py"), kernel / "run.py")
     write(kernel / "kernel-metadata.json", {
-        "id": KERNEL_ID, "title": "TabComplete Sweep comparison R1",
+        "id": kernel_id, "title": "TabComplete Sweep comparison R1",
         "code_file": "run.py", "language": "python", "kernel_type": "script",
         "is_private": True, "enable_gpu": True, "enable_internet": True,
         "dataset_sources": [DATASET_ID], "competition_sources": [], "kernel_sources": [],
@@ -138,12 +143,45 @@ def prepare(
         "input_spec_sha256": worker.digest(dataset / "sweep-worker-spec.json"),
         "worker_sha256": worker.digest(kernel / "run.py"),
         "state": "prepared", "renewal": "2026-10-03T00:00:00",
+        "retry_after": str(retry_after) if retry_after is not None else None,
+        "kernel_id": kernel_id,
     })
     temporary.rename(output)
 
 
+def validate_failed_attempt(previous: Path) -> None:
+    state = json.loads((previous / "submission-state.json").read_text())
+    if state.get("state") != "kernel_pushed" or state.get("kernel_id") != KERNEL_ID:
+        raise RuntimeError("retry requires the reconciled initial Sweep allocation")
+    observed = cli(["kaggle", "kernels", "status", KERNEL_ID])
+    if "KernelWorkerStatus.ERROR" not in observed:
+        raise RuntimeError("initial Sweep job is not verified terminal ERROR")
+    observation = previous / "terminal-observation.json"
+    if observation.exists():
+        terminal = json.loads(observation.read_text())
+    else:
+        terminal = {
+            "kernel_id": KERNEL_ID, "state": "ERROR",
+            "observed_at": datetime.now(UTC).isoformat(),
+            "source": "authenticated kaggle kernels status",
+        }
+        write(observation, terminal)
+    started = datetime.fromisoformat(state["quota_before"]["observed_at"])
+    ended = datetime.fromisoformat(terminal["observed_at"])
+    upper_bound = (ended - started).total_seconds()
+    if (terminal["kernel_id"] != KERNEL_ID or terminal["state"] != "ERROR"
+            or upper_bound < 0 or upper_bound + 7200 > 14400):
+        raise RuntimeError("Sweep aggregate wall-budget upper bound would be exceeded")
+
+
 def submit(bundle: Path) -> None:
     manifest = json.loads((bundle / "bundle-manifest.json").read_text())
+    kernel_id = manifest.get("kernel_id", KERNEL_ID)
+    retry_after = manifest.get("retry_after")
+    if retry_after is not None:
+        if kernel_id != KERNEL_ID + "-retry":
+            raise ValueError("unapproved retry identity")
+        validate_failed_attempt(Path(retry_after))
     state_path = bundle / "submission-state.json"
     state = json.loads(state_path.read_text()) if state_path.exists() else {"state": "prepared"}
     if state["state"] in {"submission_started", "kernel_pushed"}:
@@ -163,21 +201,33 @@ def submit(bundle: Path) -> None:
     if state["state"] == "prepared":
         datasets = json.loads(cli(["kaggle", "datasets", "list", "--mine", "--page-size", "100",
                                    "--format", "json"]))
-        if any(row.get("ref") == DATASET_ID for row in datasets):
-            raise RuntimeError("Sweep dataset already exists; reconcile publication state")
-        cli(["kaggle", "datasets", "create", "-p", str(bundle / "dataset"), "-t"])
+        exists = any(row.get("ref") == DATASET_ID for row in datasets)
+        if retry_after is not None:
+            if not exists:
+                raise RuntimeError("initial private dataset is missing")
+            cli(["kaggle", "datasets", "version", "-p", str(bundle / "dataset"), "-t",
+                 "-m", "Preserve first attempt; resolve existing CUDA driver for frozen v3"])
+        else:
+            if exists:
+                raise RuntimeError("Sweep dataset already exists; reconcile publication state")
+            cli(["kaggle", "datasets", "create", "-p", str(bundle / "dataset"), "-t"])
         state = {"state": "dataset_created"}
         write(state_path, state)
+    readiness_deadline = time.monotonic() + 180
+    while cli(["kaggle", "datasets", "status", DATASET_ID]).strip().lower() != "ready":
+        if time.monotonic() >= readiness_deadline:
+            raise RuntimeError("Sweep private dataset is not ready; GPU was not allocated")
+        time.sleep(5)
     quota = checked_quota(manifest["renewal"])
     kernels = json.loads(cli(["kaggle", "kernels", "list", "--mine", "--page-size", "100",
                               "--format", "json"]))
-    if any(row.get("ref") == KERNEL_ID for row in kernels):
+    if any(row.get("ref") == kernel_id for row in kernels):
         raise RuntimeError("Sweep kernel already exists; reconcile instead of duplicating")
     write(state_path, {"state": "submission_started", "quota_before": quota,
                        "submitted_at": datetime.now(UTC).isoformat()})
     cli(["kaggle", "kernels", "push", "-p", str(bundle / "kernel"),
          "--timeout", "7200", "--accelerator", "NvidiaTeslaT4"])
-    write(state_path, {"state": "kernel_pushed", "kernel_id": KERNEL_ID,
+    write(state_path, {"state": "kernel_pushed", "kernel_id": kernel_id,
                        "quota_before": quota, "submitted_at": datetime.now(UTC).isoformat()})
 
 
@@ -188,12 +238,14 @@ if __name__ == "__main__":
     parser.add_argument("--next-edit-fixtures", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--q4-artifact", type=Path)
+    parser.add_argument("--retry-after", type=Path)
     parser.add_argument("--submit", action="store_true")
     args = parser.parse_args()
     if args.submit:
         submit(args.output)
     elif args.plan and args.line_suite and args.next_edit_fixtures and args.q4_artifact:
-        prepare(args.plan, args.line_suite, args.next_edit_fixtures, args.output, args.q4_artifact)
+        prepare(args.plan, args.line_suite, args.next_edit_fixtures, args.output,
+                args.q4_artifact, args.retry_after)
     else:
         parser.error("preparation needs --plan, --line-suite, "
                      "--next-edit-fixtures and --q4-artifact")
