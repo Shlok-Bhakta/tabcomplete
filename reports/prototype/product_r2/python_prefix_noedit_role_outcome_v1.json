@@ -1,0 +1,50 @@
+{
+  "disposition": {
+    "accepted_rows_exported": false,
+    "accepted_training_rows": 0,
+    "quality_evidence": false,
+    "retry_or_repair_calls": 0,
+    "training_ready": false
+  },
+  "observability": {
+    "duplicate_import_detected": true,
+    "duplicate_reimported_span_count": 0,
+    "first_imported_span_count": 54,
+    "offline_bundle_sha256": "fd6b06a89aab93c2c498c056e69b01c715e6b4cb71193da91714bd594cac48c1",
+    "post_import_query_span_count": 54,
+    "post_import_query_state": "ok",
+    "run_id": "run-68c292aad87113aaba864b230021a216"
+  },
+  "role_phase": {
+    "case_count": 4,
+    "plan_sha256": "26917737c8a90af495eeefebe698425fc94fb21708a6327dbab95054a5eff85a",
+    "provider_calls_made": 11,
+    "role_evidence_accepted_count": 0,
+    "role_status_combinations": {
+      "completed_invalid_output/completed_valid_action/not_called": 1,
+      "completed_valid_action/completed_valid_action/completed_valid_review": 3
+    },
+    "root_release_sha256": "e29742d8f7eaa280093a5b8af41a1dc807f1e21f4011e07a57e9cacf6ef4ebbc",
+    "status": "complete_with_role_skips"
+  },
+  "schema": "public-prefix-noedit-role-outcome-v1",
+  "source_package": {
+    "accepted_return_prefix_origins_matched": 4,
+    "behavior_breaking_compile_valid_test_fail_count": 4,
+    "candidate_count": 4,
+    "manifest_sha256": "a2f1e624acce2bd4e4b84c6381b14e56f3bbcba79e01aeb6bb0463a3a3d4867f",
+    "objective_gold_keep_pass_count": 4,
+    "objective_variants_per_candidate": [
+      "gold",
+      "behavior_breaking"
+    ],
+    "operational_telemetry_in_scientific_inventory": false,
+    "plan_identity_sha256": "c7096316f513e71c871937e6da8e7e465e42d03dc1fc61a8f143577d2e7b3c27",
+    "plan_raw_sha256": "b166856af2f618225fb9f022ee2234fc908a164c2b68933045e0400927778903",
+    "scientific_file_count": 25,
+    "scientific_inventory_verified": true,
+    "source_license_history_rows_verified": 4,
+    "v2_scientific_bytes_preserved": true
+  },
+  "status": "no_candidates_accepted"
+}

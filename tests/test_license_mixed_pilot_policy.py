@@ -22,6 +22,7 @@ from tinycomplete.one_line.contract import (
     RecentEdit,
     apply_action,
     encode_action,
+    physical_lines,
 )
 from tinycomplete.one_line.fixed_state_role_receipts import (
     export_fixed_state_role_execution_proof,
@@ -32,6 +33,7 @@ from tinycomplete.one_line.fixed_state_roles import (
     fixed_state_protocol_bindings,
 )
 from tinycomplete.one_line.pilot_data import (
+    COMPLETED_LINE_FOLLOWUP_TRANSFORM,
     LICENSE_MIXED,
     LICENSE_MIXED_HISTORY,
     REVIEWED_PUBLIC_HISTORY_SOURCE,
@@ -486,6 +488,72 @@ def _typed_return_prefix_package(root: Path) -> dict[str, Any]:
     return row
 
 
+def _completed_line_followup_package(root: Path) -> dict[str, Any]:
+    origin = _typed_return_prefix_package(root)
+    origin_state = EditState.from_mapping(origin["state"])
+    origin_action = EditAction(**origin["action"])
+    parent_source = origin["after_source"].encode("utf-8")
+    parent_line = physical_lines(parent_source)[origin_state.target_row]
+    completion_edit = RecentEdit(
+        origin_state.target_row,
+        origin_state.history[-1].new_text,
+        parent_line.content.decode("utf-8"),
+    )
+    state = EditState(
+        file_id=origin_state.file_id,
+        filetype=origin_state.filetype,
+        source=parent_source.decode("utf-8"),
+        target_row=origin_state.target_row,
+        cursor_col=len(parent_line.content),
+        history=(*origin_state.history, completion_edit),
+        relevant=origin_state.relevant,
+    )
+    transform = {
+        "kind": COMPLETED_LINE_FOLLOWUP_TRANSFORM,
+        "target_physical_row": state.target_row,
+        "cursor_byte_column": state.cursor_col,
+        "parent_source_sha256": _sha(parent_source),
+        "selected_source_sha256": _sha(state.source.encode("utf-8")),
+        "history_origin": "synthetic_fixed_before_provider",
+        "history_sha256": _sha(
+            _canonical_bytes([asdict(edit) for edit in state.history])
+        ),
+        "origin_state_sha256": _sha(_canonical_bytes(asdict(origin_state))),
+        "origin_transform": origin["authoring_metadata"]["transform"],
+        "origin_transform_sha256": origin["authoring_metadata"]["transform_sha256"],
+        "completion_action_sha256": _sha(_canonical_bytes(asdict(origin_action))),
+    }
+    metadata = dict(origin["authoring_metadata"])
+    metadata.update(
+        {
+            "history_origin": "synthetic_fixed_before_provider",
+            "history_sha256": transform["history_sha256"],
+            "selected_source_sha256": transform["selected_source_sha256"],
+            "transform": transform,
+            "transform_sha256": _sha(_canonical_bytes(transform)),
+        }
+    )
+    context = serialize_state_bounded(state, ByteTokenizer(), max_input_tokens=1024)
+    row = dict(origin)
+    row.update(
+        {
+            "id": "public/prefix-followup-1",
+            "candidate_id": "public/prefix-followup-1",
+            "seed_id": "public/prefix-followup-1",
+            "task_family_id": "public-prefix-keep-v1",
+            "template_id": "public-prefix-keep-task-1",
+            "state": asdict(state),
+            "prompt": context.text,
+            "context_sha256": _sha(context.text.encode("utf-8")),
+            "action": asdict(EditAction("keep")),
+            "after_source": state.source,
+            "history_sha256": transform["history_sha256"],
+            "authoring_metadata": metadata,
+        }
+    )
+    return row
+
+
 def test_typed_return_prefix_transform_reconstructs_exact_parent_and_action(
     tmp_path: Path,
 ) -> None:
@@ -529,6 +597,58 @@ def test_typed_return_prefix_transform_reconstructs_exact_parent_and_action(
     wrong_scope["authoring_metadata"]["source_revision"] = "d" * 40
     with pytest.raises(ValueError, match="path-scope record"):
         validate_license_mixed_source_artifacts(wrong_scope, package_root=tmp_path)
+
+
+def test_completed_line_followup_replays_origin_history_and_requires_keep(
+    tmp_path: Path,
+) -> None:
+    row = _completed_line_followup_package(tmp_path)
+    bindings = validate_license_mixed_source_artifacts(row, package_root=tmp_path)
+    assert bindings["selected_source_sha256"] == row["authoring_metadata"][
+        "selected_source_sha256"
+    ]
+    validate_license_mixed_row(
+        row, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+    )
+    relocated = tmp_path / "relocated"
+    shutil.copytree(tmp_path, relocated, ignore=shutil.ignore_patterns("relocated"))
+    validate_license_mixed_row(
+        row, package_root=relocated, policy=LICENSE_MIXED_HISTORY
+    )
+
+    wrong_action = json.loads(json.dumps(row))
+    wrong_action["action"] = {"kind": "replace_line", "text": "    return 2"}
+    wrong_action["after_source"] = apply_action(
+        EditState.from_mapping(wrong_action["state"]),
+        EditAction(**wrong_action["action"]),
+    )
+    with pytest.raises(ValueError, match="cursor/history/action"):
+        validate_license_mixed_source_artifacts(wrong_action, package_root=tmp_path)
+
+    wrong_origin = json.loads(json.dumps(row))
+    wrong_origin["authoring_metadata"]["transform"]["origin_transform"][
+        "cursor_byte_column"
+    ] = 10
+    wrong_origin["authoring_metadata"]["transform_sha256"] = _sha(
+        _canonical_bytes(wrong_origin["authoring_metadata"]["transform"])
+    )
+    with pytest.raises(ValueError, match="origin history is invalid"):
+        validate_license_mixed_source_artifacts(wrong_origin, package_root=tmp_path)
+
+    wrong_line = json.loads(json.dumps(row))
+    wrong_line["state"]["history"][1]["new_text"] = "    return 3"
+    bad_state = EditState.from_mapping(wrong_line["state"])
+    history_sha256 = _sha(
+        _canonical_bytes([asdict(edit) for edit in bad_state.history])
+    )
+    wrong_line["history_sha256"] = history_sha256
+    wrong_line["authoring_metadata"]["history_sha256"] = history_sha256
+    wrong_line["authoring_metadata"]["transform"]["history_sha256"] = history_sha256
+    wrong_line["authoring_metadata"]["transform_sha256"] = _sha(
+        _canonical_bytes(wrong_line["authoring_metadata"]["transform"])
+    )
+    with pytest.raises(ValueError, match="completed line is not the exact public parent prefix"):
+        validate_license_mixed_source_artifacts(wrong_line, package_root=tmp_path)
 
 
 def test_manifest_keeps_frozen_train_and_development_floors() -> None:

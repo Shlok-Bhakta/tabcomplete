@@ -78,6 +78,7 @@ LICENSE_MIXED_HISTORY = PilotDataPolicy(
 )
 REVIEWED_PUBLIC_HISTORY_SOURCE = "reviewed_public_history_candidate"
 TYPED_RETURN_PREFIX_TRANSFORM = "synthetic_typed_return_prefix_v1"
+COMPLETED_LINE_FOLLOWUP_TRANSFORM = "synthetic_completed_line_followup_v1"
 PUBLIC_PREFIX_ROLE_BUNDLE_SCHEMA = "one-line-public-prefix-role-bundle-v1"
 
 PUBLIC_SOURCE_TYPES = frozenset(
@@ -459,11 +460,12 @@ def validate_license_mixed_source_artifacts(
         _provenance_value(row, metadata, "license_scope_artifact_bytes"),
         label="path-scope",
     )
-    typed_prefix_source = (
+    public_prefix_source = (
         isinstance(metadata.get("transform"), Mapping)
-        and metadata["transform"].get("kind") == TYPED_RETURN_PREFIX_TRANSFORM
+        and metadata["transform"].get("kind")
+        in {TYPED_RETURN_PREFIX_TRANSFORM, COMPLETED_LINE_FOLLOWUP_TRANSFORM}
     )
-    if typed_prefix_source:
+    if public_prefix_source:
         scope = _strict_json(scope_payload, label="typed-prefix path-scope evidence")
         if (
             not isinstance(scope, Mapping)
@@ -486,7 +488,7 @@ def validate_license_mixed_source_artifacts(
         or scope.get("source_path") != source_path
         or scope.get("source_sha256") != source_sha256
         or (
-            not typed_prefix_source
+            not public_prefix_source
             and scope.get("source_group_id") != row.get("source_group_id")
         )
         or path_scope.get("sha256") != license_sha256
@@ -533,6 +535,10 @@ def validate_license_mixed_source_artifacts(
         raise ValueError("LICENSE-MIXED source transform/history cannot be replayed") from None
     if transform.get("kind") == TYPED_RETURN_PREFIX_TRANSFORM:
         selected_sha256 = _validate_typed_return_prefix_transform(
+            row, metadata, transform, source_payload
+        )
+    elif transform.get("kind") == COMPLETED_LINE_FOLLOWUP_TRANSFORM:
+        selected_sha256 = _validate_completed_line_followup_transform(
             row, metadata, transform, source_payload
         )
     else:
@@ -599,7 +605,7 @@ def validate_license_mixed_source_artifacts(
         "transform_sha256": transform_sha256,
         "history_sha256": expected_history_sha256,
     }
-    if typed_prefix_source:
+    if public_prefix_source:
         result["selected_source_sha256"] = selected_sha256
     return result
 
@@ -700,6 +706,160 @@ def _validate_typed_return_prefix_transform(
     selected_sha256 = _sha256(exact_prefix)
     if metadata.get("selected_source_sha256") != selected_sha256:
         raise ValueError("LICENSE-MIXED typed-prefix selected source hash differs")
+    return selected_sha256
+
+
+def _validate_completed_line_followup_transform(
+    row: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    transform: Mapping[str, Any],
+    parent_source: bytes,
+) -> str:
+    """Replay a completed public line and permit only the canonical keep action."""
+    expected_keys = {
+        "kind",
+        "target_physical_row",
+        "cursor_byte_column",
+        "parent_source_sha256",
+        "selected_source_sha256",
+        "history_origin",
+        "history_sha256",
+        "origin_state_sha256",
+        "origin_transform",
+        "origin_transform_sha256",
+        "completion_action_sha256",
+    }
+    if set(transform) != expected_keys:
+        raise ValueError("LICENSE-MIXED completed-line transform descriptor is incomplete")
+    try:
+        state = EditState.from_mapping(row["state"])
+        action = EditAction(**row["action"])
+        parent_lines = physical_lines(parent_source)
+        state_bytes = state.source.encode("utf-8")
+    except (KeyError, TypeError, UnicodeDecodeError, ValueError):
+        raise ValueError("LICENSE-MIXED completed-line source/state is invalid") from None
+
+    target_row = transform.get("target_physical_row")
+    cursor_col = transform.get("cursor_byte_column")
+    origin_transform = transform.get("origin_transform")
+    if (
+        type(target_row) is not int
+        or type(cursor_col) is not int
+        or target_row < 0
+        or target_row >= len(parent_lines)
+        or target_row >= len(physical_lines(state_bytes))
+        or target_row != state.target_row
+        or cursor_col != state.cursor_col
+        or transform.get("history_origin") != "synthetic_fixed_before_provider"
+        or metadata.get("history_origin") != "synthetic_fixed_before_provider"
+        or transform.get("parent_source_sha256") != _sha256(parent_source)
+        or not isinstance(origin_transform, Mapping)
+        or not state.history
+        or state.relevant
+        or len(state.history) != 2
+        or action != EditAction("keep")
+    ):
+        raise ValueError("LICENSE-MIXED completed-line cursor/history/action is invalid")
+
+    first_edit, completion_edit = state.history
+    parent_line = parent_lines[target_row]
+    try:
+        parent_text = parent_line.content.decode("utf-8")
+        first_old = first_edit.old_text.encode("utf-8")
+        first_new = first_edit.new_text.encode("utf-8")
+        completion_old = completion_edit.old_text.encode("utf-8")
+        completion_new = completion_edit.new_text.encode("utf-8")
+    except UnicodeDecodeError:
+        raise ValueError("LICENSE-MIXED completed-line bytes are not UTF-8") from None
+    if (
+        first_edit.row != target_row
+        or completion_edit.row != target_row
+        or first_old == first_new
+        or not first_new.startswith(first_old)
+        or completion_old != first_new
+        or completion_new != parent_line.content
+        or cursor_col != len(parent_line.content)
+        or state_bytes
+        != b"".join(line.raw for line in parent_lines[:target_row]) + parent_line.raw
+    ):
+        raise ValueError("LICENSE-MIXED completed line is not the exact public parent prefix")
+
+    if set(origin_transform) != {
+        "kind",
+        "target_physical_row",
+        "cursor_byte_column",
+        "parent_source_sha256",
+        "state_reconstructed_from_exact_parent_prefix",
+        "history_origin",
+        "history_sha256",
+        "source_suffix_after_cursor_in_input",
+    }:
+        raise ValueError("LICENSE-MIXED completed-line origin transform is incomplete")
+    origin_cursor = origin_transform.get("cursor_byte_column")
+    first_history_sha256 = _sha256(_canonical_bytes([asdict(first_edit)]))
+    if (
+        origin_transform.get("kind") != TYPED_RETURN_PREFIX_TRANSFORM
+        or origin_transform.get("target_physical_row") != target_row
+        or type(origin_cursor) is not int
+        or origin_cursor <= 0
+        or origin_cursor != len(first_new)
+        or parent_line.content[:origin_cursor] != first_new
+        or origin_transform.get("parent_source_sha256") != _sha256(parent_source)
+        or origin_transform.get("state_reconstructed_from_exact_parent_prefix") is not True
+        or origin_transform.get("history_origin") != "synthetic_editor_typing"
+        or origin_transform.get("history_sha256") != first_history_sha256
+        or origin_transform.get("source_suffix_after_cursor_in_input") is not False
+        or transform.get("origin_transform_sha256")
+        != _sha256(_canonical_bytes(origin_transform))
+    ):
+        raise ValueError("LICENSE-MIXED completed-line origin history is invalid")
+
+    prefix_before_target = b"".join(line.raw for line in parent_lines[:target_row])
+    before_typing = prefix_before_target + first_old + parent_line.terminator
+    origin_source = prefix_before_target + first_new + parent_line.terminator
+    completed_source = prefix_before_target + completion_new + parent_line.terminator
+    try:
+        if replay_replacement_history(
+            before_typing.decode("utf-8"),
+            (first_edit,),
+            file_id=state.file_id,
+            filetype=state.filetype,
+        ).encode("utf-8") != origin_source:
+            raise ValueError("origin edit differs")
+        if replay_replacement_history(
+            before_typing.decode("utf-8"),
+            state.history,
+            file_id=state.file_id,
+            filetype=state.filetype,
+        ).encode("utf-8") != completed_source:
+            raise ValueError("completed edits differ")
+        origin_state = EditState(
+            file_id=state.file_id,
+            filetype=state.filetype,
+            source=origin_source.decode("utf-8"),
+            target_row=target_row,
+            cursor_col=origin_cursor,
+            history=(first_edit,),
+            relevant=state.relevant,
+        )
+    except (UnicodeDecodeError, TypeError, ValueError):
+        raise ValueError("LICENSE-MIXED completed-line history cannot be replayed") from None
+
+    origin_state_sha256 = _sha256(_canonical_bytes(asdict(origin_state)))
+    completion_action_sha256 = _sha256(
+        _canonical_bytes(asdict(EditAction("replace_line", parent_text)))
+    )
+    selected_sha256 = _sha256(state_bytes)
+    if (
+        transform.get("origin_state_sha256") != origin_state_sha256
+        or transform.get("completion_action_sha256") != completion_action_sha256
+        or transform.get("history_sha256") != row.get("history_sha256")
+        or metadata.get("history_sha256") != row.get("history_sha256")
+        or transform.get("selected_source_sha256") != selected_sha256
+        or metadata.get("selected_source_sha256") != selected_sha256
+        or apply_action(state, action) != state.source
+    ):
+        raise ValueError("LICENSE-MIXED completed-line state or action hash differs")
     return selected_sha256
 
 
