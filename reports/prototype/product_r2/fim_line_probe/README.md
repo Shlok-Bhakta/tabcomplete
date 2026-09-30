@@ -40,6 +40,21 @@ no preceding response, termination or outcome. Version 2 returns skipped rows
 before generation and distinguishes planned slots from actual model requests.
 A new source-bound plan is required for further execution. The selected-model
 v2 plan uses exactly the existing adapted Q4 artifact; it does not change the
-installed service or weights. Results are pending until that plan executes.
+installed service or weights.
+
+## Selected-model v2 results
+
+The corrected runner completed 70 actual requests and recorded two budget skips.
+FIM matched four of the 17 paired cases exactly, versus six for the untouched
+model. This small diagnostic does not establish equivalence or a general training
+regression. Selected-model FIM request latency was 2,169.4 ms median and
+27,291.0 ms p95 across 34 requests, with explicit native termination in all 34.
+Peak and retained RSS were 505,356,288 bytes. PSS was 324,715,520 bytes; the selected
+weight file also backs the existing resident editor service, so shared file pages
+lower PSS. This is not evidence that adaptation reduced predictor RAM. All actual
+requests reported backend cache_n zero.
+
+These results support investigating completion prompting, but they do not yet
+justify a useful-product claim. The current editor configuration remains intact.
 
 The useful-product objective remains open. No model is promoted by this report.

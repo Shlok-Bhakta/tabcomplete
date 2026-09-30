@@ -1,5 +1,9 @@
 {
   "actual_model_requests": 70,
+  "backend_prompt_processing_cache_n_observed": [
+    0
+  ],
+  "cache_evidence_note": "All70actual requests report server_timings.cache_n=0; final tokens_cached denotes retained state and is not evidence of reuse.",
   "historical_reporting_bug": {
     "actual_input_tokens": 3233,
     "actual_model_call": false,
@@ -170,5 +174,17 @@
   "predictions_sha256": "a9233c08e68818b196f41124b1a1c8fdf7aacb6db88df03e2292b873c839ace1",
   "publisher_prompt_reference": "https://github.com/QwenLM/Qwen3-Coder/blob/main/examples/Qwen2.5-Coder-fim.py",
   "schema": "q25-fim-line-diagnostic-v1-read-only-interpretation",
-  "summary_sha256": "af6657440944fad46306643b15cf30a786e3b87ed9f4d8a4358661ba628a0bc1"
+  "summary_sha256": "af6657440944fad46306643b15cf30a786e3b87ed9f4d8a4358661ba628a0bc1",
+  "telemetry": {
+    "MCP_verified": false,
+    "attempt_id": "attempt-188d919b-1c50-4b66-b29a-29ab3f46d623",
+    "failures_cli_state": "no_runs",
+    "imported_spans": 159,
+    "offline_bundle_sha256": "d3a0a7a87c7f32241bd7e3ab6ddcff1dcac94325e696df40831b08755098fd51",
+    "reporting_bug_in_error_spans": false,
+    "run_cli_first_page_only": true,
+    "run_cli_state": "ok",
+    "run_id": "run-c6fb7fd2bcc740acdfa610bee2053b30",
+    "scientific_results_authoritative": true
+  }
 }
