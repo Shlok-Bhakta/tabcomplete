@@ -198,6 +198,59 @@ def test_swap_delta_retains_page_units_and_negative_reset_evidence() -> None:
     ) == {"pswpin": -8}
 
 
+@pytest.mark.parametrize(("remaining", "expected_timeout"), [(1690.0, 120.0), (30.0, 30.0)])
+def test_control_request_uses_remaining_work_without_second_reserve(
+    monkeypatch: pytest.MonkeyPatch, remaining: float, expected_timeout: float
+) -> None:
+    prompt = "# Synthetic budget fixture\nreturn value"
+    calls: list[float] = []
+
+    class Native:
+        timeout_seconds = 1800.0
+        last: dict[str, object] = {}
+
+        def generate_detailed(self, text: str, cap: int) -> SimpleNamespace:
+            assert text == prompt and cap == 96
+            calls.append(self.timeout_seconds)
+            return SimpleNamespace(text="value", tokens=1)
+
+    server = SimpleNamespace(sample=lambda: None)
+    wrapper = sweep._CountingNative(Native(), [{
+        "prompt_sha256": sweep.digest_bytes(prompt.encode()),
+        "context_eligible": True, "case_id": "synthetic-budget", "input_tokens": 10,
+    }], server)
+    monkeypatch.setattr(sweep, "deadline_remaining", lambda: remaining)
+    assert wrapper.generate_detailed(prompt, 96).text == "value"
+    assert calls == [expected_timeout]
+
+
+@pytest.mark.parametrize("configured_timeout", [None, 7.5])
+def test_shared_native_transport_honors_timeout_and_preserves_legacy_default(
+    monkeypatch: pytest.MonkeyPatch, configured_timeout: float | None
+) -> None:
+    source = _SCRIPT.with_name("measure_r2_local.py")
+    spec = importlib.util.spec_from_file_location("native_budget_fixture", source)
+    assert spec is not None and spec.loader is not None
+    native_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(native_module)
+    observed: list[float] = []
+
+    @contextmanager
+    def stream(*args: object, **kwargs: object):
+        observed.append(float(kwargs["timeout"]))
+        yield SimpleNamespace(
+            raise_for_status=lambda: None,
+            iter_lines=lambda: iter(['data: {"stop":true,"stop_type":"eos","timings":{}}']),
+        )
+
+    monkeypatch.setattr(native_module.httpx, "stream", stream)
+    provider = native_module.NativeProvider("http://127.0.0.1:1", "synthetic-budget")
+    if configured_timeout is not None:
+        provider.timeout_seconds = configured_timeout
+    assert provider.generate_detailed("synthetic", 96).finish_reason == "eos"
+    assert observed == [1800.0 if configured_timeout is None else configured_timeout]
+
+
 def test_full_file_mapping_requires_unchanged_utf8_byte_range() -> None:
     current = "name = '雪'\nkeep = True\n"
     start = len(b"name = ")

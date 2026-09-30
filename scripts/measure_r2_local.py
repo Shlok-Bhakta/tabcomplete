@@ -114,6 +114,7 @@ class NativeProvider:
         self.cache = False
         self.stop_first_line = False
         self.last = {}
+        self.timeout_seconds = 1800.0
 
     def generate_line_detailed(self, prompt, max_new_tokens):
         self.stop_first_line = True
@@ -131,7 +132,7 @@ class NativeProvider:
         with httpx.stream(
             "POST",
             self.url + "/completion",
-            timeout=1800,
+            timeout=self.timeout_seconds,
             json={
                 "prompt": prompt,
                 "n_predict": max_new_tokens,

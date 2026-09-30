@@ -521,6 +521,9 @@ def freeze_plan(args: argparse.Namespace) -> None:
         "code": {
             "runner_sha256": digest_file(Path(__file__).resolve()),
             "test_sha256": digest_file(args.test_file) if args.test_file.exists() else None,
+            "native_provider_sha256": digest_file(
+                Path(__file__).resolve().with_name("measure_r2_local.py")
+            ),
             "python": "3.11",
             "no_model_generated_code_execution": True,
         },
@@ -603,6 +606,12 @@ def load_and_verify_plan(args: argparse.Namespace) -> dict[str, Any]:
     if "revision" not in plan:
         raise ValueError("Sweep plan predates required observability and strict-input checks")
     verify_file_identity(args.test_file, plan["code"]["test_sha256"], "runner test")
+    if "native_provider_sha256" in plan["code"]:
+        verify_file_identity(
+            Path(__file__).resolve().with_name("measure_r2_local.py"),
+            plan["code"]["native_provider_sha256"],
+            "native provider transport",
+        )
     verify_file_identity(
         args.strict_suite,
         plan["comparison"]["quality_controls"]["strict_causal"]["sha256"],
@@ -1324,10 +1333,9 @@ class _CountingNative:
         self.stop_first_line = False
 
     def _generate(self, prompt: str, max_new_tokens: int):
-        if deadline_remaining() <= 1800:
-            raise TimeoutError(
-                "not enough time remains for a bounded inference request and finalization"
-            )
+        # The worker deadline already excludes its finalization reserve. Bound
+        # this transport to the remaining work rather than reserving it twice.
+        self.native.timeout_seconds = min(120.0, deadline_remaining())
         prompt_hash = digest_bytes(prompt.encode())
         token_row = self.tokens.get(prompt_hash)
         if token_row is None or not token_row["context_eligible"]:

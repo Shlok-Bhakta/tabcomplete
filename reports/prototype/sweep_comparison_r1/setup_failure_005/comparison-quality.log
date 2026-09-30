@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1859, in <module>
+    main()
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1849, in main
+    run(args)
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1761, in run
+    _run_controls(args, plan, model, precision)
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1270, in _run_controls
+    predictions = generate_predictions(
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/temp/tabcomplete-sweep/src/tinycomplete/eval/code_generation.py", line 496, in generate_predictions
+    save(predict(case))
+         ^^^^^^^^^^^^^
+  File "/kaggle/temp/tabcomplete-sweep/src/tinycomplete/eval/code_generation.py", line 384, in predict
+    generation = detailed(prompt, max_new_tokens)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1353, in generate_detailed
+    return self._generate(prompt, max_new_tokens)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1328, in _generate
+    raise TimeoutError(
+TimeoutError: not enough time remains for a bounded inference request and finalization

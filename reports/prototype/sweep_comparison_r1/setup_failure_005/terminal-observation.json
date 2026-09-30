@@ -1,0 +1,9 @@
+{
+  "authenticated_status_verified": true,
+  "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5",
+  "observed_at": "2026-09-30T13:36:55.909207+00:00",
+  "query_source": "authenticated kaggle kernels status",
+  "schema": "sweep-kernel-terminal-observation-v1",
+  "status_response": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5 has status \"KernelWorkerStatus.ERROR\"",
+  "status_token": "KernelWorkerStatus.ERROR"
+}
