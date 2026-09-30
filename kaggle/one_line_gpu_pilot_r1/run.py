@@ -20,7 +20,7 @@ from typing import Any
 
 SESSION_LITERAL = "__SESSION_LITERAL__"
 SESSION = json.loads(SESSION_LITERAL)
-STARTED = time.monotonic()
+STARTED = float(os.environ.get("TABCOMPLETE_PILOT_STARTED_MONOTONIC", time.monotonic()))
 HARD_DEADLINE = STARTED + int(SESSION["session_seconds"])
 RESERVE_SECONDS = int(SESSION["reserve_seconds"])
 INPUT_ROOT = Path("/kaggle/input")
@@ -44,6 +44,52 @@ OPTIONAL_MODEL_FILES = {
     "generation_config.json",
     "special_tokens_map.json",
 }
+
+
+def _prepare_python311() -> None:
+    """Use an isolated uv environment without resetting the allocation deadline."""
+    runtime_root = Path("/kaggle/temp/tabcomplete-python311")
+    env = os.environ.copy()
+    env.update(
+        UV_CACHE_DIR=str(runtime_root / "cache"),
+        UV_PYTHON_INSTALL_DIR=str(runtime_root / "python"),
+    )
+    stage(
+        [sys.executable, "-m", "pip", "install", "--no-input", "-q", "uv==0.12.3"],
+        "setup-uv",
+        timeout=120,
+    )
+    uv = [sys.executable, "-m", "uv"]
+    python = runtime_root / "venv/bin/python"
+    stage(
+        uv + ["venv", "--python", "3.11.15", str(runtime_root / "venv")],
+        "setup-python311",
+        timeout=180,
+        env=env,
+    )
+    stage(
+        uv
+        + [
+            "pip",
+            "install",
+            "--python",
+            str(python),
+            "torch==2.10.0",
+            "transformers==5.17.0",
+            "bitsandbytes==0.50.2",
+            "PyYAML==6.0.2",
+            "tree-sitter-language-pack==1.20.0",
+            "opentelemetry-api==1.44.0",
+            "opentelemetry-sdk==1.44.0",
+            "opentelemetry-exporter-otlp-proto-http==1.44.0",
+        ],
+        "setup-python311-packages",
+        timeout=20 * 60,
+        env=env,
+    )
+    env["TABCOMPLETE_PILOT_STARTED_MONOTONIC"] = str(STARTED)
+    env["TABCOMPLETE_PILOT_PYTHON311_READY"] = "1"
+    os.execve(str(python), [str(python), str(Path(__file__).resolve())], env)
 
 
 def sha(path: Path) -> str:
@@ -138,6 +184,23 @@ def stage(
 
 
 def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
+    data_schema = SESSION.get("data_schema", "one-line-instinct-pilot-v1")
+    if data_schema == "one-line-instinct-pilot-v1":
+        source_dataset = "continuedev/instinct-data"
+        plan_schema = "one-line-instinct-pilot-plan-v1"
+        file_license_status = "unverified"
+    elif data_schema == "one-line-constructive-pilot-v1":
+        source_dataset = "synthetic/tabcomplete-constructive-r1"
+        plan_schema = "one-line-constructive-pilot-plan-v1"
+        file_license_status = "own_synthetic_source"
+        if SESSION.get("dataset_license") != "MIT":
+            raise ValueError("constructive pilot source license mismatch")
+    else:
+        raise ValueError("unapproved bounded-pilot data schema")
+    if SESSION.get("source_dataset_id", source_dataset) != source_dataset:
+        raise ValueError("pilot source dataset mismatch")
+    if SESSION.get("plan_schema", plan_schema) != plan_schema:
+        raise ValueError("pilot source plan schema mismatch")
     matches: list[Path] = []
     for candidate in INPUT_ROOT.rglob("input-manifest.json"):
         if sha(candidate) == SESSION["input_manifest_sha256"]:
@@ -157,8 +220,11 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     if not isinstance(files, dict):
         raise ValueError("input manifest has no file identities")
     names = set(files)
-    expected_names = REQUIRED_INPUTS | OPTIONAL_MODEL_FILES
-    if not REQUIRED_INPUTS <= names or not names <= expected_names:
+    required_names = REQUIRED_INPUTS
+    if data_schema == "one-line-constructive-pilot-v1":
+        required_names = required_names | {"independent_review.json"}
+    expected_names = required_names | OPTIONAL_MODEL_FILES
+    if not required_names <= names or not names <= expected_names:
         raise ValueError("input package contains missing or unapproved files")
     for candidate in manifest_path.parent.rglob("*"):
         if (
@@ -184,13 +250,13 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
             raise ValueError("attached input file hash or size mismatch")
     data_manifest = load(manifest_path.parent / "data_manifest.json")
     plan = load(manifest_path.parent / "plan.json")
-    if data_manifest.get("schema") != "one-line-instinct-pilot-v1":
+    if data_manifest.get("schema") != data_schema:
         raise ValueError("training data manifest schema mismatch")
     if (
-        data_manifest.get("dataset_id") != "continuedev/instinct-data"
+        data_manifest.get("dataset_id") != source_dataset
         or data_manifest.get("dataset_revision") != SESSION["dataset_revision"]
         or data_manifest.get("dataset_license") != SESSION["dataset_license"]
-        or data_manifest.get("source_file_license_status") != "unverified"
+        or data_manifest.get("source_file_license_status") != file_license_status
         or data_manifest.get("train_count") != SESSION["train_count"]
         or data_manifest.get("dev_count") != SESSION["development_count"]
         or data_manifest.get("file_groups_disjoint") is not True
@@ -207,7 +273,7 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     training = plan.get("training", {})
     budgets = plan.get("budgets", {})
     if (
-        plan.get("schema") != "one-line-instinct-pilot-plan-v1"
+        plan.get("schema") != plan_schema
         or plan.get("branch") != SESSION["branch"]
         or plan.get("base_commit") != SESSION["base_commit"]
         or plan.get("suite_revision") != 3
@@ -217,10 +283,10 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or student.get("weight_sha256") != SESSION["model_weight_sha256"]
         or student.get("tokenizer_sha256") != SESSION["tokenizer_sha256"]
         or student.get("config_sha256") != SESSION["model_config_sha256"]
-        or data_plan.get("dataset_id") != "continuedev/instinct-data"
+        or data_plan.get("dataset_id") != source_dataset
         or data_plan.get("dataset_revision") != SESSION["dataset_revision"]
         or data_plan.get("dataset_license") != SESSION["dataset_license"]
-        or data_plan.get("source_file_license_status") != "unverified"
+        or data_plan.get("source_file_license_status") != file_license_status
         or data_plan.get("train_count") != SESSION["train_count"]
         or data_plan.get("dev_count") != SESSION["development_count"]
         or data_plan.get("file_groups_disjoint") is not True
@@ -235,6 +301,20 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("frozen pilot plan violates the model, data, or budget contract")
+    if data_schema == "one-line-constructive-pilot-v1":
+        prior_tokens = budgets.get("prior_training_input_tokens")
+        prior_seconds = budgets.get("prior_session_wall_seconds")
+        if (
+            type(prior_tokens) is not int
+            or type(prior_seconds) is not int
+            or prior_tokens < 0
+            or prior_seconds < 0
+            or prior_tokens != SESSION.get("prior_training_input_tokens")
+            or prior_seconds != SESSION.get("prior_session_wall_seconds")
+            or prior_tokens + training["planned_nonpadding_input_tokens"] > 100_000_000
+            or prior_seconds + SESSION["session_seconds"] > 24 * 3600
+        ):
+            raise ValueError("constructive worker aggregate campaign accounting mismatch")
     if sha(manifest_path.parent / "train.jsonl") != SESSION["train_sha256"]:
         raise ValueError("training shard differs from the frozen session")
     if sha(manifest_path.parent / "development.jsonl") != SESSION["development_sha256"]:
@@ -261,6 +341,36 @@ def _verify_model(directory: Path) -> None:
         raise ValueError("untouched q25 model weight hash mismatch")
     if sha(directory / "tokenizer.json") != SESSION["tokenizer_sha256"]:
         raise ValueError("pinned q25 tokenizer hash mismatch")
+
+
+def _verify_reviewed_inputs(directory: Path) -> None:
+    if SESSION.get("data_schema") != "one-line-constructive-pilot-v1":
+        return
+    sys.path.insert(0, str(REPO / "src"))
+    from tinycomplete.one_line.contract import EditAction, EditState, apply_action
+    from tinycomplete.one_line.pilot_data import (
+        CONSTRUCTIVE,
+        validate_constructive_manifest,
+        validate_constructive_review,
+        validate_constructive_splits,
+        validate_pilot_row,
+    )
+
+    manifest = load(directory / "data_manifest.json")
+    rows = [
+        json.loads(line)
+        for filename in ("train.jsonl", "development.jsonl")
+        for line in (directory / filename).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    validate_constructive_manifest(manifest)
+    for row in rows:
+        validate_pilot_row(row, CONSTRUCTIVE)
+        state = EditState.from_mapping(row["state"])
+        if apply_action(state, EditAction(**row["action"])) != row["after_source"]:
+            raise ValueError("constructive worker action does not reconstruct its after-state")
+    validate_constructive_splits(rows)
+    validate_constructive_review(manifest, rows, directory / "independent_review.json")
 
 
 def _clone_frozen_commit() -> None:
@@ -291,13 +401,19 @@ def _clone_frozen_commit() -> None:
     )
     if ancestry.returncode:
         raise ValueError("pilot commit does not descend from its frozen base")
-    if sha(REPO / "reports/research/one_line_gpu_pilot_r1/plan.json") != SESSION["plan_sha256"]:
+    repository_plan = "reports/research/one_line_gpu_pilot_r1/plan.json"
+    if SESSION.get("data_schema") == "one-line-constructive-pilot-v1":
+        repository_plan = "reports/prototype/product_r2/constructive_pilot_plan.json"
+    if sha(REPO / repository_plan) != SESSION["plan_sha256"]:
         raise ValueError("pushed pilot plan does not match the attached frozen plan")
     if sha(REPO / "configs/research/one_line_r1.yaml") != SESSION["config_sha256"]:
         raise ValueError("pushed training config differs from the attached frozen config")
 
 
 def _check_t4_and_logits_support() -> dict[str, str]:
+    if SESSION.get("data_schema") == "one-line-constructive-pilot-v1":
+        if sys.version_info[:2] != (3, 11):
+            raise RuntimeError("constructive pilot requires Python 3.11")
     import torch
     from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
     from transformers.models.qwen2.modeling_qwen2 import Qwen2ForCausalLM
@@ -329,7 +445,12 @@ def _check_t4_and_logits_support() -> dict[str, str]:
         raise RuntimeError("Qwen2 selected-logit compatibility smoke returned an invalid shape")
     del result, smoke
     torch.cuda.empty_cache()
-    return {"device": device_name, "torch": str(torch.__version__)}
+    return {
+        "device": device_name,
+        "torch": str(torch.__version__),
+        "python": sys.version.split()[0],
+        "python_executable": sys.executable,
+    }
 
 
 def _offline_environment() -> dict[str, str]:
@@ -462,7 +583,8 @@ def _verify_evaluation(path: Path, *, model_sha: str, tokenizer_sha: str) -> dic
 
 
 def main() -> int:
-    OUT.mkdir(parents=True, exist_ok=False)
+    resumed_setup = os.environ.get("TABCOMPLETE_PILOT_PYTHON311_READY") == "1"
+    OUT.mkdir(parents=True, exist_ok=resumed_setup)
     status: dict[str, Any] = {
         "schema": "one-line-instinct-pilot-worker-status-v1",
         "state": "starting",
@@ -482,7 +604,10 @@ def main() -> int:
         "epochs": 1,
         "stages": [],
     }
-    save(OUT / "worker-status.json", status)
+    if resumed_setup:
+        status = load(OUT / "worker-status.json")
+    else:
+        save(OUT / "worker-status.json", status)
     os.environ.update(
         {
             "HF_HUB_OFFLINE": "1",
@@ -497,23 +622,27 @@ def main() -> int:
         status["input_file_count"] = len(input_manifest["files"])
         save(OUT / "worker-status.json", status)
 
-        stage(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--no-input",
-                "-q",
-                "transformers==5.17.0",
-                "bitsandbytes==0.50.2",
-                "PyYAML==6.0.2",
-                "tree-sitter-language-pack==1.20.0",
-            ],
-            "setup",
-            timeout=8 * 60,
-        )
+        if SESSION.get("data_schema") == "one-line-constructive-pilot-v1" and not resumed_setup:
+            _prepare_python311()
+        if not resumed_setup:
+            stage(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-input",
+                    "-q",
+                    "transformers==5.17.0",
+                    "bitsandbytes==0.50.2",
+                    "PyYAML==6.0.2",
+                    "tree-sitter-language-pack==1.20.0",
+                ],
+                "setup",
+                timeout=8 * 60,
+            )
         _clone_frozen_commit()
+        _verify_reviewed_inputs(dataset)
         status = load(OUT / "worker-status.json")
         env = _offline_environment()
         runtime = _check_t4_and_logits_support()
@@ -560,6 +689,8 @@ def main() -> int:
             SESSION["train_sha256"],
             "--data-manifest",
             str(dataset / "data_manifest.json"),
+            "--development-data",
+            str(dataset / "development.jsonl"),
             "--phase",
             "pilot",
             "--epochs",
@@ -572,6 +703,8 @@ def main() -> int:
             str(RESERVE_SECONDS / 60),
             "--checkpoint-every-updates",
             "25",
+            "--external-campaign-tokens",
+            str(SESSION.get("prior_training_input_tokens", 0)),
             "--execute",
         ]
         stage(

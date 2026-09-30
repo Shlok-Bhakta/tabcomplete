@@ -22,6 +22,16 @@ import yaml
 
 from tinycomplete.one_line.context import CONTEXT_POLICY_VERSION
 from tinycomplete.one_line.contract import EditAction, EditState, apply_action
+from tinycomplete.one_line.pilot_data import (
+    CONSTRUCTIVE,
+    INSTINCT,
+    policy_for_schema,
+    validate_aggregate_budget,
+    validate_constructive_manifest,
+    validate_constructive_review,
+    validate_constructive_splits,
+    validate_pilot_row,
+)
 from tinycomplete.one_line.train import (
     CosineUpdateSchedule,
     EncodedExample,
@@ -109,18 +119,26 @@ def verify_artifacts(model_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_training_rows(
-    path: Path, expected_sha256: str, *, phase: str, minimum_main_train: int
+    path: Path,
+    expected_sha256: str,
+    *,
+    phase: str,
+    minimum_main_train: int,
+    pilot_schema: str = INSTINCT.data_schema,
+    expected_split: str = "train",
 ) -> list[dict[str, Any]]:
     if sha256_file(path) != expected_sha256:
         raise ValueError("training JSONL hash mismatch")
     rows: list[dict[str, Any]] = []
     ids: set[str] = set()
+    if expected_split != "train" and not (phase == "pilot" and expected_split == "development"):
+        raise ValueError("only pilot validation can read a nontraining shard")
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             if not line.strip():
                 continue
             row = json.loads(line)
-            if row.get("split", "train") != "train":
+            if row.get("split", "train") != expected_split:
                 raise ValueError("nontraining split entered the training shard")
             if row.get("source_type", "").startswith("opencode"):
                 raise ValueError("OpenCode output cannot be used as a student label")
@@ -136,11 +154,8 @@ def load_training_rows(
                 raise ValueError("training action does not reconstruct its after-state")
             if phase == "main" and not row.get("validation", {}).get("inferability_reviewed"):
                 raise ValueError("main training requires inferability-reviewed states")
-            if phase == "pilot" and (
-                row.get("source_type") != "continue_instinct_observed"
-                or not row.get("validation", {}).get("replay_verified")
-            ):
-                raise ValueError("pilot requires replay-verified Continue edit rows")
+            if phase == "pilot":
+                validate_pilot_row(row, policy_for_schema(pilot_schema))
             rows.append(row)
     if phase == "main" and len(rows) < minimum_main_train:
         raise ValueError("main training has fewer than 20,000 accepted states")
@@ -148,8 +163,10 @@ def load_training_rows(
         raise ValueError("LR probes require the same first 2,048 accepted states")
     if phase == "fixture" and len(rows) < 64:
         raise ValueError("disposable fixture requires 64 states")
-    if phase == "pilot" and not 128 <= len(rows) <= 1024:
+    if phase == "pilot" and expected_split == "train" and not 128 <= len(rows) <= 1024:
         raise ValueError("pilot requires 128 to 1,024 distinct edit states")
+    if phase == "pilot" and expected_split == "development" and len(rows) < 64:
+        raise ValueError("pilot requires at least 64 development states")
     return rows
 
 
@@ -254,6 +271,7 @@ def main() -> None:
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--data-sha256", required=True)
     parser.add_argument("--data-manifest", type=Path)
+    parser.add_argument("--development-data", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument(
         "--phase", choices=("fixture", "probe_1e-5", "probe_3e-5", "pilot", "main"), required=True
@@ -287,8 +305,9 @@ def main() -> None:
     if args.external_campaign_tokens < 0:
         raise ValueError("invalid prior campaign token count")
     if args.phase == "pilot":
+        pilot_policy = policy_for_schema(plan.get("data", {}).get("schema"))
         if (
-            plan.get("schema") != "one-line-instinct-pilot-plan-v1"
+            plan.get("schema") != pilot_policy.plan_schema
             or plan.get("training", {}).get("phase") != "pilot"
             or plan.get("training", {}).get("epochs") != 1
             or plan.get("training", {}).get("peak_learning_rate") != 1e-5
@@ -302,6 +321,13 @@ def main() -> None:
             or args.reserve_minutes < 20
         ):
             raise ValueError("pilot plan or session budget differs from the frozen contract")
+        if pilot_policy is CONSTRUCTIVE:
+            validate_aggregate_budget(
+                plan["budgets"],
+                planned_tokens=plan["training"]["planned_nonpadding_input_tokens"],
+                session_seconds=plan["budgets"]["max_session_seconds"],
+                external_campaign_tokens=args.external_campaign_tokens,
+            )
     source_identity = verify_artifacts(args.model, config)
     if sha256_file(args.config) != plan["config_sha256"]:
         raise ValueError("frozen configuration hash mismatch")
@@ -310,6 +336,7 @@ def main() -> None:
         args.data_sha256,
         phase=args.phase,
         minimum_main_train=config["data"]["minimum_main_train"],
+        pilot_schema=plan.get("data", {}).get("schema", INSTINCT.data_schema),
     )
     if args.phase in ("main", "pilot"):
         if args.data_manifest is None:
@@ -323,7 +350,7 @@ def main() -> None:
             ):
                 raise ValueError("main data diversity/split manifest gate failed")
         elif (
-            data_manifest.get("schema") != "one-line-instinct-pilot-v1"
+            data_manifest.get("schema") != pilot_policy.data_schema
             or data_manifest.get("train_sha256") != args.data_sha256
             or data_manifest.get("train_count") != len(rows)
             or data_manifest.get("dev_count", 0) < 64
@@ -332,6 +359,28 @@ def main() -> None:
             or plan.get("data", {}).get("manifest_sha256") != sha256_file(args.data_manifest)
         ):
             raise ValueError("pilot data manifest gate failed")
+        if args.phase == "pilot" and pilot_policy is CONSTRUCTIVE:
+            validate_constructive_manifest(data_manifest)
+            if args.development_data is None:
+                raise ValueError("constructive pilot needs the frozen development shard")
+            development = load_training_rows(
+                args.development_data,
+                plan["data"]["development_sha256"],
+                phase="pilot",
+                minimum_main_train=config["data"]["minimum_main_train"],
+                pilot_schema=pilot_policy.data_schema,
+                expected_split="development",
+            )
+            if data_manifest.get("development_sha256") != plan["data"][
+                "development_sha256"
+            ] or data_manifest.get("dev_count") != len(development):
+                raise ValueError("constructive development shard differs from frozen manifest")
+            validate_constructive_splits([*rows, *development])
+            validate_constructive_review(
+                data_manifest,
+                [*rows, *development],
+                args.data_manifest.parent / "independent_review.json",
+            )
     chosen_rows = phase_rows(rows, args.phase)
     peak_lr = peak_learning_rate(args.phase, args.selection)
     output_cap = config["budget"]["maximum_new_persistent_local_research_bytes"]

@@ -26,6 +26,17 @@ from typing import Any
 
 import yaml
 
+from tinycomplete.one_line.pilot_data import (
+    CONSTRUCTIVE,
+    INSTINCT,
+    policy_for_schema,
+    validate_aggregate_budget,
+    validate_constructive_manifest,
+    validate_constructive_review,
+    validate_constructive_splits,
+    validate_pilot_row,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 REPORT = ROOT / "reports/research/one_line_gpu_pilot_r1"
 ARTIFACT_ROOT = ROOT / "artifacts/research/one_line_gpu_pilot_r1"
@@ -116,9 +127,10 @@ def live_quota() -> dict[str, Any]:
 
 
 def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
-    if plan.get("schema") != PLAN_SCHEMA or plan.get("suite_revision") != 3:
+    policy = policy_for_schema(plan.get("data", {}).get("schema"))
+    if plan.get("schema") != policy.plan_schema or plan.get("suite_revision") != 3:
         raise ValueError("pilot plan schema or suite revision mismatch")
-    if plan.get("branch") != "research/one-line-gpu-pilot-r1":
+    if plan.get("branch") != policy.branch:
         raise ValueError("pilot plan branch mismatch")
     if (
         not isinstance(plan.get("base_commit"), str)
@@ -148,10 +160,10 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
 
     data = plan.get("data", {})
     if (
-        data.get("schema") != DATA_SCHEMA
-        or data.get("dataset_id") != "continuedev/instinct-data"
-        or data.get("dataset_license") != "Apache-2.0"
-        or data.get("source_file_license_status") != "unverified"
+        data.get("schema") != policy.data_schema
+        or data.get("dataset_id") != policy.dataset_id
+        or data.get("dataset_license") != policy.dataset_license
+        or data.get("source_file_license_status") != policy.file_license_status
         or not isinstance(data.get("dataset_revision"), str)
         or not data["dataset_revision"]
         or data.get("file_groups_disjoint") is not True
@@ -182,6 +194,12 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("pilot budget contract differs from the fixed campaign limits")
+    if policy is CONSTRUCTIVE:
+        validate_aggregate_budget(
+            budgets,
+            planned_tokens=training["planned_nonpadding_input_tokens"],
+            session_seconds=SESSION_SECONDS,
+        )
     frozen_quota = plan.get("quota_at_freeze", {})
     if (
         not frozen_quota.get("observed_at")
@@ -296,7 +314,13 @@ def _git_identity(branch: str, base_commit: str, *, require_remote: bool = True)
     return branch, commit
 
 
-def _rows(path: Path, *, expected_split: str, source_type: str) -> list[dict[str, Any]]:
+def _rows(
+    path: Path,
+    *,
+    expected_split: str,
+    source_type: str,
+    data_schema: str = INSTINCT.data_schema,
+) -> list[dict[str, Any]]:
     from tinycomplete.one_line.contract import EditAction, EditState, apply_action  # noqa: PLC0415
 
     rows: list[dict[str, Any]] = []
@@ -314,6 +338,7 @@ def _rows(path: Path, *, expected_split: str, source_type: str) -> list[dict[str
                 raise ValueError("pilot row lacks its declared dataset license field")
             if row.get("validation", {}).get("replay_verified") is not True:
                 raise ValueError("pilot row is not replay-verified")
+            validate_pilot_row(row, policy_for_schema(data_schema))
             identifier = row.get("id")
             if not isinstance(identifier, str) or not identifier or identifier in ids:
                 raise ValueError("pilot IDs must be unique nonempty strings")
@@ -328,7 +353,11 @@ def _rows(path: Path, *, expected_split: str, source_type: str) -> list[dict[str
 
 def _file_group(row: dict[str, Any]) -> str:
     state = row.get("state", {})
-    group = row.get("file_group_id") or row.get("provenance", {}).get("file_group_id")
+    group = (
+        row.get("source_group_id")
+        or row.get("file_group_id")
+        or row.get("provenance", {}).get("file_group_id")
+    )
     if not group:
         group = state.get("file_id")
     if not isinstance(group, str) or not group:
@@ -346,6 +375,7 @@ def validate_inputs(
     manifest_path: Path,
 ) -> dict[str, Any]:
     plan = read_json(plan_path)
+    policy = policy_for_schema(plan.get("data", {}).get("schema"))
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     _validate_plan(plan, config)
     if sha256_file(config_path) != plan["config_sha256"]:
@@ -367,11 +397,11 @@ def validate_inputs(
         raise ValueError("pilot data-manifest hash mismatch")
     manifest = read_json(manifest_path)
     if (
-        manifest.get("schema") != DATA_SCHEMA
+        manifest.get("schema") != policy.data_schema
         or manifest.get("dataset_id") != data_plan["dataset_id"]
         or manifest.get("dataset_revision") != data_plan["dataset_revision"]
         or manifest.get("dataset_license") != data_plan["dataset_license"]
-        or manifest.get("source_file_license_status") != "unverified"
+        or manifest.get("source_file_license_status") != policy.file_license_status
         or manifest.get("train_sha256") != data_plan["train_sha256"]
         or manifest.get("development_sha256") != data_plan["development_sha256"]
         or manifest.get("train_count") != data_plan["train_count"]
@@ -383,11 +413,17 @@ def validate_inputs(
         raise ValueError("pilot training shard hash mismatch")
     if sha256_file(development_path) != data_plan["development_sha256"]:
         raise ValueError("pilot development shard hash mismatch")
-    train_rows = _rows(train_path, expected_split="train", source_type="continue_instinct_observed")
+    train_rows = _rows(
+        train_path,
+        expected_split="train",
+        source_type=policy.source_type,
+        data_schema=policy.data_schema,
+    )
     dev_rows = _rows(
         development_path,
         expected_split="development",
-        source_type="continue_instinct_observed",
+        source_type=policy.source_type,
+        data_schema=policy.data_schema,
     )
     if not MIN_TRAIN_ROWS <= len(train_rows) <= MAX_TRAIN_ROWS:
         raise ValueError("pilot training row count is outside 128..1024")
@@ -399,6 +435,14 @@ def validate_inputs(
     dev_groups = {_file_group(row) for row in dev_rows}
     if train_groups & dev_groups:
         raise ValueError("pilot train and development file groups overlap")
+    if policy == CONSTRUCTIVE:
+        # Recompute provenance and normalized-template isolation, rather than
+        # trusting only the generator's manifest boolean.
+        validate_constructive_splits([*train_rows, *dev_rows])
+        validate_constructive_manifest(manifest)
+        validate_constructive_review(
+            manifest, [*train_rows, *dev_rows], manifest_path.parent / "independent_review.json"
+        )
     return {
         "plan": plan,
         "config": config,
@@ -421,10 +465,13 @@ def inspect_training(
     plan_path: Path,
     model_dir: Path,
     train_path: Path,
+    development_path: Path,
     manifest_path: Path,
     output_parent: Path,
 ) -> dict[str, Any]:
     """Invoke the existing trainer's CPU-only inspection path and return its counts."""
+    plan = read_json(plan_path)
+    policy = policy_for_schema(plan.get("data", {}).get("schema"))
     with tempfile.TemporaryDirectory(prefix="tabcomplete-pilot-inspect-") as temporary:
         output = Path(temporary) / "inspect-only-output"
         environment = os.environ.copy()
@@ -448,6 +495,8 @@ def inspect_training(
             sha256_file(train_path),
             "--data-manifest",
             str(manifest_path),
+            "--development-data",
+            str(development_path),
             "--phase",
             "pilot",
             "--epochs",
@@ -458,6 +507,8 @@ def inspect_training(
             "120",
             "--reserve-minutes",
             "20",
+            "--external-campaign-tokens",
+            str(plan["budgets"].get("prior_training_input_tokens", 0)),
         ]
         result = subprocess.run(
             command,
@@ -479,7 +530,12 @@ def inspect_training(
         if (
             summary.get("examples")
             != len(
-                _rows(train_path, expected_split="train", source_type="continue_instinct_observed")
+                _rows(
+                    train_path,
+                    expected_split="train",
+                    source_type=policy.source_type,
+                    data_schema=policy.data_schema,
+                )
             )
             or summary.get("identity", {}).get("phase") != "pilot"
             or summary.get("identity", {}).get("source", {}).get("model_weight_sha256")
@@ -533,6 +589,7 @@ def prepare_bundle(
         manifest_path=manifest_path,
     )
     plan = checked["plan"]
+    policy = policy_for_schema(plan["data"]["schema"])
     if quota is None:
         quota = quota_reader()
     _check_live_quota(plan, quota)
@@ -541,6 +598,10 @@ def prepare_bundle(
         raise ValueError("bundle branch differs from the frozen plan")
     if not HEX_SHA1.fullmatch(identity[1]):
         raise ValueError("bundle Git commit is invalid")
+    if git_identity is None and sha256_file(ROOT / policy.repository_plan_path) != checked[
+        "plan_sha256"
+    ]:
+        raise ValueError("committed pilot plan differs from the selected staged plan")
 
     if inspection is None:
         inspection = inspect_training(
@@ -548,6 +609,7 @@ def prepare_bundle(
             plan_path=plan_path,
             model_dir=model_dir,
             train_path=train_path,
+            development_path=development_path,
             manifest_path=manifest_path,
             output_parent=output.parent,
         )
@@ -582,6 +644,9 @@ def prepare_bundle(
         path.stat().st_size
         for path in (train_path, development_path, manifest_path, config_path, plan_path)
     )
+    review_path = manifest_path.parent / "independent_review.json"
+    if policy is CONSTRUCTIVE:
+        projected += review_path.stat().st_size
     if projected > MAX_NEW_STORAGE_BYTES:
         raise ValueError("pilot bundle exceeds the 12 GiB campaign artifact limit")
     output_parent = output.parent
@@ -589,7 +654,8 @@ def prepare_bundle(
         output_parent = output_parent.parent
     if shutil.disk_usage(output_parent).free < projected + 2 * 1024**3:
         raise OSError("insufficient free space plus 2 GiB headroom for the pilot bundle")
-    existing_campaign_bytes = _directory_bytes(ARTIFACT_ROOT)
+    artifact_root = ARTIFACT_ROOT if policy == INSTINCT else Path("/mnt/ssd/tabcomplete-product-r2")
+    existing_campaign_bytes = _directory_bytes(artifact_root)
     if existing_campaign_bytes + projected > MAX_NEW_STORAGE_BYTES:
         raise ValueError("pilot campaign artifacts would exceed the 12 GiB storage limit")
 
@@ -614,6 +680,10 @@ def prepare_bundle(
         ("plan.json", plan_path),
     ):
         files[name] = _stage_file(source, dataset_dir / name)
+    if policy is CONSTRUCTIVE:
+        files["independent_review.json"] = _stage_file(
+            review_path, dataset_dir / "independent_review.json"
+        )
     input_manifest = {
         "schema": INPUT_SCHEMA,
         "plan_sha256": checked["plan_sha256"],
@@ -626,18 +696,22 @@ def prepare_bundle(
     write_json(
         dataset_dir / "dataset-metadata.json",
         {
-            "title": "TabComplete Instinct One-Line Pilot R1 (Private)",
+            "title": f"TabComplete {policy.data_schema} (Private)",
             "id": dataset_id,
             "licenses": [{"name": "other"}],
             "description": (
-                "Private, bounded research input. Dataset metadata identifies Apache-2.0. "
-                "The license of individual source files is unverified; this private package "
-                "does not grant or assert source-file rights. Do not make public."
+                "Private, bounded research input. Qwen2.5-Coder weights: Apache-2.0. "
+                f"Dataset metadata license: {policy.dataset_license}. "
+                f"Source-file status: {policy.file_license_status}. "
+                "This package does not grant source-file rights. Do not make public."
             ),
         },
     )
     session = {
         "schema": "one-line-instinct-pilot-session-v1",
+        "data_schema": policy.data_schema,
+        "plan_schema": policy.plan_schema,
+        "source_dataset_id": policy.dataset_id,
         "branch": identity[0],
         "commit": identity[1],
         "base_commit": plan["base_commit"],
@@ -662,6 +736,8 @@ def prepare_bundle(
         "session_seconds": SESSION_SECONDS,
         "reserve_seconds": RESERVE_SECONDS,
         "maximum_training_tokens": MAX_TRAINING_TOKENS,
+        "prior_training_input_tokens": plan["budgets"].get("prior_training_input_tokens", 0),
+        "prior_session_wall_seconds": plan["budgets"].get("prior_session_wall_seconds", 0),
         "planned_training_tokens": actual_tokens,
         "epochs": 1,
         "phase": "pilot",
@@ -704,7 +780,7 @@ def prepare_bundle(
         "development_examples": len(checked["development_rows"]),
         "model_weight_sha256": checked["model_weight_sha256"],
         "tokenizer_sha256": checked["tokenizer_sha256"],
-        "source_file_license_status": "unverified",
+        "source_file_license_status": policy.file_license_status,
         "quota_at_prepare": quota,
         "projected_input_bytes": projected,
         "submission_commands": [

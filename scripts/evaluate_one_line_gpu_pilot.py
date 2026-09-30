@@ -1,7 +1,8 @@
 """Evaluate a frozen pilot development shard with exact compact-action decoding.
 
-This is an edit-required, file-heldout diagnostic. Exact target agreement is
-reported separately from functional correctness, which these rows cannot prove.
+Edit-required and no-edit denominators remain separate. Exact target agreement
+is not a functional oracle; independently checked synthetic behavior is evaluated
+separately after retrieving the predictions.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import json
 import os
 import time
 from collections import Counter
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +38,31 @@ def sha256_file(path: Path) -> str:
 def resident_bytes() -> int:
     pages = int(Path("/proc/self/statm").read_text().split()[1])
     return pages * os.sysconf("SC_PAGE_SIZE")
+
+
+def action_outcome_counts(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    edit = [row for row in observations if row["gold_action"] != "keep"]
+    keep = [row for row in observations if row["gold_action"] == "keep"]
+    return {
+        "edit_required_cases": len(edit),
+        "edit_required_exact": sum(bool(row["exact_after"]) for row in edit),
+        "edit_required_predicted_keep": sum(row["predicted_action"] == "keep" for row in edit),
+        "no_edit_cases": len(keep),
+        "no_edit_recalled": sum(row["predicted_action"] == "keep" for row in keep),
+        "no_edit_false_positive_changes": sum(row.get("source_changed") is True for row in keep),
+        "no_edit_invalid": sum(not row["valid_action"] for row in keep),
+        "gold_action_breakdown": {
+            kind: {
+                "cases": sum(row["gold_action"] == kind for row in observations),
+                "exact": sum(
+                    row["gold_action"] == kind and bool(row["exact_after"]) for row in observations
+                ),
+            }
+            for kind in ("keep", "replace_line", "insert_before", "delete_line")
+        },
+        "functional_success": None,
+        "functional_status": "requires independent objective evaluation",
+    }
 
 
 def load_rows(path: Path, expected_sha: str) -> list[dict[str, Any]]:
@@ -124,10 +151,25 @@ def evaluate(
         observations.append(
             {
                 "id": row["id"],
+                "state_sha256": hashlib.sha256(
+                    json.dumps(row["state"], sort_keys=True, ensure_ascii=False).encode("utf-8")
+                ).hexdigest(),
+                "source_sha256": hashlib.sha256(state.source.encode("utf-8")).hexdigest(),
+                "context_sha256": hashlib.sha256(context.text.encode("utf-8")).hexdigest(),
                 "gold_action": row["action"]["kind"],
-                "predicted_action": decoded.action.kind if after is not None else None,
+                "predicted_action": (
+                    decoded.action.kind
+                    if after is not None and decoded.action is not None
+                    else None
+                ),
                 "valid_action": after is not None,
                 "exact_after": after == row["after_source"] if after is not None else False,
+                "source_changed": after != state.source if after is not None else None,
+                "canonical_action": (
+                    asdict(decoded.action)
+                    if after is not None and decoded.action is not None
+                    else None
+                ),
                 "terminated_by_eos": terminated,
                 "generated_tokens": len(generated),
                 "input_tokens": context.input_tokens,
@@ -157,6 +199,7 @@ def evaluate(
         "retained_cuda_allocated_bytes": torch.cuda.memory_allocated(0),
         "retained_process_rss_bytes": resident_bytes(),
         "observations": observations,
+        "task_outcomes": action_outcome_counts(observations),
     }
     if calibration_fixture is not None and calibration_manifest is not None:
         cases = load_calibration_cases(calibration_fixture, calibration_manifest)

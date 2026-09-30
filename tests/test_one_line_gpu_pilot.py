@@ -104,6 +104,34 @@ def test_frozen_plan_requires_exact_untouched_model_and_pilot_budget() -> None:
         builder._validate_plan(licensed_claim, config)
 
 
+def test_constructive_plan_enforces_prior_campaign_exposure() -> None:
+    plan, config = _valid_plan()
+    policy = builder.CONSTRUCTIVE
+    plan.update(schema=policy.plan_schema, branch=policy.branch)
+    plan["data"].update(
+        schema=policy.data_schema,
+        dataset_id=policy.dataset_id,
+        dataset_license=policy.dataset_license,
+        source_file_license_status=policy.file_license_status,
+    )
+    with pytest.raises(ValueError, match="aggregate campaign"):
+        builder._validate_plan(plan, config)
+    plan["budgets"].update(
+        prior_training_input_tokens=538_275,
+        prior_session_wall_seconds=14_400,
+    )
+    builder._validate_plan(plan, config)
+    for key, value in (
+        ("prior_training_input_tokens", 99_000_001),
+        ("prior_session_wall_seconds", 24 * 3600),
+        ("prior_training_input_tokens", True),
+    ):
+        invalid = json.loads(json.dumps(plan))
+        invalid["budgets"][key] = value
+        with pytest.raises(ValueError, match="aggregate campaign"):
+            builder._validate_plan(invalid, config)
+
+
 def test_quota_gate_requires_live_remaining_and_no_active_job() -> None:
     plan, _ = _valid_plan()
     good = {
@@ -160,6 +188,52 @@ def _worker_module(tmp_path: Path, session: dict[str, Any]):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_python311_bootstrap_preserves_deadline_and_uses_isolated_uv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _worker_module(tmp_path, {"session_seconds": 7200, "reserve_seconds": 1200})
+    calls: list[tuple[list[str], dict[str, Any]]] = []
+    monkeypatch.setattr(
+        worker,
+        "stage",
+        lambda command, label, **kwargs: calls.append((command, {"label": label, **kwargs})),
+    )
+    executed: dict[str, Any] = {}
+
+    def execve(path, args, env):
+        executed.update(path=path, args=args, env=env)
+        raise RuntimeError("test process replacement")
+
+    monkeypatch.setattr(worker.os, "execve", execve)
+    with pytest.raises(RuntimeError, match="test process replacement"):
+        worker._prepare_python311()
+    assert len(calls) == 3
+    assert "uv==0.12.3" in calls[0][0]
+    assert "3.11.15" in calls[1][0]
+    assert "torch==2.10.0" in calls[2][0]
+    assert calls[2][1]["timeout"] == 1200
+    assert executed["env"]["TABCOMPLETE_PILOT_STARTED_MONOTONIC"] == str(worker.STARTED)
+    assert executed["env"]["TABCOMPLETE_PILOT_PYTHON311_READY"] == "1"
+    assert executed["path"] == "/kaggle/temp/tabcomplete-python311/venv/bin/python"
+    assert calls[1][1]["env"]["UV_CACHE_DIR"].startswith("/kaggle/temp/")
+
+
+def test_constructive_runtime_rejects_wrong_python_before_cuda_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    worker = _worker_module(
+        tmp_path,
+        {
+            "session_seconds": 7200,
+            "reserve_seconds": 1200,
+            "data_schema": "one-line-constructive-pilot-v1",
+        },
+    )
+    monkeypatch.setattr(worker.sys, "version_info", (3, 12, 0))
+    with pytest.raises(RuntimeError, match="Python 3.11"):
+        worker._check_t4_and_logits_support()
 
 
 def _write_worker_fixture(tmp_path: Path) -> tuple[dict[str, Any], Path]:
