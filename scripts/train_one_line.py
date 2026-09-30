@@ -32,6 +32,7 @@ from tinycomplete.one_line.pilot_data import (
     CONSTRUCTIVE,
     INSTINCT,
     LICENSE_MIXED,
+    LICENSE_MIXED_HISTORY,
     _strict_json,
     license_mixed_artifact_root,
     policy_for_schema,
@@ -271,7 +272,32 @@ def validate_disposable_fixture_plan(
         raise ValueError("disposable fixture v2 phase or token declaration is invalid")
     if fixture.get("initial_loss_scale", 256.0) not in (128.0, 256.0):
         raise ValueError("unsupported disposable fixture initial loss scale")
+    if (
+        plan.get("data", {}).get("schema") == LICENSE_MIXED_HISTORY.data_schema
+        and fixture.get("initial_loss_scale") != 128.0
+    ):
+        raise ValueError("history pilot requires the frozen 128 initial loss scale")
     return fixture
+
+
+def initial_loss_scale_for_run(
+    *,
+    plan: dict[str, Any],
+    phase: str,
+    disposable_fixture_plan: dict[str, Any] | None,
+) -> float:
+    """Use the v2 pilot's frozen stable scale; preserve the legacy default elsewhere."""
+    if disposable_fixture_plan is not None:
+        return float(disposable_fixture_plan.get("initial_loss_scale", 256.0))
+    if (
+        phase == "pilot"
+        and plan.get("data", {}).get("schema") == LICENSE_MIXED_HISTORY.data_schema
+    ):
+        fixture = plan.get("training", {}).get("disposable_fixture", {})
+        if not isinstance(fixture, dict) or fixture.get("initial_loss_scale") != 128.0:
+            raise ValueError("history pilot requires the frozen 128 initial loss scale")
+        return 128.0
+    return 256.0
 
 
 def verify_artifacts(model_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
@@ -320,6 +346,10 @@ def load_training_rows(
         raise ValueError("training JSONL hash mismatch")
     rows: list[dict[str, Any]] = []
     ids: set[str] = set()
+    mixed_license = pilot_schema in {
+        LICENSE_MIXED.data_schema,
+        LICENSE_MIXED_HISTORY.data_schema,
+    }
     if expected_split != "train" and not (phase == "pilot" and expected_split == "development"):
         raise ValueError("only pilot validation can read a nontraining shard")
     with path.open(encoding="utf-8") as handle:
@@ -328,7 +358,7 @@ def load_training_rows(
                 continue
             row = (
                 _strict_json(line.encode("utf-8"), label="training row")
-                if pilot_schema == LICENSE_MIXED.data_schema
+                if mixed_license
                 else json.loads(line)
             )
             if not isinstance(row, dict):
@@ -340,7 +370,7 @@ def load_training_rows(
             if not row.get("source_license"):
                 raise ValueError("training row lacks a source license")
             identifier = row.get("id")
-            if pilot_schema == LICENSE_MIXED.data_schema:
+            if mixed_license:
                 candidate_id = row.get("candidate_id")
                 if (
                     identifier is not None
@@ -559,7 +589,7 @@ def main() -> None:
                 session_seconds=plan["budgets"]["max_session_seconds"],
                 external_campaign_tokens=args.external_campaign_tokens,
             )
-        if pilot_policy is LICENSE_MIXED:
+        if pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
             validate_aggregate_budget(
                 plan["budgets"],
                 planned_tokens=plan["training"]["planned_nonpadding_input_tokens"],
@@ -570,15 +600,15 @@ def main() -> None:
         if args.data_manifest is None:
             raise ValueError("main/pilot run needs a frozen data manifest")
         manifest_payload = args.data_manifest.read_bytes()
-        if args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+        if args.phase == "pilot" and pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
             parsed_manifest = _strict_json(manifest_payload, label="data manifest")
         else:
             parsed_manifest = json.loads(manifest_payload)
         if not isinstance(parsed_manifest, dict):
             raise ValueError("data manifest must be a JSON object")
         data_manifest = parsed_manifest
-        if args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
-            validate_license_mixed_manifest(data_manifest)
+        if args.phase == "pilot" and pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
+            validate_license_mixed_manifest(data_manifest, policy=pilot_policy)
             if (
                 plan.get("data", {}).get("manifest_sha256") != sha256_file(args.data_manifest)
                 or plan.get("data", {}).get("train_sha256") != args.data_sha256
@@ -647,7 +677,7 @@ def main() -> None:
                 [*rows, *development],
                 args.data_manifest.parent / "independent_review.json",
             )
-        elif args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+        elif args.phase == "pilot" and pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
             if args.development_data is None or pilot_artifact_root is None:
                 raise ValueError("LICENSE-MIXED pilot needs its frozen development shard")
             development = load_training_rows(
@@ -684,14 +714,15 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(
         args.model, local_files_only=True, trust_remote_code=False
     )
-    if args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+    if args.phase == "pilot" and pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         assert args.data_manifest is not None and data_manifest is not None
         assert development is not None and pilot_artifact_root is not None
         validate_license_mixed_review(
             data_manifest,
             [*rows, *development],
             tokenizer=tokenizer,
-            package_root=args.data_manifest.parent,
+            package_root=pilot_artifact_root,
+            policy=pilot_policy,
         )
     encoded: list[EncodedExample] = []
     for row in chosen_rows:
@@ -827,10 +858,10 @@ def main() -> None:
         warmup_fraction=config["training"]["warmup_fraction"],
         floor_fraction=config["training"]["final_lr_fraction"],
     )
-    initial_loss_scale = (
-        disposable_fixture_plan.get("initial_loss_scale", 256.0)
-        if disposable_fixture_plan is not None
-        else 256.0
+    initial_loss_scale = initial_loss_scale_for_run(
+        plan=plan,
+        phase=args.phase,
+        disposable_fixture_plan=disposable_fixture_plan,
     )
     scaler = torch.amp.GradScaler("cuda", init_scale=initial_loss_scale, growth_interval=2000)
     identity["initial_loss_scale"] = initial_loss_scale

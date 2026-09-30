@@ -44,6 +44,23 @@ OPTIONAL_MODEL_FILES = {
     "generation_config.json",
     "special_tokens_map.json",
 }
+LICENSE_MIXED_SCHEMA = "one-line-license-mixed-pilot-v1"
+LICENSE_MIXED_HISTORY_SCHEMA = "one-line-license-mixed-history-pilot-v2"
+LICENSE_MIXED_SCHEMAS = {LICENSE_MIXED_SCHEMA, LICENSE_MIXED_HISTORY_SCHEMA}
+PROOF_FILE_SUFFIXES = {
+    "",
+    ".json",
+    ".jsonl",
+    ".txt",
+    ".md",
+    ".py",
+    ".go",
+    ".rs",
+    ".ts",
+    ".source",
+    ".blob",
+    ".license",
+}
 
 
 def _prepare_python311() -> None:
@@ -122,6 +139,47 @@ def remaining_before_reserve() -> float:
     return remaining_seconds() - RESERVE_SECONDS
 
 
+def _validate_proof_inventory(
+    proof_files: dict[str, Any], files: dict[str, Any]
+) -> set[str]:
+    if not 1 <= len(proof_files) <= 32768:
+        raise ValueError("mixed-license input needs its frozen proof inventory")
+    total_bytes = 0
+    for name, identity in proof_files.items():
+        relative = Path(name) if isinstance(name, str) else Path("")
+        file_identity = files.get(name)
+        if (
+            not isinstance(name, str)
+            or not name
+            or relative.is_absolute()
+            or ".." in relative.parts
+            or relative.as_posix() != name
+            or len(relative.parts) < 2
+            or any(part.startswith(".") for part in relative.parts)
+            or "\0" in name
+            or relative.suffix.casefold() not in PROOF_FILE_SUFFIXES
+            or not isinstance(identity, dict)
+            or set(identity) != {"bytes", "sha256"}
+            or type(identity.get("bytes")) is not int
+            or not 1 <= identity["bytes"] <= 8 * 1024**2
+            or not isinstance(identity.get("sha256"), str)
+            or len(identity["sha256"]) != 64
+            or any(char not in "0123456789abcdef" for char in identity["sha256"])
+            or not isinstance(file_identity, dict)
+            or set(file_identity) != {"bytes", "sha256"}
+            or type(file_identity.get("bytes")) is not int
+            or not isinstance(file_identity.get("sha256"), str)
+            or len(file_identity["sha256"]) != 64
+            or any(char not in "0123456789abcdef" for char in file_identity["sha256"])
+            or file_identity != identity
+        ):
+            raise ValueError("mixed-license proof inventory is unsafe or inconsistent")
+        total_bytes += identity["bytes"]
+        if total_bytes > 512 * 1024**2:
+            raise ValueError("mixed-license proof inventory exceeds 512 MiB")
+    return set(proof_files)
+
+
 def _run(
     command: list[str],
     *,
@@ -197,12 +255,18 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         file_license_status = "own_synthetic_source"
         if SESSION.get("dataset_license") != "MIT":
             raise ValueError("constructive pilot source license mismatch")
-    elif data_schema == "one-line-license-mixed-pilot-v1":
+    elif data_schema == LICENSE_MIXED_SCHEMA:
         source_dataset = "public-source/license-mixed-pilot-r1"
         plan_schema = "one-line-license-mixed-pilot-plan-v1"
         file_license_status = "per_file_scope_pinned"
         if SESSION.get("dataset_license") != "LICENSE-MIXED":
             raise ValueError("mixed-license pilot must preserve per-file licenses")
+    elif data_schema == LICENSE_MIXED_HISTORY_SCHEMA:
+        source_dataset = "public-source/license-mixed-history-pilot-r2"
+        plan_schema = "one-line-license-mixed-history-pilot-plan-v2"
+        file_license_status = "per_file_scope_pinned"
+        if SESSION.get("dataset_license") != "LICENSE-MIXED":
+            raise ValueError("history pilot must preserve per-file licenses")
     else:
         raise ValueError("unapproved bounded-pilot data schema")
     if SESSION.get("source_dataset_id", source_dataset) != source_dataset:
@@ -231,24 +295,12 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     required_names = REQUIRED_INPUTS
     if data_schema == "one-line-constructive-pilot-v1":
         required_names = required_names | {"independent_review.json", "training-fixture.jsonl"}
-    elif data_schema == "one-line-license-mixed-pilot-v1":
+    elif data_schema in LICENSE_MIXED_SCHEMAS:
         proof_files = SESSION.get("proof_files")
-        if not isinstance(proof_files, dict) or not 1 <= len(proof_files) <= 32768:
+        if not isinstance(proof_files, dict):
             raise ValueError("mixed-license input needs its frozen proof inventory")
-        for name, identity in proof_files.items():
-            relative = Path(name)
-            if (
-                relative.is_absolute()
-                or ".." in relative.parts
-                or len(relative.parts) < 2
-                or relative.as_posix() != name
-                or any(part.startswith(".") for part in relative.parts)
-                or not isinstance(identity, dict)
-                or set(identity) != {"bytes", "sha256"}
-                or files.get(name) != identity
-            ):
-                raise ValueError("mixed-license proof inventory is unsafe or inconsistent")
-        required_names = required_names | {"training-fixture.jsonl"} | set(proof_files)
+        proof_names = _validate_proof_inventory(proof_files, files)
+        required_names = required_names | {"training-fixture.jsonl"} | proof_names
     expected_names = required_names | OPTIONAL_MODEL_FILES
     if not required_names <= names or not names <= expected_names:
         raise ValueError("input package contains missing or unapproved files")
@@ -318,6 +370,8 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or data_plan.get("file_groups_disjoint") is not True
         or training.get("phase") != "pilot"
         or training.get("epochs") != 1
+        or training.get("peak_learning_rate") != 1e-5
+        or SESSION.get("peak_learning_rate") != 1e-5
         or training.get("max_nonpadding_input_tokens") != 2_000_000
         or training.get("planned_nonpadding_input_tokens", 2_000_001) > 2_000_000
         or budgets.get("max_session_seconds") != SESSION["session_seconds"]
@@ -327,7 +381,7 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("frozen pilot plan violates the model, data, or budget contract")
-    if data_schema in {"one-line-constructive-pilot-v1", "one-line-license-mixed-pilot-v1"}:
+    if data_schema in {"one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS}:
         prior_tokens = budgets.get("prior_training_input_tokens")
         prior_seconds = budgets.get("prior_session_wall_seconds")
         fixture = training.get("disposable_fixture", {})
@@ -343,7 +397,7 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
             or fixture.get("schema")
             != (
                 "single-line-disposable-training-fixture-v2"
-                if data_schema == "one-line-license-mixed-pilot-v1"
+                if data_schema in LICENSE_MIXED_SCHEMAS
                 else "single-line-disposable-training-fixture-v1"
             )
             or fixture.get("examples") != 64
@@ -359,11 +413,19 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
             or prior_seconds + SESSION["session_seconds"] > 24 * 3600
         ):
             raise ValueError("constructive worker aggregate campaign accounting mismatch")
-        if data_schema == "one-line-license-mixed-pilot-v1":
-            expected_proof_files = {
-                item["path"]: {"bytes": item["bytes"], "sha256": item["sha256"]}
-                for item in data_plan.get("proof_files", [])
-            }
+        if data_schema in LICENSE_MIXED_SCHEMAS:
+            proof_entries = data_plan.get("proof_files")
+            if not isinstance(proof_entries, list) or not 1 <= len(proof_entries) <= 32768:
+                raise ValueError("mixed-license plan needs its frozen proof-file list")
+            expected_proof_files: dict[str, Any] = {}
+            for item in proof_entries:
+                if not isinstance(item, dict) or set(item) != {"path", "bytes", "sha256"}:
+                    raise ValueError("mixed-license plan proof entry is malformed")
+                name = item["path"]
+                if not isinstance(name, str) or name in expected_proof_files:
+                    raise ValueError("mixed-license plan proof paths are duplicated or invalid")
+                expected_proof_files[name] = {"bytes": item["bytes"], "sha256": item["sha256"]}
+            _validate_proof_inventory(expected_proof_files, files)
             if expected_proof_files != SESSION["proof_files"]:
                 raise ValueError("mixed-license proof files differ from the frozen plan")
             if data_manifest.get("artifact_root", ".") != ".":
@@ -385,6 +447,11 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
                 raise ValueError(
                     "mixed-license input lacks the declared fixture-v2 viability check"
                 )
+            if (
+                data_schema == LICENSE_MIXED_HISTORY_SCHEMA
+                and fixture.get("initial_loss_scale") != 128.0
+            ):
+                raise ValueError("history pilot requires the frozen 128 initial loss scale")
     if sha(manifest_path.parent / "train.jsonl") != SESSION["train_sha256"]:
         raise ValueError("training shard differs from the frozen session")
     if sha(manifest_path.parent / "development.jsonl") != SESSION["development_sha256"]:
@@ -481,13 +548,14 @@ def _verify_model(directory: Path) -> None:
 
 def _verify_reviewed_inputs(directory: Path) -> None:
     schema = SESSION.get("data_schema")
-    if schema not in {"one-line-constructive-pilot-v1", "one-line-license-mixed-pilot-v1"}:
+    if schema not in {"one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS}:
         return
     sys.path.insert(0, str(REPO / "src"))
     from tinycomplete.one_line.contract import EditAction, EditState, apply_action
     from tinycomplete.one_line.pilot_data import (
         CONSTRUCTIVE,
         LICENSE_MIXED,
+        LICENSE_MIXED_HISTORY,
         validate_constructive_manifest,
         validate_constructive_review,
         validate_constructive_splits,
@@ -504,15 +572,18 @@ def _verify_reviewed_inputs(directory: Path) -> None:
         for line in (directory / filename).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    if schema == LICENSE_MIXED.data_schema:
+    if schema in LICENSE_MIXED_SCHEMAS:
+        policy = LICENSE_MIXED_HISTORY if schema == LICENSE_MIXED_HISTORY_SCHEMA else LICENSE_MIXED
         from transformers import AutoTokenizer
 
         tokenizer = AutoTokenizer.from_pretrained(
             directory, local_files_only=True, trust_remote_code=False
         )
-        validate_license_mixed_manifest(manifest)
+        validate_license_mixed_manifest(manifest, policy=policy)
         validate_license_mixed_splits(rows)
-        validate_license_mixed_review(manifest, rows, tokenizer=tokenizer, package_root=directory)
+        validate_license_mixed_review(
+            manifest, rows, tokenizer=tokenizer, package_root=directory, policy=policy
+        )
         return
     validate_constructive_manifest(manifest)
     for row in rows:
@@ -557,6 +628,8 @@ def _clone_frozen_commit() -> None:
         repository_plan = "reports/prototype/product_r2/constructive_pilot_plan.json"
     elif SESSION.get("data_schema") == "one-line-license-mixed-pilot-v1":
         repository_plan = "reports/prototype/product_r2/license_mixed_pilot_plan.json"
+    elif SESSION.get("data_schema") == LICENSE_MIXED_HISTORY_SCHEMA:
+        repository_plan = "reports/prototype/product_r2/license_mixed_history_pilot_plan_v2.json"
     elif SESSION.get("fixture_only") is True:
         repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v5.json"
     if sha(REPO / repository_plan) != SESSION["plan_sha256"]:
@@ -574,7 +647,7 @@ def _clone_frozen_commit() -> None:
 def _check_t4_and_logits_support() -> dict[str, str]:
     if SESSION.get("fixture_only") is True or SESSION.get("data_schema") in {
         "one-line-constructive-pilot-v1",
-        "one-line-license-mixed-pilot-v1",
+        *LICENSE_MIXED_SCHEMAS,
     }:
         if sys.version_info[:2] != (3, 11):
             raise RuntimeError("constructive pilot requires Python 3.11")
@@ -919,7 +992,7 @@ def main() -> int:
         if (
             SESSION.get("fixture_only") is True
             or SESSION.get("data_schema")
-            in {"one-line-constructive-pilot-v1", "one-line-license-mixed-pilot-v1"}
+            in {"one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS}
         ) and not resumed_setup:
             _prepare_python311()
         if not resumed_setup:
@@ -976,7 +1049,7 @@ def main() -> int:
             return 0
         if SESSION.get("data_schema") in {
             "one-line-constructive-pilot-v1",
-            "one-line-license-mixed-pilot-v1",
+            *LICENSE_MIXED_SCHEMAS,
         }:
             status["state"] = "disposable_training_fixture"
             save(OUT / "worker-status.json", status)

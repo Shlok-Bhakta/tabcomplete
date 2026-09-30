@@ -84,6 +84,42 @@ def _valid_plan() -> tuple[dict[str, Any], dict[str, Any]]:
     return plan, config
 
 
+def _license_mixed_plan(policy) -> tuple[dict[str, Any], dict[str, Any]]:
+    plan, config = _valid_plan()
+    plan.update(schema=policy.plan_schema, branch=policy.branch)
+    plan["data"].update(
+        schema=policy.data_schema,
+        dataset_id=policy.dataset_id,
+        dataset_license=policy.dataset_license,
+        source_file_license_status=policy.file_license_status,
+    )
+    plan["training"]["disposable_fixture"] = {
+        "schema": "single-line-disposable-training-fixture-v2",
+        "sha256": "4" * 64,
+        "examples": 64,
+        "epochs": 1,
+        "peak_learning_rate": 1e-4,
+        "nonpadding_training_input_tokens": 10_000,
+        "supervised_response_and_eos_tokens": 400,
+        "quality_evidence": False,
+        "effective_batch_examples": 2,
+        "microbatch_examples": 2,
+        "expected_updates": 32,
+        "decode_examples_per_action": 4,
+        "minimum_exact_actions_per_action": 3,
+        "eos_required": True,
+        "implementation_viability_schema": (
+            "single-line-disposable-implementation-viability-v1"
+        ),
+        "initial_loss_scale": 128.0,
+    }
+    plan["budgets"].update(
+        prior_training_input_tokens=538_275,
+        prior_session_wall_seconds=14_400,
+    )
+    return plan, config
+
+
 def test_frozen_plan_requires_exact_untouched_model_and_pilot_budget() -> None:
     plan, config = _valid_plan()
     builder._validate_plan(plan, config)
@@ -140,6 +176,51 @@ def test_constructive_plan_enforces_prior_campaign_exposure() -> None:
         invalid["budgets"][key] = value
         with pytest.raises(ValueError, match="aggregate campaign"):
             builder._validate_plan(invalid, config)
+
+
+def test_license_mixed_v1_and_history_v2_plan_dispatch_keep_fixed_gates() -> None:
+    legacy, config = _license_mixed_plan(builder.LICENSE_MIXED)
+    legacy["training"]["disposable_fixture"].pop("initial_loss_scale")
+    builder._validate_plan(legacy, config)
+
+    history, config = _license_mixed_plan(builder.LICENSE_MIXED_HISTORY)
+    builder._validate_plan(history, config)
+    invalid_scale = json.loads(json.dumps(history))
+    invalid_scale["training"]["disposable_fixture"]["initial_loss_scale"] = 256.0
+    with pytest.raises(ValueError, match="128 initial loss scale"):
+        builder._validate_plan(invalid_scale, config)
+    invalid_fixture = json.loads(json.dumps(history))
+    invalid_fixture["training"]["disposable_fixture"]["expected_updates"] = 31
+    with pytest.raises(ValueError, match="fixture-v2 viability"):
+        builder._validate_plan(invalid_fixture, config)
+
+
+def test_mixed_proof_inventory_requires_frozen_safe_files(tmp_path: Path) -> None:
+    review = tmp_path / "artifacts" / "review.json"
+    review.parent.mkdir()
+    review.write_bytes(b'{"schema":"review"}\n')
+    entry = {
+        "path": "artifacts/review.json",
+        "bytes": review.stat().st_size,
+        "sha256": _sha(review),
+    }
+    plan = {"data": {"proof_files": [entry]}}
+    manifest = {
+        "independent_review_path": entry["path"],
+        "independent_review_sha256": entry["sha256"],
+        "independent_review_bytes": entry["bytes"],
+    }
+    assert builder._mixed_proof_files(plan, manifest, tmp_path) == {entry["path"]: review}
+
+    for bad_entry in (
+        {**entry, "path": "../review.json"},
+        {**entry, "sha256": "0" * 64},
+        {**entry, "extra": True},
+    ):
+        with pytest.raises(ValueError, match="mixed-license proof"):
+            builder._mixed_proof_files(
+                {"data": {"proof_files": [bad_entry]}}, manifest, tmp_path
+            )
 
 
 def test_quota_gate_requires_live_remaining_and_no_active_job() -> None:
@@ -210,6 +291,7 @@ def test_worker_fixture_requires_actual_updates_and_counts_both_phases(
     session = {
         "session_seconds": 7200,
         "reserve_seconds": 1200,
+        "plan_sha256": "a" * 64,
         "prior_training_input_tokens": 538_275,
         "disposable_fixture": {
             "sha256": _sha(fixture_file),
@@ -352,6 +434,7 @@ def _write_worker_fixture(tmp_path: Path) -> tuple[dict[str, Any], Path]:
         "training": {
             "phase": "pilot",
             "epochs": 1,
+            "peak_learning_rate": 1e-5,
             "max_nonpadding_input_tokens": 2_000_000,
             "planned_nonpadding_input_tokens": 1_000_000,
         },
@@ -400,8 +483,104 @@ def _write_worker_fixture(tmp_path: Path) -> tuple[dict[str, Any], Path]:
         "development_count": 64,
         "session_seconds": builder.SESSION_SECONDS,
         "reserve_seconds": builder.RESERVE_SECONDS,
+        "peak_learning_rate": 1e-5,
     }
     return session, source
+
+
+def _write_mixed_worker_fixture(
+    tmp_path: Path, policy
+) -> tuple[dict[str, Any], Path, str]:
+    session, source = _write_worker_fixture(tmp_path)
+    proof_name = "artifacts/role-proof.json"
+    proof_path = source / proof_name
+    proof_path.parent.mkdir()
+    proof_path.write_bytes(b'{"proof":"synthetic"}\n')
+    fixture_path = source / "training-fixture.jsonl"
+    fixture_path.write_bytes(b"synthetic fixture input\n")
+
+    data_path = source / "data_manifest.json"
+    data_manifest = json.loads(data_path.read_text())
+    data_manifest.update(
+        schema=policy.data_schema,
+        dataset_id=policy.dataset_id,
+        dataset_license=policy.dataset_license,
+        source_file_license_status=policy.file_license_status,
+        artifact_root=".",
+    )
+    data_path.write_text(json.dumps(data_manifest, sort_keys=True) + "\n")
+    proof_identity = {
+        "bytes": proof_path.stat().st_size,
+        "sha256": _sha(proof_path),
+    }
+    fixture = {
+        "schema": "single-line-disposable-training-fixture-v2",
+        "sha256": _sha(fixture_path),
+        "examples": 64,
+        "epochs": 1,
+        "peak_learning_rate": 1e-4,
+        "nonpadding_training_input_tokens": 10_000,
+        "supervised_response_and_eos_tokens": 400,
+        "quality_evidence": False,
+        "effective_batch_examples": 2,
+        "microbatch_examples": 2,
+        "expected_updates": 32,
+        "decode_examples_per_action": 4,
+        "minimum_exact_actions_per_action": 3,
+        "eos_required": True,
+        "implementation_viability_schema": (
+            "single-line-disposable-implementation-viability-v1"
+        ),
+        "initial_loss_scale": 128.0,
+    }
+    plan_path = source / "plan.json"
+    plan = json.loads(plan_path.read_text())
+    plan.update(schema=policy.plan_schema, branch=policy.branch)
+    plan["data"] = {
+        **data_manifest,
+        "manifest_sha256": _sha(data_path),
+        "proof_files": [
+            {"path": proof_name, **proof_identity},
+        ],
+    }
+    plan["training"].update(disposable_fixture=fixture)
+    plan["budgets"].update(
+        prior_training_input_tokens=538_275,
+        prior_session_wall_seconds=14_400,
+    )
+    plan_path.write_text(json.dumps(plan, sort_keys=True) + "\n")
+
+    input_path = source / "input-manifest.json"
+    input_manifest = json.loads(input_path.read_text())
+    file_records = {
+        path.name: {"bytes": path.stat().st_size, "sha256": _sha(path)}
+        for path in source.iterdir()
+        if path.is_file() and path.name != "input-manifest.json"
+    }
+    file_records[proof_name] = proof_identity
+    input_manifest.update(
+        plan_sha256=_sha(plan_path),
+        branch=policy.branch,
+        files=file_records,
+    )
+    input_path.write_text(json.dumps(input_manifest, sort_keys=True) + "\n")
+
+    session.update(
+        data_schema=policy.data_schema,
+        plan_schema=policy.plan_schema,
+        source_dataset_id=policy.dataset_id,
+        branch=policy.branch,
+        input_manifest_sha256=_sha(input_path),
+        plan_sha256=_sha(plan_path),
+        manifest_sha256=_sha(data_path),
+        dataset_license=policy.dataset_license,
+        source_file_license_status=policy.file_license_status,
+        prior_training_input_tokens=538_275,
+        prior_session_wall_seconds=14_400,
+        disposable_fixture=fixture,
+        proof_files={proof_name: proof_identity},
+    )
+    return session, source, proof_name
 
 
 def test_worker_verifies_frozen_input_bundle_and_rejects_extra_weights(tmp_path: Path) -> None:
@@ -415,6 +594,75 @@ def test_worker_verifies_frozen_input_bundle_and_rejects_extra_weights(tmp_path:
     (source / "other-model.gguf").write_bytes(b"forbidden")
     with pytest.raises(ValueError, match="unapproved model"):
         module._safe_input_manifest(source.parent)
+
+
+@pytest.mark.parametrize("policy", [builder.LICENSE_MIXED, builder.LICENSE_MIXED_HISTORY])
+def test_worker_dispatches_mixed_policy_and_rejects_bad_proof_inventory(
+    tmp_path: Path, policy
+) -> None:
+    session, source, proof_name = _write_mixed_worker_fixture(tmp_path, policy)
+    module = _worker_module(tmp_path, session)
+    module.INPUT_ROOT = source.parent
+    found, manifest = module._safe_input_manifest(source.parent)
+    assert found == source
+    assert manifest["files"][proof_name]["sha256"] == session["proof_files"][proof_name]["sha256"]
+
+    module.SESSION["proof_files"][proof_name]["sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="proof inventory is unsafe or inconsistent"):
+        module._safe_input_manifest(source.parent)
+
+    module.SESSION["proof_files"] = {
+        "artifacts/unapproved.gguf": session["proof_files"][proof_name]
+    }
+    with pytest.raises(ValueError, match="proof inventory is unsafe or inconsistent"):
+        module._safe_input_manifest(source.parent)
+
+
+@pytest.mark.parametrize("policy", [builder.LICENSE_MIXED, builder.LICENSE_MIXED_HISTORY])
+def test_worker_review_dispatch_passes_the_selected_license_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, policy
+) -> None:
+    import types
+
+    import tinycomplete.one_line.pilot_data as pilot_data
+
+    data = tmp_path / "input"
+    data.mkdir()
+    (data / "data_manifest.json").write_text("{}\n")
+    row = {"id": "reviewed-row", "split": "train"}
+    for name in ("train.jsonl", "development.jsonl"):
+        (data / name).write_text(json.dumps(row) + "\n")
+    worker = _worker_module(
+        tmp_path,
+        {"session_seconds": 7200, "reserve_seconds": 1200, "data_schema": policy.data_schema},
+    )
+    worker.REPO = tmp_path / "frozen-repo"
+    observed: list[tuple[str, Any]] = []
+    monkeypatch.setattr(
+        pilot_data,
+        "validate_license_mixed_manifest",
+        lambda _manifest, *, policy: observed.append(("manifest", policy)),
+    )
+    monkeypatch.setattr(pilot_data, "validate_license_mixed_splits", lambda _rows: None)
+    monkeypatch.setattr(
+        pilot_data,
+        "validate_license_mixed_review",
+        lambda _manifest, _rows, *, tokenizer, package_root, policy: observed.append(
+            ("review", policy)
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "transformers",
+        types.SimpleNamespace(
+            AutoTokenizer=types.SimpleNamespace(
+                from_pretrained=lambda *_args, **_kwargs: object()
+            )
+        ),
+    )
+
+    worker._verify_reviewed_inputs(data)
+    assert observed == [("manifest", policy), ("review", policy)]
 
 
 def test_worker_evaluation_uses_the_export_tokenizer_hash(tmp_path: Path) -> None:

@@ -30,6 +30,7 @@ from tinycomplete.one_line.pilot_data import (
     CONSTRUCTIVE,
     INSTINCT,
     LICENSE_MIXED,
+    LICENSE_MIXED_HISTORY,
     PUBLIC_SOURCE_TYPES,
     license_mixed_artifact_root,
     policy_for_schema,
@@ -261,13 +262,14 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("pilot budget contract differs from the fixed campaign limits")
-    if policy in (CONSTRUCTIVE, LICENSE_MIXED):
+    if policy in (CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         fixture = training.get("disposable_fixture", {})
+        mixed_license = policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY)
         if (
             fixture.get("schema")
             != (
                 "single-line-disposable-training-fixture-v2"
-                if policy is LICENSE_MIXED
+                if mixed_license
                 else "single-line-disposable-training-fixture-v1"
             )
             or fixture.get("examples") != 64
@@ -279,7 +281,7 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
             or fixture["nonpadding_training_input_tokens"] <= 0
         ):
             raise ValueError("constructive pilot requires the frozen disposable training fixture")
-        if policy is LICENSE_MIXED and any(
+        if mixed_license and any(
             fixture.get(key) != value
             for key, value in {
                 "effective_batch_examples": 2,
@@ -294,6 +296,8 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
             }.items()
         ):
             raise ValueError("mixed-license pilot requires the declared fixture-v2 viability check")
+        if policy is LICENSE_MIXED_HISTORY and fixture.get("initial_loss_scale") != 128.0:
+            raise ValueError("history pilot requires the frozen 128 initial loss scale")
         validate_aggregate_budget(
             budgets,
             planned_tokens=(
@@ -581,8 +585,8 @@ def validate_inputs(
         raise ValueError("pilot data-manifest hash mismatch")
     manifest = read_json(manifest_path)
     package_root = None
-    if policy is LICENSE_MIXED:
-        validate_license_mixed_manifest(manifest)
+    if policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
+        validate_license_mixed_manifest(manifest, policy=policy)
         if manifest.get("artifact_root", ".") != ".":
             raise ValueError("Kaggle mixed-license package must use a portable root of '.'")
         package_root = license_mixed_artifact_root(manifest, manifest_path.parent)
@@ -636,7 +640,7 @@ def validate_inputs(
         validate_constructive_review(
             manifest, [*train_rows, *dev_rows], manifest_path.parent / "independent_review.json"
         )
-    elif policy is LICENSE_MIXED:
+    elif policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         from transformers import AutoTokenizer  # noqa: PLC0415
 
         tokenizer = AutoTokenizer.from_pretrained(
@@ -645,7 +649,11 @@ def validate_inputs(
         assert package_root is not None
         validate_license_mixed_splits([*train_rows, *dev_rows])
         validate_license_mixed_review(
-            manifest, [*train_rows, *dev_rows], tokenizer=tokenizer, package_root=package_root
+            manifest,
+            [*train_rows, *dev_rows],
+            tokenizer=tokenizer,
+            package_root=package_root,
+            policy=policy,
         )
     return {
         "plan": plan,
@@ -676,6 +684,12 @@ def inspect_training(
     """Invoke the existing trainer's CPU-only inspection path and return its counts."""
     plan = read_json(plan_path)
     policy = policy_for_schema(plan.get("data", {}).get("schema"))
+    manifest = read_json(manifest_path)
+    package_root = (
+        license_mixed_artifact_root(manifest, manifest_path.parent)
+        if policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY)
+        else None
+    )
     with tempfile.TemporaryDirectory(prefix="tabcomplete-pilot-inspect-") as temporary:
         output = Path(temporary) / "inspect-only-output"
         environment = os.environ.copy()
@@ -744,6 +758,7 @@ def inspect_training(
                     expected_split="train",
                     source_type=policy.source_type,
                     data_schema=policy.data_schema,
+                    package_root=package_root,
                 )
             )
             or summary.get("identity", {}).get("phase") != "pilot"
@@ -837,10 +852,10 @@ def prepare_bundle(
     training = plan["training"]
     fixture_payload: bytes | None = None
     fixture_spec: dict[str, Any] = {}
-    if policy in (CONSTRUCTIVE, LICENSE_MIXED):
+    if policy in (CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         fixture_payload, fixture_spec = disposable_fixture_input(
             model_dir,
-            version2=policy is LICENSE_MIXED,
+            version2=policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY),
             initial_loss_scale=training["disposable_fixture"].get("initial_loss_scale"),
         )
         if fixture_spec != training["disposable_fixture"]:
@@ -882,7 +897,7 @@ def prepare_bundle(
     if policy is CONSTRUCTIVE:
         projected += review_path.stat().st_size
         projected += len(fixture_payload or b"")
-    elif policy is LICENSE_MIXED:
+    elif policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         proof_files = _mixed_proof_files(plan, checked["data_manifest"], manifest_path.parent)
         projected += sum(path.stat().st_size for path in proof_files.values())
         projected += len(fixture_payload or b"")
@@ -926,7 +941,7 @@ def prepare_bundle(
     for name, source in proof_files.items():
         (dataset_dir / name).parent.mkdir(parents=True, exist_ok=True)
         files[name] = _stage_file(source, dataset_dir / name)
-    if policy in (CONSTRUCTIVE, LICENSE_MIXED):
+    if policy in (CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         fixture_file = dataset_dir / "training-fixture.jsonl"
         fixture_file.write_bytes(fixture_payload or b"")
         files["training-fixture.jsonl"] = {
