@@ -1,0 +1,83 @@
+{
+  "schema": "product-r2-current-verification-v1",
+  "observed_at": "2026-09-30T18:24:25.730812+00:00",
+  "head": "b6f2c00c9a0c6503c0529cba976a0183898ce5d3",
+  "uncommitted_agent_work": true,
+  "scope_note": "Results cover checkout as exercised, not source changes or newly added tests after these runs. No training/deployment promotion evidence.",
+  "source_sha256": {
+    "src/tinycomplete/one_line/pilot_data.py": "44926403928801615c3fdbfa8b4951ce27d20dbb3cdc53601dd0fd7df53efd1d",
+    "src/tinycomplete/one_line/candidate_acceptance.py": "efe308e97a07c05813612520ff682885fcf2d9eb067e206f05f47217895ba910",
+    "src/tinycomplete/one_line/muse_acceptance_package.py": "1dab0ece25fd8ae9757bc7f23309a8ae1c6ce752be6d0cb720a2f0268a86fec9",
+    "scripts/train_one_line.py": "6df7236be73652daf20f67799c5dc43deab5e2ae88b1133c7268756a2937d796",
+    "scripts/materialize_public_source_oracle_seeds.py": "a30572417002b708123c0f1dc3be7dc9bd23e6e23d25c3ff0af0e71a98582eb1",
+    "scripts/evaluate_fim_line_probe.py": "789604a2524cf4e2bcd5dfaf5e13476832fed190a9a8b45966d5dc5ae077313c"
+  },
+  "python": {
+    "command": "PYTHONPATH=worktree/src:worktree/.venv/lib/python3.11/site-packages:main/.venv/lib/python3.11/site-packages uv run --no-sync pytest -q",
+    "passed": 805,
+    "skipped": 1,
+    "failed": 0,
+    "seconds": 119.74,
+    "log": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/final_verification/pytest-current-mixed-policy-v1.log"
+  },
+  "ruff": {
+    "command": "uv run --no-sync ruff check .",
+    "exit_code": 0
+  },
+  "mypy": {
+    "command": "uv run --no-sync mypy src scripts/observability.py scripts/train_one_line.py scripts/evaluate_fim_line_probe.py scripts/materialize_public_source_oracle_seeds.py scripts/export_muse_candidate_acceptance.py scripts/export_frozen_v8_muse_acceptance.py",
+    "sources": 85,
+    "exit_code": 0
+  },
+  "bun": {
+    "gateway": {
+      "passed": 16,
+      "failed": 0
+    },
+    "collector_server": {
+      "passed": 56,
+      "failed": 0
+    },
+    "collector_analysis": {
+      "passed": 38,
+      "failed": 0
+    }
+  },
+  "typescript": {
+    "gateway": 0,
+    "collector_server": 0,
+    "collector_analysis": 0
+  },
+  "lua": {
+    "collector": {
+      "passed": 56,
+      "failed": 0
+    },
+    "predict_safety": {
+      "exit_code": 0,
+      "synthetic": true
+    },
+    "automatic_state_and_sse": {
+      "exit_code": 0,
+      "synthetic": true
+    },
+    "shared_slot_two_process": {
+      "exit_code": 0,
+      "synthetic": true
+    }
+  },
+  "stable_predictor": {
+    "host": "crabcake",
+    "backend": "CPU",
+    "pid": 3343901,
+    "health": "ok",
+    "mode": "automatic",
+    "experimental_auto_opt_in": true,
+    "automatic_quality_validated": false,
+    "automatic_personalization_enabled": false,
+    "model_gguf_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+    "precision": "Q4_K_M",
+    "installation_changed": false
+  },
+  "training_started": false
+}
