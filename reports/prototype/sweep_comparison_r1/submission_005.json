@@ -1,0 +1,30 @@
+{
+  "aggregate_prior_conservative_wall_seconds": 9381.212425000002,
+  "aggregate_upper_bound_with_this_session_seconds": 14181.212425000002,
+  "aggregate_wall_cap_seconds": 14400,
+  "attempt_number": 5,
+  "bundle_manifest_sha256": "274e9953e353c95f79e6dbe1993a8e4f91006e590373939fce9c93dfd05b9287",
+  "finalization_reserve_seconds": 1200,
+  "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5",
+  "plan_path": "reports/prototype/sweep_comparison_r1/plan-v9.json",
+  "predictions_available_at_submission": false,
+  "private_bundle": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/gpu-bundle-005",
+  "quota_before": {
+    "active_jobs": [],
+    "observed_at": "2026-09-30T13:03:22.771137+00:00",
+    "remaining": 42.94,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 2.06
+  },
+  "schema_version": 1,
+  "scoring_plan_path": "reports/prototype/sweep_comparison_r1/scoring_plan_v9.json",
+  "session_seconds": 4800,
+  "source_commit": "78ebaba",
+  "state": "kernel_pushed",
+  "submission_state_sha256": "324c3a4ef238f0248fb7bdca10a8c6566d60cff5b51e6c56860b757ad31b26f4",
+  "submitted_at": "2026-09-30T13:03:55.670251+00:00",
+  "training_tokens": 0
+}

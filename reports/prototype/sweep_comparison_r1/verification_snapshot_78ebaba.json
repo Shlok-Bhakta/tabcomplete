@@ -1,0 +1,118 @@
+{
+  "checks": {
+    "bun_verification.json": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/final_verification/bun_verification.json",
+      "result": [
+        {
+          "exit_code": 0,
+          "name": "gateway-tests",
+          "summary": [
+            "(pass) absent heartbeat is stale, not failed [0.14ms]",
+            "16 pass",
+            "0 fail",
+            "36 expect() calls",
+            "Ran 16 tests across 3 files. [73.00ms]"
+          ],
+          "wall_seconds": 0.11504231905564666
+        },
+        {
+          "exit_code": 0,
+          "name": "collector-server-tests",
+          "summary": [
+            "56 pass",
+            "0 fail",
+            "305 expect() calls",
+            "Ran 56 tests across 2 files. [1311.00ms]"
+          ],
+          "wall_seconds": 1.3687869070563465
+        },
+        {
+          "exit_code": 0,
+          "name": "collector-analysis-tests",
+          "summary": [
+            "38 pass",
+            "0 fail",
+            "160 expect() calls",
+            "Ran 38 tests across 7 files. [14.58s]"
+          ],
+          "wall_seconds": 14.610197686008178
+        },
+        {
+          "exit_code": 0,
+          "name": "gateway-types",
+          "summary": [],
+          "wall_seconds": 1.7694361309986562
+        },
+        {
+          "exit_code": 0,
+          "name": "collector-server-types",
+          "summary": [],
+          "wall_seconds": 1.6690329279517755
+        },
+        {
+          "exit_code": 0,
+          "name": "collector-analysis-types",
+          "summary": [],
+          "wall_seconds": 1.6191165250493214
+        }
+      ],
+      "sha256": "9ad94f1b6c8f867e7d15a14aa9c697cb43dbb1d8b6ceb5928efe465b8d10c2bc"
+    },
+    "lua_verification.json": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/final_verification/lua_verification.json",
+      "result": [
+        {
+          "exit_code": 0,
+          "name": "run.lua",
+          "summary": [
+            "56 passed, 0 failed"
+          ],
+          "wall_seconds": 1.8223442130256444
+        },
+        {
+          "exit_code": 0,
+          "name": "predict.lua",
+          "summary": [
+            "predict headless safety checks passed"
+          ],
+          "wall_seconds": 0.11500237009022385
+        },
+        {
+          "exit_code": 0,
+          "name": "automatic_predict.lua",
+          "summary": [
+            "automatic prediction state machine and SSE passed"
+          ],
+          "wall_seconds": 0.9190368490526453
+        },
+        {
+          "exit_code": 0,
+          "name": "automatic_shared_slot.lua",
+          "summary": [
+            "synthetic two-process shared slot arbitration passed"
+          ],
+          "wall_seconds": 1.7246429090155289
+        }
+      ],
+      "sha256": "e41bfb462147427d366352b2192ab3bbc491eb62ba351997216f93bc0d53af40"
+    },
+    "python_after_short_session.json": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/final_verification/python_after_short_session.json",
+      "result": {
+        "exit_code": 0,
+        "log": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/final_verification/pytest-after-short-session.log",
+        "summary": [
+          "724 passed, 1 skipped in 116.80s (0:01:56)"
+        ],
+        "wall_seconds": 118.47851719101891
+      },
+      "sha256": "392defa476c069024b17430c5f8c3041e18d4690e4b8defa8639f6a7272e7e6f"
+    }
+  },
+  "mypy_exit_code": 0,
+  "mypy_source_files": 85,
+  "python_summary": "724 passed, 1 skipped in 116.80s",
+  "ruff_exit_code": 0,
+  "ruff_scope": ".",
+  "source_commit": "78ebaba"
+}

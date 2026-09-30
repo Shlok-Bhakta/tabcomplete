@@ -9,8 +9,8 @@ and collector remain unchanged. No training, teacher, draft model, or other
 model weights were used in this comparison.
 
 Both local replays are complete. The fourth Kaggle allocation reached ERROR,
-observed at 2026-09-30 12:11:59 UTC, without scientific predictions. A shorter
-retry is being prepared under a new frozen plan and the existing four-hour cap.
+observed at 2026-09-30 12:11:59 UTC, without scientific predictions. The fifth
+allocation is running under a new frozen plan and the existing four-hour cap.
 This report does not mark the overall comparison or useful-model objective
 complete.
 
@@ -180,9 +180,9 @@ reported 43.46 remaining of 45 account GPU-hours, 1.54 used, renewal
 2026-10-03 00:00:00. There were no other active jobs. Those are observations at
 that time, not a current balance.
 
-The frozen comparison caps aggregate conservative session bounds at four hours,
-one allocation at a time, and reserves 20 minutes of the two-hour final session
-for finalization. Prior bounds total 7,065.335220 seconds; adding the final
+The fourth allocation's frozen plan capped aggregate conservative session bounds
+at four hours, with one allocation at a time, and reserved 20 minutes of its
+two-hour session for finalization. Prior bounds totaled 7,065.335220 seconds; adding its
 7,200-second limit gives 14,265.335220 seconds. These bounds include queue and
 observation delays and are not exact billed GPU usage. No Kaggle training ran.
 
@@ -194,6 +194,18 @@ records an actual-log-backed parser fix with mandatory inventory and offload
 checks. Three regression tests failed before the fix; all 22 targeted tests
 passed afterward. The new interpretation does not create predictions from
 the failed allocation.
+
+Fifth allocation `shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5` submitted
+at 2026-09-30 13:03:55.670251 UTC from committed source `78ebaba` under
+[plan 9](sweep_comparison_r1/plan-v9.json). It uses an 80-minute provider and
+worker deadline, including compilation, with a 20-minute finalization reserve.
+The four prior conservative bounds total 9,381.212425 seconds; adding its
+4,800-second limit gives 14,181.212425 seconds, below the same 14,400-second cap.
+Authenticated quota at 13:03:22.771137 UTC showed 42.94 remaining of 45 account
+GPU-hours, 2.06 used, the same renewal, and no active jobs. The job was observed
+RUNNING after submission. This is execution status, not a quality result.
+The [submission record](sweep_comparison_r1/submission_005.json) preserves the
+source, plan, quota, and private bundle hashes.
 
 The GPU runner preserves the existing raw-causal strict200 and line180 prompts,
 96-token ceiling and scoring rules. They are task-mismatch code controls for a
@@ -231,11 +243,12 @@ directory and Git history.
 
 ## Repository verification snapshot
 
-After the local replay, the actual workspace Python suite passed 694 tests
-with one skip in 117.56 seconds. Ruff passed and expanded mypy passed across
-85 source files. These counts precede the four new CUDA-inventory regression
-cases and the forthcoming shortened-worker changes; the relevant revised
-runner suite has separately passed 22 tests.
+After the shortened-worker and teacher-accounting changes, the actual workspace
+Python suite passed 724 tests with one skip in 116.80 seconds. Ruff passed and
+expanded mypy passed across 85 source files. The relevant revised runner suite
+also passed 22 targeted tests. The
+[verification snapshot](sweep_comparison_r1/verification_snapshot_78ebaba.json)
+preserves the private log hashes and actual command results.
 
 Fresh Bun results were gateway 16, collector server 56, and analysis 38 tests,
 all passed. All three TypeScript checks passed. Lua collector tests passed
