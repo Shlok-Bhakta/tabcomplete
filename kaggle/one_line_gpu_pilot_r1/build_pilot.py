@@ -114,7 +114,7 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def disposable_fixture_input(
-    model_dir: Path, *, version2: bool = False
+    model_dir: Path, *, version2: bool = False, initial_loss_scale: float | None = None
 ) -> tuple[bytes, dict[str, Any]]:
     """CPU-only preparation for the actual, separate training mechanics pass."""
     from transformers import AutoTokenizer
@@ -167,6 +167,10 @@ def disposable_fixture_input(
                 "eos_required": True,
             }
         )
+    if initial_loss_scale is not None:
+        if not version2 or initial_loss_scale not in (128.0, 256.0):
+            raise ValueError("unsupported disposable fixture initial loss scale")
+        spec["initial_loss_scale"] = initial_loss_scale
     return payload, spec
 
 
@@ -824,7 +828,9 @@ def prepare_bundle(
     fixture_spec: dict[str, Any] = {}
     if policy in (CONSTRUCTIVE, LICENSE_MIXED):
         fixture_payload, fixture_spec = disposable_fixture_input(
-            model_dir, version2=policy is LICENSE_MIXED
+            model_dir,
+            version2=policy is LICENSE_MIXED,
+            initial_loss_scale=training["disposable_fixture"].get("initial_loss_scale"),
         )
         if fixture_spec != training["disposable_fixture"]:
             raise ValueError("disposable fixture tokenizer exposure differs from frozen plan")
@@ -1117,13 +1123,17 @@ def prepare_fixture_bundle(
     ):
         if sha256_file(model_dir / name) != expected:
             raise ValueError("disposable fixture model artifact identity mismatch")
-    payload, spec = disposable_fixture_input(model_dir, version2=True)
+    payload, spec = disposable_fixture_input(
+        model_dir,
+        version2=True,
+        initial_loss_scale=plan["training"]["disposable_fixture"].get("initial_loss_scale"),
+    )
     if spec != plan["training"]["disposable_fixture"]:
         raise ValueError("disposable fixture bytes or tokenizer exposure differs from frozen plan")
     quota = quota_reader()
     _check_live_quota(plan, quota)
     identity = _git_identity(plan["branch"], plan["base_commit"])
-    if sha256_file(ROOT / "reports/prototype/product_r2/disposable_fixture_plan_v3.json") != (
+    if sha256_file(ROOT / "reports/prototype/product_r2/disposable_fixture_plan_v4.json") != (
         sha256_file(plan_path)
     ):
         raise ValueError("disposable fixture plan is not committed at its expected path")

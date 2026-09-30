@@ -117,8 +117,9 @@ def finalization_reserve_seconds(reserve_minutes: float, last_save_seconds: floa
     return max(reserve_minutes * 60, last_save_seconds * 2 + 60)
 
 
-def remaining_training_seconds(deadline_monotonic: float, now_monotonic: float,
-                               reserve_seconds: float) -> float:
+def remaining_training_seconds(
+    deadline_monotonic: float, now_monotonic: float, reserve_seconds: float
+) -> float:
     """Return time available for updates after preserving checkpoint reserve."""
     if reserve_seconds < 0:
         raise ValueError("finalization reserve cannot be negative")
@@ -268,6 +269,8 @@ def validate_disposable_fixture_plan(
         or fixture["nonpadding_training_input_tokens"] <= 0
     ):
         raise ValueError("disposable fixture v2 phase or token declaration is invalid")
+    if fixture.get("initial_loss_scale", 256.0) not in (128.0, 256.0):
+        raise ValueError("unsupported disposable fixture initial loss scale")
     return fixture
 
 
@@ -619,8 +622,7 @@ def main() -> None:
                 or data_manifest.get("dev_count", 0) < 64
                 or not data_manifest.get("file_groups_disjoint")
                 or plan.get("data", {}).get("train_sha256") != args.data_sha256
-                or plan.get("data", {}).get("manifest_sha256")
-                != sha256_file(args.data_manifest)
+                or plan.get("data", {}).get("manifest_sha256") != sha256_file(args.data_manifest)
             ):
                 raise ValueError("pilot data manifest gate failed")
         if args.phase == "pilot" and pilot_policy is CONSTRUCTIVE:
@@ -657,11 +659,9 @@ def main() -> None:
                 expected_split="development",
                 package_root=pilot_artifact_root,
             )
-            if (
-                data_manifest.get("development_sha256")
-                != plan["data"]["development_sha256"]
-                or data_manifest.get("dev_count") != len(development)
-            ):
+            if data_manifest.get("development_sha256") != plan["data"][
+                "development_sha256"
+            ] or data_manifest.get("dev_count") != len(development):
                 raise ValueError("LICENSE-MIXED development shard differs from frozen manifest")
             validate_license_mixed_splits([*rows, *development])
     chosen_rows = phase_rows(rows, args.phase)
@@ -717,8 +717,7 @@ def main() -> None:
         if (
             len(encoded) != disposable_fixture_plan["examples"]
             or len(batches) != disposable_fixture_plan["expected_updates"]
-            or planned_tokens
-            != disposable_fixture_plan["nonpadding_training_input_tokens"]
+            or planned_tokens != disposable_fixture_plan["nonpadding_training_input_tokens"]
         ):
             raise ValueError("disposable fixture v2 counts differ from the frozen phase plan")
         fixture_supervision_audit = disposable_fixture_supervision_by_action(
@@ -828,7 +827,13 @@ def main() -> None:
         warmup_fraction=config["training"]["warmup_fraction"],
         floor_fraction=config["training"]["final_lr_fraction"],
     )
-    scaler = torch.amp.GradScaler("cuda", init_scale=256.0, growth_interval=2000)
+    initial_loss_scale = (
+        disposable_fixture_plan.get("initial_loss_scale", 256.0)
+        if disposable_fixture_plan is not None
+        else 256.0
+    )
+    scaler = torch.amp.GradScaler("cuda", init_scale=initial_loss_scale, growth_interval=2000)
+    identity["initial_loss_scale"] = initial_loss_scale
     identity["optimizer"] = optimizer_name
     fingerprint = canonical_sha256(identity)
     # Persist the resolved optimizer identity before the first update.

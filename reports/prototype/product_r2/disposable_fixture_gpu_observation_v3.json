@@ -1,0 +1,87 @@
+{
+  "accepted_training": 0,
+  "actual_session_seconds": 164.659114499,
+  "actual_training_seconds": 28.21579431300006,
+  "changed_parameter_elements": 896,
+  "checkpoint_preserved_on_kaggle": true,
+  "commit": "7650ffdad9a474b2f40c334953cc2eda5bcc2bbc",
+  "cursor": {
+    "attempted_updates": 32,
+    "completed_updates": 31,
+    "epoch": 1,
+    "next_example_index": 64,
+    "skipped_updates": 1,
+    "supervised_target_tokens": 408,
+    "training_input_tokens": 10592
+  },
+  "failure_stage": "disposable_training_fixture",
+  "inference_export_saved": false,
+  "kernel_id": "shlokbhakta/tabcomplete-disposable-fixture-v2",
+  "monitor_query": {
+    "command": "observability.py runs --since 1h --limit 200 --json",
+    "note": "This existing trainer path did not enable the SDK. Scientific files are authoritative; next revision adds the existing offline run scope.",
+    "state": "no_runs"
+  },
+  "new_allocations": 1,
+  "overflow": {
+    "attempted_update": 3,
+    "gradient_norm": "nonfinite",
+    "initial_loss_scale": 256.0,
+    "mean_example_loss": 20.762941360473633,
+    "scale_after_skip": 128.0,
+    "subsequent_applied_updates": 29
+  },
+  "per_action": {
+    "delete_line": {
+      "exact_actions": 4,
+      "examples": 4,
+      "minimum_exact_actions": 3,
+      "terminated_by_eos": 4,
+      "valid_actions": 4
+    },
+    "insert_before": {
+      "exact_actions": 4,
+      "examples": 4,
+      "minimum_exact_actions": 3,
+      "terminated_by_eos": 4,
+      "valid_actions": 4
+    },
+    "keep": {
+      "exact_actions": 4,
+      "examples": 4,
+      "minimum_exact_actions": 3,
+      "terminated_by_eos": 4,
+      "valid_actions": 4
+    },
+    "replace_line": {
+      "exact_actions": 4,
+      "examples": 4,
+      "minimum_exact_actions": 3,
+      "terminated_by_eos": 4,
+      "valid_actions": 4
+    }
+  },
+  "plan_sha256": "79797ddf5ea7a28c7bc88b8d1c74ff2d552e4fcaea0a14c33e6f5057f677246b",
+  "private_artifact_hashes": {
+    "disposable-training-fixture/resume-step-000032.pt.complete.json": "66ad6b794b8e7a6ae0dae9e829ec47a92ee8b9cbbbad451b26f78fc24529a840",
+    "disposable-training-fixture/run_result.json": "69e47aaad7f9734afcd7158e0a38a55da114a43d488cac8d7e3105d727f174d5",
+    "disposable-training-fixture/updates.jsonl": "08f01bba11e3f2cba9d5cab56c9a955138444ec7d03c4c1320c766371db1d05e",
+    "worker-status.json": "606095eb7846c23effc744b75be29cb7c2d4c2a624bf9de3d1c7af0ae6ceeb10"
+  },
+  "quality_evidence": false,
+  "quota_after": {
+    "active_jobs": [],
+    "observed_at": "2026-09-30T20:50:59.047109+00:00",
+    "remaining": 41.69,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 3.31
+  },
+  "schema": "disposable-fixture-gpu-observation-v3",
+  "source_weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+  "state": "failed",
+  "strict_viability_passed": false,
+  "supervision_audit_passed": true
+}

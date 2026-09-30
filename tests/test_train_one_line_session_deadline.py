@@ -55,22 +55,24 @@ def test_disposable_fixture_v2_plan_pins_updates_batch_and_viability_budget() ->
             }
         }
     }
-    assert validate(plan, phase="fixture", epochs=1, microbatch=2) == plan[
-        "training"
-    ]["disposable_fixture"]
+    assert (
+        validate(plan, phase="fixture", epochs=1, microbatch=2)
+        == plan["training"]["disposable_fixture"]
+    )
     assert validate(plan, phase="pilot", epochs=1, microbatch=2) is None
-    assert validate(
-        {
-            "training": {
-                "disposable_fixture": {
-                    "schema": "single-line-disposable-training-fixture-v1"
+    assert (
+        validate(
+            {
+                "training": {
+                    "disposable_fixture": {"schema": "single-line-disposable-training-fixture-v1"}
                 }
-            }
-        },
-        phase="fixture",
-        epochs=1,
-        microbatch=2,
-    ) is None
+            },
+            phase="fixture",
+            epochs=1,
+            microbatch=2,
+        )
+        is None
+    )
 
 
 def test_disposable_fixture_viability_requires_every_action_header_and_eos() -> None:
@@ -92,9 +94,7 @@ def test_disposable_fixture_viability_requires_every_action_header_and_eos() -> 
     assert result["passed"] is True
     assert result["quality_evidence"] is False
     assert result["scope"] == "answer-cued_disposable_codec_only"
-    assert all(
-        result["per_action"][kind]["exact_actions"] == 3 for kind in kinds
-    )
+    assert all(result["per_action"][kind]["exact_actions"] == 3 for kind in kinds)
 
     failed = [dict(row) for row in observations]
     failed[-4]["exact_action"] = False
@@ -117,3 +117,25 @@ def test_disposable_fixture_identity_survives_json_tuple_roundtrip() -> None:
     assert digest(loaded) == digest(rows)
     loaded[0]["state"]["source"] = "altered = True\n"
     assert digest(loaded) != digest(rows)
+
+
+def test_fixture_loss_scale_is_explicit_and_bounded() -> None:
+    import json
+
+    root = Path(__file__).resolve().parents[1]
+    plan = json.loads(
+        (root / "reports/prototype/product_r2/disposable_fixture_plan_v3.json").read_text()
+    )
+    validate = _TRAINER["validate_disposable_fixture_plan"]
+    fixture = plan["training"]["disposable_fixture"]
+    assert (
+        validate(plan, phase="fixture", epochs=1, microbatch=2).get("initial_loss_scale", 256.0)
+        == 256.0
+    )
+    fixture["initial_loss_scale"] = 128.0
+    assert validate(plan, phase="fixture", epochs=1, microbatch=2)["initial_loss_scale"] == 128.0
+    fixture["initial_loss_scale"] = float("inf")
+    import pytest
+
+    with pytest.raises(ValueError, match="loss scale"):
+        validate(plan, phase="fixture", epochs=1, microbatch=2)

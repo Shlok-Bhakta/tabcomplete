@@ -25,7 +25,7 @@ HARD_DEADLINE = STARTED + int(SESSION["session_seconds"])
 RESERVE_SECONDS = int(SESSION["reserve_seconds"])
 INPUT_ROOT = Path("/kaggle/input")
 WORK_ROOT = Path("/kaggle/working")
-REPO = WORK_ROOT / "tabcomplete"
+REPO = Path("/kaggle/temp/tabcomplete")
 OUT = WORK_ROOT / "one_line_gpu_pilot_r1"
 TRAIN_OUT = OUT / "training"
 MAX_EVAL_SECONDS = 15 * 60
@@ -558,7 +558,7 @@ def _clone_frozen_commit() -> None:
     elif SESSION.get("data_schema") == "one-line-license-mixed-pilot-v1":
         repository_plan = "reports/prototype/product_r2/license_mixed_pilot_plan.json"
     elif SESSION.get("fixture_only") is True:
-        repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v3.json"
+        repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v4.json"
     if sha(REPO / repository_plan) != SESSION["plan_sha256"]:
         raise ValueError("pushed pilot plan does not match the attached frozen plan")
     if SESSION.get("fixture_only") is True:
@@ -681,6 +681,28 @@ def _verify_training_output(
 
 
 def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
+    # Offline only. Scientific JSON results remain authoritative.
+    os.environ.update(
+        {
+            "TABCOMPLETE_OBSERVABILITY_ENABLED": "1",
+            "TABCOMPLETE_OBSERVABILITY_MODE": "offline",
+            "TABCOMPLETE_OBSERVABILITY_OFFLINE_BUNDLE": str(OUT / "fixture-telemetry.jsonl"),
+            "TABCOMPLETE_OBSERVABILITY_OFFLINE_MAX_BYTES": str(4 * 1024**2),
+            "TABCOMPLETE_OBSERVABILITY_CAPTURE_CONTENT": "0",
+        }
+    )
+    sys.path.insert(0, str(REPO / "src"))
+    from tinycomplete.observability.context import RunContext, subprocess_environment
+    from tinycomplete.observability.runs import run_scope
+    from tinycomplete.observability.spans import operation
+
+    seed = RunContext.new(campaign_id="tabcomplete-product-r2")
+    with seed.activate(), run_scope(OUT / "fixture-observability-run.json", "disposable-fixture"):
+        with operation("campaign.phase", attributes={"tabcomplete.phase": "disposable-fixture"}):
+            return _run_disposable_training_fixture_impl(dataset, subprocess_environment(env))
+
+
+def _run_disposable_training_fixture_impl(dataset: Path, env: dict[str, str]) -> int:
     """Actual pretrained q25 update check, discarded as quality evidence."""
     spec = SESSION["disposable_fixture"]
     path = dataset / "training-fixture.jsonl"
