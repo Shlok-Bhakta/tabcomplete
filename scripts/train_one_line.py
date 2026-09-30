@@ -21,7 +21,7 @@ from typing import Any
 import yaml
 
 from tinycomplete.one_line.context import CONTEXT_POLICY_VERSION
-from tinycomplete.one_line.contract import EditAction, EditState, apply_action
+from tinycomplete.one_line.contract import EditAction, EditState, apply_action, decode_action
 from tinycomplete.one_line.pilot_data import (
     CONSTRUCTIVE,
     INSTINCT,
@@ -638,9 +638,43 @@ def main() -> None:
     if fixture_before is not None:
         fixture_after = model.model.norm.weight.detach().float().cpu()
         delta = (fixture_after - fixture_before).abs()
+        generated_observations = []
+        model.eval()
+        # Four deliberately exposed codec exercises. Actual greedy stopping is
+        # observed separately from correctly supervising EOS in the loss.
+        for row, example in zip(chosen_rows[:4], encoded[:4], strict=True):
+            ids = torch.tensor([example.input_ids[: example.prompt_tokens]], device=device)
+            with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
+                generated = model.generate(
+                    ids,
+                    max_new_tokens=64,
+                    do_sample=False,
+                    use_cache=True,
+                    eos_token_id=tokenizer.eos_token_id,
+                    pad_token_id=tokenizer.eos_token_id,
+                )[0, ids.shape[1] :].tolist()
+            terminated = bool(generated and generated[-1] == tokenizer.eos_token_id)
+            wire = tokenizer.decode(
+                generated[:-1] if terminated else generated,
+                skip_special_tokens=False,
+                clean_up_tokenization_spaces=False,
+            )
+            decoded = decode_action(wire, terminated=terminated, generated_tokens=len(generated))
+            generated_observations.append(
+                {
+                    "id": row["id"],
+                    "gold_action": row["action"]["kind"],
+                    "wire": wire,
+                    "generated_tokens": len(generated),
+                    "terminated_by_eos": terminated,
+                    "valid_action": decoded.action is not None,
+                    "exact_action": decoded.action == EditAction(**row["action"]),
+                }
+            )
         summary["disposable_fixture"] = {
             "quality_evidence": False,
-            "generation_quality_status": "not_measured_by_training_mechanics_check",
+            "generation_quality_status": "four_exposed_training_exercises_not_quality_evidence",
+            "greedy_generation_observations": generated_observations,
             "response_and_eos_positions_supervised": all(
                 example.labels[: example.prompt_tokens] == (-100,) * example.prompt_tokens
                 and example.labels[-1] == tokenizer.eos_token_id

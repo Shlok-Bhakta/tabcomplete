@@ -572,6 +572,7 @@ def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
     result, checkpoint = _verify_training_output(output, phase="fixture")
     counts = result.get("cursor", {})
     observation = result.get("disposable_fixture", {})
+    generations = observation.get("greedy_generation_observations", [])
     if (
         result.get("status") != "complete"
         or result.get("examples") != 64
@@ -581,6 +582,11 @@ def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
         or counts.get("supervised_target_tokens") != spec["supervised_response_and_eos_tokens"]
         or observation.get("response_and_eos_positions_supervised") is not True
         or observation.get("changed_parameter_elements", 0) <= 0
+        or not isinstance(generations, list)
+        or len(generations) != 4
+        or {row.get("gold_action") for row in generations}
+        != {"keep", "replace_line", "insert_before", "delete_line"}
+        or any(type(row.get("terminated_by_eos")) is not bool for row in generations)
     ):
         raise ValueError("disposable fixture did not prove the declared updates and supervision")
     save(
@@ -591,6 +597,7 @@ def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
             "checkpoint_sha256": sha(checkpoint),
             "token_counts": counts,
             "parameter_update_evidence": observation,
+            "actual_generation_observations": generations,
             "main_pilot_initializer": "untouched_pretrained_in_separate_process",
         },
     )

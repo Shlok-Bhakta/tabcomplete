@@ -236,6 +236,10 @@ def test_worker_fixture_requires_actual_updates_and_counts_both_phases(
         "disposable_fixture": {
             "response_and_eos_positions_supervised": True,
             "changed_parameter_elements": 3,
+            "greedy_generation_observations": [
+                {"gold_action": kind, "terminated_by_eos": False}
+                for kind in ("keep", "replace_line", "insert_before", "delete_line")
+            ],
         },
     }
     monkeypatch.setattr(worker, "_verify_training_output", lambda *a, **kw: (result, checkpoint))
