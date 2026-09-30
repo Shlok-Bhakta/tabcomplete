@@ -1,0 +1,11 @@
+{
+  "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+  "metadata_reconciliation": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/gpu-bundle-002/submission-reconciliation.json",
+  "quota_observed_at": "2026-09-30T09:06:18.669494+00:00",
+  "remaining": 44.57,
+  "renewal": "2026-10-03T00:00:00",
+  "reserve_seconds": 1200,
+  "session_seconds": 7200,
+  "source_commit": "fd6e548ae7cd572654314c0b4906dfb6bdc13bb5",
+  "submitted_at": "2026-09-30T09:06:53.261529+00:00"
+}

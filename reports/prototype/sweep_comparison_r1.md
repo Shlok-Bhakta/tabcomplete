@@ -2,7 +2,7 @@
 
 ## Status
 
-The user authorized this specific model, Q4 comparison, the existing benchmarks, and free Kaggle comparisons on 2026-09-30. No Sweep model has replaced the installed automatic q25 provider. The first GPU allocation failed during CMake configuration before model loading. A tested CUDA driver-library lookup fix is being prepared for the one bounded retry. Ordinary-context CPU replay has now started; quality and replay results are still pending.
+The user authorized this specific model, Q4 comparison, the existing benchmarks, and free Kaggle comparisons on 2026-09-30. No Sweep model has replaced the installed automatic q25 provider. The first GPU allocation failed during CMake configuration before model loading. The tested CUDA driver-library lookup fix was submitted in the one bounded retry, which is now RUNNING. Q4 completed all 96 local replay requests; Q8 is running next. Quality and replay summaries are still pending.
 
 ## Identity and format
 
@@ -39,3 +39,9 @@ The actual active `tabcomplete-predictor.service` was verified at2026-09-30T07:3
 The private initial job was submitted at 2026-09-30T08:17:42.592904Z and reached ERROR. Its worker ran for 54.991668288 seconds, failing because CMake could not resolve `CUDA::cuda_driver`. No model was loaded and no quality prediction was produced. The fix resolves the existing driver via `ldconfig`, or selects the pinned runtime's supported CUDA allocator without virtual memory management. It still requires verified GPU offload and does not install drivers. The focused worker and submission tests pass, 39 tests in 0.67 seconds.
 
 Authenticated quota was 44.59 GPU-hours remaining before attempt 1 and 44.57 at 08:34:03.962691Z after its failure, with renewal 2026-10-03. These balances are observed rounded values. Exact provider wall time is unknown. The interval from the pre-submit quota observation through the authenticated terminal observation bounds attempt 1 at 1,352.229974 seconds. Adding the two-hour retry gives a conservative 8,552.229974-second total below the four-hour campaign cap. Fresh quota and active-job checks remain enforced at submission.
+
+## Submission metadata reconciliation
+
+The first retry push was rejected, leaving a deliberately ambiguous `submission_started` ledger. Authenticated exact-status and full account notebook listing found no retry notebook; the initial notebook retained its previous execution timestamp. The retry title did not resolve to its requested slug. Installed Kaggle CLI source documents this mismatch. The original state and metadata were preserved privately, the title was corrected to match the retry slug, and a new fresh all-job/quota gate was started before retrying submission. The discarded API error text prevents a confirmed causal claim about the title. This administrative retry does not count as a GPU allocation unless the provider actually launches a job.
+
+The actual retry was submitted at 2026-09-30T09:06:53.261529Z from committed source `fd6e548ae7cd572654314c0b4906dfb6bdc13bb5`. The fresh authenticated quota observation at 09:06:18.669494Z reports 44.57 GPU-hours remaining and no active jobs before allocation. Plan v5 preserves the scientific comparison and pins the final setup worker. The job is restricted to two session hours, including a 20-minute finalization reserve.
