@@ -43,3 +43,20 @@ def test_selection_is_fixed_before_outputs_and_budget_bounded(probe):
     assert probe.MAX_SECONDS == 900
     with pytest.raises(ValueError, match="nine languages"):
         probe.selected_cases(rows[:3])
+
+
+def test_overflow_never_inherits_previous_request_outcome(probe):
+    class Provider:
+        last = {"raw_response": "previous request must not appear here"}
+
+        def generate_line_detailed(self, *args):
+            pytest.fail("over-budget prompt must not run inference")
+
+    record = probe.generate_record({"id": "too-long"}, "fim_psm", 1, 2977, Provider())
+    assert record == {
+        "case_id": "too-long",
+        "policy": "fim_psm",
+        "repetition": 1,
+        "input_tokens": 2977,
+        "status": "input_budget_skipped",
+    }

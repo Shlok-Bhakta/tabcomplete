@@ -39,6 +39,7 @@ RUNTIME_SHA = "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c"
 SUITE_SHA = "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
 MAX_REQUESTS = 72
 MAX_SECONDS = 900
+SELECTED_SHA = "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626"
 
 
 def digest(path: Path) -> str:
@@ -66,14 +67,41 @@ def selected_cases(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return selected
 
 
+def generate_record(case, policy, repetition, input_tokens, provider):
+    result = {
+        "case_id": case["id"],
+        "policy": policy,
+        "repetition": repetition,
+        "input_tokens": input_tokens,
+    }
+    if input_tokens > 2976:
+        return {**result, "status": "input_budget_skipped"}
+    generated = provider.generate_line_detailed(prompt(case, policy), 96)
+    result.update(
+        score_line(case, generated.text, native_newline_omitted=generated.finish_reason == "word")
+    )
+    return {
+        **result,
+        "status": "completed",
+        "native": dict(provider.last),
+        "explicit_termination": generated.finish_reason in ("eos", "word"),
+    }
+
+
 def identities(args: argparse.Namespace) -> dict[str, Any]:
-    if digest(args.model) != MODEL_SHA or args.model.stat().st_size != MODEL_BYTES:
-        raise ValueError("existing untouched Qwen artifact identity mismatch")
+    expected_sha, expected_bytes = (
+        (MODEL_SHA, MODEL_BYTES)
+        if args.model_alias == "untouched-q25"
+        else (SELECTED_SHA, 397_807_232)
+    )
+    if digest(args.model) != expected_sha or args.model.stat().st_size != expected_bytes:
+        raise ValueError("existing approved Qwen artifact identity mismatch")
     if digest(args.binary) != RUNTIME_SHA or digest(args.suite) != SUITE_SHA:
         raise ValueError("runtime or fixed suite identity mismatch")
     return {
-        "model_sha256": MODEL_SHA,
-        "model_bytes": MODEL_BYTES,
+        "model_alias": args.model_alias,
+        "model_sha256": expected_sha,
+        "model_bytes": expected_bytes,
         "binary_sha256": RUNTIME_SHA,
         "suite_sha256": SUITE_SHA,
         "code": {
@@ -96,10 +124,13 @@ def main() -> None:
     for field in ("model", "binary", "suite", "plan", "output"):
         parser.add_argument(f"--{field}", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--model-alias", choices=("untouched-q25", "selected-adapted-q25"), default="untouched-q25"
+    )
     args = parser.parse_args()
     rows = selected_cases([json.loads(line) for line in args.suite.read_text().splitlines()])
     plan = {
-        "schema": "q25-matched-fim-line-diagnostic-v1",
+        "schema": "q25-matched-fim-line-diagnostic-v2",
         **identities(args),
         "cases": [row["id"] for row in rows],
         "prompts": {
@@ -121,7 +152,11 @@ def main() -> None:
         "overflow": "record skipped before generation; never truncate either prompt",
         "task": "line completion, not next-edit or human acceptance calibration",
         "runtime_argv": build_server_argv(args.binary, args.model, 0),
-        "source_identity": "existing R2 verified-local-models q25 source_checkpoint_modified=false",
+        "source_identity": (
+            "existing R2 verified-local-models q25 source_checkpoint_modified=false"
+            if args.model_alias == "untouched-q25"
+            else "existing selected prototype deployment manifest, adapted q25 Q4 unchanged"
+        ),
     }
     if not args.execute:
         args.plan.parent.mkdir(parents=True, exist_ok=True)
@@ -153,7 +188,7 @@ def main() -> None:
         sampler.start()
         try:
             load_seconds = _wait_server(process, url, timeout_seconds=60)
-            provider = NativeProvider(url, "q25-untouched-q4-fim-diagnostic")
+            provider = NativeProvider(url, args.model_alias + "-q4-fim-diagnostic")
             provider.cache = False
             with run_scope(args.output / "run.json", "q25-fim-line-diagnostic") as run:
                 with (args.output / "predictions.jsonl").open("x") as output:
@@ -174,42 +209,19 @@ def main() -> None:
                                 )
                                 response.raise_for_status()
                                 tokens = response.json()["tokens"]
-                                result = {
-                                    "case_id": case["id"],
-                                    "policy": policy,
-                                    "repetition": repetition,
-                                    "input_tokens": len(tokens),
-                                }
-                                if len(tokens) > plan["input_budget"]:
-                                    result["status"] = "input_budget_skipped"
-                                else:
-                                    provider.timeout_seconds = min(
-                                        60, deadline - time.monotonic() - 30
+                                provider.timeout_seconds = min(60, deadline - time.monotonic() - 30)
+                                with run.for_case(f"{case['id']}/{policy}/{repetition}").activate():
+                                    result = generate_record(
+                                        case, policy, repetition, len(tokens), provider
                                     )
-                                    with run.for_case(
-                                        f"{case['id']}/{policy}/{repetition}"
-                                    ).activate():
-                                        generated = provider.generate_line_detailed(text, 96)
-                                        result.update(
-                                            score_line(
-                                                case,
-                                                generated.text,
-                                                native_newline_omitted=generated.finish_reason
-                                                == "word",
-                                            )
-                                        )
-                                result.update(status="completed", native=provider.last)
-                                result["explicit_termination"] = generated.finish_reason in (
-                                    "eos",
-                                    "word",
-                                )
                                 records.append(result)
                                 output.write(json.dumps(result, ensure_ascii=False) + "\n")
                                 output.flush()
             summary = {
                 "plan_sha256": digest(args.plan),
                 "load_seconds": load_seconds,
-                "requests": len(records),
+                "planned_slots": len(records),
+                "actual_model_requests": sum(r["status"] == "completed" for r in records),
                 "memory": sampler.report(),
                 "policies": {
                     policy: {
@@ -224,7 +236,14 @@ def main() -> None:
                 },
             }
             (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-            print(json.dumps({"requests": len(records), "policies": summary["policies"]}))
+            print(
+                json.dumps(
+                    {
+                        "actual_model_requests": summary["actual_model_requests"],
+                        "policies": summary["policies"],
+                    }
+                )
+            )
         finally:
             sampler.close()
             _stop_process(process)
