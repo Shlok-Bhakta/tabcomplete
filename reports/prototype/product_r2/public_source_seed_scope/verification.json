@@ -1,0 +1,25 @@
+{
+  "accepted_training_states": 0,
+  "builder_sha256": "b94b8cc9e0715826838b4df65db2eb2c07c6c7a25c097e65ec2cb554b1edb773",
+  "child_source_accessed": false,
+  "focused_tests_passed": 18,
+  "gpu_hours": 0,
+  "model_calls": 0,
+  "mypy": "passed",
+  "network_bytes": 136193,
+  "network_cap_bytes": 2097152,
+  "notes": [
+    "Pinned exact parent-tree source blob identities and path-scoped licenses matched.",
+    "No detected ancestor NOTICE/COPYRIGHT, REUSE dep5, or ambiguous SPDX evidence.",
+    "This audit is provenance evidence, not a legal guarantee or edit quality measurement."
+  ],
+  "plan_raw_sha256": "cc24cc4b314e097d25f5fb9d249a09f8cf4f85adf8cf715cc36fb2b13cc455f2",
+  "private_plan_path": "/mnt/ssd/tabcomplete-product-r2/public-source-oracle-seeds-r1/plan_v2.json",
+  "provider_calls": 0,
+  "ruff": "passed",
+  "schema": "public-source-seed-scope-verification-v1",
+  "source_audit_only": true,
+  "tests_sha256": "7093adf8c0237b4bd2b993b689d949fd448d4adb3363d8463788d05a461f6bcf",
+  "training_ready": false,
+  "unique_training_parent_groups": 8
+}

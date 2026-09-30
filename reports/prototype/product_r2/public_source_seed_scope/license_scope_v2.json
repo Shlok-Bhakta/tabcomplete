@@ -1,0 +1,312 @@
+{
+  "artifact_identity_sha256": "af06b6a131f6ee1c6c2e610b2bbd39a5ae5b6e731c65656e6ba705621994e3b7",
+  "child_source_accessed": false,
+  "gpu_hours": 0,
+  "model_calls": 0,
+  "network_bytes_total": 136193,
+  "network_cap_bytes": 2097152,
+  "plan_raw_sha256": "cc24cc4b314e097d25f5fb9d249a09f8cf4f85adf8cf715cc36fb2b13cc455f2",
+  "provider_calls": 0,
+  "results": [
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/68a81d31e1ad9a6f66d642b3",
+      "network_bytes": 7068,
+      "parent_commit": "06351ed65a23d9dfd59344d2a8fbf10e56e43069",
+      "path_scope": {
+        "git_blob_sha": "530058f891f2bc17581b35c49890260f0fbd761e",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "80d871c1f63b3c729f72e21374401b871c47ab951613b1dc6c7793361b1186f1",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "mit"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "cassava/repoctl",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "530058f891f2bc17581b35c49890260f0fbd761e",
+        "path": "LICENSE",
+        "root_spdx": [
+          "mit"
+        ],
+        "sha256": "80d871c1f63b3c729f72e21374401b871c47ab951613b1dc6c7793361b1186f1"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-01-package-suffix",
+      "source_group_id": "a43b333dc7e00e024306d533a2066d7376cdc193b4072067e33f8fd9e18eb956",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "alpm/format.go",
+      "source_sha256": "a8e43df0db3bba191a2916568ad68a0483c9830d3b964dea6a20329077a45ca4",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/2fc499c2c241a0e4c93eaf56",
+      "network_bytes": 11241,
+      "parent_commit": "e9995a6d3e834534ebed81ec4f60256f4445a9cb",
+      "path_scope": {
+        "git_blob_sha": "a5184d48640868286bbbad07020601648a969477",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "cd81479c1bc8fdc8a4e1977bd24e7102d6b705dd6a4c3121a54a9bd2ae46fccd",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "bsd-3-clause"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "Becklyn/mojave",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "a5184d48640868286bbbad07020601648a969477",
+        "path": "LICENSE",
+        "root_spdx": [
+          "bsd-3-clause"
+        ],
+        "sha256": "cd81479c1bc8fdc8a4e1977bd24e7102d6b705dd6a4c3121a54a9bd2ae46fccd"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-02-json-object-contract",
+      "source_group_id": "6689ff0aecf8fa7ebf8526a4abfb7fc20b832656af29113a0ab1f456e08d927f",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "json.ts",
+      "source_sha256": "3827f6ea060dbf48b32394e078736097d3b4c4a1d3ba4eaec9aad4a71d1021e0",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/a6eb3efc9d322f7f59ec69fa",
+      "network_bytes": 24341,
+      "parent_commit": "e98032d4c2e5b2a12e75f0cf8523927909599aa2",
+      "path_scope": {
+        "git_blob_sha": "e0ccc701cdcb2d87d268dedafc1c140d9adc3c03",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "5a9a79f0e8b686cb1346c7203038c22518e4c76e30784b9429089762bd0737dc",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "mit"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "omise/omise-go",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "e0ccc701cdcb2d87d268dedafc1c140d9adc3c03",
+        "path": "LICENSE",
+        "root_spdx": [
+          "mit"
+        ],
+        "sha256": "5a9a79f0e8b686cb1346c7203038c22518e4c76e30784b9429089762bd0737dc"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-03-explicit-date-override",
+      "source_group_id": "5b1d2c08cb282ecc63ab6d9c49dd690668269a8660467a59d8fea0c56a629aa4",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "operations/list.go",
+      "source_sha256": "c3bf18fa2ac6383c2b44ba42155f2fff15ea89934c64f95e0192a7843d1f5848",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/b1709088ff3b111101fd24a1",
+      "network_bytes": 46331,
+      "parent_commit": "39a6c005ddded2083777f83bccdc3d21772c3447",
+      "path_scope": {
+        "git_blob_sha": "10494a5b38cf84d38253b0f138361d4266399a76",
+        "license_path": "LICENSE.md",
+        "scope": "root",
+        "sha256": "174146cd88f80d8a3e9f0c3ded3af1f65757a534e3a397709d169463a95dbb5c",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "mit"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "DestinyItemManager/DIM",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "10494a5b38cf84d38253b0f138361d4266399a76",
+        "path": "LICENSE.md",
+        "root_spdx": [
+          "mit"
+        ],
+        "sha256": "174146cd88f80d8a3e9f0c3ded3af1f65757a534e3a397709d169463a95dbb5c"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-04-empty-inventory-id",
+      "source_group_id": "935d93542b94460e80c531d27bfb8976ee150db47a01fb35642859fe9b5be32d",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "src/app/inventory/store/item-index.ts",
+      "source_sha256": "bd0006c6d989821da59bd197de2e28f09341c158c3abfc40bfa6c61be3b4c9b8",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/ecec19afc8be49798907c2c6",
+      "network_bytes": 22285,
+      "parent_commit": "fd8cfc7dffbcdaa11ff2dc2c61ec2b62df660d8b",
+      "path_scope": {
+        "git_blob_sha": "8dada3edaf50dbc082c9a125058f25def75e625a",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "apache-2.0"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "nodeswork/sbase",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "8dada3edaf50dbc082c9a125058f25def75e625a",
+        "path": "LICENSE",
+        "root_spdx": [
+          "apache-2.0"
+        ],
+        "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-05-repeat-next-contract",
+      "source_group_id": "d129b35ddbcb3607c931ad5f2e07e6e1d421bf711f7ea48a720b207388ad2ae9",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "src/koa/utils.ts",
+      "source_sha256": "5396e15eee01cee0d343d3b85b04f78a41cac45430ef58788c9045fc5d5619a7",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/4c6f19d20f253d59172465b6",
+      "network_bytes": 15471,
+      "parent_commit": "073f0ee9c73111502e8eb6fb692802dd41855dbe",
+      "path_scope": {
+        "git_blob_sha": "e1720e0fb70684043842e94ede48622e6bffc62d",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "303574d9bdd85c757d6025017942bf17baeedf2778f62bd7f425d07d880f4c4a",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "bsd-3-clause"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "jonathanslenders/python-prompt-toolkit",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "e1720e0fb70684043842e94ede48622e6bffc62d",
+        "path": "LICENSE",
+        "root_spdx": [
+          "bsd-3-clause"
+        ],
+        "sha256": "303574d9bdd85c757d6025017942bf17baeedf2778f62bd7f425d07d880f4c4a"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-06-boolean-filter-contract",
+      "source_group_id": "8e99bbe7861814812f62a4da79cc8828fd9765aa1e70f3052e97df8e8e6f2fa4",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "prompt_toolkit/filters/utils.py",
+      "source_sha256": "85a851d0ad626bada3b64e347769971585e76e7e72aaa9f985a26d057f4d7a0d",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/dc7b6133ce548947d9d120fb",
+      "network_bytes": 4038,
+      "parent_commit": "7b7958ba4830d201c1b31275f449d3d03d77b47a",
+      "path_scope": {
+        "git_blob_sha": "b3ff1184918688eace4fb0da087922de3ef41c10",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "f6ad3257edb2bed711971e0e4ed91d5e7784fa6c1ff5af92cc308c5c019e8b86",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "mit"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "bbrks/wrap",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "b3ff1184918688eace4fb0da087922de3ef41c10",
+        "path": "LICENSE",
+        "root_spdx": [
+          "mit"
+        ],
+        "sha256": "f6ad3257edb2bed711971e0e4ed91d5e7784fa6c1ff5af92cc308c5c019e8b86"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-07-exact-wrap-width",
+      "source_group_id": "5f19cfded5ae5065aee7157c9034f79df910baa985284ba7c3047d2ee10b19c0",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "wrap.go",
+      "source_sha256": "f804d603542627e94a5ea124800915f544696da75dadf73c40850dd9671e39fd",
+      "status": "verified_path_scope"
+    },
+    {
+      "additional_license_references": [],
+      "candidate_id": "commit-sequence/f23a85517771485aea1ae128",
+      "network_bytes": 5418,
+      "parent_commit": "ecd16757238cc0b204b6a5136f89eb1be3e73f7e",
+      "path_scope": {
+        "git_blob_sha": "bd92d22e4fcce9f01798354954381e99e2428f85",
+        "license_path": "LICENSE",
+        "scope": "root",
+        "sha256": "2ed77474952bd007d8892e1f7105f1c5f30970fb26b6312b28f1d987f7a54750",
+        "source": "exact_parent_tree_root_license_plus_frozen_root_api_spdx",
+        "spdx": [
+          "mit"
+        ],
+        "spdx_ambiguous": false,
+        "spdx_expression_count": 0
+      },
+      "repository": "mneumann/lindenmayer-system",
+      "reuse_dep5_references": [],
+      "root_license": {
+        "git_blob_sha": "bd92d22e4fcce9f01798354954381e99e2428f85",
+        "path": "LICENSE",
+        "root_spdx": [
+          "mit"
+        ],
+        "sha256": "2ed77474952bd007d8892e1f7105f1c5f30970fb26b6312b28f1d987f7a54750"
+      },
+      "schema": "exact-parent-license-scope-v2",
+      "seed_id": "seed-08-dual-alphabet-predicate",
+      "source_group_id": "70bb50cfe9e52c778ef61a14ec4e399516a2b9ac59b02cc44cf93486326a94cc",
+      "source_header_spdx": [],
+      "source_header_spdx_ambiguous": false,
+      "source_header_spdx_expression_count": 0,
+      "source_path": "src/lib.rs",
+      "source_sha256": "b8fc9504f28aa84d0fe5e0b253bed4b318feb29b14aea0e46648381b75d43523",
+      "status": "verified_path_scope"
+    }
+  ],
+  "revision": 2,
+  "schema": "exact-parent-license-scope-v2",
+  "training_ready": false,
+  "wall_cap_seconds": 1200
+}
