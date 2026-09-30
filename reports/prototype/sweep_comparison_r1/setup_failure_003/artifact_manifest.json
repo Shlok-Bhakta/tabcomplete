@@ -1,0 +1,86 @@
+{
+  "backend_note": "Actual CUDA0 placement and29/29offload verified independently; device-count log suppressed by CLI argument order, so mandatory guard stopped generation.",
+  "files": {
+    "comparison-download.log": {
+      "bytes": 194,
+      "sha256": "1ea2772cedb344c25866de2a7e390a7d6bf85f1d5121c722b81d4e5e4d8dc277"
+    },
+    "comparison-quality.log": {
+      "bytes": 715,
+      "sha256": "4d38c12f0821d6e74887142dffea9b65116ebeaf0d51738125a1e2208f0df960"
+    },
+    "comparison-quantize.log": {
+      "bytes": 192,
+      "sha256": "c4f5a0829313f1010554d63afc3f192308e3e58bea7c7f37495a2d203b093815"
+    },
+    "cuda-driver-configuration.json": {
+      "bytes": 230,
+      "sha256": "733c4af7d3f9ee08f040edb110eef1223a5df5f3b9a28ac34de5ac73009c176d"
+    },
+    "dependencies.log": {
+      "bytes": 9882,
+      "sha256": "2ed0227ca6f80492c59055119b6b6b7d53e4bf6f42bbbb3e4693c4a9d9c65732"
+    },
+    "ensurepip.log": {
+      "bytes": 249,
+      "sha256": "9082dd9cfd179bc685e639a76bba3e453ab7308aa183f50838d9d4c0ead1878a"
+    },
+    "install-uv.log": {
+      "bytes": 433,
+      "sha256": "854003450571702e8fe5ae17871aff21f5947205d1403e4fb2050bbbcb6e2e6a"
+    },
+    "python311.log": {
+      "bytes": 431,
+      "sha256": "638bd8f7ead196d936ad2fb7cc2d10d04c14ac2cd99f167744c3d116f1e5f913"
+    },
+    "repo-checkout.log": {
+      "bytes": 680,
+      "sha256": "894d839fc343429f17cfe6771d741bb96b1d04310d100e6769627db7616a61e0"
+    },
+    "repo-clone.log": {
+      "bytes": 49,
+      "sha256": "33d16f2a6e0927abc642f49c8cc2dcb6b24fc43163c49eddb3b0af3bfae3a6b4"
+    },
+    "results/observability-runtime.json": {
+      "bytes": 239,
+      "sha256": "597da08b8445e59d4a8278006ef11fbe5b898f6c132beec609da1c83b7979d64"
+    },
+    "results/server-sweep-next-edit-1.5b.q8_0.v2-1790766464985604216.backend-startup.json": {
+      "bytes": 2636,
+      "sha256": "03322fe04b7e1123c4c697a2153db5615d3a4001b26e0099b0fa03e2e62cb3e5"
+    },
+    "results/server-sweep-next-edit-1.5b.q8_0.v2-1790766464985604216.log": {
+      "bytes": 15395,
+      "sha256": "139145b57181425e2252bffb6641415a7e5904624eb8e50a43044dd518fd8431"
+    },
+    "runtime-build.log": {
+      "bytes": 36201,
+      "sha256": "474e325a0d63c4610836d09239c55c32721321b8170abff0b93a6e22ac7a4105"
+    },
+    "runtime-checkout.log": {
+      "bytes": 654,
+      "sha256": "e92fa7ee4caed8ab536b62772fca8e6083a1acfc5a25d646995664fc9ee240f9"
+    },
+    "runtime-clone.log": {
+      "bytes": 3417,
+      "sha256": "0b3596a09b1303df6235a2ba19402a495e37fc17797553bac0d646fe6577010f"
+    },
+    "runtime-configure.log": {
+      "bytes": 2447,
+      "sha256": "2ef817771a89ece2f5dd412648ce499eba8553e7f5cc532e9bcb1cc5236f018b"
+    },
+    "runtime-environment.json": {
+      "bytes": 1359,
+      "sha256": "737bc13d3abfebe6f36c12304f8f807b01b300d997dd5034267659a302a79e71"
+    },
+    "worker-status.json": {
+      "bytes": 403,
+      "sha256": "77e32c861971f6475510dae5eba3a06d9be4ffcaf61c6ca4c70db90822a77294"
+    }
+  },
+  "kernel": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+  "observability_run_ids": [],
+  "quality_predictions": 0,
+  "schema": "sweep-failed-setup-artifacts-v1",
+  "source_root": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/gpu-output-003/sweep_comparison_r1"
+}

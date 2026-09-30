@@ -96,6 +96,12 @@ def test_startup_enables_backend_logs_and_preserves_guard_evidence(
 
     def launch(argv, **kwargs):
         level = int(argv[argv.index("--log-verbosity") + 1])
+        # The real parser handles arguments in order. GPU options initialize
+        # CUDA's cached device inventory, so later verbosity cannot recover it.
+        assert argv.index("--log-verbosity") < min(
+            argv.index(option)
+            for option in ("--split-mode", "--main-gpu", "--n-gpu-layers")
+        )
         if level >= 4:
             layers = 29 if offloaded else 0
             kwargs["stdout"].write(

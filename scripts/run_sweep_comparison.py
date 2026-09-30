@@ -736,6 +736,8 @@ class Server:
         log = log_path.open("wb")
         argv = [
             str(server),
+            "--log-verbosity",
+            "4",
             "--model",
             str(self.model),
             "--host",
@@ -769,8 +771,6 @@ class Server:
             "--n-gpu-layers",
             str(self.args.gpu_layers),
             "--no-webui",
-            "--log-verbosity",
-            "4",
         ]
         self.argv = argv
         self.log = log
