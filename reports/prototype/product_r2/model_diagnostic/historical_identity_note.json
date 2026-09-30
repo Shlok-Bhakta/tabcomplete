@@ -1,0 +1,14 @@
+{
+  "current_verified_installation": {
+    "automatic_personalization_enabled": false,
+    "automatic_quality_validated": false,
+    "experimental_auto_opt_in": true,
+    "host": "crabcake",
+    "mode": "automatic"
+  },
+  "historical_flag_capture_bug": "The historical boolean scanner treated the presence of field names as true. automatic_quality_validated and automatic_personalization_enabled in that historical plan are not current installation facts.",
+  "historical_plan": "diagnostic_plan_v2.json",
+  "preserve_bytes_and_hash": true,
+  "schema": "historical-diagnostic-identity-note-v1",
+  "source": "Existing prototype configuration and product-r2 continuation verification; no configuration change."
+}
