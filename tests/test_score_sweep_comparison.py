@@ -177,6 +177,7 @@ def test_over_context_case_counts_as_unavailable_not_as_a_prediction() -> None:
     row = {
         "context_eligible": False,
         "input_tokens": 8000,
+        "observability_ids": None,
         "editable_range_mapping": {
             "mapping": "incomplete_or_unterminated_output_not_scored",
             "out_of_range": None,
@@ -204,6 +205,31 @@ def test_over_context_case_counts_as_unavailable_not_as_a_prediction() -> None:
     assert scored["predicted_action"] is None
     assert scored["no_edit_agreement"] is None
     assert scored["mapping_status"] == "context_ineligible_not_generated"
+    assert scored["observability_ids"] is None
+    scorer._validate_request_correlation(row, fixture["case_id"], request_expected=False)
+
+
+def test_request_ids_are_mandatory_only_when_the_worker_made_a_request() -> None:
+    case_id = "python/example"
+    scorer._validate_request_correlation(
+        {"observability_ids": {"case_id": case_id, "request_id": "request-1"}},
+        case_id,
+        request_expected=True,
+    )
+    scorer._validate_request_correlation(
+        {"observability_ids": None}, case_id, request_expected=False
+    )
+
+    with pytest.raises(ValueError, match="missing its request correlation"):
+        scorer._validate_request_correlation(
+            {"observability_ids": None}, case_id, request_expected=True
+        )
+    with pytest.raises(ValueError, match="fabricated request correlation"):
+        scorer._validate_request_correlation(
+            {"observability_ids": {"case_id": case_id, "request_id": "fake"}},
+            case_id,
+            request_expected=False,
+        )
 
 
 def test_complete_mapped_action_uses_container_backend_and_preserves_public_label(

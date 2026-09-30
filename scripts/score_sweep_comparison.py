@@ -947,6 +947,25 @@ def _row_terminal_valid(row: dict[str, Any]) -> bool:
     )
 
 
+def _validate_request_correlation(
+    row: dict[str, Any], case_id: str, *, request_expected: bool
+) -> None:
+    ids = row.get("observability_ids")
+    if not request_expected:
+        if ids is not None:
+            raise ValueError(
+                f"no-request next-edit case has fabricated request correlation: {case_id}"
+            )
+        return
+    if (
+        not isinstance(ids, dict)
+        or ids.get("case_id") != case_id
+        or not isinstance(ids.get("request_id"), str)
+        or not ids["request_id"]
+    ):
+        raise ValueError(f"next-edit result is missing its request correlation: {case_id}")
+
+
 def _score_next_edit_result(
     *,
     row: dict[str, Any],
@@ -1244,15 +1263,6 @@ def _score_next_edit(
                         or row.get("prompt_sha256") != prompt["prompt_sha256"]
                     ):
                         raise ValueError(f"next-edit result identity mismatch: {key[0]}")
-                    ids = row.get("observability_ids")
-                    if (
-                        not isinstance(ids, dict)
-                        or ids.get("case_id") != key[0]
-                        or not ids.get("request_id")
-                    ):
-                        raise ValueError(
-                            f"next-edit result is missing its request correlation: {key[0]}"
-                        )
                     input_tokens = row.get("input_tokens")
                     if (
                         not isinstance(input_tokens, int)
@@ -1267,6 +1277,9 @@ def _score_next_edit(
                         raise ValueError(
                             "next-edit context eligibility differs from the frozen limit"
                         )
+                    _validate_request_correlation(
+                        row, key[0], request_expected=expected_eligibility
+                    )
                     row_map[key] = row
             expected_keys = {
                 (case_id, repetition) for case_id in prompt_by_id for repetition in (0, 1)
