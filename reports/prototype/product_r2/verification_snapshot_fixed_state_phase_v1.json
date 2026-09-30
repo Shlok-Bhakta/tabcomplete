@@ -1,0 +1,37 @@
+{
+  "automatic_personalization_enabled": false,
+  "covered_sources": {
+    "kaggle/one_line_gpu_pilot_r1/build_pilot.py": "d893aad7cfd2c807d36b04d8b6173d6606750ea47590a5206eabb602530ee4cf",
+    "kaggle/one_line_gpu_pilot_r1/run.py": "158bb878bf2d76ab0eb9b4d13f5b1c59e108037616422c5020dd8d459b621bfa",
+    "scripts/run_fixed_state_role_pilot.py": "7d82dd12641fafbd939f1428dffaf562118479d52aeebb849b3d44bbd3536978",
+    "scripts/train_one_line.py": "7d7c5ac8776ac14cbd605c60cb08cb1a6104af96c2074ad189d7778143e32839",
+    "src/tinycomplete/one_line/fixed_state_role_receipts.py": "b7df907d0647a95906e3609dec6a05955a1d4c176f822d07990cd11e8bb38a4f",
+    "src/tinycomplete/one_line/fixed_state_roles.py": "4d45ac1f29e67b0ff29c3182f49d5f4a1a701c618fc98d5c06a2339328c58d3b",
+    "src/tinycomplete/one_line/pilot_data.py": "10ccf74d810c2cfa15c06864384dd97cb5c30858bfca48dd95e5eabce76c35d0",
+    "tests/test_license_mixed_pilot_policy.py": "854840e0f6b590e9edfa6a74e52eb1d04eafe489df4e5a613d662e74864040af",
+    "tests/test_one_line_gpu_pilot.py": "a4bb92f3812e54d91fc29208e4a0244ac21178dacf49e1372c4dff11cf1608dc",
+    "tests/test_one_line_pilot_trainer.py": "b9c8c330906e3e8b296cd4a9795d02eb7590df17d34cc79c657b62a26e5d6677"
+  },
+  "mypy_core_trainer_and_kaggle": {
+    "source_files": 84,
+    "status": "passed"
+  },
+  "new_actual_teacher_calls": 12,
+  "new_training_input_tokens": 0,
+  "observed_at_utc": "2026-09-30T22:31:49.910401+00:00",
+  "policy_independent_target_tests": {
+    "passed": 12,
+    "seconds": 50.87
+  },
+  "python_full_working_tree": {
+    "failed": 0,
+    "passed": 934,
+    "private_log_sha256": "e5fc122ed489000081223226c01136c99c8921b0b89a1cbfe07494eb32b935af",
+    "seconds": 177.95,
+    "skipped": 1
+  },
+  "quality_claim": false,
+  "ruff_core_trainer_and_kaggle": "passed",
+  "schema": "tabcomplete-verification-snapshot-v1",
+  "working_tree_includes_uncommitted_agent_preparation": true
+}
