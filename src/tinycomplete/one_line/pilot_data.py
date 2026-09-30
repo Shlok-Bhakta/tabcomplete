@@ -10,7 +10,7 @@ from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .context import CONTEXT_POLICY_VERSION, serialize_state_bounded
 from .contract import (
@@ -77,6 +77,8 @@ LICENSE_MIXED_HISTORY = PilotDataPolicy(
     "reports/prototype/product_r2/license_mixed_history_pilot_plan_v2.json",
 )
 REVIEWED_PUBLIC_HISTORY_SOURCE = "reviewed_public_history_candidate"
+TYPED_RETURN_PREFIX_TRANSFORM = "synthetic_typed_return_prefix_v1"
+PUBLIC_PREFIX_ROLE_BUNDLE_SCHEMA = "one-line-public-prefix-role-bundle-v1"
 
 PUBLIC_SOURCE_TYPES = frozenset(
     {"synthetic_public_source_task", "muse_author_public_candidate"}
@@ -118,10 +120,14 @@ def license_mixed_row_bindings(row: Mapping[str, Any]) -> dict[str, str]:
     after_source = row.get("after_source")
     if not isinstance(after_source, str):
         raise ValueError("LICENSE-MIXED row lacks its reconstructed after-state")
+    context_sha256 = row.get("context_sha256")
+    if not isinstance(context_sha256, str) or _SHA256.fullmatch(context_sha256) is None:
+        raise ValueError("LICENSE-MIXED row lacks its pinned model context hash")
     return {
         "state_sha256": _sha256(_canonical_bytes(asdict(state))),
         "action_sha256": _sha256(_canonical_bytes(asdict(action))),
         "after_source_sha256": _sha256(after_source.encode("utf-8")),
+        "context_sha256": context_sha256,
         "history_sha256": _sha256(
             _canonical_bytes([asdict(edit) for edit in state.history])
         ),
@@ -453,7 +459,21 @@ def validate_license_mixed_source_artifacts(
         _provenance_value(row, metadata, "license_scope_artifact_bytes"),
         label="path-scope",
     )
-    scope = _spdx_scope_entry(scope_payload, candidate_id)
+    typed_prefix_source = (
+        isinstance(metadata.get("transform"), Mapping)
+        and metadata["transform"].get("kind") == TYPED_RETURN_PREFIX_TRANSFORM
+    )
+    if typed_prefix_source:
+        scope = _strict_json(scope_payload, label="typed-prefix path-scope evidence")
+        if (
+            not isinstance(scope, Mapping)
+            or scope.get("schema") != "exact-parent-license-scope-v2"
+            or scope.get("status") != "verified_path_scope"
+            or not isinstance(metadata.get("license_scope_candidate_id"), str)
+        ):
+            raise ValueError("LICENSE-MIXED typed-prefix path-scope evidence is invalid")
+    else:
+        scope = _spdx_scope_entry(scope_payload, candidate_id)
     path_scope = scope.get("path_scope")
     if not isinstance(path_scope, Mapping):
         raise ValueError("LICENSE-MIXED path-scope record is incomplete")
@@ -465,7 +485,10 @@ def validate_license_mixed_source_artifacts(
         or scope.get("parent_commit") != source_revision
         or scope.get("source_path") != source_path
         or scope.get("source_sha256") != source_sha256
-        or scope.get("source_group_id") != row.get("source_group_id")
+        or (
+            not typed_prefix_source
+            and scope.get("source_group_id") != row.get("source_group_id")
+        )
         or path_scope.get("sha256") != license_sha256
         or path_scope.get("license_path") != license_path
         or path_scope.get("git_blob_sha") != license_git_blob_sha
@@ -494,13 +517,7 @@ def validate_license_mixed_source_artifacts(
         raise ValueError("LICENSE-MIXED root license blob differs from file scope")
 
     transform = metadata.get("transform")
-    if not isinstance(transform, Mapping) or set(transform) != {
-        "kind",
-        "start_line_1based",
-        "end_line_1based_inclusive",
-        "parent_source_sha256",
-        "selected_source_sha256",
-    }:
+    if not isinstance(transform, Mapping):
         raise ValueError("LICENSE-MIXED transform descriptor is incomplete")
     transform_sha256 = metadata.get("transform_sha256")
     if (
@@ -510,42 +527,61 @@ def validate_license_mixed_source_artifacts(
         or transform.get("parent_source_sha256") != source_sha256
     ):
         raise ValueError("LICENSE-MIXED transform descriptor hash mismatch")
-    lines = physical_lines(source_payload)
-    start, end = transform.get("start_line_1based"), transform.get("end_line_1based_inclusive")
-    if (
-        type(start) is not int
-        or type(end) is not int
-        or start < 1
-        or end < start
-        or end > len(lines)
-    ):
-        raise ValueError("LICENSE-MIXED line-slice bounds are invalid")
-    selected = b"".join(line.raw for line in lines[start - 1 : end])
-    selected_sha256 = _sha256(selected)
-    expected_kind = (
-        "exact_parent_file"
-        if start == 1 and end == len(lines)
-        else "contiguous_parent_file_line_slice"
-    )
-    if (
-        transform.get("kind") != expected_kind
-        or transform.get("selected_source_sha256") != selected_sha256
-        or metadata.get("selected_source_sha256") != selected_sha256
-    ):
-        raise ValueError("LICENSE-MIXED line-slice output differs from pinned transform")
     try:
-        selected_source = selected.decode("utf-8")
         state = EditState.from_mapping(row["state"])
-        replayed = replay_replacement_history(
-            selected_source,
-            state.history,
-            file_id=state.file_id,
-            filetype=state.filetype,
-        )
-    except (KeyError, UnicodeDecodeError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError):
         raise ValueError("LICENSE-MIXED source transform/history cannot be replayed") from None
-    if replayed != state.source:
-        raise ValueError("LICENSE-MIXED source transform/history differs from model state")
+    if transform.get("kind") == TYPED_RETURN_PREFIX_TRANSFORM:
+        selected_sha256 = _validate_typed_return_prefix_transform(
+            row, metadata, transform, source_payload
+        )
+    else:
+        if set(transform) != {
+            "kind",
+            "start_line_1based",
+            "end_line_1based_inclusive",
+            "parent_source_sha256",
+            "selected_source_sha256",
+        }:
+            raise ValueError("LICENSE-MIXED transform descriptor is incomplete")
+        lines = physical_lines(source_payload)
+        start, end = (
+            transform.get("start_line_1based"),
+            transform.get("end_line_1based_inclusive"),
+        )
+        if (
+            type(start) is not int
+            or type(end) is not int
+            or start < 1
+            or end < start
+            or end > len(lines)
+        ):
+            raise ValueError("LICENSE-MIXED line-slice bounds are invalid")
+        selected = b"".join(line.raw for line in lines[start - 1 : end])
+        selected_sha256 = _sha256(selected)
+        expected_kind = (
+            "exact_parent_file"
+            if start == 1 and end == len(lines)
+            else "contiguous_parent_file_line_slice"
+        )
+        if (
+            transform.get("kind") != expected_kind
+            or transform.get("selected_source_sha256") != selected_sha256
+            or metadata.get("selected_source_sha256") != selected_sha256
+        ):
+            raise ValueError("LICENSE-MIXED line-slice output differs from pinned transform")
+        try:
+            selected_source = selected.decode("utf-8")
+            replayed = replay_replacement_history(
+                selected_source,
+                state.history,
+                file_id=state.file_id,
+                filetype=state.filetype,
+            )
+        except (KeyError, UnicodeDecodeError, TypeError, ValueError):
+            raise ValueError("LICENSE-MIXED source transform/history cannot be replayed") from None
+        if replayed != state.source:
+            raise ValueError("LICENSE-MIXED source transform/history differs from model state")
     history_sha256 = row.get("history_sha256")
     expected_history_sha256 = _sha256(
         _canonical_bytes([asdict(edit) for edit in state.history])
@@ -555,7 +591,7 @@ def validate_license_mixed_source_artifacts(
     chronology = row.get("human_chronology_observed", row.get("chronology_observed"))
     if chronology is not False:
         raise ValueError("LICENSE-MIXED row claims unverified human chronology")
-    return {
+    result = {
         "source_tree_sha": source_tree_sha,
         "source_sha256": source_sha256,
         "path_license_sha256": license_sha256,
@@ -563,6 +599,656 @@ def validate_license_mixed_source_artifacts(
         "transform_sha256": transform_sha256,
         "history_sha256": expected_history_sha256,
     }
+    if typed_prefix_source:
+        result["selected_source_sha256"] = selected_sha256
+    return result
+
+
+def _validate_typed_return_prefix_transform(
+    row: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    transform: Mapping[str, Any],
+    parent_source: bytes,
+) -> str:
+    """Prove the visible source is exactly the public file through its typed cursor."""
+    expected_keys = {
+        "kind",
+        "target_physical_row",
+        "cursor_byte_column",
+        "parent_source_sha256",
+        "state_reconstructed_from_exact_parent_prefix",
+        "history_origin",
+        "history_sha256",
+        "source_suffix_after_cursor_in_input",
+    }
+    if set(transform) != expected_keys:
+        raise ValueError("LICENSE-MIXED typed-prefix transform descriptor is incomplete")
+    try:
+        state = EditState.from_mapping(row["state"])
+        action = EditAction(**row["action"])
+        parent_lines = physical_lines(parent_source)
+        state_bytes = state.source.encode("utf-8")
+        state_lines = physical_lines(state_bytes)
+    except (KeyError, TypeError, UnicodeDecodeError, ValueError):
+        raise ValueError("LICENSE-MIXED typed-prefix source/state is invalid") from None
+
+    target_row = transform.get("target_physical_row")
+    cursor_col = transform.get("cursor_byte_column")
+    if (
+        type(target_row) is not int
+        or type(cursor_col) is not int
+        or target_row < 0
+        or target_row >= len(parent_lines)
+        or target_row >= len(state_lines)
+        or target_row != state.target_row
+        or cursor_col != state.cursor_col
+        or transform.get("state_reconstructed_from_exact_parent_prefix") is not True
+        or transform.get("history_origin") != "synthetic_editor_typing"
+        or metadata.get("history_origin") != "synthetic_editor_typing"
+        or transform.get("source_suffix_after_cursor_in_input") is not False
+        or state.relevant
+        or len(state.history) != 1
+    ):
+        raise ValueError("LICENSE-MIXED typed-prefix cursor/history declaration is invalid")
+
+    parent_line = parent_lines[target_row]
+    state_line = state_lines[target_row]
+    edit = state.history[0]
+    try:
+        old_bytes = edit.old_text.encode("utf-8")
+        new_bytes = edit.new_text.encode("utf-8")
+        expected_gold_text = parent_line.content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ValueError("LICENSE-MIXED typed-prefix line is not valid UTF-8") from None
+    if (
+        edit.row != target_row
+        or cursor_col <= 0
+        or cursor_col > len(parent_line.content)
+        or len(new_bytes) != cursor_col
+        or parent_line.content[:cursor_col] != new_bytes
+        or state_line.content != new_bytes
+        or state_line.terminator != parent_line.terminator
+        or len(old_bytes) >= len(new_bytes)
+        or not new_bytes.startswith(old_bytes)
+    ):
+        raise ValueError("LICENSE-MIXED typed-prefix bytes do not match the pinned parent line")
+
+    exact_prefix = b"".join(line.raw for line in parent_lines[:target_row]) + (
+        new_bytes + parent_line.terminator
+    )
+    if state_bytes != exact_prefix:
+        raise ValueError("LICENSE-MIXED typed-prefix input contains changed or hidden source bytes")
+    before_typing = b"".join(line.raw for line in parent_lines[:target_row]) + (
+        old_bytes + parent_line.terminator
+    )
+    try:
+        replayed = replay_replacement_history(
+            before_typing.decode("utf-8"),
+            state.history,
+            file_id=state.file_id,
+            filetype=state.filetype,
+        )
+    except (UnicodeDecodeError, TypeError, ValueError):
+        raise ValueError("LICENSE-MIXED typed-prefix history cannot be replayed") from None
+    if replayed.encode("utf-8") != exact_prefix:
+        raise ValueError("LICENSE-MIXED typed-prefix history does not reconstruct the input")
+
+    if action.kind != "replace_line" or action.text != expected_gold_text:
+        raise ValueError("LICENSE-MIXED typed-prefix action differs from the exact parent line")
+    if transform.get("history_sha256") != row.get("history_sha256"):
+        raise ValueError("LICENSE-MIXED typed-prefix transform history binding differs")
+    selected_sha256 = _sha256(exact_prefix)
+    if metadata.get("selected_source_sha256") != selected_sha256:
+        raise ValueError("LICENSE-MIXED typed-prefix selected source hash differs")
+    return selected_sha256
+
+
+def validate_public_prefix_role_bundle(
+    manifest: Mapping[str, Any], *, package_root: Path, tokenizer: Any
+) -> dict[str, Any]:
+    """Verify individually qualified public typed-prefix rows without claiming a shard.
+
+    This candidate package deliberately has no training-size floor. It is never a
+    trainer manifest; the normal LICENSE-MIXED manifest still enforces 128/64.
+    """
+    required_manifest_keys = {
+        "schema",
+        "data_policy_schema",
+        "source_package_root",
+        "source_package_manifest_path",
+        "source_package_manifest_sha256",
+        "source_package_manifest_bytes",
+        "source_package_plan_path",
+        "source_package_plan_sha256",
+        "source_package_plan_bytes",
+        "accepted_rows_path",
+        "accepted_rows_sha256",
+        "accepted_rows_bytes",
+        "candidate_count",
+        "candidate_split_counts",
+        "train_count",
+        "development_count",
+        "source_group_count",
+        "role_plan_sha256",
+        "root_release_sha256",
+        "accepted_training_count",
+        "training_ready",
+        "quality_evidence",
+    }
+    if (
+        set(manifest) != required_manifest_keys
+        or manifest.get("schema") != PUBLIC_PREFIX_ROLE_BUNDLE_SCHEMA
+        or manifest.get("data_policy_schema") != LICENSE_MIXED_HISTORY.data_schema
+        or manifest.get("training_ready") is not False
+        or manifest.get("quality_evidence") is not False
+    ):
+        raise ValueError("public-prefix candidate bundle identity or readiness is invalid")
+    source_root_value = manifest.get("source_package_root")
+    if (
+        not isinstance(source_root_value, str)
+        or not source_root_value
+        or Path(source_root_value).is_absolute()
+        or ".." in Path(source_root_value).parts
+        or manifest.get("source_package_manifest_path")
+        != source_root_value + "/manifest.json"
+        or manifest.get("source_package_plan_path") != source_root_value + "/plan.json"
+        or manifest.get("accepted_rows_path") != "accepted_rows.jsonl"
+        or any(
+            not isinstance(manifest.get(key), str)
+            or _SHA256.fullmatch(str(manifest.get(key))) is None
+            for key in (
+                "source_package_manifest_sha256",
+                "source_package_plan_sha256",
+                "role_plan_sha256",
+                "root_release_sha256",
+            )
+        )
+    ):
+        raise ValueError("public-prefix source package root is not portable")
+    source_root = package_root / Path(source_root_value)
+    source_manifest_payload = _pinned_artifact_bytes(
+        package_root,
+        manifest.get("source_package_manifest_path"),
+        manifest.get("source_package_manifest_sha256"),
+        manifest.get("source_package_manifest_bytes"),
+        label="public-prefix source package manifest",
+    )
+    source_manifest = _strict_json(
+        source_manifest_payload, label="public-prefix source package manifest"
+    )
+    if not isinstance(source_manifest, Mapping):
+        raise ValueError("public-prefix source package manifest is invalid")
+    source_candidate_count = source_manifest.get("candidate_count")
+    if (
+        source_manifest.get("schema") != "python-prefix-objective-qualification-summary-v4"
+        or source_manifest.get("status") != "complete"
+        or source_manifest.get("accepted_training") != 0
+        or source_manifest.get("inferability_reviewed") is not False
+        or source_manifest.get("quality_evidence") is not False
+        or source_manifest.get("provider_calls") != 0
+        or source_manifest.get("model_runs") != 0
+        or source_manifest.get("training_tokens") != 0
+        or source_manifest.get("execution_backend") != "container"
+        or source_manifest.get("network_access") != "none"
+        or type(source_candidate_count) is not int
+        or source_candidate_count < 1
+    ):
+        raise ValueError("public-prefix source package is not the frozen CPU-only v4 form")
+    plan_payload = _pinned_artifact_bytes(
+        package_root,
+        manifest.get("source_package_plan_path"),
+        manifest.get("source_package_plan_sha256"),
+        manifest.get("source_package_plan_bytes"),
+        label="public-prefix source package plan",
+    )
+    plan = _strict_json(plan_payload, label="public-prefix source package plan")
+    qualification_policy = plan.get("qualification_policy") if isinstance(plan, Mapping) else None
+    if (
+        not isinstance(qualification_policy, Mapping)
+        or qualification_policy.get("training_acceptance") is not False
+        or qualification_policy.get("human_inferability_proven") is not False
+        or qualification_policy.get("gold")
+        != {"compile": "pass", "parse": "pass", "test": "pass"}
+        or qualification_policy.get("behavior_breaking")
+        != {"compile": "pass", "parse": "pass", "test": "fail"}
+        or not isinstance(qualification_policy.get("before"), Mapping)
+        or qualification_policy["before"].get("compile") != "pass"
+        or qualification_policy["before"].get("test") != "fail"
+        or plan.get("source_package_manifest", {}).get("sha256")
+        != source_manifest.get("source_package_manifest_sha256")
+    ):
+        raise ValueError("public-prefix CPU qualification policy differs from its frozen plan")
+    files = source_manifest.get("files")
+    if not isinstance(files, Mapping) or not files:
+        raise ValueError("public-prefix source package has no pinned file inventory")
+    total_bytes = 0
+    for name, descriptor in files.items():
+        if (
+            not isinstance(name, str)
+            or not isinstance(descriptor, Mapping)
+            or set(descriptor) != {"path", "sha256", "bytes"}
+            or descriptor.get("path") != name
+        ):
+            raise ValueError("public-prefix source package inventory is invalid")
+        size = descriptor.get("bytes")
+        if type(size) is not int or size < 0:
+            raise ValueError("public-prefix source package inventory size is invalid")
+        total_bytes += size
+        if total_bytes > 64 * 1024 * 1024:
+            raise ValueError("public-prefix source package exceeds its portable size bound")
+        _pinned_artifact_bytes(
+            source_root,
+            descriptor.get("path"),
+            descriptor.get("sha256"),
+            size,
+            label="public-prefix source package file",
+        )
+    if (
+        source_manifest.get("candidate_count") != source_manifest.get("objective_verified_count")
+        or source_manifest.get("candidate_count") != plan.get("eligible_count")
+        or not isinstance(plan.get("eligible_candidate_ids"), list)
+        or source_manifest.get("runtime_sha256") is None
+    ):
+        raise ValueError("public-prefix source package plan and summary disagree")
+
+    candidate_count = manifest.get("candidate_count")
+    if (
+        type(candidate_count) is not int
+        or candidate_count < 1
+        or candidate_count > 1024
+        or manifest.get("accepted_training_count") != candidate_count
+        or manifest.get("train_count") != candidate_count
+        or manifest.get("development_count") != 0
+        or manifest.get("candidate_split_counts") != {"train": candidate_count}
+    ):
+        raise ValueError("public-prefix partial bundle counts or splits are invalid")
+    rows_payload = _pinned_artifact_bytes(
+        package_root,
+        manifest.get("accepted_rows_path"),
+        manifest.get("accepted_rows_sha256"),
+        manifest.get("accepted_rows_bytes"),
+        label="public-prefix accepted rows",
+    )
+    rows = _strict_jsonl(rows_payload, label="public-prefix accepted rows")
+    if len(rows) != candidate_count:
+        raise ValueError("public-prefix accepted row count differs from its manifest")
+
+    indexed: dict[str, dict[str, dict[str, Any]]] = {}
+    for filename in (
+        "source_only_inputs.jsonl",
+        "answers_private.jsonl",
+        "provenance_private.jsonl",
+        "fixture_bindings_private.jsonl",
+        "oracle_results.jsonl",
+        "parent_trees.jsonl",
+    ):
+        descriptor = files.get(filename)
+        if not isinstance(descriptor, Mapping):
+            raise ValueError("public-prefix source package is missing " + filename)
+        payload = _pinned_artifact_bytes(
+            source_root,
+            descriptor.get("path"),
+            descriptor.get("sha256"),
+            descriptor.get("bytes"),
+            label="public-prefix " + filename,
+        )
+        indexed[filename] = _unique_index(
+            _strict_jsonl(payload, label="public-prefix " + filename),
+            key="candidate_id",
+            label="public-prefix " + filename,
+        )
+    diagnostics_descriptor = files.get("oracle_diagnostics.jsonl")
+    if not isinstance(diagnostics_descriptor, Mapping):
+        raise ValueError("public-prefix source package lacks oracle diagnostics")
+    diagnostics_payload = _pinned_artifact_bytes(
+        source_root,
+        diagnostics_descriptor.get("path"),
+        diagnostics_descriptor.get("sha256"),
+        diagnostics_descriptor.get("bytes"),
+        label="public-prefix oracle diagnostics",
+    )
+    diagnostic_records: dict[tuple[str, str], dict[str, Any]] = {}
+    diagnostic_hashes: dict[tuple[str, str], str] = {}
+    for diagnostic in _strict_jsonl(
+        diagnostics_payload, label="public-prefix oracle diagnostics"
+    ):
+        key = (str(diagnostic.get("candidate_id", "")), str(diagnostic.get("variant", "")))
+        if not key[0] or not key[1] or key in diagnostic_records:
+            raise ValueError("public-prefix oracle diagnostic identity is duplicate or missing")
+        diagnostic_records[key] = diagnostic
+        diagnostic_hashes[key] = _sha256(_canonical_bytes(diagnostic))
+
+    source_candidate_ids = set(indexed["source_only_inputs.jsonl"])
+    if (
+        any(set(indexed[name]) != source_candidate_ids for name in indexed)
+        or set(plan["eligible_candidate_ids"]) != source_candidate_ids
+        or source_manifest.get("candidate_count") != len(source_candidate_ids)
+        or set(diagnostic_records)
+        != {
+            (candidate_id, variant)
+            for candidate_id in source_candidate_ids
+            for variant in ("gold", "before", "behavior_breaking")
+        }
+    ):
+        raise ValueError("public-prefix source package candidate inventory is inconsistent")
+
+    candidate_ids: set[str] = set()
+    source_groups: set[str] = set()
+    row_hashes: set[str] = set()
+    for row in rows:
+        candidate_id = _license_mixed_id(row)
+        if (
+            candidate_id is None
+            or candidate_id in candidate_ids
+            or row.get("source_type") != REVIEWED_PUBLIC_HISTORY_SOURCE
+            or row.get("split") != "train"
+            or row.get("accepted_training") is not True
+            or row.get("inferability_reviewed") is not True
+            or row.get("objective_verified") is not True
+            or row.get("wrong_action_controls_rejected") is not True
+            or row.get("history_leakage_check") is not True
+            or row.get("quality_evidence") is not False
+        ):
+            raise ValueError("public-prefix candidate disposition or identity is invalid")
+        candidate_ids.add(candidate_id)
+        validate_license_mixed_row(
+            row, package_root=package_root, policy=LICENSE_MIXED_HISTORY
+        )
+        bindings = license_mixed_row_bindings(row)
+        source_input = indexed["source_only_inputs.jsonl"].get(candidate_id)
+        answer = indexed["answers_private.jsonl"].get(candidate_id)
+        provenance = indexed["provenance_private.jsonl"].get(candidate_id)
+        fixture_binding = indexed["fixture_bindings_private.jsonl"].get(candidate_id)
+        oracle = indexed["oracle_results.jsonl"].get(candidate_id)
+        parent_tree = indexed["parent_trees.jsonl"].get(candidate_id)
+        if any(
+            item is None
+            for item in (source_input, answer, provenance, fixture_binding, oracle, parent_tree)
+        ):
+            raise ValueError("public-prefix candidate is absent from its frozen CPU package")
+        assert source_input is not None
+        assert answer is not None
+        assert provenance is not None
+        assert fixture_binding is not None
+        assert oracle is not None
+        assert parent_tree is not None
+        metadata = row.get("authoring_metadata")
+        raw_metadata = provenance.get("authoring_metadata")
+        if not isinstance(metadata, Mapping) or not isinstance(raw_metadata, Mapping):
+            raise ValueError("public-prefix candidate source provenance is incomplete")
+        if (
+            row.get("seed_id") != source_input.get("seed_id")
+            or row.get("state") != source_input.get("state")
+            or row.get("prompt") != source_input.get("prompt")
+            or row.get("context_sha256") != source_input.get("context_sha256")
+            or row.get("context_sha256") != answer.get("context_sha256")
+            or row.get("split") != answer.get("split")
+            or row.get("source_group_id") != provenance.get("source_group_id")
+            or row.get("source_group_id") != oracle.get("source_group_id")
+            or row.get("session_or_commit") != parent_tree.get("parent_commit")
+            or row.get("task_family_id") != raw_metadata.get("task_family_id")
+            or row.get("template_id") != raw_metadata.get("template_id")
+            or bindings["state_sha256"] != answer.get("state_sha256")
+            or bindings["context_sha256"] != answer.get("context_sha256")
+            or bindings["action_sha256"] != answer.get("action_sha256")
+            or bindings["after_source_sha256"] != answer.get("after_source_sha256")
+            or bindings["history_sha256"] != answer.get("history_before_sha256")
+            or row.get("history_sha256") != raw_metadata.get("transform", {}).get("history_sha256")
+            or row.get("source_materialization_provenance_sha256")
+            != _sha256(_canonical_bytes(provenance))
+        ):
+            raise ValueError("public-prefix row differs from its immutable CPU source record")
+        if (
+            provenance.get("accepted_training") is not False
+            or provenance.get("inferability_reviewed") is not False
+            or provenance.get("objective_verified") is not True
+            or answer.get("accepted_training") is not False
+            or answer.get("inferability_reviewed") is not False
+            or answer.get("objective_verified") is not True
+            or answer.get("human_chronology_observed") is not False
+            or row.get("human_chronology_observed") is not False
+            or provenance.get("human_chronology_observed") not in (None, False)
+            or provenance.get("history_leakage_check") is not True
+            or answer.get("history_leakage_check") is not True
+            or provenance.get("wrong_action_controls_rejected") is not True
+            or answer.get("wrong_action_controls_rejected") is not True
+            or provenance.get("source_type") != "synthetic_public_source_task"
+            or answer.get("source_type") != "synthetic_public_source_task"
+        ):
+            raise ValueError(
+                "public-prefix source package status flags are not pending-proof values"
+            )
+        parent_bindings = {
+            "repository": metadata.get("source_repo"),
+            "parent_commit": metadata.get("source_revision"),
+            "source_revision": metadata.get("origin_transition_revision"),
+            "source_tree_sha": metadata.get("source_tree_sha"),
+            "source_path": metadata.get("source_path"),
+            "source_sha256": metadata.get("source_sha256"),
+            "source_group_id": row.get("source_group_id"),
+            "split": row.get("split"),
+        }
+        if any(parent_tree.get(key) != value for key, value in parent_bindings.items()):
+            raise ValueError("public-prefix source revision/tree mapping is invalid")
+        parent_tree_projection = {
+            "sha": parent_tree.get("parent_commit"),
+            "tree": {"sha": parent_tree.get("source_tree_sha")},
+        }
+        if (
+            parent_tree.get("metadata_fields_verified") != ["sha", "tree.sha"]
+            or parent_tree.get("metadata_projection_sha256")
+            != _sha256(_canonical_bytes(parent_tree_projection))
+        ):
+            raise ValueError("public-prefix source parent-tree receipt is invalid")
+        transform = metadata.get("transform")
+        if (
+            transform != raw_metadata.get("transform")
+            or metadata.get("transform_sha256") != raw_metadata.get("transform_sha256")
+            or metadata.get("source_repo") != raw_metadata.get("source_repo")
+            or metadata.get("origin_transition_revision") != raw_metadata.get("source_revision")
+            or metadata.get("source_sha256") != raw_metadata.get("source_artifact_sha256")
+        ):
+            raise ValueError("public-prefix typed transform/source provenance was changed")
+
+        objective_binding = row.get("objective_evidence_binding")
+        if not isinstance(objective_binding, Mapping):
+            raise ValueError("public-prefix CPU objective evidence is unpinned")
+        expected_objective_binding = {
+            "schema": "python-prefix-objective-candidate-binding-v1",
+            "source_manifest_sha256": manifest["source_package_manifest_sha256"],
+            "source_input_sha256": _sha256(_canonical_bytes(source_input)),
+            "answer_sha256": _sha256(_canonical_bytes(answer)),
+            "source_provenance_sha256": _sha256(_canonical_bytes(provenance)),
+            "fixture_binding_sha256": _sha256(_canonical_bytes(fixture_binding)),
+            "oracle_result_sha256": _sha256(_canonical_bytes(oracle)),
+            "oracle_diagnostic_sha256": {
+                name: diagnostic_hashes.get((candidate_id, name))
+                for name in ("gold", "before", "behavior_breaking")
+            },
+            "fixture_artifact_path": oracle.get("fixture_artifact_path"),
+            "fixture_artifact_sha256": oracle.get("fixture_sha256"),
+            "fixture_artifact_bytes": oracle.get("fixture_artifact_bytes"),
+            "evaluator_sha256": oracle.get("evaluator_sha256"),
+            "runtime_sha256": oracle.get("runtime_sha256"),
+        }
+        if dict(objective_binding) != expected_objective_binding:
+            raise ValueError("public-prefix row CPU objective binding differs from source bytes")
+
+        action = EditAction(**row["action"])
+        state = EditState.from_mapping(row["state"])
+        fixture = fixture_binding.get("wrong_action")
+        if (
+            oracle.get("candidate_id") != candidate_id
+            or oracle.get("seed_id") != row.get("seed_id")
+            or oracle.get("split") != row.get("split")
+            or oracle.get("source_type") != "synthetic_public_source_task"
+            or oracle.get("state_sha256") != bindings["state_sha256"]
+            or oracle.get("action_sha256") != bindings["action_sha256"]
+            or oracle.get("context_sha256") != bindings["context_sha256"]
+            or oracle.get("history_before_sha256") != bindings["history_sha256"]
+            or oracle.get("fixture_sha256") != fixture_binding.get("fixture_sha256")
+            or oracle.get("fixture_artifact_path") != fixture_binding.get("fixture_path")
+            or oracle.get("fixture_artifact_bytes") != fixture_binding.get("fixture_bytes")
+            or oracle.get("evaluator_sha256") != source_manifest.get("evaluator_sha256")
+            or oracle.get("runtime_sha256") != source_manifest.get("runtime_sha256")
+            or oracle.get("backend") != "container"
+            or oracle.get("network") != "none"
+            or oracle.get("objective_verified") is not True
+            or oracle.get("accepted_training") is not False
+            or oracle.get("inferability_reviewed") is not False
+            or not isinstance(fixture, Mapping)
+            or fixture_binding.get("action_sha256") != bindings["action_sha256"]
+        ):
+            raise ValueError("public-prefix CPU objective does not bind the accepted row")
+        fixture_descriptor = files.get(str(oracle.get("fixture_artifact_path")))
+        if (
+            not isinstance(fixture_descriptor, Mapping)
+            or fixture_descriptor.get("sha256") != oracle.get("fixture_sha256")
+            or fixture_descriptor.get("bytes") != oracle.get("fixture_artifact_bytes")
+            or fixture_binding.get("fixture_sha256") != oracle.get("fixture_sha256")
+            or fixture_binding.get("fixture_bytes") != oracle.get("fixture_artifact_bytes")
+        ):
+            raise ValueError("public-prefix objective fixture differs from its pinned bytes")
+
+        try:
+            wrong_action = EditAction(**fixture)
+        except (TypeError, ValueError):
+            raise ValueError("public-prefix behavior-breaking action is invalid") from None
+        variants = oracle.get("variants")
+        expected_actions = {
+            "gold": action,
+            "before": EditAction("keep"),
+            "behavior_breaking": wrong_action,
+        }
+        if not isinstance(variants, Mapping) or set(variants) != set(expected_actions):
+            raise ValueError("public-prefix CPU objective controls are incomplete")
+        for name, expected_action in expected_actions.items():
+            variant = variants.get(name)
+            diagnostic_record = diagnostic_records.get((candidate_id, name))
+            expected_after = apply_action(state, expected_action)
+            expected_functional = "pass" if name == "gold" else "fail"
+            if (
+                not isinstance(variant, Mapping)
+                or not isinstance(diagnostic_record, Mapping)
+                or variant.get("action") != asdict(expected_action)
+                or variant.get("action_sha256")
+                != _sha256(_canonical_bytes(asdict(expected_action)))
+                or variant.get("after_source_sha256") != _sha256(expected_after.encode("utf-8"))
+                or variant.get("functional_status") != expected_functional
+                or variant.get("functional_expected") != expected_functional
+                or variant.get("parse_status") != "pass"
+                or variant.get("compile_status") != "pass"
+                or variant.get("test_status") != expected_functional
+                or diagnostic_hashes.get((candidate_id, name))
+                != variant.get("diagnostic_sha256")
+                or diagnostic_record.get("candidate_id") != candidate_id
+                or diagnostic_record.get("variant") != name
+                or diagnostic_record.get("parse_status") != "pass"
+                or diagnostic_record.get("compile_status") != "pass"
+                or diagnostic_record.get("test_status") != expected_functional
+                or diagnostic_record.get("working_tree_sha256")
+                != variant.get("working_tree_sha256")
+                or diagnostic_record.get("compile_configured") is not True
+                or diagnostic_record.get("test_configured") is not True
+            ):
+                raise ValueError("public-prefix CPU objective positive or wrong control failed")
+            checks = diagnostic_record.get("checks")
+            if (
+                not isinstance(checks, Mapping)
+                or set(checks) != {"parse", "compile", "test"}
+                or any(
+                    not isinstance(checks[key], Mapping)
+                    or checks[key].get("status")
+                    != diagnostic_record.get(key + "_status")
+                    for key in ("parse", "compile", "test")
+                )
+            ):
+                raise ValueError("public-prefix diagnostic checks do not bind evaluator statuses")
+        if (
+            row.get("objective_fixture_binding")
+            != {
+                "schema": "python-prefix-objective-fixture-binding-v1",
+                "path": oracle.get("fixture_artifact_path"),
+                "sha256": oracle.get("fixture_sha256"),
+                "bytes": oracle.get("fixture_artifact_bytes"),
+            }
+        ):
+            raise ValueError("public-prefix candidate fixture reference is inconsistent")
+
+        if not isinstance(row.get("role_execution_proof_ref"), Mapping):
+            raise ValueError("public-prefix actual role execution proof is unpinned")
+        role_ref = row["role_execution_proof_ref"]
+        role_decision = _verify_public_prefix_role_proof(
+            row, role_ref, package_root=package_root, tokenizer=tokenizer,
+            expected_plan_sha256=str(manifest["role_plan_sha256"]),
+            expected_release_sha256=str(manifest["root_release_sha256"]),
+        )
+        if not role_decision:
+            raise ValueError("public-prefix actual author/solver/reviewer evidence failed")
+        source_groups.add(str(row["source_group_id"]))
+        row_hashes.add(bindings["near_duplicate_sha256"])
+
+    if (
+        len(source_groups) != manifest.get("source_group_count")
+        or len(source_groups) < 2
+        or len(row_hashes) != len(rows)
+        or validate_license_mixed_splits(cast(list[Mapping[str, Any]], rows))["rows"]
+        != len(rows)
+    ):
+        raise ValueError("public-prefix candidate source groups or split audit is invalid")
+    return {
+        "candidate_count": len(rows),
+        "accepted_training_count": len(rows),
+        "training_ready": False,
+        "quality_evidence": False,
+        "source_group_count": len(source_groups),
+        "candidate_split_counts": {"train": len(rows)},
+        "provider_signature": False,
+    }
+
+
+def _verify_public_prefix_role_proof(
+    row: Mapping[str, Any],
+    role_ref: Mapping[str, Any],
+    *,
+    package_root: Path,
+    tokenizer: Any,
+    expected_plan_sha256: str,
+    expected_release_sha256: str,
+) -> bool:
+    from .fixed_state_role_receipts import verify_fixed_state_role_execution_proof
+
+    decision = verify_fixed_state_role_execution_proof(
+        row, role_ref, package_root=package_root, tokenizer=tokenizer
+    )
+    if not decision.accepted or decision.evidence.get("functional_status") != (
+        "not_evaluated_by_role_runner"
+    ):
+        return False
+    if (
+        row.get("role_evidence_artifact_path")
+        != str(role_ref.get("root", "")) + "/" + str(role_ref.get("role_evidence_path", ""))
+        or row.get("role_evidence_sha256") != role_ref.get("role_evidence_sha256")
+        or row.get("role_evidence_bytes") != role_ref.get("role_evidence_bytes")
+    ):
+        return False
+    proof_manifest_path = (
+        str(role_ref.get("root", "")) + "/" + str(role_ref.get("manifest_path", ""))
+    )
+    proof_bytes = _read_relative_artifact(
+        package_root,
+        proof_manifest_path,
+        label="public-prefix role execution manifest",
+        expected_sha256=str(role_ref.get("manifest_sha256")),
+        expected_bytes=int(role_ref.get("manifest_bytes", -1)),
+    )
+    proof_manifest = _strict_json(proof_bytes, label="public-prefix role execution manifest")
+    return (
+        isinstance(proof_manifest, Mapping)
+        and proof_manifest.get("candidate_id") == row.get("candidate_id")
+        and proof_manifest.get("plan_sha256") == expected_plan_sha256
+        and proof_manifest.get("root_release_sha256") == expected_release_sha256
+    )
 
 
 def validate_license_mixed_splits(rows: list[Mapping[str, Any]]) -> dict[str, Any]:

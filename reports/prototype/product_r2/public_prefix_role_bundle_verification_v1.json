@@ -1,0 +1,18 @@
+{
+  "attempted_original_private_reads": 0,
+  "audit": {
+    "accepted_training_count": 4,
+    "candidate_count": 4,
+    "candidate_split_counts": {
+      "train": 4
+    },
+    "provider_signature": false,
+    "quality_evidence": false,
+    "source_group_count": 4,
+    "training_ready": false
+  },
+  "manifest_sha256": "94c360bcc10983755e2ac29e476b0b8789268a0599cf923925620c9bc83c6e16",
+  "provider_calls": 0,
+  "schema": "actual-public-prefix-role-relocation-verification-v1",
+  "training_started": false
+}

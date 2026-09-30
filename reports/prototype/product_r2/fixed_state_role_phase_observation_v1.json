@@ -1,6 +1,8 @@
 {
+  "accepted_candidate_rows": 4,
   "actions_matching_frozen_functional_gold": 4,
-  "candidate_package_status": "assembly_in_progress",
+  "candidate_bundle_manifest_sha256": "94c360bcc10983755e2ac29e476b0b8789268a0599cf923925620c9bc83c6e16",
+  "candidate_package_status": "actual_candidate_bundle_verified_after_relocation",
   "human_chronology_observed": false,
   "initial_monitor_query_http_status": 502,
   "input_tokens": 27888,
@@ -10,8 +12,14 @@
     "imported_spans": 30
   },
   "monitor_post_import_query_state": "ok",
+  "monitor_repeat_import": {
+    "bundle_sha256": "ff9a0c3816abd1f1b6fa63eba604c3289e0c3e54af61cc9548406f80a7235294",
+    "duplicate": true,
+    "imported_spans": 0
+  },
   "monitor_run_id": "run-cc54f36e812df76cc916c49c6acb8cb5",
   "new_unknown_usage_requests": 0,
+  "original_private_reads_during_relocation": 0,
   "phase_status": "complete",
   "plan_sha256": "2a5f1c211c6c8c04d15884e650aed1a6b2ae849ae19620e30e2309443ae06d84",
   "provider_calls": 12,

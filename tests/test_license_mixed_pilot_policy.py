@@ -35,6 +35,7 @@ from tinycomplete.one_line.pilot_data import (
     LICENSE_MIXED,
     LICENSE_MIXED_HISTORY,
     REVIEWED_PUBLIC_HISTORY_SOURCE,
+    TYPED_RETURN_PREFIX_TRANSFORM,
     _canonical_bytes,
     _runtime_sha256,
     _verified_oracle_record,
@@ -367,6 +368,167 @@ def test_source_and_license_artifacts_are_hash_bound_and_relocatable(tmp_path: P
     )
     with pytest.raises(ValueError, match="package-relative"):
         validate_license_mixed_source_artifacts(absolute, package_root=relocated)
+
+
+def _typed_return_prefix_package(root: Path) -> dict[str, Any]:
+    candidate_id = "public/prefix-task-1"
+    source_group_id = "public/example@parent"
+    revision = "a" * 40
+    tree_sha = "b" * 40
+    license_blob_sha = "c" * 40
+    source = b"def answer():\n    return 2\n"
+    source_ref = _put(root, "artifacts/source.py", source)
+    license_bytes = b"MIT License\n"
+    license_ref = _put(root, "artifacts/LICENSE", license_bytes)
+    source_sha = _sha(source)
+    license_sha = _sha(license_bytes)
+    scope = {
+        "schema": "exact-parent-license-scope-v2",
+        "status": "verified_path_scope",
+        "repository": "public/example",
+        "parent_commit": revision,
+        "source_path": "src/example.py",
+        "source_sha256": source_sha,
+        "path_scope": {
+            "license_path": "LICENSE",
+            "git_blob_sha": license_blob_sha,
+            "sha256": license_sha,
+            "scope": "root",
+            "spdx": ["MIT"],
+            "spdx_ambiguous": False,
+            "spdx_expression_count": 0,
+        },
+        "root_license": {
+            "path": "LICENSE",
+            "git_blob_sha": license_blob_sha,
+            "sha256": license_sha,
+            "root_spdx": ["MIT"],
+        },
+        "source_header_spdx": [],
+        "source_header_spdx_ambiguous": False,
+        "source_header_spdx_expression_count": 0,
+        "additional_license_references": [],
+        "reuse_dep5_references": [],
+    }
+    scope_ref = _put(root, "artifacts/scope.json", _canonical_bytes(scope))
+    state = EditState(
+        file_id="sample.py",
+        filetype="python",
+        source="def answer():\n    return \n",
+        target_row=1,
+        cursor_col=11,
+        history=(RecentEdit(1, "    ", "    return "),),
+    )
+    action = EditAction("replace_line", "    return 2")
+    transform = {
+        "kind": TYPED_RETURN_PREFIX_TRANSFORM,
+        "parent_source_sha256": source_sha,
+        "target_physical_row": 1,
+        "cursor_byte_column": 11,
+        "state_reconstructed_from_exact_parent_prefix": True,
+        "history_origin": "synthetic_editor_typing",
+        "history_sha256": _sha(
+            _canonical_bytes([asdict(edit) for edit in state.history])
+        ),
+        "source_suffix_after_cursor_in_input": False,
+    }
+    state_context = serialize_state_bounded(state, ByteTokenizer(), max_input_tokens=1024)
+    metadata = {
+        "source_repo": "public/example",
+        "source_revision": revision,
+        "source_tree_sha": tree_sha,
+        "source_path": "src/example.py",
+        "source_sha256": source_sha,
+        "source_artifact_path": source_ref["path"],
+        "source_artifact_sha256": source_ref["sha256"],
+        "source_artifact_bytes": source_ref["bytes"],
+        "source_license": "MIT",
+        "path_license": "MIT",
+        "path_license_sha256": license_sha,
+        "path_license_git_blob_sha": license_blob_sha,
+        "license_path": "LICENSE",
+        "license_scope_candidate_id": candidate_id,
+        "license_scope_status": "verified_path_scope",
+        "path_license_artifact_path": license_ref["path"],
+        "path_license_artifact_sha256": license_ref["sha256"],
+        "path_license_artifact_bytes": license_ref["bytes"],
+        "license_scope_artifact_path": scope_ref["path"],
+        "license_scope_sha256": scope_ref["sha256"],
+        "license_scope_artifact_bytes": scope_ref["bytes"],
+        "selected_source_sha256": _sha(state.source.encode("utf-8")),
+        "history_origin": "synthetic_editor_typing",
+        "transform": transform,
+        "transform_sha256": _sha(_canonical_bytes(transform)),
+    }
+    row = {
+        "id": candidate_id,
+        "candidate_id": candidate_id,
+        "split": "train",
+        "source_type": REVIEWED_PUBLIC_HISTORY_SOURCE,
+        "source_group_id": source_group_id,
+        "session_or_commit": revision,
+        "task_family_id": "public-prefix-return-v1",
+        "template_id": "public-prefix-return-task-1",
+        "seed_id": candidate_id,
+        "state": asdict(state),
+        "prompt": state_context.text,
+        "context_sha256": _sha(state_context.text.encode("utf-8")),
+        "context_policy": CONTEXT_POLICY_VERSION,
+        "action": asdict(action),
+        "after_source": apply_action(state, action),
+        "source_license": "MIT",
+        "source_license_sha256": license_sha,
+        "history_order": "synthetic_fixed_before_provider",
+        "human_chronology_observed": False,
+        "history_sha256": metadata["transform"]["history_sha256"],
+        "authoring_metadata": metadata,
+    }
+    return row
+
+
+def test_typed_return_prefix_transform_reconstructs_exact_parent_and_action(
+    tmp_path: Path,
+) -> None:
+    row = _typed_return_prefix_package(tmp_path)
+    validate_license_mixed_row(
+        row, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+    )
+    relocation = tmp_path / "relocated"
+    shutil.copytree(tmp_path, relocation, ignore=shutil.ignore_patterns("relocated"))
+    validate_license_mixed_row(
+        row, package_root=relocation, policy=LICENSE_MIXED_HISTORY
+    )
+
+    retargeted = json.loads(json.dumps(row))
+    retargeted["state"]["cursor_col"] = 10
+    context = serialize_state_bounded(
+        EditState.from_mapping(retargeted["state"]), ByteTokenizer(), max_input_tokens=1024
+    )
+    retargeted["prompt"] = context.text
+    retargeted["context_sha256"] = _sha(context.text.encode("utf-8"))
+    retargeted["authoring_metadata"]["transform"]["cursor_byte_column"] = 10
+    retargeted["authoring_metadata"]["transform_sha256"] = _sha(
+        _canonical_bytes(retargeted["authoring_metadata"]["transform"])
+    )
+    with pytest.raises(ValueError, match="typed-prefix bytes"):
+        validate_license_mixed_row(
+            retargeted, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+        )
+
+    wrong_gold = json.loads(json.dumps(row))
+    wrong_gold["action"]["text"] = "    return 3"
+    wrong_gold["after_source"] = apply_action(
+        EditState.from_mapping(wrong_gold["state"]), EditAction(**wrong_gold["action"])
+    )
+    with pytest.raises(ValueError, match="exact parent line"):
+        validate_license_mixed_row(
+            wrong_gold, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+        )
+
+    wrong_scope = json.loads(json.dumps(row))
+    wrong_scope["authoring_metadata"]["source_revision"] = "d" * 40
+    with pytest.raises(ValueError, match="path-scope record"):
+        validate_license_mixed_source_artifacts(wrong_scope, package_root=tmp_path)
 
 
 def test_manifest_keeps_frozen_train_and_development_floors() -> None:
