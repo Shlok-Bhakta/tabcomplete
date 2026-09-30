@@ -1,0 +1,718 @@
+{
+  "artifact_manifest": {
+    "archived_producer": {
+      "git_commit": "a681d5c4ba88388742b4217a838d840ed5c257a5",
+      "prompt_and_mapper_function_sha256": {
+        "build_sweep_prompt": "93ce49cd6fa2dc79d27bbfd71118b487a109eb89b83ae798ebd52fe6d05a66f5",
+        "map_full_file": "f5648152092193d990dc911eee97a157c25cd7528c2683f9ff9618d7409cc317"
+      },
+      "prompt_source_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+      "runner_sha256": "d05914df807cac5fc21b014e24aef310a08244396217ebb178115df4993c456f",
+      "tests_sha256": "d3232eb6c5f25eca24e8d0b1fa79af736fe586ee5d0a70bb68f334e85ea68c1c"
+    },
+    "frozen_score_inputs": {
+      "inputs": {
+        "base_plan": {
+          "bytes": 9543,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/scoring_plan_v7.json",
+          "sha256": "816f79736e95cb35f0660af58b902e164ff6bde74bc2aacb97ff3609385b0699"
+        },
+        "campaign_plan": {
+          "bytes": 32684,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/plan-v7.json",
+          "sha256": "8c0ef572979028a2eff3bd1bda4f5ae2eb6a9742f27cbb1640a933431eb6e8f9"
+        },
+        "diagnostic": {
+          "bytes": 64634,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/product_r2/model_diagnostic/diagnostic_plan_v2.json",
+          "sha256": "efa0bf5c245b5edca14df2722b19c6e086e790a3da256656eec1e8db2ed34c34"
+        },
+        "local_plan": {
+          "bytes": 11901,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_plan.json",
+          "sha256": "e6109e562ff37a9afddead276e46d77f59be4e484a7866f353c35871c4dd5c2e"
+        },
+        "local_upstream_plan": {
+          "bytes": 9106,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/plan-v2.json",
+          "sha256": "8b6f781d153b58284c3c994774cc5cc82bbb9cfbc1615a51f0079080e7573a97"
+        },
+        "metadata": {
+          "bytes": 5907,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/metadata.json",
+          "sha256": "1d7036abbc896113c4328758b8a5bf203d004954092beb347a10d2d97830bc9b"
+        },
+        "prompt_inputs": {
+          "bytes": 45825,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl",
+          "sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3"
+        },
+        "source_suite": {
+          "bytes": 337300,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/data/benchmarks/next_edit_v2.jsonl",
+          "sha256": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff"
+        },
+        "summary": {
+          "bytes": 44212,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/summary.json",
+          "sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465"
+        },
+        "superseded_local_score_plan_v1": {
+          "bytes": 7351,
+          "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_scoring_plan_v1.json",
+          "sha256": "7d1520140b7008053fc0ae039f5ca88cd5bf119dad0a64a8646e9086b7b4aa6c"
+        },
+        "telemetry": {
+          "bytes": 590338,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/observability.jsonl",
+          "sha256": "454e49df449d8d70262b0d5c16a92afd4faf33866acb7f82ba1a779b6be6b217"
+        },
+        "telemetry_run": {
+          "bytes": 110,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/observability-run.json",
+          "sha256": "76f6a94baa1bc0aab19ff5e73ade3d256a150cbbfa4cbadcc1a65da261b861b1"
+        }
+      },
+      "measurement_files": {
+        "q4_k_m": {
+          "bytes": 17977,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/server-measurement-q4_k_m.json",
+          "sha256": "6b582f872ebcfe20c2a65b29d9839b69d98e8e2d67763182a4ef4f8dd988767c"
+        },
+        "q8_0": {
+          "bytes": 17993,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/server-measurement-q8_0.json",
+          "sha256": "27ef562a5b47eea32b723d89abdb6ee6fc641af178458d08fb67cc484f2581e2"
+        }
+      },
+      "prediction_files": {
+        "q4_k_m": {
+          "bytes": 375200,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/predictions-q4_k_m.jsonl",
+          "sha256": "9540cb5f4cd2385bc1af46057a84d0182ec301b16e46590aade8075c111ea043"
+        },
+        "q8_0": {
+          "bytes": 376711,
+          "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/predictions-q8_0.jsonl",
+          "sha256": "e54d583502c8e9c79495de2f070afd80af4dab2118df66258546f30f1b7b25be"
+        }
+      }
+    },
+    "frozen_score_plan": {
+      "bytes": 9103,
+      "embedded_identity_sha256": "d0c7f4a89e599f60fedd09d69c64b7f28c601f323ae3da378fb775cd7b7c5e91",
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_scoring_plan_v2.json",
+      "sha256": "b8c9dab2f397ec7976e5f599a28730a4b4b573d43f728458afa5f1d46123544f"
+    },
+    "model_artifacts": {
+      "q4_k_m_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+      "q8_0_sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+      "repository": "sweepai/sweep-next-edit-1.5B",
+      "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+    },
+    "offline_bundles": {
+      "baseline": {
+        "bytes": 590338,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/observability.jsonl",
+        "sha256": "454e49df449d8d70262b0d5c16a92afd4faf33866acb7f82ba1a779b6be6b217"
+      },
+      "controller": {
+        "bytes": 1436,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/observability.jsonl",
+        "sha256": "56092500f968715613f1d3a176541fe564eb567246c4a9422e5f418539a60931"
+      }
+    },
+    "previous_interpretations": {
+      "v1": {
+        "bytes": 14380,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_interpretation_v1.json",
+        "sha256": "93b6713f75824163901122f99790591ae95360d109bf9587837425e7deb8f0bf"
+      },
+      "v2": {
+        "bytes": 10169,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_interpretation_v2.json",
+        "sha256": "f8e8a6d719d0aa142434164360e3c18bb9c394a8294a5524b77a8b8b81401604"
+      }
+    },
+    "score_output_files": {
+      "controller_offline_telemetry": {
+        "bytes": 1436,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/observability.jsonl",
+        "sha256": "56092500f968715613f1d3a176541fe564eb567246c4a9422e5f418539a60931"
+      },
+      "controller_run_metadata": {
+        "bytes": 110,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/observability-run.json",
+        "sha256": "70c5d4ee903e0cafad228bd5c2d561f4f986d591edb327501dbd7d368a365601"
+      },
+      "q4_changed_state": {
+        "bytes": 42177,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/q4_k_m/changed_state.jsonl",
+        "sha256": "1777d43bef7bce1e38f63af2d2f3f117627efae0cc1cbc0b2bc5f5c0acbbc185"
+      },
+      "q4_same_prompt_repeats": {
+        "bytes": 18398,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/q4_k_m/same_prompt_repeats.jsonl",
+        "sha256": "2edab054688ccf10c397db11371c2f2d1724d2195e0c17d65cce2e0a2507709b"
+      },
+      "q4_summary": {
+        "bytes": 1953,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/q4_k_m/summary.json",
+        "sha256": "c8a7b96c1894ff32fa643c2fd905e144ca1e535441e8778b4d60f7d945c20904"
+      },
+      "q8_changed_state": {
+        "bytes": 42078,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/q8_0/changed_state.jsonl",
+        "sha256": "31417c01c62cc2482f07cc1b4feb457e8558654cb0d3edb97839b9308a141d3b"
+      },
+      "q8_same_prompt_repeats": {
+        "bytes": 18398,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/q8_0/same_prompt_repeats.jsonl",
+        "sha256": "c4c559d65fdc06ba31f729980a6656b0e19c8e6167b560663b389d110ead2af6"
+      },
+      "q8_summary": {
+        "bytes": 1953,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/q8_0/summary.json",
+        "sha256": "c8a7b96c1894ff32fa643c2fd905e144ca1e535441e8778b4d60f7d945c20904"
+      },
+      "summary": {
+        "bytes": 8267,
+        "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v2/summary.json",
+        "sha256": "c234335964b0cb5e39a47bc2c63d3149a13b73a6e7f3162f884b6d5ba24272d9"
+      }
+    },
+    "scoring_time_source_identities": {
+      "adapter": {
+        "bytes": 25812,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/score_local_sweep_replay.py",
+        "sha256": "954481d98785ab1fd586ae4401af11d775eb056cac7d5a21736486e096f38f71"
+      },
+      "archived_producer": {
+        "bytes": 73313,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_scoring_inputs/measure_sweep_local.py.a681d5c.py.txt",
+        "sha256": "d05914df807cac5fc21b014e24aef310a08244396217ebb178115df4993c456f"
+      },
+      "archived_producer_tests": {
+        "bytes": 12091,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_scoring_inputs/test_measure_sweep_local.py.a681d5c.py.txt",
+        "sha256": "d3232eb6c5f25eca24e8d0b1fa79af736fe586ee5d0a70bb68f334e85ea68c1c"
+      },
+      "archived_prompt_source": {
+        "bytes": 74662,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_scoring_inputs/run_sweep_comparison.py.a681d5c.py.txt",
+        "sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0"
+      },
+      "base_scorer": {
+        "bytes": 89342,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/score_sweep_comparison.py",
+        "sha256": "62ee400663cde8a827094af2bf5d4c2782dd6125b333a26f4df346152d8da01e"
+      },
+      "base_tests": {
+        "bytes": 15624,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/tests/test_score_sweep_comparison.py",
+        "sha256": "3e4ee099d4e4bee5f35950d33e96f293ebd68f373116501e31f987f387014fd7"
+      },
+      "evaluator": {
+        "bytes": 20357,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/src/tinycomplete/eval/code_benchmark.py",
+        "sha256": "a30f50b6f0c87cfd9a733a6f7eb7a5a1b2553ba272d04245451a2141718a7b66"
+      },
+      "next_edit_contract": {
+        "bytes": 9777,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/src/tinycomplete/eval/next_edit_benchmark.py",
+        "sha256": "a8649a58f23b059e317851b40c231ed4498796505b6e3ffcf8eb532220791453"
+      },
+      "tests": {
+        "bytes": 5778,
+        "path": "/home/crabcake/Projects/tabcomplete-product-r2/tests/test_score_local_sweep_replay.py",
+        "sha256": "4aa6bf807e925b22a46cf2a64b4f408f826c10fb2f45e7184834c47d3ebabdf5"
+      }
+    }
+  },
+  "created_at_utc": "2026-09-30T11:31:30.013533+00:00",
+  "fixed_suite_coverage": {
+    "changed_state_requests_per_precision": 48,
+    "distinct_file_identity_count": 21,
+    "fixture_scope_warning": "The 24 cases are fixed states, not 24 evolving editor trajectories. Same-prompt cache repeats do not measure ordinary changed-state editing.",
+    "language_counts": {
+      "c": 2,
+      "csharp": 1,
+      "java": 3,
+      "javascript": 5,
+      "python": 4,
+      "rust": 5,
+      "typescript": 4
+    },
+    "repetitions_per_state": 2,
+    "request_kind_scored": "changed_state",
+    "same_prompt_cache_repeat_requests_per_precision": 48,
+    "same_prompt_repeats_quality_weight": 0,
+    "state_count": 24
+  },
+  "interpretation_identity_sha256": "6168592a1cbb0b017486ec39165da9c05dee70fa64b0e680fb996ddd0404c9ff",
+  "mismatch_diagnosis": {
+    "diagnostic_only_one_leading_lf_offset": {
+      "case_level_categories_q4_k_m": {
+        "leading_lf_only": 2,
+        "preserved_prefix_but_suffix_mismatch_or_absent": 15,
+        "too_short_to_contain_both_immutable_spans": 7
+      },
+      "case_level_categories_q8_0": {
+        "enough_total_bytes_but_neither_immutable_span_matches": 1,
+        "leading_lf_only": 2,
+        "preserved_prefix_but_suffix_mismatch_or_absent": 18,
+        "too_short_to_contain_both_immutable_spans": 3
+      },
+      "counterfactual_mapped_cases_per_precision": 2,
+      "counterfactual_mapped_rows_per_precision": 4,
+      "method": "In-memory byte-alignment categorization only: consider the response after skipping one initial LF, then check exact immutable prefix/suffix. Never wrote altered outputs or scored this alternate text.",
+      "next_input_only_test": "The frozen prompt ends at the updated-file path header without a trailing LF. An explicit header-separator input variant could be tested only under a new frozen prompt plan. It was not tested here; output text must not be stripped to improve this score.",
+      "official_score_changed": false,
+      "repeat_pair_category_stability": "Both repetitions for each case fell in the same diagnostic category within each precision.",
+      "row_level_categories_q4_k_m": {
+        "leading_lf_only": 4,
+        "preserved_prefix_but_suffix_mismatch_or_absent": 30,
+        "too_short_to_contain_both_immutable_spans": 14
+      },
+      "row_level_categories_q8_0": {
+        "enough_total_bytes_but_neither_immutable_span_matches": 2,
+        "leading_lf_only": 4,
+        "preserved_prefix_but_suffix_mismatch_or_absent": 36,
+        "too_short_to_contain_both_immutable_spans": 6
+      },
+      "same_two_cases_for_q4_and_q8": true,
+      "termination_interpretation": "All rows observed EOS below the token cap. Insufficient-body categories mean the finished whole-file response could not contain both immutable spans; they are not cap cutoffs. For suffix mismatches, these records alone cannot distinguish intentional out-of-range changes from omitted body."
+    },
+    "official_mapping": "Byte-exact whole-file output; bytes outside the frozen editable range must match the current file exactly. No trimming, separator stripping, parser repair, or truncation was used by the official score.",
+    "raw_result": {
+      "q4_k_m": {
+        "out_of_range_rows": 48,
+        "output_cap_rows": 0,
+        "raw_output_starts_lf": 48,
+        "rows": 48,
+        "source_file_starts_lf": 0,
+        "terminal_eos_rows": 48
+      },
+      "q8_0": {
+        "out_of_range_rows": 48,
+        "output_cap_rows": 0,
+        "raw_output_starts_lf": 48,
+        "rows": 48,
+        "source_file_starts_lf": 0,
+        "terminal_eos_rows": 48
+      }
+    }
+  },
+  "observability_evidence": {
+    "baseline_run_query": {
+      "all_returned_spans_match_run_id": true,
+      "campaign_id": "campaign-8a8683a51d167629819c24ff871b3e4a",
+      "data_pages": 5,
+      "data_spans": 500,
+      "last_ingested_at": "unknown (gateway returned null); preserved event timestamps were used.",
+      "query_state": "ok",
+      "run_id": "run-8a8683a51d167629819c24ff871b3e4a",
+      "span_name_counts": {
+        "model.generate": 192,
+        "model.load": 2,
+        "request.start": 192,
+        "run.heartbeat": 112,
+        "run.start": 1,
+        "run.summary": 1
+      },
+      "terminal_empty_cursor_page": true
+    },
+    "controller_run_query": {
+      "campaign_id": "campaign-165bb28854dbbfb72d48adcd4498c3af",
+      "data_spans": 2,
+      "inference_request_spans": 0,
+      "last_ingested_at": "unknown (gateway returned null).",
+      "query_state": "ok",
+      "run_id": "run-165bb28854dbbfb72d48adcd4498c3af",
+      "span_name_counts": {
+        "run.start": 1,
+        "run.summary": 1
+      }
+    },
+    "example_genuine_id_mapping": {
+      "case_id": "python/stable_11",
+      "generation_span_id": "4c9f3f63ba5faefe",
+      "generation_trace_id": "eb64ded111f1a34a96ae0515192b658d",
+      "precision": "q4_k_m",
+      "prompt_sha256": "c055afc356b28059a0c1ac3697a9567c51c8c9947ed09da9a3f73388ccc48480",
+      "repetition": 0,
+      "request_id": "request-968a672e-06ef-48ea-a855-17ee4f51267d",
+      "request_query": {
+        "matching_spans": [
+          "request.start",
+          "model.generate"
+        ],
+        "returned_request_id_matches": true,
+        "state": "ok"
+      },
+      "request_start_span_id": "1291ca4e72d7fd49",
+      "request_start_trace_id": "a59a7e7130db62d87d22723cc27df774",
+      "response_sha256": "f862029e087bf6742b43b914db4d2edb88ccef17a3510a57baf2f5ca447e8e5e",
+      "run_id": "run-8a8683a51d167629819c24ff871b3e4a",
+      "scoring_result": "valid EOS response; out_of_range; no mapped action",
+      "source": "Scored Q4 changed-state row joined to offline request.start by case/precision/request-kind and a unique timestamp within 1 second; output record binds its request ID to prompt and response hashes.",
+      "trace_note": "The two spans share the genuine request ID but have separate trace IDs; the request query returns both and the trace query resolves the model.generate trace.",
+      "trace_query": {
+        "matching_spans": [
+          "model.generate"
+        ],
+        "returned_trace_id_matches": true,
+        "state": "ok"
+      }
+    },
+    "import_method": "Existing `uv run python scripts/observability.py import-offline PATH` command via configured remote importer; no new endpoint or database.",
+    "metric_label_policy": {
+      "metrics_added": false,
+      "uuid_or_request_ids_used_as_metric_labels": false
+    },
+    "offline_imports": {
+      "baseline": {
+        "bundle_sha256": "454e49df449d8d70262b0d5c16a92afd4faf33866acb7f82ba1a779b6be6b217",
+        "capture_content": false,
+        "duplicate": false,
+        "imported_spans": 500
+      },
+      "controller_scoring": {
+        "bundle_sha256": "56092500f968715613f1d3a176541fe564eb567246c4a9422e5f418539a60931",
+        "capture_content": false,
+        "duplicate": false,
+        "imported_spans": 2
+      }
+    },
+    "payload_capture": {
+      "baseline_metadata_capture_content": false,
+      "baseline_plan_capture_content": false,
+      "evidence": "Capture-content was disabled in the baseline plan and metadata and in the controller scorer. The telemetry bundles have null input/output preview fields and provide no prompt/completion payload. The frozen public/synthetic local prediction files were read for byte-boundary diagnosis; no raw text was copied into the report.",
+      "payload_retrieval_claimed": false,
+      "payloads_captured": false,
+      "raw_response_files_read_locally_for_byte_diagnosis": true,
+      "scorer_capture_content_environment": "0",
+      "telemetry_payloads_available": false
+    },
+    "request_id_recovery": {
+      "ambiguous": 0,
+      "matched": 192,
+      "missing_timestamp": 0,
+      "rows": 192,
+      "telemetry_requests": 192,
+      "unmatched": 0,
+      "unmatched_telemetry": 0
+    },
+    "status_query": "healthy"
+  },
+  "quality_results": {
+    "comparison_limit": "Both variants are at the zero-mapped-action floor. This run cannot select between Q4_K_M and Q8_0 or support an equivalence claim.",
+    "interpretation": "Neither precision produced a byte-safe mapped action in this fixed 24-state suite. This is a pipeline usability failure under the frozen whole-file-to-edit-region contract; it does not estimate general human edit quality.",
+    "q4_k_m": {
+      "ambiguous_cases": 6,
+      "ambiguous_mapped_actions": 0,
+      "ambiguous_repetitions": 12,
+      "changed_state_rows": 48,
+      "clear_intent_cases": 11,
+      "clear_intent_exact_reference_matches": 0,
+      "clear_intent_functional_oracle_invocations": 0,
+      "clear_intent_functional_success_recorded_by_frozen_scorer": 0,
+      "clear_intent_interpretation": "No prediction mapped, so the source functional oracle was not invoked. Frozen score 0/22 is not evidence that 22 candidate patches were functionally tested and failed; useful functional quality is unassessed.",
+      "clear_intent_repetitions": 22,
+      "mapped_rows": 0,
+      "model_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+      "no_edit_agreement_rate": null,
+      "no_edit_false_positive_rate": null,
+      "no_edit_mapped_actions": 0,
+      "no_edit_plausible_cases": 5,
+      "no_edit_repetitions": 10,
+      "synthetic_deletion_cases": 2,
+      "synthetic_deletion_mapped_actions": 0,
+      "synthetic_deletion_repetitions": 4,
+      "valid_eos_and_below_cap": 48
+    },
+    "q8_0": {
+      "ambiguous_cases": 6,
+      "ambiguous_mapped_actions": 0,
+      "ambiguous_repetitions": 12,
+      "changed_state_rows": 48,
+      "clear_intent_cases": 11,
+      "clear_intent_exact_reference_matches": 0,
+      "clear_intent_functional_oracle_invocations": 0,
+      "clear_intent_functional_success_recorded_by_frozen_scorer": 0,
+      "clear_intent_interpretation": "No prediction mapped, so the source functional oracle was not invoked. Frozen score 0/22 is not evidence that 22 candidate patches were functionally tested and failed; useful functional quality is unassessed.",
+      "clear_intent_repetitions": 22,
+      "mapped_rows": 0,
+      "model_sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+      "no_edit_agreement_rate": null,
+      "no_edit_false_positive_rate": null,
+      "no_edit_mapped_actions": 0,
+      "no_edit_plausible_cases": 5,
+      "no_edit_repetitions": 10,
+      "synthetic_deletion_cases": 2,
+      "synthetic_deletion_mapped_actions": 0,
+      "synthetic_deletion_repetitions": 4,
+      "valid_eos_and_below_cap": 48
+    }
+  },
+  "repeat_consistency": {
+    "action_consistency": {
+      "correction": "The frozen summary compared None == None because every output was unmapped. Its 48/48 identical_actions field is not an action-consistency result. The per-case primary repetition identical_action_count of 24 has the same null-comparison problem. Only raw response hash consistency is interpretable.",
+      "frozen_summary_reported_identical_actions_per_precision": 48,
+      "rate": null,
+      "valid_mapped_action_pairs": 0
+    },
+    "changed_state_repetition_raw_response_hashes": {
+      "q4_k_m": {
+        "cases": 24,
+        "identical_raw_responses": 24
+      },
+      "q8_0": {
+        "cases": 24,
+        "identical_raw_responses": 24
+      }
+    },
+    "immediate_same_prompt_repeat_raw_response_hashes": {
+      "q4_k_m": {
+        "identical_raw_responses": 46,
+        "pairs": 48
+      },
+      "q8_0": {
+        "identical_raw_responses": 46,
+        "pairs": 48
+      }
+    },
+    "no_edit_correction": "A frozen false_positive_edits count of zero is not a zero false-positive rate: no response mapped to any action, so that rate is undefined."
+  },
+  "revision": 3,
+  "revision_reason": "Adds frozen Q4/Q8 next-edit score interpretation, actual offline import/query evidence, a non-scoring byte-mismatch diagnosis, and exact artifact hashes. Preserves local replay interpretation v1/v2, score plan v2, and every prediction/score file.",
+  "schema": "sweep-local-replay-quality-interpretation-v3",
+  "scope": {
+    "automatic_personalization_or_training": false,
+    "campaign_plan_file_sha256": "8c0ef572979028a2eff3bd1bda4f5ae2eb6a9742f27cbb1640a933431eb6e8f9",
+    "campaign_plan_identity_sha256": "4c1d6f628132a2f13a787cb457cd1a7b7accd81756c3b1fd9e65f883eb8f80f1",
+    "fixture_states": 24,
+    "general_quality_claim": false,
+    "host": {
+      "background_model_processes": [
+        {
+          "cpu_system_seconds": 0.44,
+          "cpu_user_seconds": 1.2,
+          "memory": {
+            "Anonymous_bytes": 113971200,
+            "Pss_Anon_bytes": 113971200,
+            "Pss_File_bytes": 354140160,
+            "Pss_bytes": 468111360,
+            "RssAnon_bytes": 113971200,
+            "RssFile_bytes": 358109184,
+            "Swap_bytes": 0,
+            "VmHWM_bytes": 518078464,
+            "VmRSS_bytes": 472080384,
+            "VmSwap_bytes": 0
+          },
+          "model_filename": "q25-coder-adapted-Q4_K_M.gguf",
+          "pid": 3343901,
+          "process_name": "llama-server",
+          "role": "background_q25_predictor"
+        }
+      ],
+      "cpu_frequency_mhz_per_core": [
+        1635.675,
+        3300.0,
+        1400.0,
+        1400.0,
+        1767.971,
+        2949.689,
+        1532.786,
+        1231.04
+      ],
+      "cpu_temperature_celsius": {
+        "hwmon:k10temp:Tctl": 52.875
+      },
+      "host": "crabcake",
+      "io_pressure": {
+        "full": {
+          "avg10": 0.0,
+          "avg300": 0.0,
+          "avg60": 0.0,
+          "total": 1419440815
+        },
+        "some": {
+          "avg10": 0.0,
+          "avg300": 0.0,
+          "avg60": 0.0,
+          "total": 1534997128
+        }
+      },
+      "load_average_1_5_15": [
+        0.5224609375,
+        0.283203125,
+        0.27783203125
+      ],
+      "logical_cpu_count": 8,
+      "memory_pressure": {
+        "full": {
+          "avg10": 0.0,
+          "avg300": 0.0,
+          "avg60": 0.0,
+          "total": 46435993
+        },
+        "some": {
+          "avg10": 0.0,
+          "avg300": 0.0,
+          "avg60": 0.0,
+          "total": 48857678
+        }
+      },
+      "observed_at_utc": "2026-09-30T09:01:03.595762+00:00",
+      "other_temperature_sensors_celsius": {
+        "hwmon:amdgpu:edge": 52.0,
+        "hwmon:iwlwifi_1:temp1_input": 37.0,
+        "hwmon:nvme:Composite": 40.85,
+        "hwmon:nvme:Sensor 1": 40.85,
+        "hwmon:nvme:Sensor 2": 39.85,
+        "thermal:iwlwifi_1": 40.0
+      },
+      "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+      "ram_available_bytes": 11682525184,
+      "ram_total_bytes": 14580572160,
+      "swap_activity_pages": {
+        "pswpin": 2008682,
+        "pswpout": 6381575
+      },
+      "swap_occupancy": {
+        "total_bytes": 4294963200,
+        "used_bytes": 1810325504
+      },
+      "system_cpu_ticks": [
+        713454269,
+        613134616
+      ],
+      "workload_processes": [
+        {
+          "cpu_seconds": 33637.64,
+          "pid": 1314,
+          "process_name": "node",
+          "rss_bytes": 531247104,
+          "start_time_ticks": 1194
+        },
+        {
+          "cpu_seconds": 11807.74,
+          "pid": 972236,
+          "process_name": "node",
+          "rss_bytes": 171941888,
+          "start_time_ticks": 10349735
+        },
+        {
+          "cpu_seconds": 4461.83,
+          "pid": 938724,
+          "process_name": "npm exec t3@0.0",
+          "rss_bytes": 15548416,
+          "start_time_ticks": 10121465
+        },
+        {
+          "cpu_seconds": 848.54,
+          "pid": 2456997,
+          "process_name": "bun",
+          "rss_bytes": 33521664,
+          "start_time_ticks": 79575981
+        },
+        {
+          "cpu_seconds": 788.47,
+          "pid": 2273982,
+          "process_name": "bun",
+          "rss_bytes": 8978432,
+          "start_time_ticks": 24396403
+        },
+        {
+          "cpu_seconds": 377.29,
+          "pid": 3356863,
+          "process_name": "codex",
+          "rss_bytes": 339709952,
+          "start_time_ticks": 88272311
+        },
+        {
+          "cpu_seconds": 48.06,
+          "pid": 3366571,
+          "process_name": "codex",
+          "rss_bytes": 219779072,
+          "start_time_ticks": 88291698
+        },
+        {
+          "cpu_seconds": 26.81,
+          "pid": 2207,
+          "process_name": "goa-identity-se",
+          "rss_bytes": 5799936,
+          "start_time_ticks": 1458
+        },
+        {
+          "cpu_seconds": 24.39,
+          "pid": 3357424,
+          "process_name": "codex-code-mode",
+          "rss_bytes": 27688960,
+          "start_time_ticks": 88274383
+        },
+        {
+          "cpu_seconds": 8.37,
+          "pid": 3344104,
+          "process_name": "codex",
+          "rss_bytes": 191295488,
+          "start_time_ticks": 88143850
+        },
+        {
+          "cpu_seconds": 1.32,
+          "pid": 3368015,
+          "process_name": "codex-code-mode",
+          "rss_bytes": 24559616,
+          "start_time_ticks": 88292872
+        },
+        {
+          "cpu_seconds": 1.17,
+          "pid": 3344178,
+          "process_name": "codex",
+          "rss_bytes": 110964736,
+          "start_time_ticks": 88143871
+        },
+        {
+          "cpu_seconds": 0.14,
+          "pid": 2117,
+          "process_name": "goa-daemon",
+          "rss_bytes": 9342976,
+          "start_time_ticks": 1447
+        },
+        {
+          "cpu_seconds": 0.04,
+          "pid": 3695962,
+          "process_name": "uv",
+          "rss_bytes": 34320384,
+          "start_time_ticks": 89581411
+        },
+        {
+          "cpu_seconds": 0.01,
+          "pid": 2348,
+          "process_name": "gvfs-goa-volume",
+          "rss_bytes": 4575232,
+          "start_time_ticks": 1482
+        }
+      ]
+    },
+    "human_acceptance_or_preference_evidence": false,
+    "inference_execution": "local CPU inference; no CUDA execution claimed",
+    "model_artifacts": {
+      "q4_k_m_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+      "q8_0_sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+      "repository": "sweepai/sweep-next-edit-1.5B",
+      "revision": null,
+      "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+    },
+    "outputs_repaired_or_rescored_for_this_revision": false,
+    "quantization_equivalence_claim": false,
+    "raw_prediction_text_copied_to_report": false,
+    "score_summary_sha256": "c234335964b0cb5e39a47bc2c63d3149a13b73a6e7f3162f884b6d5ba24272d9",
+    "scoring_plan_file_sha256": "b8c9dab2f397ec7976e5f599a28730a4b4b573d43f728458afa5f1d46123544f",
+    "scoring_plan_identity_sha256": "d0c7f4a89e599f60fedd09d69c64b7f28c601f323ae3da378fb775cd7b7c5e91",
+    "sealed_test_data_used": false,
+    "source_kind": "fixed public/synthetic development fixtures; not human editing sessions"
+  }
+}

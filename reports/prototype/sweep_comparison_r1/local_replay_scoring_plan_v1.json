@@ -1,0 +1,153 @@
+{
+  "base_scoring_plan_sha256": "7de22f66fecdbeb54ab0d37b8a118bea5e7601a6eeec0555b152a94ec1c0cbd7",
+  "campaign_plan_sha256": "4c1d6f628132a2f13a787cb457cd1a7b7accd81756c3b1fd9e65f883eb8f80f1",
+  "contract": {
+    "cases": 24,
+    "functional_backend": "base scoring plan pinned network-none images",
+    "joined_id_bound_to": [
+      "validated prompt_sha256",
+      "verified raw output_sha256"
+    ],
+    "missing_or_ambiguous_id": "unknown, never fabricated",
+    "primary": "changed_state",
+    "quality_scope": "fixed benchmark evidence, not human acceptance/general quality",
+    "repeat": "immediate_same_prompt_repeat",
+    "repeat_quality_samples": 0,
+    "repetitions": 2,
+    "request_id_join": "actual offline request.start ID by case/precision/kind and unique timestamp within 1s; never row order",
+    "response_repair": "none",
+    "telemetry_content_hashes": false
+  },
+  "frozen_at_utc": "2026-09-30T11:00:01.594165+00:00",
+  "inputs": {
+    "base_plan": {
+      "bytes": 9543,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/scoring_plan_v7.json",
+      "sha256": "816f79736e95cb35f0660af58b902e164ff6bde74bc2aacb97ff3609385b0699"
+    },
+    "campaign_plan": {
+      "bytes": 32684,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/plan-v7.json",
+      "sha256": "8c0ef572979028a2eff3bd1bda4f5ae2eb6a9742f27cbb1640a933431eb6e8f9"
+    },
+    "diagnostic": {
+      "bytes": 64634,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/product_r2/model_diagnostic/diagnostic_plan_v2.json",
+      "sha256": "efa0bf5c245b5edca14df2722b19c6e086e790a3da256656eec1e8db2ed34c34"
+    },
+    "local_plan": {
+      "bytes": 11901,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/local_replay_plan.json",
+      "sha256": "e6109e562ff37a9afddead276e46d77f59be4e484a7866f353c35871c4dd5c2e"
+    },
+    "local_upstream_plan": {
+      "bytes": 9106,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/plan-v2.json",
+      "sha256": "8b6f781d153b58284c3c994774cc5cc82bbb9cfbc1615a51f0079080e7573a97"
+    },
+    "metadata": {
+      "bytes": 5907,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/metadata.json",
+      "sha256": "1d7036abbc896113c4328758b8a5bf203d004954092beb347a10d2d97830bc9b"
+    },
+    "prompt_inputs": {
+      "bytes": 45825,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl",
+      "sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3"
+    },
+    "source_suite": {
+      "bytes": 337300,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/data/benchmarks/next_edit_v2.jsonl",
+      "sha256": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff"
+    },
+    "summary": {
+      "bytes": 44212,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/summary.json",
+      "sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465"
+    },
+    "telemetry": {
+      "bytes": 590338,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/observability.jsonl",
+      "sha256": "454e49df449d8d70262b0d5c16a92afd4faf33866acb7f82ba1a779b6be6b217"
+    },
+    "telemetry_run": {
+      "bytes": 110,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/observability-run.json",
+      "sha256": "76f6a94baa1bc0aab19ff5e73ade3d256a150cbbfa4cbadcc1a65da261b861b1"
+    }
+  },
+  "local_plan_sha256": "00540772e011da95f5aba99e0f92d43300a894fe47f83c9ea89d15b42761f8d2",
+  "measurements": {
+    "q4_k_m": {
+      "bytes": 17977,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/server-measurement-q4_k_m.json",
+      "sha256": "6b582f872ebcfe20c2a65b29d9839b69d98e8e2d67763182a4ef4f8dd988767c"
+    },
+    "q8_0": {
+      "bytes": 17993,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/server-measurement-q8_0.json",
+      "sha256": "27ef562a5b47eea32b723d89abdb6ee6fc641af178458d08fb67cc484f2581e2"
+    }
+  },
+  "models": {
+    "q4_k_m_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+    "q8_0_sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+    "repository": "sweepai/sweep-next-edit-1.5B",
+    "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+    "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+  },
+  "output": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay_scoring_v1",
+  "predictions": {
+    "q4_k_m": {
+      "bytes": 375200,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/predictions-q4_k_m.jsonl",
+      "sha256": "9540cb5f4cd2385bc1af46057a84d0182ec301b16e46590aade8075c111ea043"
+    },
+    "q8_0": {
+      "bytes": 376711,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0/predictions-q8_0.jsonl",
+      "sha256": "e54d583502c8e9c79495de2f070afd80af4dab2118df66258546f30f1b7b25be"
+    }
+  },
+  "revision": 1,
+  "run_dir": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay/20260930T090103Z-00540772e0",
+  "schema": "sweep-local-replay-scoring-plan-v1",
+  "scoring_plan_sha256": "6f0327c4ff83912505ade97cb49cd98668505b315d5ed18c68978d430c8a1512",
+  "sources": {
+    "adapter": {
+      "bytes": 22840,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/score_local_sweep_replay.py",
+      "sha256": "f4d677fa896cff67df718ee0a46a080849e657dbfa75d906b1a38d08a6b1d017"
+    },
+    "base_scorer": {
+      "bytes": 89342,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/score_sweep_comparison.py",
+      "sha256": "62ee400663cde8a827094af2bf5d4c2782dd6125b333a26f4df346152d8da01e"
+    },
+    "base_tests": {
+      "bytes": 15624,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/tests/test_score_sweep_comparison.py",
+      "sha256": "3e4ee099d4e4bee5f35950d33e96f293ebd68f373116501e31f987f387014fd7"
+    },
+    "evaluator": {
+      "bytes": 20357,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/src/tinycomplete/eval/code_benchmark.py",
+      "sha256": "a30f50b6f0c87cfd9a733a6f7eb7a5a1b2553ba272d04245451a2141718a7b66"
+    },
+    "local_runner": {
+      "bytes": 101544,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/measure_sweep_local.py",
+      "sha256": "8bfd80c2498b7190700275601ed4eb53c5b7b21681a6bb4086c5c9c07dd19b54"
+    },
+    "next_edit_contract": {
+      "bytes": 9777,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/src/tinycomplete/eval/next_edit_benchmark.py",
+      "sha256": "a8649a58f23b059e317851b40c231ed4498796505b6e3ffcf8eb532220791453"
+    },
+    "tests": {
+      "bytes": 5778,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/tests/test_score_local_sweep_replay.py",
+      "sha256": "4aa6bf807e925b22a46cf2a64b4f408f826c10fb2f45e7184834c47d3ebabdf5"
+    }
+  }
+}
