@@ -558,7 +558,7 @@ def _clone_frozen_commit() -> None:
     elif SESSION.get("data_schema") == "one-line-license-mixed-pilot-v1":
         repository_plan = "reports/prototype/product_r2/license_mixed_pilot_plan.json"
     elif SESSION.get("fixture_only") is True:
-        repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v4.json"
+        repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v5.json"
     if sha(REPO / repository_plan) != SESSION["plan_sha256"]:
         raise ValueError("pushed pilot plan does not match the attached frozen plan")
     if SESSION.get("fixture_only") is True:
@@ -699,7 +699,9 @@ def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
     seed = RunContext.new(campaign_id="tabcomplete-product-r2")
     with seed.activate(), run_scope(OUT / "fixture-observability-run.json", "disposable-fixture"):
         with operation("campaign.phase", attributes={"tabcomplete.phase": "disposable-fixture"}):
-            return _run_disposable_training_fixture_impl(dataset, subprocess_environment(env))
+            child_env = dict(env)
+            child_env.update(subprocess_environment(env))
+            return _run_disposable_training_fixture_impl(dataset, child_env)
 
 
 def _run_disposable_training_fixture_impl(dataset: Path, env: dict[str, str]) -> int:

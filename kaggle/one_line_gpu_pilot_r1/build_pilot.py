@@ -1133,7 +1133,7 @@ def prepare_fixture_bundle(
     quota = quota_reader()
     _check_live_quota(plan, quota)
     identity = _git_identity(plan["branch"], plan["base_commit"])
-    if sha256_file(ROOT / "reports/prototype/product_r2/disposable_fixture_plan_v4.json") != (
+    if sha256_file(ROOT / "reports/prototype/product_r2/disposable_fixture_plan_v5.json") != (
         sha256_file(plan_path)
     ):
         raise ValueError("disposable fixture plan is not committed at its expected path")

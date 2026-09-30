@@ -1,0 +1,23 @@
+{
+  "applied_updates": 0,
+  "deployment_permitted": false,
+  "diagnosis": "Owned trainer subprocess environment was replaced with filtered observability environment. Parent detected Tesla T4; child reported CUDA unavailable before loading/training. Preserve scientific environment and merge correlation fields.",
+  "failures_query_state": "ok",
+  "fixture_stage_elapsed_seconds": 7.617772922000086,
+  "kernel_id": "shlokbhakta/tabcomplete-disposable-fixture-v4",
+  "plan_revision": 4,
+  "plan_sha256": "a286346366513128935b20945d5e984aa2d9186343d63e13f3cad49b504c9302",
+  "private_evidence_hashes": {
+    "fixture-telemetry.jsonl": "37f6773f4d48ec8242a0a5fe02acbb9242fdaa7e067bd51061bc8056356989c5",
+    "fixture-v4-failure-query.json": "cbb3e23fc5135b6e51600605c221a86f0fc1b534b93ff68e3d09a286d1fba724",
+    "worker-status.json": "08c54d54fb9907a9c4dea9e0905b42b8112438d512809e0f04f4af233b272489"
+  },
+  "quality_evidence": false,
+  "run_id": "run-1aedaa1cd42cd9e06b269d3f1803839c",
+  "schema": "one-line-disposable-fixture-gpu-observation-v1",
+  "source_commit": "d2f96dde9e257f649cda17473c2746a2c7338b77",
+  "trace_id": "be70b4fb4491e68a6ce713fb1c37fd54",
+  "training_input_tokens": 0,
+  "worker_elapsed_seconds": 119.70771210200007,
+  "worker_state": "failed"
+}

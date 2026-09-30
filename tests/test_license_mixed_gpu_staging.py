@@ -231,3 +231,43 @@ def test_frozen_source_inventory_detects_changes(tmp_path):
     source.write_bytes(b"changed")
     with pytest.raises(ValueError, match="changed after freeze"):
         builder.verify_frozen_sources(plan, tmp_path)
+
+
+def test_fixture_telemetry_preserves_owned_cuda_environment(tmp_path, monkeypatch):
+    import os
+    import sys
+
+    monkeypatch.setattr(os, "environ", dict(os.environ))
+
+    builder = _builder()
+    template = Path(builder.__file__).with_name("run.py").read_text()
+    session = {"session_seconds": 7200, "reserve_seconds": 1200}
+    source = template.replace('"__SESSION_LITERAL__"', repr(json.dumps(session)))
+    worker = {"__name__": "fixture_environment_test"}
+    exec(compile(source, "fixture_environment_test.py", "exec"), worker)
+    monkeypatch.setitem(worker, "REPO", Path(__file__).parents[1])
+    monkeypatch.setitem(worker, "OUT", tmp_path)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    owned_environment = {
+        "CUDA_VISIBLE_DEVICES": "0",
+        "LD_LIBRARY_PATH": "/synthetic/cuda/lib64",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "TABCOMPLETE_PILOT_STARTED_MONOTONIC": "12345",
+    }
+    received = {}
+
+    def implementation(dataset, env):
+        assert dataset == tmp_path
+        received.update(env)
+        return 10592
+
+    monkeypatch.setitem(worker, "_run_disposable_training_fixture_impl", implementation)
+    assert worker["_run_disposable_training_fixture"](tmp_path, owned_environment) == 10592
+    assert owned_environment.items() <= received.items()
+    assert received["TABCOMPLETE_CAMPAIGN_ID"] == "tabcomplete-product-r2"
+    assert received["TABCOMPLETE_RUN_ID"].startswith("run-")
+    assert set(owned_environment) == {
+        "CUDA_VISIBLE_DEVICES", "LD_LIBRARY_PATH", "HF_HUB_OFFLINE",
+        "TRANSFORMERS_OFFLINE", "TABCOMPLETE_PILOT_STARTED_MONOTONIC",
+    }
