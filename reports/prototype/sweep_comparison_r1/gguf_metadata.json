@@ -1,0 +1,14 @@
+{
+  "observed_at": "2026-09-30T06:54:05.748618+00:00",
+  "source": "https://huggingface.co/api/models/sweepai/sweep-next-edit-1.5B",
+  "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+  "metadata": {
+    "total": 1445014016,
+    "architecture": "qwen2",
+    "context_length": 32768,
+    "eos_token": "<|endoftext|>",
+    "totalFileSize": 1537269856
+  },
+  "verification": "Publisher Hub metadata; verify downloaded GGUF header before inference.",
+  "context_discrepancy": "Card specifies8192 while GGUFmetadata specifies32768; neither authorizes an unbounded context benchmark."
+}

@@ -80,6 +80,8 @@ def validate_spec(spec: dict) -> None:
         or not spec["runner_arguments"]
         or any(not isinstance(item, str) or len(item) > 4096
                for item in spec["runner_arguments"])
+        or "--mode" in spec["runner_arguments"]
+        or spec.get("runner_modes") != ["download", "quantize", "quality", "next-edit"]
         or not isinstance(spec.get("runner_sha256"), str)
         or len(spec["runner_sha256"]) != 64
         or any(c not in "0123456789abcdef" for c in spec["runner_sha256"])
@@ -156,8 +158,13 @@ def main() -> None:
                      for part in spec["runner_arguments"]]
         os.environ.update(PYTHONPATH=str(REPO / "src"), TABCOMPLETE_OBSERVABILITY_MODE="offline",
                           TABCOMPLETE_SWEEP_DEADLINE=str(DEADLINE))
-        run([sys.executable, str(REPO / "scripts/run_sweep_comparison.py"), *arguments],
-            "comparison", REPO)
+        for mode in spec["runner_modes"]:
+            stage = "comparison_" + mode
+            status.update(state="running", stage=stage,
+                          elapsed_session_seconds=time.monotonic() - START)
+            (OUT / "worker-status.json").write_text(json.dumps(status, indent=2) + "\n")
+            run([sys.executable, str(REPO / "scripts/run_sweep_comparison.py"),
+                 *arguments, "--mode", mode], "comparison-" + mode, REPO)
         status["state"] = "complete"
     except Exception as exc:
         status.update(state="failed", failure_stage=stage, error_type=type(exc).__name__)

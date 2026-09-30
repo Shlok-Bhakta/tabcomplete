@@ -28,6 +28,7 @@ def valid_spec():
         "files": {"plan.json": "b" * 64},
         "runner_sha256": "c" * 64,
         "runner_arguments": ["--plan", "{input}/plan.json"],
+        "runner_modes": ["download", "quantize", "quality", "next-edit"],
     }
 
 
@@ -39,6 +40,8 @@ def valid_spec():
     ("reserve_seconds", 0),
     ("session_seconds", 7201),
     ("runner_arguments", [None]),
+    ("runner_arguments", ["--mode", "download"]),
+    ("runner_modes", ["train"]),
     ("runner_sha256", "invalid"),
     ("commit", "invalid"),
     ("files", {"../secret": "b" * 64}),
