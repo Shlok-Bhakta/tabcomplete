@@ -1,0 +1,34 @@
+{
+  "observed_at": "2026-09-30T06:39:37.320892+00:00",
+  "source": "https://huggingface.co/api/models/sweepai/sweep-next-edit-1.5B?blobs=true",
+  "repository": "sweepai/sweep-next-edit-1.5B",
+  "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+  "license": "apache-2.0",
+  "files": [
+    {
+      "name": ".gitattributes",
+      "size": 1589,
+      "lfs": null
+    },
+    {
+      "name": "README.md",
+      "size": 1409,
+      "lfs": null
+    },
+    {
+      "name": "run_model.py",
+      "size": 5273,
+      "lfs": null
+    },
+    {
+      "name": "sweep-next-edit-1.5b.q8_0.v2.gguf",
+      "size": 1537269856,
+      "lfs": {
+        "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+        "size": 1537269856,
+        "pointerSize": 135
+      }
+    }
+  ],
+  "authorization": "User explicitly authorized Sweep Q8/Q4 evaluation on existing benches and free Kaggle on 2026-09-30. Existing live model is preserved."
+}
