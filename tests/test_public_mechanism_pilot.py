@@ -408,7 +408,7 @@ def test_frozen_two_seed_schedule_is_exactly_six_unique_calls() -> None:
     case_ids = ("synthetic-a", "synthetic-b")
     request_ids = {
         f"{case_id}:{role}": (
-            f"two-seed-source-grounded-v1-{role}-"
+            f"two-seed-source-grounded-v2-{role}-"
             + hashlib.sha256(case_id.encode()).hexdigest()[:20]
         )
         for case_id in case_ids

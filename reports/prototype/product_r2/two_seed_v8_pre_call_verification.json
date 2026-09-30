@@ -1,0 +1,24 @@
+{
+  "actual_sandbox_cases": 9,
+  "focused_tests_passed": 15,
+  "mypy": "passed",
+  "pending_before_provider_calls": [
+    "independent frozen-packet audit"
+  ],
+  "plan_identity_sha256": "abead2f6e6106db75e8793a172921354ad4f9499b0fa902a2f5d692828b9f15d",
+  "plan_sha256": "de41567f02fee65725d29a7984307b5bf5a843165b3a03ebcb3814b1c4f4ae49",
+  "preflight_file_sha256": "12815e64e374d7bf9f5d970ee94c7b0f080c186e8bc425bfaa677e7209ff8eea",
+  "preflight_internal_sha256": "1305b16bc9be35f200afd7987f4bcdff6dcf2ed54ad437fc30f2cff91673760c",
+  "preflight_status": "complete",
+  "prior_v7_invalid_reason": "Task history mapping was iterated as a list; corrected to a single-record tuple before real execution.",
+  "private_packet": "/mnt/ssd/tabcomplete-product-r2/next-pilot-frozen-v8",
+  "provider_calls_at_verification": 0,
+  "ruff": "passed",
+  "schema": "public-source-two-seed-pre-call-verification-v2",
+  "source_hashes": {
+    "scripts/prepare_two_seed_synthetic_pilot.py": "c5fa8f8e56a1732925c6740e4580bd029c153bfc965a17f3709858a24f0643c0",
+    "scripts/run_public_mechanism_pilot.py": "3186248c8bc74e06bf731e447ef4e0f9845e6d1591cc10d978ec416c4b79ac7f",
+    "tests/test_public_mechanism_pilot.py": "cd1db85b1826a7573d5321318220f1e3e12d5acb5afcd9e0cbb0e6c11aa3dae6"
+  },
+  "training_ready": false
+}

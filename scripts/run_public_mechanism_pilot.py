@@ -2109,7 +2109,7 @@ def _enable_offline_observability(run_dir: Path | None = None) -> None:
     os.environ["TABCOMPLETE_OBSERVABILITY_CAPTURE_CONTENT"] = "0"
 
 
-TWO_SEED_PACKET_SCHEMA = "public-source-two-seed-synthetic-author-solver-review-v3"
+TWO_SEED_PACKET_SCHEMA = "public-source-two-seed-synthetic-author-solver-review-v4"
 TWO_SEED_EXECUTION_SCHEMA = "public-source-two-seed-execution-v1"
 TWO_SEED_PACKET_BUILDER = ROOT / "scripts/prepare_two_seed_synthetic_pilot.py"
 TWO_SEED_ORACLE_PREFLIGHT = ROOT / "scripts/verify_two_seed_oracle_preflight.py"
@@ -2159,7 +2159,7 @@ def _frozen_two_seed_schedule(plan: dict[str, Any]) -> list[tuple[str, str, str]
     for case_id in cases:
         for role in ("author", "solver", "reviewer"):
             expected = (
-                f"two-seed-source-grounded-v1-{role}-"
+                f"two-seed-source-grounded-v2-{role}-"
                 + sha_bytes(case_id.encode("utf-8"))[:20]
             )
             request_id = requests[f"{case_id}:{role}"]
@@ -2358,9 +2358,10 @@ def _validate_frozen_two_seed_packet(
         state = row.get("state", {})
         try:
             history = tuple(RecentEdit(**entry) for entry in state.get("history", []))
-            expected_history = tuple(
-                RecentEdit(**entry) for entry in task_case.get("history", [])
-            )
+            frozen_history = task_case.get("history")
+            if not isinstance(frozen_history, dict):
+                raise TypeError("frozen case history must contain one replacement")
+            expected_history = (RecentEdit(**frozen_history),)
             replayed_source = replay_replacement_history(
                 row.get("author_source_text", ""),
                 history,
@@ -2712,13 +2713,13 @@ def execute_frozen_two_seed_packet(packet_dir: Path) -> dict[str, Any]:
         if sha_bytes(rebuilt.encode("utf-8")) != sha_bytes(frozen_solver.encode("utf-8")):
             raise ValueError("frozen solver prompt does not match its visible state")
     _enable_offline_observability(run_dir)
-    campaign = RunContext.new(campaign_id="tabcomplete-two-seed-public-synthetic-v5")
+    campaign = RunContext.new(campaign_id="tabcomplete-two-seed-public-synthetic-v8")
     results: list[dict[str, Any]] = []
     failure_seen = False
     schedule = _frozen_two_seed_schedule(plan)
     call_count = 0
     with campaign.activate(), run_scope(
-        run_dir / "observability-run.json", "public-source-two-seed-synthetic-v5"
+        run_dir / "observability-run.json", "public-source-two-seed-synthetic-v8"
     ) as observed:
         context = observed or campaign
         with OpenCodeTeacherClient(

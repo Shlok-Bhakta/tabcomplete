@@ -17,7 +17,7 @@ from tinycomplete.one_line.contract import EditState, RecentEdit
 from tinycomplete.one_line.pilot_roles import build_blind_solver_prompt
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = Path("/mnt/ssd/tabcomplete-product-r2/next-pilot-frozen-v7")
+OUT = Path("/mnt/ssd/tabcomplete-product-r2/next-pilot-frozen-v8")
 SOURCE_PACKET = Path(
     "/mnt/ssd/tabcomplete-product-r2/commitpackft/next-pilot-review-v1/source_only_inputs.jsonl"
 )
@@ -504,7 +504,7 @@ def main() -> None:
     used = len(set(ledger_rows) - baseline)
     remaining = pilot.CAMPAIGN_HARD_MAX_CALLS - used
     request_ids = {
-        f"{case_id}:{role}": (f"two-seed-source-grounded-v1-{role}-" + _sha(case_id.encode())[:20])
+        f"{case_id}:{role}": (f"two-seed-source-grounded-v2-{role}-" + _sha(case_id.encode())[:20])
         for case_id in case_manifest
         for role in ("author", "solver", "reviewer")
     }
@@ -514,7 +514,7 @@ def main() -> None:
     source_manifest = SOURCE_AUDIT / "manifest.json"
     source_results = SOURCE_AUDIT / "candidate_results.jsonl"
     plan: dict[str, Any] = {
-        "schema": "public-source-two-seed-synthetic-author-solver-review-v3",
+        "schema": "public-source-two-seed-synthetic-author-solver-review-v4",
         "status": "frozen_before_provider_calls",
         "created_at_unix_ns": time.time_ns(),
         "objective": (
@@ -597,7 +597,7 @@ def main() -> None:
             "request_ids": request_ids,
             "execution_gate": "parent reviews frozen plan before the first call",
         },
-        "execution_dir": str(OUT / "execution-v7"),
+        "execution_dir": str(OUT / "execution-v8"),
         "budget_observation": {
             "observed_at_unix_ns": time.time_ns(),
             "ledger_path": str(pilot.LEDGER),
