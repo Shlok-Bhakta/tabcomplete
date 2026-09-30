@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import signal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -232,6 +234,126 @@ def test_request_ids_are_mandatory_only_when_the_worker_made_a_request() -> None
         )
 
 
+def test_sigterm_after_case_checkpoint_preserves_row_and_marks_missing_unknown(
+    tmp_path: Path,
+) -> None:
+    staging = tmp_path / ".attempt.incomplete"
+    final = tmp_path / "attempt"
+    raw = tmp_path / "raw-results"
+    staging.mkdir()
+    raw.mkdir()
+    strict_cases = [
+        scorer.BenchmarkCase(
+            id="strict/done", language="python", path="a.py", prefix="", expected="x"
+        ),
+        scorer.BenchmarkCase(
+            id="strict/pending", language="python", path="b.py", prefix="", expected="x"
+        ),
+    ]
+    line_cases = [{"id": "line/not-reached"}]
+    prompt_rows = [{"case_id": "edit/not-reached"}]
+    checkpoint = staging / "strict" / "q8_0" / "results.jsonl"
+    scorer._append_jsonl(
+        checkpoint,
+        {
+            "case_id": "strict/done",
+            "precision": "q8_0",
+            "context_eligible": False,
+            "scored": False,
+        },
+    )
+
+    with pytest.raises(scorer.ScoringInterrupted):
+        scorer._scoring_sigterm(signal.SIGTERM, None)
+
+    plan = {
+        "scoring_plan_sha256": "frozen-test-plan",
+        "campaign": {"embedded_plan_sha256": "frozen-test-campaign"},
+    }
+    summary = scorer._preserve_interrupted_output(
+        staging_root=staging,
+        final_output_root=final,
+        results_root=raw,
+        plan=plan,
+        strict_cases=strict_cases,
+        line_cases=line_cases,
+        prompt_rows=prompt_rows,
+    )
+
+    persisted = scorer._read_jsonl(final / "strict" / "q8_0" / "results.jsonl")
+    assert persisted == [
+        {
+            "case_id": "strict/done",
+            "precision": "q8_0",
+            "context_eligible": False,
+            "scored": False,
+        }
+    ]
+    assert summary["state"] == "interrupted_partial"
+    coverage = summary["partial_coverage"]
+    assert coverage["completed_record_total"] == 1
+    assert coverage["unknown_unscored_total"] == 2 * (2 + 1 + 2) - 1
+    q8_strict = coverage["tasks"]["strict/q8_0"]
+    assert q8_strict["known_unscored_ids"] == ["strict/done"]
+    assert q8_strict["unknown_unscored_ids"] == ["strict/pending"]
+    assert json.loads((final / "artifact_manifest.json").read_text())["state"] == (
+        "interrupted_partial"
+    )
+
+
+def test_sigterm_controlled_exception_bypasses_evaluator_exception_handlers() -> None:
+    assert issubclass(scorer.ScoringInterrupted, KeyboardInterrupt)
+    try:
+        scorer._scoring_sigterm(signal.SIGTERM, None)
+    except Exception:
+        pytest.fail("SIGTERM was swallowed by an ordinary evaluator exception handler")
+    except scorer.ScoringInterrupted:
+        pass
+
+
+def test_unexpected_error_preserves_checkpoint_without_message_or_traceback(
+    tmp_path: Path,
+) -> None:
+    staging = tmp_path / ".failed.incomplete"
+    final = tmp_path / "failed"
+    raw = tmp_path / "raw-results"
+    staging.mkdir()
+    raw.mkdir()
+    strict_cases = [
+        scorer.BenchmarkCase(
+            id="strict/done", language="python", path="a.py", prefix="", expected="x"
+        )
+    ]
+    checkpoint = staging / "strict" / "q8_0" / "results.jsonl"
+    row = {"case_id": "strict/done", "precision": "q8_0", "scored": True}
+    scorer._append_jsonl(checkpoint, row)
+
+    scorer._preserve_failed_output(
+        staging_root=staging,
+        final_output_root=final,
+        results_root=raw,
+        plan={
+            "scoring_plan_sha256": "frozen-test-plan",
+            "campaign": {"embedded_plan_sha256": "frozen-test-campaign"},
+        },
+        strict_cases=strict_cases,
+        line_cases=[],
+        prompt_rows=[],
+        error=ValueError("private prompt text must not be persisted"),
+    )
+
+    failure = json.loads((final / "failure_metadata.json").read_text())
+    assert failure == {
+        "schema": "sweep-comparison-failure-metadata-v1",
+        "state": "failed_partial",
+        "exception_type": "ValueError",
+        "exception_message": "omitted",
+        "traceback": "omitted",
+    }
+    assert scorer._read_jsonl(final / "strict" / "q8_0" / "results.jsonl") == [row]
+    summary = json.loads((final / "summary.json").read_text())
+    assert summary["state"] == "failed_partial"
+    assert summary["partial_coverage"]["unknown_unscored_total"] == 1
 def test_complete_mapped_action_uses_container_backend_and_preserves_public_label(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -11,9 +11,11 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -82,6 +84,14 @@ BOOTSTRAP_SEED = 20260930
 BOOTSTRAP_REPLICATES = 10_000
 MAX_JSONL_BYTES = 256 * 1024**2
 MAX_NEXT_EDIT_RESPONSE_BYTES = 2 * 1024**2
+
+
+class ScoringInterrupted(KeyboardInterrupt):
+    """Controlled termination that preserves completed per-case score records."""
+
+
+def _scoring_sigterm(_signum: int, _frame: Any) -> None:
+    raise ScoringInterrupted("controller scoring was stopped by SIGTERM")
 
 
 def canonical_json(value: Any) -> bytes:
@@ -449,7 +459,7 @@ def freeze_plan(args: argparse.Namespace) -> dict[str, Any]:
     )
     plan: dict[str, Any] = {
         "schema": SCHEMA,
-        "revision": 1,
+        "revision": args.revision,
         "frozen_at_utc": datetime.now(UTC).isoformat(),
         "campaign": {
             "name": campaign.get("campaign"),
@@ -567,6 +577,14 @@ def freeze_plan(args: argparse.Namespace) -> dict[str, Any]:
                 "sandbox_statuses_without_stdout_or_stderr",
             ],
             "metrics_have_no_case_uuid_path_prompt_response_or_full_model_hash_labels": True,
+            "incremental_case_checkpoints": "append-and-fsync-one-complete-jsonl-row-per-case",
+            "interrupted_run_accounting": (
+                "missing expected score rows are unknown_unscored, never failed outcomes"
+            ),
+            "sigterm_behavior": "finalize partial coverage and artifacts before exit status 130",
+            "unexpected_exception_cleanup": (
+                "preserve partial records; write exception type only; re-raise unchanged"
+            ),
         },
         "telemetry": {
             "run_scope": True,
@@ -597,8 +615,16 @@ def write_frozen_plan(path: Path, plan: dict[str, Any]) -> None:
 
 def load_frozen_plan(path: Path) -> dict[str, Any]:
     plan = json.loads(path.read_text(encoding="utf-8"))
-    if plan.get("schema") != SCHEMA or plan.get("revision") != 1:
+    if plan.get("schema") != SCHEMA or plan.get("revision") not in (1, 2, 3):
         raise ValueError("unsupported scoring plan schema or revision")
+    if plan.get("revision") in (2, 3) and plan.get("output_contract", {}).get(
+        "incremental_case_checkpoints"
+    ) != "append-and-fsync-one-complete-jsonl-row-per-case":
+        raise ValueError("scoring plan lacks the incremental checkpoint contract")
+    if plan.get("revision") == 3 and plan.get("output_contract", {}).get(
+        "unexpected_exception_cleanup"
+    ) != "preserve partial records; write exception type only; re-raise unchanged":
+        raise ValueError("revision 3 scoring plan lacks the failure-preservation contract")
     expected = digest_bytes(
         canonical_json({k: v for k, v in plan.items() if k != "scoring_plan_sha256"})
     )
@@ -779,21 +805,23 @@ def _precision_quality(
     output_root: Path,
     run_context: RunContext,
     image_ids: dict[str, str],
+    checkpoint_path: Path,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     results = []
     rows = []
+    _reset_jsonl(checkpoint_path)
     with tempfile.TemporaryDirectory(prefix="sweep-score-" + precision + "-") as temp_name:
         temp_root = Path(temp_name)
         for index, case in enumerate(cases):
             if case.id not in eligible:
-                rows.append(
-                    {
-                        "case_id": case.id,
-                        "precision": precision,
-                        "context_eligible": False,
-                        "scored": False,
-                    }
-                )
+                row = {
+                    "case_id": case.id,
+                    "precision": precision,
+                    "context_eligible": False,
+                    "scored": False,
+                }
+                rows.append(row)
+                _append_jsonl(checkpoint_path, row)
                 continue
             prediction = predictions[case.id]
             check = case.check
@@ -822,23 +850,23 @@ def _precision_quality(
                     execution_backend="container",
                 )
             results.append(result)
-            rows.append(
-                {
-                    "case_id": case.id,
-                    "precision": precision,
-                    "context_eligible": True,
-                    "scored": True,
-                    "response_sha256": digest_bytes(prediction.completion.encode()),
-                    "finish_reason": prediction.finish_reason,
-                    "hit_token_cap": prediction.hit_token_cap,
-                    "exact_match": result.exact_match,
-                    "normalized_exact_match": result.normalized_exact_match,
-                    "parse_status": result.parse.status,
-                    "compile_status": result.compile.status,
-                    "test_status": result.test.status,
-                    "functional_valid": _functional_valid(result),
-                }
-            )
+            row = {
+                "case_id": case.id,
+                "precision": precision,
+                "context_eligible": True,
+                "scored": True,
+                "response_sha256": digest_bytes(prediction.completion.encode()),
+                "finish_reason": prediction.finish_reason,
+                "hit_token_cap": prediction.hit_token_cap,
+                "exact_match": result.exact_match,
+                "normalized_exact_match": result.normalized_exact_match,
+                "parse_status": result.parse.status,
+                "compile_status": result.compile.status,
+                "test_status": result.test.status,
+                "functional_valid": _functional_valid(result),
+            }
+            rows.append(row)
+            _append_jsonl(checkpoint_path, row)
     return rows, summarize_results(results)
 
 
@@ -894,6 +922,7 @@ def _score_quality_task(
         output_root=output_root,
         run_context=run_context,
         image_ids=image_ids,
+        checkpoint_path=output_root / task / precision / "results.jsonl",
     )
     summary.update(
         {
@@ -1231,6 +1260,8 @@ def _score_next_edit(
     with tempfile.TemporaryDirectory(prefix="sweep-next-edit-score-") as temp_name:
         temp_root = Path(temp_name)
         for precision in PRECISIONS:
+            checkpoint_path = output_root / "next-edit" / precision / "results.jsonl"
+            _reset_jsonl(checkpoint_path)
             model_sha = (
                 plan["models"]["q8_0_sha256"]
                 if precision == "q8_0"
@@ -1312,9 +1343,9 @@ def _score_next_edit(
                         run_context=run_context,
                     )
                     scored_rows.append(output_row)
+                    _append_jsonl(checkpoint_path, output_row)
             output[precision] = scored_rows
             all_rows[precision] = scored_rows
-            write_jsonl(output_root / "next-edit" / precision / "results.jsonl", scored_rows)
             (output_root / "next-edit" / precision / "summary.json").parent.mkdir(
                 parents=True, exist_ok=True
             )
@@ -1352,12 +1383,234 @@ def _score_next_edit(
     return output, summary
 
 
-def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+def _reset_jsonl(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "".join(json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n" for row in rows),
-        encoding="utf-8",
+    with path.open("w", encoding="utf-8") as handle:
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(encoded)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    _reset_jsonl(path)
+    for row in rows:
+        _append_jsonl(path, row)
+
+
+def _checkpoint_records(
+    path: Path, expected_keys: set[str], *, next_edit: bool
+) -> tuple[set[str], set[str]]:
+    completed: set[str] = set()
+    known_unscored: set[str] = set()
+    if not path.is_file():
+        return completed, known_unscored
+    with path.open("rb") as handle:
+        lines = handle.readlines()
+    for index, raw_line in enumerate(lines):
+        if not raw_line.endswith(b"\n"):
+            if index == len(lines) - 1:
+                break  # A torn last write is unknown, never a completed score.
+            raise ValueError("controller checkpoint contains a truncated interior row")
+        if not raw_line.strip():
+            continue
+        try:
+            row = json.loads(raw_line)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("controller checkpoint contains an invalid complete row") from exc
+        if not isinstance(row, dict) or not isinstance(row.get("case_id"), str):
+            raise ValueError("controller checkpoint row has no case identity")
+        if next_edit:
+            repetition = row.get("repetition")
+            if (
+                not isinstance(repetition, int)
+                or isinstance(repetition, bool)
+                or repetition not in (0, 1)
+            ):
+                raise ValueError("next-edit checkpoint row has an invalid repetition")
+            key = f"{row['case_id']}#{repetition}"
+        else:
+            key = row["case_id"]
+        if key not in expected_keys or key in completed:
+            raise ValueError("controller checkpoint has an unexpected or duplicate case")
+        completed.add(key)
+        if row.get("scored") is False or row.get("context_eligible") is False:
+            known_unscored.add(key)
+    return completed, known_unscored
+
+
+def _partial_coverage(
+    output_root: Path,
+    strict_cases: list[BenchmarkCase],
+    line_cases: list[dict[str, Any]],
+    prompt_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    expected: dict[str, tuple[set[str], bool]] = {}
+    for precision in PRECISIONS:
+        expected[f"strict/{precision}"] = ({case.id for case in strict_cases}, False)
+        expected[f"line/{precision}"] = ({row["id"] for row in line_cases}, False)
+        expected[f"next-edit/{precision}"] = (
+            {f"{row['case_id']}#{repeat}" for row in prompt_rows for repeat in (0, 1)},
+            True,
+        )
+    entries: dict[str, Any] = {}
+    for task, (expected_keys, next_edit) in expected.items():
+        path = output_root / task / "results.jsonl"
+        completed, known_unscored = _checkpoint_records(
+            path, expected_keys, next_edit=next_edit
+        )
+        unknown = sorted(expected_keys - completed)
+        entries[task] = {
+            "expected_count": len(expected_keys),
+            "completed_record_count": len(completed),
+            "scored_record_count": len(completed - known_unscored),
+            "known_unscored_count": len(known_unscored),
+            "known_unscored_ids": sorted(known_unscored),
+            "unknown_unscored_count": len(unknown),
+            "unknown_unscored_ids": unknown,
+            "results_path": path.relative_to(output_root).as_posix(),
+            "results_sha256": digest_file(path) if path.is_file() else None,
+        }
+    return {
+        "schema": "sweep-comparison-partial-coverage-v1",
+        "interpretation": "missing records are unknown/unscored and are not quality failures",
+        "tasks": entries,
+        "expected_total": sum(len(keys) for keys, _ in expected.values()),
+        "completed_record_total": sum(row["completed_record_count"] for row in entries.values()),
+        "unknown_unscored_total": sum(row["unknown_unscored_count"] for row in entries.values()),
+    }
+
+
+def _write_json_durable(path: Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(value, handle, ensure_ascii=False, sort_keys=True, indent=2)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _artifact_manifest(
+    output_root: Path,
+    results_root: Path,
+    plan: dict[str, Any],
+    *,
+    partial: bool,
+    state: str | None = None,
+) -> dict[str, Any]:
+    raw_paths = {
+        f"{precision}/{task}": results_root
+        / "quality"
+        / precision
+        / f"{'strict' if task == 'strict' else 'line'}-predictions.jsonl"
+        for precision in PRECISIONS
+        for task in ("strict", "line")
+    } | {
+        f"{precision}/next_edit": results_root / "next-edit" / precision / "predictions.jsonl"
+        for precision in PRECISIONS
+    }
+    raw_hashes = {
+        key: digest_file(path)
+        for key, path in raw_paths.items()
+        if path.is_file()
+    }
+    if not partial and len(raw_hashes) != len(raw_paths):
+        raise FileNotFoundError("a required raw prediction file disappeared during scoring")
+    outputs = {
+        path.relative_to(output_root).as_posix(): digest_file(path)
+        for path in sorted(output_root.rglob("*"))
+        if path.is_file() and path.name != "artifact_manifest.json"
+    }
+    return {
+        "schema": "sweep-comparison-score-artifact-manifest-v1",
+        "state": state or ("interrupted_partial" if partial else "complete"),
+        "scoring_plan_sha256": plan["scoring_plan_sha256"],
+        "raw_prediction_files": raw_hashes,
+        "controller_outputs": outputs,
+    }
+
+
+def _preserve_interrupted_output(
+    *,
+    staging_root: Path,
+    final_output_root: Path,
+    results_root: Path,
+    plan: dict[str, Any],
+    strict_cases: list[BenchmarkCase],
+    line_cases: list[dict[str, Any]],
+    prompt_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    coverage = _partial_coverage(staging_root, strict_cases, line_cases, prompt_rows)
+    summary = {
+        "schema": "sweep-comparison-scoring-results-v1",
+        "state": "interrupted_partial",
+        "scoring_plan_sha256": plan["scoring_plan_sha256"],
+        "campaign_plan_sha256": plan["campaign"]["embedded_plan_sha256"],
+        "results_root": str(results_root),
+        "partial_coverage": coverage,
+        "limitations": [
+            "Interruption prevented complete scoring; missing rows are unknown, not failures.",
+            "Only durable per-case records present in the checkpoint JSONL files are scored.",
+        ],
+    }
+    _write_json_durable(staging_root / "partial_coverage.json", coverage)
+    _write_json_durable(staging_root / "summary.json", summary)
+    _write_json_durable(
+        staging_root / "artifact_manifest.json",
+        _artifact_manifest(staging_root, results_root, plan, partial=True),
     )
+    staging_root.replace(final_output_root)
+    return summary
+
+
+def _preserve_failed_output(
+    *,
+    staging_root: Path,
+    final_output_root: Path,
+    results_root: Path,
+    plan: dict[str, Any],
+    strict_cases: list[BenchmarkCase],
+    line_cases: list[dict[str, Any]],
+    prompt_rows: list[dict[str, Any]],
+    error: BaseException,
+) -> None:
+    coverage = _partial_coverage(staging_root, strict_cases, line_cases, prompt_rows)
+    failure = {
+        "schema": "sweep-comparison-failure-metadata-v1",
+        "state": "failed_partial",
+        "exception_type": type(error).__name__,
+        "exception_message": "omitted",
+        "traceback": "omitted",
+    }
+    summary = {
+        "schema": "sweep-comparison-scoring-results-v1",
+        "state": "failed_partial",
+        "scoring_plan_sha256": plan["scoring_plan_sha256"],
+        "campaign_plan_sha256": plan["campaign"]["embedded_plan_sha256"],
+        "results_root": str(results_root),
+        "partial_coverage": coverage,
+        "limitations": [
+            "Scoring stopped after an infrastructure or controller error.",
+            "Missing expected rows are unknown/unscored, never quality failures.",
+        ],
+    }
+    _write_json_durable(staging_root / "partial_coverage.json", coverage)
+    _write_json_durable(staging_root / "failure_metadata.json", failure)
+    _write_json_durable(staging_root / "summary.json", summary)
+    _write_json_durable(
+        staging_root / "artifact_manifest.json",
+        _artifact_manifest(
+            staging_root, results_root, plan, partial=True, state="failed_partial"
+        ),
+    )
+    staging_root.replace(final_output_root)
 
 
 def _paired_quality(
@@ -1419,10 +1672,14 @@ def _score_line_task(
         raise ValueError("line syntax results differ from the frozen eligible set")
     result_rows = []
     exact = syntax = 0
+    result_path = output_root / "line" / precision / "results.jsonl"
+    _reset_jsonl(result_path)
     for case in cases:
         case_id = case["id"]
         if case_id not in eligible:
-            result_rows.append({"case_id": case_id, "precision": precision, "scored": False})
+            row = {"case_id": case_id, "precision": precision, "scored": False}
+            result_rows.append(row)
+            _append_jsonl(result_path, row)
             continue
         prediction = predictions[case_id]
         case_context = run_context.for_case(case_id)
@@ -1449,25 +1706,23 @@ def _score_line_task(
                 raise ValueError(f"stored line scoring differs from frozen rule: {case_id}/{key}")
         exact += bool(scored["exact"])
         syntax += scored["syntax"] == "pass"
-        result_rows.append(
-            {
-                "case_id": case_id,
-                "precision": precision,
-                "scored": True,
-                "response_sha256": digest_bytes(prediction.completion.encode()),
-                "finish_reason": prediction.finish_reason,
-                "hit_token_cap": prediction.hit_token_cap,
-                "exact": scored["exact"],
-                "longest_exact_character_prefix": scored["longest_exact_character_prefix"],
-                "reference_characters": scored["reference_characters"],
-                "returned_characters": scored["returned_characters"],
-                "syntax": scored["syntax"],
-                "input_tokens": token_rows[case_id]["input_tokens"],
-                "latency_seconds": prediction.latency_seconds,
-            }
-        )
-    output_dir = output_root / "line" / precision
-    write_jsonl(output_dir / "results.jsonl", result_rows)
+        row = {
+            "case_id": case_id,
+            "precision": precision,
+            "scored": True,
+            "response_sha256": digest_bytes(prediction.completion.encode()),
+            "finish_reason": prediction.finish_reason,
+            "hit_token_cap": prediction.hit_token_cap,
+            "exact": scored["exact"],
+            "longest_exact_character_prefix": scored["longest_exact_character_prefix"],
+            "reference_characters": scored["reference_characters"],
+            "returned_characters": scored["returned_characters"],
+            "syntax": scored["syntax"],
+            "input_tokens": token_rows[case_id]["input_tokens"],
+            "latency_seconds": prediction.latency_seconds,
+        }
+        result_rows.append(row)
+        _append_jsonl(result_path, row)
     summary = {
         "requested_cases": len(cases),
         "context_eligible_cases": len(eligible),
@@ -1525,9 +1780,8 @@ def _score_strict_task(
         output_root=output_root,
         run_context=run_context,
         image_ids=image_ids,
+        checkpoint_path=output_root / "strict" / precision / "results.jsonl",
     )
-    output_dir = output_root / "strict" / precision
-    write_jsonl(output_dir / "results.jsonl", rows)
     summary.update(
         {
             "requested_cases": len(cases),
@@ -1593,6 +1847,9 @@ def score_plan(args: argparse.Namespace) -> dict[str, Any]:
     }
     eligibility: dict[str, dict[str, set[str]]] = {task: {} for task in ("strict", "line")}
     meta_path = output_root / "observability-run.json"
+    prior_sigterm = signal.getsignal(signal.SIGTERM)
+    signal.signal(signal.SIGTERM, _scoring_sigterm)
+    preserve_staging = False
     try:
         with run_scope(meta_path, "sweep-comparison-controller-score") as scoped_run:
             run_context = scoped_run or root_context
@@ -1687,46 +1944,66 @@ def score_plan(args: argparse.Namespace) -> dict[str, Any]:
                     ],
                 }
                 output_root.mkdir(parents=True, exist_ok=True)
-                (output_root / "summary.json").write_text(
-                    json.dumps(summary, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-                    encoding="utf-8",
-                )
-                artifact = {
-                    "schema": "sweep-comparison-score-artifact-manifest-v1",
-                    "scoring_plan_sha256": plan["scoring_plan_sha256"],
-                    "raw_prediction_files": {
-                        f"{precision}/{task}": digest_file(
-                            results_root
-                            / "quality"
-                            / precision
-                            / f"{'strict' if task == 'strict' else 'line'}-predictions.jsonl"
-                        )
-                        for precision in PRECISIONS
-                        for task in ("strict", "line")
-                    }
-                    | {
-                        f"{precision}/next_edit": digest_file(
-                            results_root / "next-edit" / precision / "predictions.jsonl"
-                        )
-                        for precision in PRECISIONS
-                    },
-                    "controller_outputs": {},
-                }
-                for path in sorted(output_root.rglob("*")):
-                    if path.is_file() and path.name != "artifact_manifest.json":
-                        artifact["controller_outputs"][path.relative_to(output_root).as_posix()] = (
-                            digest_file(path)
-                        )
-                (output_root / "artifact_manifest.json").write_text(
-                    json.dumps(artifact, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-                    encoding="utf-8",
+                summary["state"] = "complete"
+                _write_json_durable(output_root / "summary.json", summary)
+                _write_json_durable(
+                    output_root / "artifact_manifest.json",
+                    _artifact_manifest(output_root, results_root, plan, partial=False),
                 )
                 staging_root.replace(final_output_root)
                 return summary
+    except ScoringInterrupted:
+        # Once TERM is observed, make the short finalization phase non-interruptible.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        if final_output_root.is_dir() and not staging_root.exists():
+            completed_summary = final_output_root / "summary.json"
+            if completed_summary.is_file():
+                return json.loads(completed_summary.read_text(encoding="utf-8"))
+        try:
+            return _preserve_interrupted_output(
+                staging_root=staging_root,
+                final_output_root=final_output_root,
+                results_root=results_root,
+                plan=plan,
+                strict_cases=strict_cases,
+                line_cases=line_rows,
+                prompt_rows=prompt_rows,
+            )
+        except Exception:
+            preserve_staging = True
+            raise RuntimeError(
+                "interrupted scoring could not finalize; per-case checkpoints remain in staging"
+            ) from None
+    except BaseException as error:
+        # Preserve durable case rows even for evaluator, runtime, and controller failures.
+        # Exception text and traceback can contain prompts or source, so only persist the type.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        preserve_staging = True
+        try:
+            _preserve_failed_output(
+                staging_root=staging_root,
+                final_output_root=final_output_root,
+                results_root=results_root,
+                plan=plan,
+                strict_cases=strict_cases,
+                line_cases=line_rows,
+                prompt_rows=prompt_rows,
+                error=error,
+            )
+        except BaseException:
+            # Do not replace the original exception; retain the staging directory for inspection.
+            pass
+        raise
     finally:
-        if staging_root.exists():
+        active_exception = sys.exc_info()[0] is not None
+        signal.signal(signal.SIGTERM, prior_sigterm)
+        if staging_root.exists() and not preserve_staging:
             shutil.rmtree(staging_root)
-        runtime.shutdown()
+        try:
+            runtime.shutdown()
+        except Exception:
+            if not active_exception:
+                raise
 
 
 def _parse_args() -> argparse.Namespace:
@@ -1741,11 +2018,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--diagnostic-plan", type=Path, default=DIAGNOSTIC_PLAN_DEFAULT)
     parser.add_argument("--prompt-inputs", type=Path, default=NEXT_EDIT_INPUTS_DEFAULT)
     parser.add_argument("--plan", type=Path, default=PLAN_DEFAULT)
+    parser.add_argument("--revision", type=int, default=1)
     parser.add_argument("--results-root", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.score and (args.results_root is None or args.output is None):
         parser.error("--score requires --results-root and --output")
+    if args.freeze_plan and args.revision not in (1, 2, 3):
+        parser.error("--revision must be 1, 2, or 3")
     return args
 
 
@@ -1770,13 +2050,15 @@ def main() -> None:
         print(
             json.dumps(
                 {
-                    "state": "scored",
+                    "state": summary["state"],
                     "scoring_plan_sha256": summary["scoring_plan_sha256"],
                     "summary": str(args.output / "summary.json"),
                 },
                 sort_keys=True,
             )
         )
+        if summary["state"] != "complete":
+            raise SystemExit(130)
 
 
 if __name__ == "__main__":
