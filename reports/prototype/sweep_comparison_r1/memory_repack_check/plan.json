@@ -1,0 +1,23 @@
+{
+  "schema": "sweep-memory-repacking-check-plan-v1",
+  "frozen_at": "2026-09-30T07:33:25.657986+00:00",
+  "script_sha256": "456bc916e39b9fba90452ee9bfce32bfda4984e6225925ce083daa707cb0fbd6",
+  "server": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+  "server_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+  "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "host": "crabcake",
+  "backend": "CPU",
+  "prompt": "<|file_sep|>original/smoke.py\nvalue = 1\n<|file_sep|>current/smoke.py\nvalue = 2\n<|file_sep|>updated/smoke.py\n",
+  "condition": "Memory diagnostic only; concurrent sandbox compiler. Same short prompt as baseline; no controlled latency conclusion.",
+  "models": [
+    {
+      "precision": "Q4_K_M",
+      "file": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+    }
+  ],
+  "max_output_tokens": 64,
+  "quality_evidence": false,
+  "extra_runtime_argument": "--no-repack",
+  "baseline_plan_sha256": "29248c54a72da9e94043db723c72fb07613dd9773f80db1dfca210ce33a281d6"
+}

@@ -1,0 +1,76 @@
+{
+  "authorization": "Explicit user authorization for sweepai/sweep-next-edit-1.5B Q8 vs Q4 evaluation; no other weights, teacher calls, paid compute, Kaggle allocation, training, publication, or deployment change.",
+  "frozen_at_utc": "2026-09-30T07:11:09.927405+00:00",
+  "host_at_preparation": {
+    "hostname": "crabcake",
+    "local_inference_policy": "Do not stop or benchmark against the active q25 service. Kaggle worker execution is separately quota-governed by root.",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39"
+  },
+  "model": {
+    "architecture": "qwen2",
+    "bytes": 1537269856,
+    "context_card_tokens": 8192,
+    "context_hub_metadata_tokens": 32768,
+    "context_note": "Use 8192; Hub metadata and model card differ. No 32k inference claim.",
+    "context_used_tokens": 8192,
+    "eos_token": "<|endoftext|>",
+    "file": "sweep-next-edit-1.5b.q8_0.v2.gguf",
+    "license": "apache-2.0",
+    "parameters_total": 1445014016,
+    "repository": "sweepai/sweep-next-edit-1.5B",
+    "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+    "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+    "url": "https://huggingface.co/sweepai/sweep-next-edit-1.5B/resolve/409016591c6c1a94f545f22328a85a3516118f34/sweep-next-edit-1.5b.q8_0.v2.gguf"
+  },
+  "paths": {
+    "line_control": {
+      "bytes": 1064851,
+      "cases": 180,
+      "path": "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl",
+      "sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
+    },
+    "next_edit_fixture_plan": {
+      "bytes": 64634,
+      "case_count": 24,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/product_r2/model_diagnostic/diagnostic_plan_v2.json",
+      "plan_sha256": "153f2211be603f0c51a9abbe8086ecaaffa6198eda543859d704b512e7bbb03a",
+      "sha256": "efa0bf5c245b5edca14df2722b19c6e086e790a3da256656eec1e8db2ed34c34"
+    },
+    "next_edit_source": {
+      "bytes": 337300,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/data/benchmarks/next_edit_v2.jsonl",
+      "sha256": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff"
+    },
+    "strict_control": {
+      "bytes": 290914,
+      "path": "/home/crabcake/Projects/tabcomplete-product-r2/data/benchmarks/code_completion_v2.jsonl",
+      "sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4"
+    }
+  },
+  "plan_sha256": "08edfdcb8ba47c69ec503db4056acbe2770edebf00f6c7f54ab7fce00e9832d4",
+  "quota_reference": "reports/prototype/sweep_comparison_r1/quota_preparation.json; refresh and allocation remain owned by root.",
+  "runtime": {
+    "conversion": "llama-quantize --allow-requantize input.q8_0.gguf output.q4_k_m.gguf Q4_K_M 4",
+    "quantization_provenance": "Q8_0 source requantized to Q4_K_M; not F16/F32-to-Q4.",
+    "quantizer_sha256": "cc3716569740e341ee2f28d19c6ab9c1191cb7f555e55f17a8fdc640652385cd",
+    "revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "server_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+    "server_version": "0.4.1-dev (build 1, commit f072b10)",
+    "source": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp"
+  },
+  "schema": "tabcomplete-sweep-artifact-preparation-v1",
+  "scope": "Only identity-pinned Sweep Q8 download and Q8_0-to-Q4_K_M local conversion. This is not the full comparison plan. No model inference outputs may be created until a separate runner-and-suite plan is frozen.",
+  "storage": {
+    "artifact_directory": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts",
+    "budget_root": "/mnt/ssd/tabcomplete-product-r2",
+    "cap_bytes": 12884901888,
+    "enforcement": "Recheck before each write; abort before the shared root exceeds 12 GiB or filesystem free drops below 2 GiB. Do not delete existing checkpoints.",
+    "existing_root_bytes_before_preparation": 3432448216,
+    "filesystem_available_bytes_before_preparation": 56416243712,
+    "minimum_filesystem_free_bytes": 2147483648,
+    "predicted_peak_new_bytes": 2611011680,
+    "q4_conservative_upper_bound_bytes": 1073741824,
+    "q8_expected_bytes": 1537269856,
+    "stage_root": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1"
+  }
+}

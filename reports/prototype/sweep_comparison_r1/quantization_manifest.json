@@ -1,0 +1,44 @@
+{
+  "artifact_plan_sha256": "b8090328b12d33c29bd81cc263f1ab34df69c98211115952a757aa6edfe6c366",
+  "command": [
+    "llama-quantize",
+    "--allow-requantize",
+    "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+    "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+    "Q4_K_M",
+    "4"
+  ],
+  "completed_at_utc": "2026-09-30T07:15:05.065671+00:00",
+  "observed_quantizer": {
+    "elapsed_ms": 50947.36,
+    "model_size_mib": 1464.61,
+    "quantized_size_mib": 840.92,
+    "warning": "llama.cpp notes requantizing already quantized tensors can reduce quality; comparison must quantify effects."
+  },
+  "output": {
+    "bytes": 883289056,
+    "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+    "precision": "Q4_K_M",
+    "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+  },
+  "provenance": "Q8_0 requantized to Q4_K_M using llama.cpp; not F16/F32-to-Q4.",
+  "runtime": {
+    "quantizer_sha256": "cc3716569740e341ee2f28d19c6ab9c1191cb7f555e55f17a8fdc640652385cd",
+    "scheduling": "nice 15, ionice idle class",
+    "source_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "threads": 4
+  },
+  "schema": "tabcomplete-sweep-quantization-manifest-v1",
+  "source": {
+    "bytes": 1537269856,
+    "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+    "precision": "Q8_0",
+    "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+  },
+  "storage_after": {
+    "cap_bytes": 12884901888,
+    "filesystem_free_bytes": 53573668864,
+    "minimum_remaining_bytes": 2147483648,
+    "shared_root_bytes": 6250820486
+  }
+}

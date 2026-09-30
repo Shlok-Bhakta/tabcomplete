@@ -1,0 +1,20 @@
+0.00.000.485 I srv  llama_server: initializing ...
+warning: no usable GPU found, --gpu-layers option will be ignored
+warning: one possible reason is that llama.cpp was compiled without GPU support
+warning: consult docs/build.md for compilation instructions
+0.00.004.942 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.005.712 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.007.100 I srv    load_model: loading model '/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf'
+0.00.310.127 I cmn          init: llama threadpool init, n_threads = 2
+0.00.411.056 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 512, kv_unified = 'false'
+0.00.411.113 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.00.414.125 I srv  llama_server: model loaded
+0.00.414.132 I srv  llama_server: listening on http://127.0.0.1:38879
+0.00.525.321 I slot get_availabl: id  0 | task -1 | selected slot by id (0)
+0.00.525.380 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.02.085.611 I slot print_timing: id  0 | task 0 | prompt eval time =    1281.63 ms /    28 tokens (   45.77 ms per token,    21.85 tokens per second)
+0.02.085.618 I slot print_timing: id  0 | task 0 |        eval time =     278.57 ms /     6 tokens (   55.71 ms per token,    17.95 tokens per second)
+0.02.085.620 I slot print_timing: id  0 | task 0 |       total time =    1560.20 ms /    34 tokens
+0.02.085.621 I slot print_timing: id  0 | task 0 |    graphs reused =          4
+0.02.085.637 I slot      release: id  0 | task 0 | stop processing: n_tokens = 33, truncated = 0
+0.02.100.046 I srv    operator(): operator(): cleaning up before exit...

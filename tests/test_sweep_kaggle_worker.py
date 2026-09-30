@@ -92,3 +92,28 @@ def test_timeout_terminates_owned_process_group(tmp_path, monkeypatch):
     else:
         os.kill(child, 9)
         pytest.fail("stage timeout left an owned child running")
+
+
+def test_canonical_q4_staging_checks_identity_and_reuses(tmp_path, monkeypatch):
+    source = tmp_path / "inputs"
+    source.mkdir()
+    artifact = source / worker.Q4_FILE
+    artifact.write_bytes(b"authorized-test-artifact")
+    monkeypatch.setattr(worker, "Q4_BYTES", artifact.stat().st_size)
+    monkeypatch.setattr(worker, "Q4_SHA256", worker.digest(artifact))
+    scratch = tmp_path / "scratch"
+    worker.stage_canonical_q4(source, scratch)
+    assert (scratch / worker.Q4_FILE).read_bytes() == artifact.read_bytes()
+    worker.stage_canonical_q4(source, scratch)
+    (scratch / worker.Q4_FILE).write_bytes(b"corrupted")
+    with pytest.raises(ValueError, match="existing worker"):
+        worker.stage_canonical_q4(source, scratch)
+
+
+def test_bad_canonical_q4_never_stages(tmp_path):
+    source = tmp_path / worker.Q4_FILE
+    source.write_bytes(b"wrong model")
+    scratch = tmp_path / "scratch"
+    with pytest.raises(ValueError, match="identity"):
+        worker.stage_canonical_q4(tmp_path, scratch)
+    assert not scratch.exists()

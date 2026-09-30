@@ -1,0 +1,11 @@
+{
+  "artifact_plan_sha256": "b8090328b12d33c29bd81cc263f1ab34df69c98211115952a757aa6edfe6c366",
+  "bytes": 1537269856,
+  "downloaded_at_utc": "2026-09-30T07:13:02.305293+00:00",
+  "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+  "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+  "schema": "tabcomplete-sweep-download-manifest-v1",
+  "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+  "source": "https://huggingface.co/sweepai/sweep-next-edit-1.5B/resolve/409016591c6c1a94f545f22328a85a3516118f34/sweep-next-edit-1.5b.q8_0.v2.gguf",
+  "verification": "Exact pinned size and SHA-256 match."
+}

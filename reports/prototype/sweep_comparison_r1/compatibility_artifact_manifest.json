@@ -1,0 +1,58 @@
+{
+  "files": [
+    {
+      "path": "reports/prototype/sweep_comparison_r1/compatibility_smoke/plan.json",
+      "bytes": 1290,
+      "sha256": "29248c54a72da9e94043db723c72fb07613dd9773f80db1dfca210ce33a281d6"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/compatibility_smoke/run_smoke.py.txt",
+      "bytes": 3507,
+      "sha256": "338f2a89cf64d038a66fd10ca5f50dc44e9188058b76425b846c9a1128feb889"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/compatibility_smoke/Q8_0.json",
+      "bytes": 4303,
+      "sha256": "2febcfb60acb10af5c7030e35c01eb81d12631e1e11f5bf8a5c57f71a53d87d4"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/compatibility_smoke/Q4_K_M.json",
+      "bytes": 4294,
+      "sha256": "9049f1c907d31a123b9dbeb15499fd165962d9e5cf766bf158aaef3c9d47d477"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/compatibility_smoke/Q8_0.server.log",
+      "bytes": 1838,
+      "sha256": "67775faa331c7125d474f8c3f3e7f233eeeebf195e21354119cb2646eb9791c1"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/compatibility_smoke/Q4_K_M.server.log",
+      "bytes": 1837,
+      "sha256": "e69d766d919b69d66ec7137fc923c91c65012a05661ae269dec6b718dd485f8c"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/memory_repack_check/plan.json",
+      "bytes": 1199,
+      "sha256": "cb1bb3d532deb9c2e9520ed38bbdf4e3fd9c8cdf1071a4413029be61559ebeac"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/memory_repack_check/run_smoke.py.txt",
+      "bytes": 3527,
+      "sha256": "456bc916e39b9fba90452ee9bfce32bfda4984e6225925ce083daa707cb0fbd6"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/memory_repack_check/Q4_K_M.json",
+      "bytes": 4308,
+      "sha256": "3202ab8805ed1b5cf41cef67d028bf4d22456b5ddcf0e793f5d263053ff666f6"
+    },
+    {
+      "path": "reports/prototype/sweep_comparison_r1/memory_repack_check/Q4_K_M.server.log",
+      "bytes": 1837,
+      "sha256": "df5a4f6bfad695d82f69c3f8310edcd5b348465ff1534d6beaf2460eb09a626e"
+    }
+  ],
+  "quality_evidence": false,
+  "controlled_latency_evidence": false,
+  "telemetry": "One-off compatibility requests have no OTel request IDs. Full benchmark runner will use existing provider instrumentation; do not fabricate smoke traces.",
+  "archival_sources": "Executed one-off source is archived byte-identically as .py.txt; plans retain the original execution source identity."
+}

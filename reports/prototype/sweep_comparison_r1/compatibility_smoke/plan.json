@@ -1,0 +1,26 @@
+{
+  "schema": "sweep-compatibility-smoke-plan-v1",
+  "frozen_at": "2026-09-30T07:28:02.573027+00:00",
+  "script_sha256": "338f2a89cf64d038a66fd10ca5f50dc44e9188058b76425b846c9a1128feb889",
+  "server": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+  "server_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+  "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "host": "crabcake",
+  "backend": "CPU",
+  "prompt": "<|file_sep|>original/smoke.py\nvalue = 1\n<|file_sep|>current/smoke.py\nvalue = 2\n<|file_sep|>updated/smoke.py\n",
+  "condition": "Compatibility only; concurrent sandbox compiler and data audit. Timing is not a controlled deployment benchmark.",
+  "models": [
+    {
+      "precision": "Q8_0",
+      "file": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+      "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+    },
+    {
+      "precision": "Q4_K_M",
+      "file": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+    }
+  ],
+  "max_output_tokens": 64,
+  "quality_evidence": false
+}

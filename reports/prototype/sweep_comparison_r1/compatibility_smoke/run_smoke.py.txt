@@ -1,0 +1,61 @@
+import hashlib,json,os,signal,socket,subprocess,time,urllib.request
+from pathlib import Path
+BASE=Path('/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/compatibility')
+PLAN=BASE/'plan.json'
+def sha(p):
+ h=hashlib.sha256()
+ with Path(p).open('rb') as f:
+  for b in iter(lambda:f.read(8388608),b''):h.update(b)
+ return h.hexdigest()
+def memory(pid):
+ d={}
+ for fn in ['status','smaps_rollup']:
+  p=Path(f'/proc/{pid}/{fn}')
+  if not p.exists():continue
+  for l in p.read_text().splitlines():
+   k,_,v=l.partition(':')
+   if k in ['VmRSS','VmHWM','RssAnon','RssFile','VmSwap','Rss','Pss','Anonymous','Swap']:
+    d[k+'_kib']=int(v.split()[0])
+ return d
+def post(url,data):
+ req=urllib.request.Request(url,data=json.dumps(data).encode(),headers={'Content-Type':'application/json'})
+ with urllib.request.urlopen(req,timeout=120) as r:return json.load(r)
+def main():
+ plan=json.loads(PLAN.read_text());assert sha(__file__)==plan['script_sha256']
+ assert sha(plan['server'])==plan['server_sha256']
+ for m in plan['models']:
+  assert sha(m['file'])==m['sha256']
+  with socket.socket() as s:s.bind(('127.0.0.1',0));port=s.getsockname()[1]
+  url=f'http://127.0.0.1:{port}'
+  args=[plan['server'],'-m',m['file'],'--host','127.0.0.1','--port',str(port),'-ngl','0','-t','2','-tb','2','-c','512','--parallel','1','-b','64','-ub','32','--cache-ram','0','--ctx-checkpoints','0','--no-warmup','--no-context-shift','--no-mmproj-auto','--spec-type','none']
+  row={'precision':m['precision'],'model_sha256':m['sha256'],'launch_arguments':args,'condition':plan['condition'],'quality_evidence':False}
+  started=time.monotonic()
+  try:
+   with (BASE/(m['precision']+'.server.log')).open('wb') as log:
+    proc=subprocess.Popen(args,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+    try:
+     while time.monotonic()-started<90:
+      if proc.poll() is not None:raise RuntimeError('server exited before health')
+      try:
+       with urllib.request.urlopen(url+'/health',timeout=1) as r:
+        if r.status==200:break
+      except Exception:time.sleep(.2)
+     else:raise TimeoutError('server startup deadline')
+     row['load_until_healthy_seconds']=time.monotonic()-started
+     row['memory_before_request']=memory(proc.pid)
+     ids=post(url+'/tokenize',{'content':plan['prompt'],'add_special':False,'parse_special':True})['tokens']
+     row['input_tokens']=len(ids)
+     t=time.monotonic()
+     response=post(url+'/completion',{'prompt':plan['prompt'],'n_predict':64,'temperature':0,'seed':928173,'stream':False,'cache_prompt':False,'id_slot':0,'return_tokens':True,'stop':['<|file_sep|>','</s>']})
+     row.update(response=response,completed_seconds=time.monotonic()-t,memory_post_request=memory(proc.pid),actual_termination=response.get('stop_type'),actual_eos=response.get('stop_type')=='eos',hit_cap=response.get('stop_type')=='limit')
+     row['finite_text']=isinstance(response.get('content'),str)
+    finally:
+     if proc.poll() is None:
+      os.killpg(proc.pid,signal.SIGTERM)
+      try:proc.wait(timeout=10)
+      except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait()
+  except Exception as e:row.update(error_type=type(e).__name__,status='failed')
+  else:row['status']='completed'
+  (BASE/(m['precision']+'.json')).write_text(json.dumps(row,indent=2)+'\n')
+  print(json.dumps({k:row.get(k) for k in ['precision','status','input_tokens','actual_termination','actual_eos','completed_seconds','error_type','memory_post_request']}),flush=True)
+if __name__=='__main__':main()

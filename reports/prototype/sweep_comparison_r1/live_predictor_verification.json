@@ -1,0 +1,20 @@
+{
+  "MainPID": "3343901",
+  "NRestarts": "1",
+  "ExecMainStartTimestamp": "Wed 2026-09-30 00:01:13 CDT",
+  "ActiveState": "active",
+  "arguments": {
+    "-m": "/home/crabcake/Projects/tabcomplete-small-model-prototype-r1/artifacts/research/small_model_prototype_r1/selected_runtime/small_model_prototype_r1_selected_conversion/q25-coder-adapted-Q4_K_M.gguf",
+    "--host": "127.0.0.1",
+    "--port": "19093",
+    "-t": "4",
+    "-tb": "4",
+    "-ngl": "0",
+    "-c": "2304",
+    "--cache-ram": "128",
+    "--ctx-checkpoints": "32"
+  },
+  "binary": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+  "model_sha256": "a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626",
+  "observed_at": "2026-09-30T07:36:31.523221+00:00"
+}

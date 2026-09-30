@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -23,6 +24,9 @@ DEADLINE = START + SESSION_SECONDS - RESERVE_SECONDS
 RUNTIME_REVISION = "f072b103714dfa1eee531f80b24512faf38e3dd2"
 MODEL_REVISION = "409016591c6c1a94f545f22328a85a3516118f34"
 MODEL_SHA256 = "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+Q4_FILE = "sweep-next-edit-1.5b.q4_k_m.gguf"
+Q4_SHA256 = "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+Q4_BYTES = 883_289_056
 OUT = Path("/kaggle/working/sweep_comparison_r1")
 REPO = Path("/kaggle/temp/tabcomplete-sweep")
 RUNTIME = Path("/kaggle/temp/llama-sweep")
@@ -99,6 +103,22 @@ def validate_spec(spec: dict) -> None:
             raise ValueError("Sweep input file identity is invalid")
 
 
+def stage_canonical_q4(input_dir: Path, scratch: Path) -> None:
+    """Reuse the exact privately staged derivative, without GPU requantization."""
+    source = input_dir / Q4_FILE
+    if source.stat().st_size != Q4_BYTES or digest(source) != Q4_SHA256:
+        raise ValueError("canonical Q4 artifact identity mismatch")
+    scratch.mkdir(parents=True, exist_ok=True)
+    target = scratch / Q4_FILE
+    if target.exists():
+        if target.stat().st_size != Q4_BYTES or digest(target) != Q4_SHA256:
+            raise ValueError("existing worker Q4 artifact identity mismatch")
+        return
+    shutil.copyfile(source, target)
+    if digest(target) != Q4_SHA256:
+        raise ValueError("worker Q4 staging hash mismatch")
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     status = {
@@ -151,6 +171,8 @@ def main() -> None:
             "runtime-configure")
         run(["cmake", "--build", str(RUNTIME / "build"), "--target", "llama-server",
              "llama-quantize", "-j", "2"], "runtime-build")
+        stage = "canonical_q4_staging"
+        stage_canonical_q4(input_dir, Path("/kaggle/temp/sweep-artifacts"))
         stage = "comparison"
         arguments = [part.replace("{input}", str(input_dir)).replace("{output}", str(OUT))
                      .replace("{runtime}", str(RUNTIME))
