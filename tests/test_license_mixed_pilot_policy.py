@@ -1,21 +1,40 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import runpy
 import shutil
+import sys
 from collections.abc import Mapping
+from contextlib import nullcontext
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
-from tinycomplete.one_line.context import serialize_state_bounded
-from tinycomplete.one_line.contract import EditAction, EditState, apply_action, encode_action
+from tinycomplete.one_line.context import CONTEXT_POLICY_VERSION, serialize_state_bounded
+from tinycomplete.one_line.contract import (
+    EditAction,
+    EditState,
+    RecentEdit,
+    apply_action,
+    encode_action,
+)
+from tinycomplete.one_line.fixed_state_role_receipts import (
+    export_fixed_state_role_execution_proof,
+)
+from tinycomplete.one_line.fixed_state_roles import (
+    build_fixed_state_prompt,
+    build_fixed_state_review_prompt,
+    fixed_state_protocol_bindings,
+)
 from tinycomplete.one_line.pilot_data import (
     LICENSE_MIXED,
+    LICENSE_MIXED_HISTORY,
+    REVIEWED_PUBLIC_HISTORY_SOURCE,
     _canonical_bytes,
     _runtime_sha256,
     _verified_oracle_record,
@@ -31,6 +50,7 @@ from tinycomplete.one_line.pilot_roles import (
     build_blind_solver_prompt,
     build_reviewer_prompt,
 )
+from tinycomplete.one_line.teacher import MODEL_ID, TeacherResponse, TeacherUsageLedger
 
 _TRAINER = runpy.run_path(
     str(Path(__file__).parents[1] / "scripts" / "train_one_line.py"),
@@ -357,6 +377,345 @@ def test_manifest_keeps_frozen_train_and_development_floors() -> None:
         validate_license_mixed_manifest(_license_manifest(dev_count=63))
 
 
+def test_fixed_history_policy_is_separate_from_license_mixed_v1(tmp_path: Path) -> None:
+    parent = b"value = 1\n"
+    parent_sha = _sha(parent)
+    source_ref = _put(tmp_path, "artifacts/source.py", parent)
+    license_ref = _put(tmp_path, "artifacts/LICENSE", b"MIT License\n")
+    state = EditState(
+        file_id="src/example.py",
+        filetype="python",
+        source="value = 2\n",
+        target_row=0,
+        cursor_col=0,
+        history=(RecentEdit(0, "value = 1", "value = 2"),),
+        relevant=(),
+    )
+    action = EditAction("replace_line", "value = 3")
+    transform = {
+        "kind": "exact_parent_file",
+        "start_line_1based": 1,
+        "end_line_1based_inclusive": 1,
+        "parent_source_sha256": parent_sha,
+        "selected_source_sha256": parent_sha,
+    }
+    scope = {
+        "schema": "exact-parent-license-scope-v2",
+        "results": [
+            {
+                "candidate_id": "public/history-seed-1",
+                "status": "verified_path_scope",
+                "repository": "public/example",
+                "parent_commit": "a" * 40,
+                "source_path": "src/example.py",
+                "source_sha256": parent_sha,
+                "source_group_id": "public/example@parent",
+                "source_header_spdx": ["MIT"],
+                "source_header_spdx_ambiguous": False,
+                "source_header_spdx_expression_count": 0,
+                "path_scope": {
+                    "license_path": "LICENSE",
+                    "git_blob_sha": "c" * 40,
+                    "sha256": license_ref["sha256"],
+                    "scope": "root",
+                    "spdx": ["MIT"],
+                    "spdx_ambiguous": False,
+                    "spdx_expression_count": 0,
+                },
+                "root_license": {
+                    "path": "LICENSE",
+                    "sha256": license_ref["sha256"],
+                    "git_blob_sha": "c" * 40,
+                    "root_spdx": ["MIT"],
+                },
+                "additional_license_references": [],
+                "reuse_dep5_references": [],
+            }
+        ],
+    }
+    scope_ref = _put(tmp_path, "artifacts/scope.json", _canonical_bytes(scope))
+    state_context = serialize_state_bounded(state, ByteTokenizer(), max_input_tokens=1024)
+    history_sha = _sha(_canonical_bytes([asdict(edit) for edit in state.history]))
+    row = {
+        "id": "public/history-seed-1",
+        "candidate_id": "public/history-seed-1",
+        "split": "train",
+        "source_type": REVIEWED_PUBLIC_HISTORY_SOURCE,
+        "source_group_id": "public/example@parent",
+        "session_or_commit": "a" * 40,
+        "task_family_id": "history-return-value-v1",
+        "template_id": "return-value-history-1",
+        "seed_id": "seed-1",
+        "state": asdict(state),
+        "action": asdict(action),
+        "after_source": apply_action(state, action),
+        "source_license": "MIT",
+        "history_order": "synthetic_fixed_before_provider",
+        "human_chronology_observed": False,
+        "history_sha256": history_sha,
+        "context_policy": CONTEXT_POLICY_VERSION,
+        "prompt": state_context.text,
+        "context_sha256": _sha(state_context.text.encode()),
+        "authoring_metadata": {
+            "source_repo": "public/example",
+            "source_revision": "a" * 40,
+            "source_tree_sha": "b" * 40,
+            "source_path": "src/example.py",
+            "source_sha256": parent_sha,
+            "source_artifact_path": source_ref["path"],
+            "source_artifact_sha256": source_ref["sha256"],
+            "source_artifact_bytes": source_ref["bytes"],
+            "source_license": "MIT",
+            "path_license": "MIT",
+            "path_license_sha256": license_ref["sha256"],
+            "path_license_git_blob_sha": "c" * 40,
+            "license_path": "LICENSE",
+            "license_scope_status": "verified_path_scope",
+            "path_license_artifact_path": license_ref["path"],
+            "path_license_artifact_sha256": license_ref["sha256"],
+            "path_license_artifact_bytes": license_ref["bytes"],
+            "license_scope_artifact_path": scope_ref["path"],
+            "license_scope_sha256": scope_ref["sha256"],
+            "license_scope_artifact_bytes": scope_ref["bytes"],
+            "selected_source_sha256": parent_sha,
+            "transform": transform,
+            "transform_sha256": _sha(_canonical_bytes(transform)),
+        },
+    }
+    validate_license_mixed_row(
+        row, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+    )
+    with pytest.raises(ValueError, match="unapproved source type"):
+        validate_license_mixed_row(row, package_root=tmp_path, policy=LICENSE_MIXED)
+    no_history = json.loads(json.dumps(row))
+    no_history["history_order"] = "observed"
+    with pytest.raises(ValueError, match="fixed-history row declaration"):
+        validate_license_mixed_row(
+            no_history, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+        )
+    request_cue = json.loads(json.dumps(row))
+    request_cue["state"]["relevant"] = ["replace value with three"]
+    with pytest.raises(ValueError, match="fixed-history row declaration"):
+        validate_license_mixed_row(
+            request_cue, package_root=tmp_path, policy=LICENSE_MIXED_HISTORY
+        )
+
+
+@pytest.fixture(scope="module")
+def _fixed_history_review_package(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[Path, dict[str, Any], list[Mapping[str, Any]]]:
+    controller = tmp_path_factory.mktemp("fixed-history-review") / "controller-package"
+    manifest, rows = _full_review_package(controller, policy=LICENSE_MIXED_HISTORY)
+    return controller, manifest, rows
+
+
+def test_fixed_history_review_revalidates_portable_role_and_oracle_receipts(
+    tmp_path: Path,
+    _fixed_history_review_package: tuple[Path, dict[str, Any], list[Mapping[str, Any]]],
+) -> None:
+    controller, frozen_manifest, rows = _fixed_history_review_package
+    manifest = json.loads(json.dumps(frozen_manifest))
+    staged = tmp_path / "relocated-package"
+    shutil.copytree(controller, staged)
+    result = validate_license_mixed_review(
+        manifest,
+        rows,
+        tokenizer=ByteTokenizer(),
+        package_root=staged,
+        policy=LICENSE_MIXED_HISTORY,
+    )
+    assert result["verified_rows"] == 192
+    assert result["quality_evidence"] is False
+    action_counts = {
+        kind: sum(EditAction(**row["action"]).kind == kind for row in rows)
+        for kind in ("keep", "replace_line", "insert_before", "delete_line")
+    }
+    assert action_counts == {
+        "keep": 48,
+        "replace_line": 48,
+        "insert_before": 48,
+        "delete_line": 48,
+    }
+
+    task_document = json.loads(
+        (staged / "artifacts/objective-fixtures.json").read_bytes()
+    )
+    task_by_seed = {task["seed_id"]: task for task in task_document["seeds"]}
+    representative_rows: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        kind = EditAction(**row["action"]).kind
+        if row["split"] == "train" and kind not in representative_rows:
+            representative_rows[kind] = row
+
+    def execute(row: Mapping[str, Any], source: str) -> Any:
+        kind = EditAction(**row["action"]).kind
+        suffix = int(str(row["candidate_id"]).rsplit("-", 1)[1])
+        namespace: dict[str, Any] = {}
+        exec(compile(source, "<policy-test-fixture>", "exec"), namespace)
+        if kind == "keep":
+            return namespace["answer"]
+        if kind == "replace_line":
+            return namespace[f"double_{suffix}"](3)
+        if kind == "insert_before":
+            return namespace[f"result_{suffix}"]
+        if kind == "delete_line":
+            return namespace[f"answer_{suffix}"]()
+        raise AssertionError("unexpected fixed-history action kind")
+
+    expected_outputs = {
+        "replace_line": (6, 3, 9),
+        "insert_before": (4, "NameError", "NameError"),
+        "delete_line": (45, "NotImplementedError", 0),
+    }
+    for action_kind, row in representative_rows.items():
+        state = EditState.from_mapping(row["state"])
+        action = EditAction(**row["action"])
+        task = task_by_seed[row["seed_id"]]
+        wrong_action = EditAction(**task["wrong_action"])
+        variants = {
+            "before": state.source,
+            "gold": apply_action(state, action),
+            "behavior_breaking": apply_action(state, wrong_action),
+        }
+        for source in variants.values():
+            compile(source, "<policy-test-fixture>", "exec")
+        results: dict[str, Any] = {}
+        for name, source in variants.items():
+            try:
+                results[name] = execute(row, source)
+            except Exception as error:
+                results[name] = type(error).__name__
+        if action_kind == "keep":
+            assert results["before"] == results["gold"]
+            assert results["behavior_breaking"] != results["gold"]
+        else:
+            expected_gold, expected_before, expected_wrong = expected_outputs[action_kind]
+            assert results == {
+                "before": expected_before,
+                "gold": expected_gold,
+                "behavior_breaking": expected_wrong,
+            }
+
+    review_path = staged / manifest["independent_review_path"]
+    review = json.loads(review_path.read_bytes())
+    role_entry = review["rows"][0]
+    unproved_rows = json.loads(json.dumps(rows))
+    del unproved_rows[0]["role_execution_proof_ref"]
+    with pytest.raises(ValueError, match="runner proof is unpinned"):
+        validate_license_mixed_review(
+            manifest,
+            unproved_rows,
+            tokenizer=ByteTokenizer(),
+            package_root=staged,
+            policy=LICENSE_MIXED_HISTORY,
+        )
+
+    role_payload = b"{}"
+    role_path = staged / role_entry["role_evidence_artifact_path"]
+    role_path.write_bytes(role_payload)
+    with pytest.raises(ValueError, match="runner proof failed portable verification"):
+        validate_license_mixed_review(
+            manifest,
+            rows,
+            tokenizer=ByteTokenizer(),
+            package_root=staged,
+            policy=LICENSE_MIXED_HISTORY,
+        )
+
+
+def test_fixed_history_review_rejects_rebound_controls_and_retargeted_edits(
+    tmp_path: Path,
+    _fixed_history_review_package: tuple[Path, dict[str, Any], list[Mapping[str, Any]]],
+) -> None:
+    controller, frozen_manifest, rows = _fixed_history_review_package
+    manifest = json.loads(json.dumps(frozen_manifest))
+    staged = tmp_path / "staged-package"
+    shutil.copytree(controller, staged)
+    replacement = next(
+        row for row in rows if EditAction(**row["action"]).kind == "replace_line"
+    )
+    candidate_id = str(replacement["candidate_id"])
+
+    nonfailing_root = tmp_path / "nonfailing-control"
+    shutil.copytree(staged, nonfailing_root)
+    nonfailing_manifest = json.loads(json.dumps(manifest))
+    _rewrite_history_oracle_variant(
+        nonfailing_root,
+        nonfailing_manifest,
+        candidate_id=candidate_id,
+        variant_name="behavior_breaking",
+        variant_updates={},
+        test_status="pass",
+    )
+    with pytest.raises(ValueError, match="behavior-breaking control did not fail functionally"):
+        validate_license_mixed_review(
+            nonfailing_manifest,
+            rows,
+            tokenizer=ByteTokenizer(),
+            package_root=nonfailing_root,
+            policy=LICENSE_MIXED_HISTORY,
+        )
+
+    rebound_root = tmp_path / "control-rebound-to-gold"
+    shutil.copytree(staged, rebound_root)
+    rebound_manifest = json.loads(json.dumps(manifest))
+    oracle_rows = [
+        json.loads(line)
+        for line in (rebound_root / rebound_manifest["oracle_results_path"])
+        .read_bytes()
+        .splitlines()
+    ]
+    oracle = next(item for item in oracle_rows if item["candidate_id"] == candidate_id)
+    gold = oracle["variants"]["gold"]
+    _rewrite_history_oracle_variant(
+        rebound_root,
+        rebound_manifest,
+        candidate_id=candidate_id,
+        variant_name="behavior_breaking",
+        variant_updates={
+            "action_sha256": gold["action_sha256"],
+            "after_source_sha256": gold["after_source_sha256"],
+        },
+    )
+    with pytest.raises(ValueError, match="behavior-breaking control did not fail functionally"):
+        validate_license_mixed_review(
+            rebound_manifest,
+            rows,
+            tokenizer=ByteTokenizer(),
+            package_root=rebound_root,
+            policy=LICENSE_MIXED_HISTORY,
+        )
+
+    retargeted_rows = json.loads(json.dumps(rows))
+    retargeted = next(item for item in retargeted_rows if item["candidate_id"] == candidate_id)
+    state = EditState.from_mapping(retargeted["state"])
+    moved_state = EditState(
+        file_id=state.file_id,
+        filetype=state.filetype,
+        source=state.source,
+        target_row=0,
+        cursor_col=state.cursor_col,
+        history=state.history,
+        relevant=state.relevant,
+    )
+    retargeted["state"] = asdict(moved_state)
+    retargeted["after_source"] = apply_action(
+        moved_state, EditAction(**retargeted["action"])
+    )
+    context = serialize_state_bounded(moved_state, ByteTokenizer(), max_input_tokens=1024)
+    retargeted["prompt"] = context.text
+    retargeted["context_sha256"] = _sha(context.text.encode("utf-8"))
+    with pytest.raises(ValueError, match="differs from independently reviewed bindings"):
+        validate_license_mixed_review(
+            manifest,
+            retargeted_rows,
+            tokenizer=ByteTokenizer(),
+            package_root=staged,
+            policy=LICENSE_MIXED_HISTORY,
+        )
+
+
 def test_split_audit_rejects_repository_and_task_family_leakage(tmp_path: Path) -> None:
     first = _source_package(tmp_path)
     second = json.loads(json.dumps(first))
@@ -578,13 +937,261 @@ def test_trainer_rejects_too_small_train_and_development_shards(tmp_path: Path) 
         )
 
 
+def _fixed_state_roles(row: Mapping[str, Any], tokenizer: Any, index: int) -> bytes:
+    state = EditState.from_mapping(row["state"])
+    action = EditAction(**row["action"])
+    student = build_fixed_state_prompt(state, tokenizer)
+    wire = encode_action(action)
+    reviewer_prompt = build_fixed_state_review_prompt(state, wire, wire, tokenizer)
+    verdict = _canonical_bytes(
+        {"retain": True, "ambiguous": False, "reason": "The actions match the visible history."}
+    ).decode("utf-8")
+    common = {
+        "model_id": MODEL_ID,
+        "finish_reason": "stop",
+        "provider_input_tokens": 100,
+        "provider_output_tokens": 10,
+        "provider_reasoning_tokens": 0,
+    }
+    wire_sha = _sha(wire.encode("utf-8"))
+    reviewer_sha = _sha(verdict.encode("utf-8"))
+
+    def student_role(name: str) -> dict[str, Any]:
+        return {
+            **common,
+            "actor_id": f"actor-{name}-{index:03d}",
+            "session_id": f"session-{name}-{index:03d}",
+            "request_id": f"request-{name}-{index:03d}",
+            "response_id": f"response-{name}-{index:03d}",
+            "prompt_sha256": student.prompt_sha256,
+            "response_sha256": wire_sha,
+            "wire": wire,
+            "wire_sha256": wire_sha,
+            "q25_supervised_tokens_including_eos": (
+                len(tokenizer.encode(wire, add_special_tokens=False)) + 1
+            ),
+        }
+
+    record = {
+        "schema": "one-line-fixed-state-roles-v1",
+        "candidate_id": row["candidate_id"],
+        "protocol": fixed_state_protocol_bindings(row, tokenizer),
+        "author": student_role("author"),
+        "solver": student_role("solver"),
+        "reviewer": {
+            **common,
+            "actor_id": f"actor-review-{index:03d}",
+            "session_id": f"session-review-{index:03d}",
+            "request_id": f"request-review-{index:03d}",
+            "response_id": f"response-review-{index:03d}",
+            "prompt_sha256": reviewer_prompt.prompt_sha256,
+            "response_sha256": reviewer_sha,
+            "verdict_json": verdict,
+            "verdict_sha256": reviewer_sha,
+            "q25_supervised_tokens_including_eos": (
+                len(tokenizer.encode(verdict, add_special_tokens=False)) + 1
+            ),
+        },
+    }
+    return _canonical_bytes(record)
+
+
+def _run_fixed_state_role_batch(
+    candidates: list[Mapping[str, Any]],
+    *,
+    work_root: Path,
+    package_root: Path,
+    tokenizer: Any,
+    batch_index: int,
+) -> dict[str, dict[str, Any]]:
+    """Create real-format portable receipts with the local runner and a fake client."""
+    runner_path = Path(__file__).parents[1] / "scripts/run_fixed_state_role_pilot.py"
+    runner_spec = importlib.util.spec_from_file_location(
+        f"fixed_state_policy_test_runner_{batch_index}", runner_path
+    )
+    assert runner_spec is not None and runner_spec.loader is not None
+    runner = importlib.util.module_from_spec(runner_spec)
+    sys.modules[runner_spec.name] = runner
+    runner_spec.loader.exec_module(runner)
+
+    phase_dir = work_root / f"phase-{batch_index:03d}"
+    phase_dir.mkdir(mode=0o700)
+    packet_path = phase_dir / "inputs.jsonl"
+    packet_rows = [
+        {
+            "candidate_id": row["candidate_id"],
+            "seed_id": row["seed_id"],
+            "state": row["state"],
+            "prompt": row["prompt"],
+            "context_sha256": row["context_sha256"],
+        }
+        for row in candidates
+    ]
+    packet_path.write_bytes(
+        b"\n".join(_canonical_bytes(row) for row in packet_rows) + b"\n"
+    )
+    packet_path.chmod(0o600)
+    run_dir = phase_dir / "run"
+    ledger_path = phase_dir / "usage.jsonl"
+    runtime = {"fixture": "policy-test-local-fake"}
+    plan = runner.freeze_plan(
+        packet_path=packet_path,
+        run_dir=run_dir,
+        ledger_path=ledger_path,
+        tokenizer=tokenizer,
+        runtime=runtime,
+    )
+    planned_ids = [
+        case["request_ids"][role]
+        for case in plan["cases"]
+        for role in runner.CALL_ROLES
+    ]
+    release = {
+        "schema": runner.RELEASE_SCHEMA,
+        "plan_sha256": plan["plan_sha256"],
+        "baseline_ledger_sha256": plan["ledger"]["baseline_sha256"],
+        "baseline_request_ids_sha256": plan["ledger"]["baseline_request_ids_sha256"],
+        "planned_request_ids": planned_ids,
+        "max_calls": len(planned_ids),
+        "max_wall_seconds": runner.MAX_PHASE_WALL_SECONDS,
+        "reserve_input_tokens": runner.RESERVE_INPUT_TOKENS,
+        "reserve_output_tokens": runner.RESERVE_OUTPUT_TOKENS,
+        "global_caps": {
+            "calls": runner.MAX_CALLS,
+            "input_tokens": runner.MAX_INPUT_TOKENS,
+            "output_tokens": runner.MAX_OUTPUT_TOKENS,
+        },
+        "released_by": "test-only-local-fixture",
+        "released_at_utc": "2026-09-30T00:00:00Z",
+    }
+    release_bytes = runner._canonical(release) + b"\n"
+    release_path = phase_dir / "root-release.json"
+    release_path.write_bytes(release_bytes)
+    release_path.chmod(0o600)
+    rows_by_request = {
+        case["request_ids"][role]: next(
+            row for row in candidates if row["candidate_id"] == case["candidate_id"]
+        )
+        for case in plan["cases"]
+        for role in runner.CALL_ROLES
+    }
+
+    class FakeClient:
+        def __init__(self, ledger: TeacherUsageLedger) -> None:
+            self.ledger = ledger
+            self.calls = 0
+
+        def __enter__(self) -> FakeClient:
+            return self
+
+        def __exit__(self, *_exc: object) -> None:
+            return None
+
+        def run_role(self, **kwargs: Any) -> TeacherResponse:
+            self.calls += 1
+            request_id = kwargs["request_id"]
+            self.ledger.reserve(
+                request_id,
+                input_tokens=kwargs["reserve_input_tokens"],
+                max_output_tokens=kwargs["reserve_output_tokens"],
+            )
+            if kwargs["purpose"] == "automated_score":
+                text = json.dumps(
+                    {"retain": True, "ambiguous": False, "reason": "Local fixture."},
+                    separators=(",", ":"),
+                )
+            else:
+                candidate = rows_by_request[request_id]
+                text = encode_action(EditAction(**candidate["action"]))
+            response = TeacherResponse(
+                content=text,
+                session_id=f"policy-test-session-{batch_index}-{self.calls}",
+                response_id=f"policy-test-response-{batch_index}-{self.calls}",
+                model_id=MODEL_ID,
+                input_tokens=10,
+                output_tokens=len(text.encode("utf-8")),
+                reasoning_tokens=0,
+                total_tokens_reported=None,
+                cached_read_tokens=0,
+                cached_write_tokens=0,
+                finish_reason="stop",
+                cost_usd_reported=None,
+            )
+            kwargs["persist_completed_response"](response)
+            self.ledger.settle(
+                request_id,
+                input_tokens=response.input_tokens,
+                output_tokens=response.output_tokens + response.reasoning_tokens,
+            )
+            return response
+
+    from unittest.mock import patch
+
+    with (
+        patch.object(runner, "run_scope", lambda *_args: nullcontext(None)),
+        patch.object(runner, "_enable_offline_observability", lambda *_args: None),
+        patch.object(runner, "operation", lambda *_args, **_kwargs: nullcontext(None)),
+    ):
+        summary = runner.execute_plan(
+            run_dir=run_dir,
+            release_path=release_path,
+            release_sha256=_sha(release_bytes),
+            tokenizer=tokenizer,
+            runtime=runtime,
+            ledger_path_override=ledger_path,
+            client_factory=FakeClient,
+        )
+    assert summary["phase_status"] == "complete"
+
+    proofs = {}
+    for candidate in candidates:
+        proof_ref = export_fixed_state_role_execution_proof(
+            candidate,
+            run_dir=run_dir,
+            release_path=release_path,
+            release_sha256=_sha(release_bytes),
+            ledger_path=ledger_path,
+            package_root=package_root,
+            tokenizer=tokenizer,
+        )
+        proofs[str(candidate["candidate_id"])] = proof_ref
+    return proofs
+
+
+def _fixed_state_role_proofs(
+    candidates: list[Mapping[str, Any]],
+    *,
+    work_root: Path,
+    package_root: Path,
+    tokenizer: Any,
+) -> dict[str, dict[str, Any]]:
+    work_root.mkdir(mode=0o700)
+    package_root.chmod(0o700)
+    proofs: dict[str, dict[str, Any]] = {}
+    for batch_index, offset in enumerate(range(0, len(candidates), 8)):
+        proofs.update(
+            _run_fixed_state_role_batch(
+                candidates[offset : offset + 8],
+                work_root=work_root,
+                package_root=package_root,
+                tokenizer=tokenizer,
+                batch_index=batch_index,
+            )
+        )
+    return proofs
+
+
 def _full_review_package(
-    root: Path, *, tokenizer: Any | None = None
+    root: Path,
+    *,
+    tokenizer: Any | None = None,
+    policy: Any = LICENSE_MIXED,
 ) -> tuple[dict[str, Any], list[Mapping[str, Any]]]:
     """Build explicit test-only proofs for the entire frozen 128/64 review path."""
     from tinycomplete.eval.code_benchmark import evaluate_prediction
 
     root.mkdir(parents=True)
+    history_policy = policy is LICENSE_MIXED_HISTORY
     tokenizer = tokenizer or ByteTokenizer()
     license_payload = b"MIT License\nSynthetic policy-test fixture only.\n"
     license_ref = _put(root, "artifacts/LICENSE", license_payload)
@@ -609,13 +1216,132 @@ def _full_review_package(
             index = split_offset + local_index
             candidate_id = f"synthetic-policy-test/{split}-{local_index:03d}"
             seed_id = f"seed-{index:03d}"
+            history: tuple[RecentEdit, ...] = ()
             repo = f"public/policy-fixture-{index:03d}"
             commit = f"{index + 1:040x}"
             tree_sha = f"{index + 1001:040x}"
             source_path = "src/value.py"
-            values = ",".join("1" for _ in range(local_index + 1))
-            prefix = "value = " if split == "train" else "value: list[int] = "
-            source_payload = f"{prefix}[{values}]\n".encode()
+            if history_policy and index % 4 == 0:
+                operators = ("+", "-", "*", "//", "%", "|", "&", "^")
+
+                def expression(
+                    pattern: int, operators: tuple[str, ...] = operators
+                ) -> str:
+                    digits = []
+                    for _ in range(3):
+                        digits.append(operators[pattern % len(operators)])
+                        pattern //= len(operators)
+                    return "answer = 1 " + " ".join(
+                        token
+                        for pair in zip(digits, ("2", "3", "4"), strict=True)
+                        for token in pair
+                    )
+
+                old_source = expression((index - 1) % 512)
+                state_line = expression(index)
+                if split == "development":
+                    old_source = old_source.replace("answer =", "answer: int =")
+                    state_line = state_line.replace("answer =", "answer: int =")
+                state_source = state_line + "\n"
+                source_payload = (old_source + "\n").encode()
+                history = (RecentEdit(0, old_source, state_line),)
+                relevant: tuple[str, ...] = ()
+                target_row = 0
+                action = EditAction("keep")
+                wrong_action = EditAction("replace_line", "answer = -1")
+            elif history_policy and index % 4 == 1:
+                function_name = f"double_{index}"
+                if split == "train":
+                    source_payload = (
+                        f"def {function_name}(value):\n    return value * 2\n"
+                    ).encode()
+                    state_source = f"def {function_name}(value):\n    return value\n"
+                    target_row = 1
+                    old_line = "    return value * 2"
+                    new_line = "    return value"
+                else:
+                    source_payload = (
+                        f"class Box_{index}:\n"
+                        "    def double(self, value):\n"
+                        "        return value * 2\n"
+                    ).encode()
+                    state_source = (
+                        f"class Box_{index}:\n"
+                        "    def double(self, value):\n"
+                        "        return value\n"
+                    )
+                    target_row = 2
+                    old_line = "        return value * 2"
+                    new_line = "        return value"
+                history = (RecentEdit(target_row, old_line, new_line),)
+                relevant = ()
+                action = EditAction("replace_line", old_line)
+                wrong_action = EditAction("replace_line", old_line.replace("2", "3"))
+            elif history_policy and index % 4 == 2:
+                result_name = f"result_{index}"
+                input_value = index + 1
+                if split == "train":
+                    expression_line = f"{result_name} = ceil({input_value}.2)"
+                else:
+                    expression_line = (
+                        f"def calculate_{index}():\n    return ceil({input_value}.2)"
+                    )
+                source_payload = f"from math import ceil\n{expression_line}\n".encode()
+                state_source = f"# import removed\n{expression_line}\n"
+                history = (RecentEdit(0, "from math import ceil", "# import removed"),)
+                relevant = ()
+                target_row = 0
+                action = EditAction("insert_before", "from math import ceil")
+                wrong_action = EditAction("insert_before", "from math import floor")
+            elif history_policy:
+                function_name = f"answer_{index}"
+                answer = index + 42
+                if split == "train":
+                    source_payload = (
+                        f"def {function_name}():\n"
+                        f"    return {answer}\n"
+                        f"    return {answer}\n"
+                    ).encode()
+                    state_source = (
+                        f"def {function_name}():\n"
+                        "    raise NotImplementedError()\n"
+                        f"    return {answer}\n"
+                    )
+                    target_row = 1
+                    old_line = f"    return {answer}"
+                    new_line = "    raise NotImplementedError()"
+                    wrong_line = "    return 0"
+                else:
+                    source_payload = (
+                        f"class Answer_{index}:\n"
+                        "    def value(self):\n"
+                        f"        return {answer}\n"
+                        f"        return {answer}\n"
+                    ).encode()
+                    state_source = (
+                        f"class Answer_{index}:\n"
+                        "    def value(self):\n"
+                        "        raise NotImplementedError()\n"
+                        f"        return {answer}\n"
+                    )
+                    target_row = 2
+                    old_line = f"        return {answer}"
+                    new_line = "        raise NotImplementedError()"
+                    wrong_line = "        return 0"
+                history = (RecentEdit(target_row, old_line, new_line),)
+                relevant = ()
+                action = EditAction("delete_line")
+                wrong_action = EditAction("replace_line", wrong_line)
+            else:
+                values = ",".join("1" for _ in range(local_index + 1))
+                prefix = "value = " if split == "train" else "value: list[int] = "
+                source_payload = f"{prefix}[{values}]\n".encode()
+                state_source = source_payload.decode("utf-8")
+                history = ()
+                relevant = ("Keep the current public value unchanged.",)
+                target_row = 0
+                action = EditAction("keep")
+                wrong_action = EditAction("replace_line", "value = []")
             source_sha = _sha(source_payload)
             source_ref = _put(
                 root,
@@ -625,19 +1351,21 @@ def _full_review_package(
             state = EditState(
                 file_id=source_path,
                 filetype="python",
-                source=source_payload.decode("utf-8"),
-                target_row=0,
+                source=state_source,
+                target_row=target_row,
                 cursor_col=0,
-                relevant=("Keep the current public value unchanged.",),
+                history=history,
+                relevant=relevant,
             )
-            action = EditAction("keep")
             after_source = apply_action(state, action)
-            request = state.relevant[0]
-            history_sha = _sha(_canonical_bytes([]))
+            request = state.relevant[0] if state.relevant else None
+            history_sha = _sha(
+                _canonical_bytes([asdict(edit) for edit in state.history])
+            )
             transform = {
                 "kind": "exact_parent_file",
                 "start_line_1based": 1,
-                "end_line_1based_inclusive": 1,
+                "end_line_1based_inclusive": len(source_payload.splitlines()),
                 "parent_source_sha256": source_sha,
                 "selected_source_sha256": source_sha,
             }
@@ -670,40 +1398,54 @@ def _full_review_package(
                 "id": candidate_id,
                 "candidate_id": candidate_id,
                 "split": split,
-                "source_type": "synthetic_public_source_task",
+                "source_type": (
+                    REVIEWED_PUBLIC_HISTORY_SOURCE
+                    if history_policy
+                    else "synthetic_public_source_task"
+                ),
                 "source_group_id": f"group-{index:03d}",
                 "session_or_commit": commit,
                 "task_family_id": f"contract-family-{index:03d}",
-                "template_id": f"visible-keep-{index:03d}",
+                "template_id": (
+                    f"fixed-history-{action.kind}-{index:03d}"
+                    if history_policy
+                    else f"visible-keep-{index:03d}"
+                ),
                 "seed_id": seed_id,
                 "state": asdict(state),
                 "action": asdict(action),
                 "after_source": after_source,
                 "source_license": "MIT",
                 "human_chronology_observed": False,
-                "visible_request_location": "state.relevant[0]",
                 "history_sha256": history_sha,
                 "prompt": context.text,
                 "context_sha256": _sha(context.text.encode("utf-8")),
                 "authoring_metadata": metadata,
             }
-            row["provenance"] = {
-                "author_actor_id": f"author-test-{index:03d}",
-                "author_response_sha256": _sha(f"author-response-{index}".encode()),
-                "objective": {
-                    "kind": "visible_keep_contract",
-                    "description": "Retain the visible value under the explicit request.",
-                    "checks": ["The value remains unchanged."],
-                },
-            }
-            fixture_task = {
+            if history_policy:
+                row["history_order"] = "synthetic_fixed_before_provider"
+                row["context_policy"] = CONTEXT_POLICY_VERSION
+            else:
+                row["visible_request_location"] = "state.relevant[0]"
+                row["provenance"] = {
+                    "author_actor_id": f"author-test-{index:03d}",
+                    "author_response_sha256": _sha(f"author-response-{index}".encode()),
+                    "objective": {
+                        "kind": "visible_keep_contract",
+                        "description": "Retain the visible value under the explicit request.",
+                        "checks": ["The value remains unchanged."],
+                    },
+                }
+            fixture_task: dict[str, Any] = {
                 "seed_id": seed_id,
                 "candidate_id": candidate_id,
-                "student_request": request,
                 "action": asdict(action),
-                "wrong_action": asdict(EditAction("replace_line", "value = []")),
+                "wrong_action": asdict(wrong_action),
                 "oracle": objective,
             }
+            if not history_policy:
+                assert request is not None
+                fixture_task["student_request"] = request
             fixture_sha = _sha(_canonical_bytes(objective))
             row["objective_fixture_binding"] = {"sha256": fixture_sha}
             bindings = license_mixed_row_bindings(row)
@@ -775,12 +1517,18 @@ def _full_review_package(
                 "source_artifact": source_ref,
                 "path_license_artifact": license_ref,
             }
+            if history_policy:
+                provenance_candidate["history_order"] = row["history_order"]
             provenance_candidates.append(provenance_candidate)
             seed_rows.append(
                 {
                     "candidate_id": candidate_id,
                     "seed_id": seed_id,
-                    "student_request": request,
+                    **(
+                        {"history_order": row["history_order"], "action": asdict(action)}
+                        if history_policy
+                        else {"student_request": request}
+                    ),
                 }
             )
             fixture_rows.append(fixture_task)
@@ -818,6 +1566,16 @@ def _full_review_package(
     diagnostics: list[dict[str, Any]] = []
     oracle_records: list[dict[str, Any]] = []
     review_entries: list[dict[str, Any]] = []
+    role_proofs = (
+        _fixed_state_role_proofs(
+            [artifact["row"] for artifact in row_artifacts],
+            work_root=root.parent / f"{root.name}-role-runner-work",
+            package_root=root,
+            tokenizer=tokenizer,
+        )
+        if history_policy
+        else {}
+    )
 
     for index, artifact in enumerate(row_artifacts):
         row = artifact["row"]
@@ -827,16 +1585,19 @@ def _full_review_package(
         action = EditAction(**row["action"])
         bindings = license_mixed_row_bindings(row)
         variants: dict[str, dict[str, Any]] = {}
-        for name, variant_action, expected, test_status, functional_status in (
-            ("gold", action, True, "pass", "pass"),
+        variant_specs = [("gold", action, True, "pass", "pass")]
+        if action.kind != "keep":
+            variant_specs.append(("before", EditAction("keep"), False, "fail", "fail"))
+        variant_specs.append(
             (
                 "behavior_breaking",
                 EditAction(**fixture_task["wrong_action"]),
                 False,
                 "fail",
                 "fail",
-            ),
-        ):
+            )
+        )
+        for name, variant_action, expected, test_status, functional_status in variant_specs:
             after_source = apply_action(state, variant_action)
             diagnostic = {
                 "candidate_id": candidate_id,
@@ -917,53 +1678,61 @@ def _full_review_package(
         }
         oracle_records.append(result)
         oracle_sha = _sha(_canonical_bytes(result))
-        role_candidate = dict(row)
-        author_id = row["provenance"]["author_actor_id"]
-        role_wire = encode_action(action)
-        verdict = _canonical_bytes(
-            {
-                "retain": True,
-                "ambiguous": False,
-                "reason": "The explicit request supports the keep action.",
+        if history_policy:
+            role_proof_ref = role_proofs[candidate_id]
+            row["role_execution_proof_ref"] = role_proof_ref
+            role_ref = {
+                "path": (
+                    f"{role_proof_ref['root']}/{role_proof_ref['role_evidence_path']}"
+                ),
+                "sha256": role_proof_ref["role_evidence_sha256"],
+                "bytes": role_proof_ref["role_evidence_bytes"],
             }
-        ).decode("utf-8")
-        role = {
-            "schema": "one-line-role-evidence-v1",
-            "candidate_id": candidate_id,
-            "author": {
-                "actor_id": author_id,
-                "session_id": f"author-session-{index:03d}",
-                "response_sha256": row["provenance"]["author_response_sha256"],
-            },
-            "solver": {
-                "actor_id": f"blind-solver-{index:03d}",
-                "session_id": f"solver-session-{index:03d}",
-                "prompt_sha256": _sha(
-                    build_blind_solver_prompt(role_candidate, tokenizer).encode("utf-8")
-                ),
-                "wire": role_wire,
-                "wire_sha256": _sha(role_wire.encode("utf-8")),
-                "terminated": True,
-                "generated_tokens": len(
-                    tokenizer.encode(role_wire, add_special_tokens=False)
-                )
-                + 1,
-            },
-            "reviewer": {
-                "actor_id": f"reviewer-{index:03d}",
-                "session_id": f"review-session-{index:03d}",
-                "prompt_sha256": _sha(
-                    build_reviewer_prompt(role_candidate, role_wire).encode("utf-8")
-                ),
-                "verdict_json": verdict,
-                "verdict_sha256": _sha(verdict.encode("utf-8")),
-            },
-        }
-        role_ref = _put(
-            root,
-            f"artifacts/roles/role-{index:03d}.json",
-            _canonical_bytes(role),
-        )
+        else:
+            role_candidate = dict(row)
+            author_id = row["provenance"]["author_actor_id"]
+            role_wire = encode_action(action)
+            verdict = _canonical_bytes(
+                {
+                    "retain": True,
+                    "ambiguous": False,
+                    "reason": "The explicit request supports the keep action.",
+                }
+            ).decode("utf-8")
+            role = {
+                "schema": "one-line-role-evidence-v1",
+                "candidate_id": candidate_id,
+                "author": {
+                    "actor_id": author_id,
+                    "session_id": f"author-session-{index:03d}",
+                    "response_sha256": row["provenance"]["author_response_sha256"],
+                },
+                "solver": {
+                    "actor_id": f"blind-solver-{index:03d}",
+                    "session_id": f"solver-session-{index:03d}",
+                    "prompt_sha256": _sha(
+                        build_blind_solver_prompt(role_candidate, tokenizer).encode("utf-8")
+                    ),
+                    "wire": role_wire,
+                    "wire_sha256": _sha(role_wire.encode("utf-8")),
+                    "terminated": True,
+                    "generated_tokens": len(
+                        tokenizer.encode(role_wire, add_special_tokens=False)
+                    )
+                    + 1,
+                },
+                "reviewer": {
+                    "actor_id": f"reviewer-{index:03d}",
+                    "session_id": f"review-session-{index:03d}",
+                    "prompt_sha256": _sha(
+                        build_reviewer_prompt(role_candidate, role_wire).encode("utf-8")
+                    ),
+                    "verdict_json": verdict,
+                    "verdict_sha256": _sha(verdict.encode("utf-8")),
+                },
+            }
+            role_payload = _canonical_bytes(role)
+            role_ref = _put(root, f"artifacts/roles/role-{index:03d}.json", role_payload)
         row_artifacts[index]["role_ref"] = role_ref
         review_entries.append(
             {
@@ -991,6 +1760,7 @@ def _full_review_package(
                 "near_duplicate_sha256": bindings["near_duplicate_sha256"],
                 "context_sha256": row["context_sha256"],
                 "human_chronology_observed": False,
+                **({"history_order": row["history_order"]} if history_policy else {}),
                 "accepted_training": True,
                 "inferability_reviewed": True,
                 "objective_verified": True,
@@ -1004,6 +1774,11 @@ def _full_review_package(
                 "role_evidence_artifact_path": role_ref["path"],
                 "role_evidence_sha256": role_ref["sha256"],
                 "role_evidence_bytes": role_ref["bytes"],
+                **(
+                    {"role_execution_proof_ref": role_proof_ref}
+                    if history_policy
+                    else {}
+                ),
             }
         )
 
@@ -1043,7 +1818,11 @@ def _full_review_package(
         _canonical_bytes(provenance),
     )
     review = {
-        "schema": "one-line-license-mixed-independent-review-v1",
+        "schema": (
+            "one-line-license-mixed-history-independent-review-v2"
+            if history_policy
+            else "one-line-license-mixed-independent-review-v1"
+        ),
         "full_split_audit_complete": True,
         "independent_reviewer_id": "synthetic-review-fixture",
         "rows": review_entries,
@@ -1052,10 +1831,10 @@ def _full_review_package(
     train_rows = [row for row in rows if row["split"] == "train"]
     development_rows = [row for row in rows if row["split"] == "development"]
     manifest: dict[str, Any] = {
-        "schema": LICENSE_MIXED.data_schema,
-        "dataset_id": LICENSE_MIXED.dataset_id,
-        "dataset_license": LICENSE_MIXED.dataset_license,
-        "source_file_license_status": LICENSE_MIXED.file_license_status,
+        "schema": policy.data_schema,
+        "dataset_id": policy.dataset_id,
+        "dataset_license": policy.dataset_license,
+        "source_file_license_status": policy.file_license_status,
         "train_sha256": _sha(_canonical_bytes(train_rows)),
         "development_sha256": _sha(_canonical_bytes(development_rows)),
         "independent_review_sha256": review_ref["sha256"],
@@ -1085,6 +1864,50 @@ def _rewrite_review(root: Path, manifest: dict[str, Any], review: dict[str, Any]
     (root / manifest["independent_review_path"]).write_bytes(payload)
     manifest["independent_review_sha256"] = _sha(payload)
     manifest["independent_review_bytes"] = len(payload)
+
+
+def _rewrite_history_oracle_variant(
+    root: Path,
+    manifest: dict[str, Any],
+    *,
+    candidate_id: str,
+    variant_name: str,
+    variant_updates: Mapping[str, Any],
+    test_status: str | None = None,
+) -> None:
+    result_path = root / manifest["oracle_results_path"]
+    result_rows = [json.loads(line) for line in result_path.read_bytes().splitlines()]
+    result = next(item for item in result_rows if item["candidate_id"] == candidate_id)
+    variant = result["variants"][variant_name]
+    variant.update(variant_updates)
+
+    diagnostic_path = root / manifest["oracle_diagnostics_path"]
+    diagnostic_rows = [json.loads(line) for line in diagnostic_path.read_bytes().splitlines()]
+    diagnostic = next(
+        item
+        for item in diagnostic_rows
+        if item["candidate_id"] == candidate_id and item["variant"] == variant_name
+    )
+    if test_status is not None:
+        diagnostic["test_status"] = test_status
+        diagnostic["checks"]["test"]["status"] = test_status
+        diagnostic["checks"]["test"]["returncode"] = 0 if test_status == "pass" else 1
+        variant["test_status"] = test_status
+        variant["functional_status"] = "pass" if test_status == "pass" else "fail"
+        variant["diagnostic_sha256"] = _sha(_canonical_bytes(diagnostic))
+        diagnostic_payload = b"\n".join(_canonical_bytes(item) for item in diagnostic_rows) + b"\n"
+        diagnostic_path.write_bytes(diagnostic_payload)
+        manifest["oracle_diagnostics_sha256"] = _sha(diagnostic_payload)
+        manifest["oracle_diagnostics_bytes"] = len(diagnostic_payload)
+
+    result_payload = b"\n".join(_canonical_bytes(item) for item in result_rows) + b"\n"
+    result_path.write_bytes(result_payload)
+    manifest["oracle_results_sha256"] = _sha(result_payload)
+    manifest["oracle_results_bytes"] = len(result_payload)
+    review = json.loads((root / manifest["independent_review_path"]).read_bytes())
+    review_entry = next(item for item in review["rows"] if item["candidate_id"] == candidate_id)
+    review_entry["oracle_result_sha256"] = _sha(_canonical_bytes(result))
+    _rewrite_review(root, manifest, review)
 
 
 def test_full_review_accepts_relocated_package_and_rejects_unproved_flags(

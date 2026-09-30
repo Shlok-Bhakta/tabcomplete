@@ -66,6 +66,17 @@ LICENSE_MIXED = PilotDataPolicy(
     "public_source_supervised_candidate",
     "reports/prototype/product_r2/license_mixed_pilot_plan.json",
 )
+LICENSE_MIXED_HISTORY = PilotDataPolicy(
+    "one-line-license-mixed-history-pilot-v2",
+    "one-line-license-mixed-history-pilot-plan-v2",
+    "prototype/product-r2",
+    "public-source/license-mixed-history-pilot-r2",
+    "LICENSE-MIXED",
+    "per_file_scope_pinned",
+    "reviewed_public_history_candidate",
+    "reports/prototype/product_r2/license_mixed_history_pilot_plan_v2.json",
+)
+REVIEWED_PUBLIC_HISTORY_SOURCE = "reviewed_public_history_candidate"
 
 PUBLIC_SOURCE_TYPES = frozenset(
     {"synthetic_public_source_task", "muse_author_public_candidate"}
@@ -75,7 +86,7 @@ _REVISION = re.compile(r"[a-f0-9]{40,64}\Z")
 
 
 def policy_for_schema(schema: object) -> PilotDataPolicy:
-    for policy in (INSTINCT, CONSTRUCTIVE, LICENSE_MIXED):
+    for policy in (INSTINCT, CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         if schema == policy.data_schema:
             return policy
     raise ValueError("unapproved bounded-pilot data schema")
@@ -649,13 +660,17 @@ def _strict_json(payload: bytes, *, label: str) -> Any:
         raise ValueError("LICENSE-MIXED " + label + " is not strict JSON") from None
 
 
-def validate_license_mixed_manifest(manifest: Mapping[str, Any]) -> None:
+def validate_license_mixed_manifest(
+    manifest: Mapping[str, Any], *, policy: PilotDataPolicy = LICENSE_MIXED
+) -> None:
     """Require the frozen mixed-license policy and immutable shard identities."""
+    if policy not in {LICENSE_MIXED, LICENSE_MIXED_HISTORY}:
+        raise ValueError("unapproved LICENSE-MIXED policy")
     for key, expected in (
-        ("schema", LICENSE_MIXED.data_schema),
-        ("dataset_id", LICENSE_MIXED.dataset_id),
-        ("dataset_license", LICENSE_MIXED.dataset_license),
-        ("source_file_license_status", LICENSE_MIXED.file_license_status),
+        ("schema", policy.data_schema),
+        ("dataset_id", policy.dataset_id),
+        ("dataset_license", policy.dataset_license),
+        ("source_file_license_status", policy.file_license_status),
     ):
         if manifest.get(key) != expected:
             raise ValueError("LICENSE-MIXED manifest identity mismatch: " + key)
@@ -1166,6 +1181,149 @@ def _validate_synthetic_provenance_row(
     return fixture_sha256
 
 
+def _validate_public_history_provenance_row(
+    row: Mapping[str, Any],
+    result: Mapping[str, Any],
+    provenance: Mapping[str, Any],
+) -> str:
+    """Bind a fixed-state history candidate to its public source and oracle fixture."""
+    identifier = _license_mixed_id(row)
+    seed_id = row.get("seed_id")
+    mapped_seed = provenance["spec_by_candidate"].get(identifier)
+    if (
+        identifier is None
+        or not isinstance(seed_id, str)
+        or not isinstance(mapped_seed, Mapping)
+        or mapped_seed.get("seed_id") != seed_id
+        or result.get("seed_id") != seed_id
+        or row.get("source_type") != REVIEWED_PUBLIC_HISTORY_SOURCE
+        or row.get("history_order") != "synthetic_fixed_before_provider"
+    ):
+        raise ValueError("LICENSE-MIXED fixed-history candidate/seed binding is invalid")
+    fixture = provenance["fixture_by_seed"].get(seed_id)
+    if not isinstance(fixture, Mapping) or not isinstance(fixture.get("oracle"), Mapping):
+        raise ValueError("LICENSE-MIXED fixed-history row lacks its objective fixture")
+    state = EditState.from_mapping(row["state"])
+    if (
+        not state.history
+        or state.relevant
+        or fixture.get("action") != row.get("action")
+        or mapped_seed.get("action", row.get("action")) != row.get("action")
+    ):
+        raise ValueError("LICENSE-MIXED fixed-history gold differs from its frozen task")
+    try:
+        wrong_action = EditAction(**fixture["wrong_action"])
+        wrong_after = apply_action(state, wrong_action)
+        gold_after = apply_action(state, EditAction(**row["action"]))
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("LICENSE-MIXED fixed-history behavior control is invalid") from None
+    if wrong_after in {state.source, gold_after}:
+        raise ValueError("LICENSE-MIXED fixed-history behavior control has no distinct effect")
+    fixture_sha256 = _sha256(_canonical_bytes(fixture["oracle"]))
+    if fixture_sha256 != result.get("fixture_sha256"):
+        raise ValueError("LICENSE-MIXED fixed-history oracle differs from its frozen fixture")
+    fixture_binding = row.get("objective_fixture_binding")
+    if not isinstance(fixture_binding, Mapping) or fixture_binding.get("sha256") != fixture_sha256:
+        raise ValueError("LICENSE-MIXED fixed-history row lacks its bound objective fixture")
+
+    metadata = row.get("authoring_metadata")
+    candidate_provenance = provenance["provenance_candidates"].get(identifier)
+    source_result = provenance["source_rows"].get(identifier)
+    if (
+        not isinstance(metadata, Mapping)
+        or not isinstance(candidate_provenance, Mapping)
+        or not isinstance(source_result, Mapping)
+    ):
+        raise ValueError("LICENSE-MIXED fixed-history source provenance is incomplete")
+    source_pair = source_result.get("source_pair")
+    parent_license = source_result.get("parent_license")
+    root_license = (
+        parent_license.get("root_license") if isinstance(parent_license, Mapping) else None
+    )
+    if not isinstance(source_pair, Mapping) or not isinstance(parent_license, Mapping):
+        raise ValueError(
+            "LICENSE-MIXED fixed-history source verification row lacks parent identity"
+        )
+    source_identity = {
+        "source_repo": metadata.get("source_repo"),
+        "source_revision": metadata.get("source_revision"),
+        "source_tree_sha": metadata.get("source_tree_sha"),
+        "source_path": metadata.get("source_path"),
+        "source_sha256": metadata.get("source_sha256"),
+        "source_group_id": row.get("source_group_id"),
+    }
+    observed_source = {
+        "source_repo": source_result.get("repository"),
+        "source_revision": source_result.get("parent_commit"),
+        "source_tree_sha": parent_license.get("tree_sha"),
+        "source_path": source_result.get("file_path"),
+        "source_sha256": source_pair.get("parent_sha256"),
+        "source_group_id": source_result.get("source_group_id"),
+    }
+    if (
+        source_identity != observed_source
+        or source_result.get("status") != "source_and_license_verified_for_human_review"
+        or source_result.get("candidate_id") != identifier
+        or not isinstance(root_license, Mapping)
+    ):
+        raise ValueError("LICENSE-MIXED fixed-history row differs from exact-parent source proof")
+
+    file_bindings = {
+        "repository": metadata.get("source_repo"),
+        "source_revision": metadata.get("source_revision"),
+        "source_tree_sha": metadata.get("source_tree_sha"),
+        "source_path": metadata.get("source_path"),
+        "parent_source_sha256": metadata.get("source_sha256"),
+        "selected_source_sha256": metadata.get("selected_source_sha256"),
+        "transform_sha256": metadata.get("transform_sha256"),
+        "source_group_id": row.get("source_group_id"),
+        "path_license": metadata.get("path_license"),
+        "path_license_spdx": metadata.get("path_license_spdx"),
+        "path_license_scope": metadata.get("path_license_scope"),
+        "path_license_git_blob_sha": metadata.get("path_license_git_blob_sha"),
+        "path_license_sha256": metadata.get("path_license_sha256"),
+        "history_sha256": license_mixed_row_bindings(row)["history_sha256"],
+        "seed_id": seed_id,
+        "state_sha256": license_mixed_row_bindings(row)["state_sha256"],
+        "context_sha256": row.get("context_sha256"),
+        "objective_fixture_sha256": fixture_sha256,
+        "history_order": row.get("history_order"),
+    }
+    if any(candidate_provenance.get(key) != value for key, value in file_bindings.items()):
+        raise ValueError("LICENSE-MIXED fixed-history row differs from its source manifest")
+    for reference_key, metadata_path, metadata_sha, metadata_bytes in (
+        (
+            "source_artifact",
+            "source_artifact_path",
+            "source_artifact_sha256",
+            "source_artifact_bytes",
+        ),
+        (
+            "path_license_artifact",
+            "path_license_artifact_path",
+            "path_license_artifact_sha256",
+            "path_license_artifact_bytes",
+        ),
+        (
+            "license_scope_artifact",
+            "license_scope_artifact_path",
+            "license_scope_sha256",
+            "license_scope_artifact_bytes",
+        ),
+    ):
+        reference = candidate_provenance.get(reference_key)
+        if not isinstance(reference, Mapping) or any(
+            metadata.get(field) != reference.get(ref_field)
+            for field, ref_field in (
+                (metadata_path, "path"),
+                (metadata_sha, "sha256"),
+                (metadata_bytes, "bytes"),
+            )
+        ):
+            raise ValueError("LICENSE-MIXED fixed-history artifact differs from source manifest")
+    return fixture_sha256
+
+
 def _context_action_bindings(
     row: Mapping[str, Any], tokenizer: Any
 ) -> dict[str, Any]:
@@ -1483,9 +1641,17 @@ def _verified_oracle_record(
     ):
         raise ValueError("LICENSE-MIXED behavior-breaking control did not fail functionally")
     if action.kind == "keep":
-        if row.get("source_type") != "synthetic_public_source_task":
+        source_type = row.get("source_type")
+        if source_type == REVIEWED_PUBLIC_HISTORY_SOURCE:
+            if (
+                row.get("history_order") != "synthetic_fixed_before_provider"
+                or not state.history
+                or state.relevant
+            ):
+                raise ValueError("LICENSE-MIXED fixed-history N row lacks a visible history")
+        elif source_type != "synthetic_public_source_task":
             raise ValueError("Muse-authored no-edit rows lack independent decision evidence")
-        if (
+        if source_type == "synthetic_public_source_task" and (
             not state.relevant
             or not state.relevant[0].strip()
             or row.get("visible_request_location") != "state.relevant[0]"
@@ -1632,13 +1798,16 @@ def validate_license_mixed_review(
     *,
     tokenizer: Any,
     package_root: Path,
+    policy: PilotDataPolicy = LICENSE_MIXED,
 ) -> dict[str, Any]:
     """Recheck portable per-row proofs and the full review split audit.
 
     This path reads only frozen artifacts and status records. It performs no
     sandbox, compilation, provider, or network work.
     """
-    validate_license_mixed_manifest(manifest)
+    if policy not in {LICENSE_MIXED, LICENSE_MIXED_HISTORY}:
+        raise ValueError("unapproved LICENSE-MIXED review policy")
+    validate_license_mixed_manifest(manifest, policy=policy)
     review_payload = _read_relative_artifact(
         package_root,
         manifest.get("independent_review_path"),
@@ -1649,7 +1818,12 @@ def validate_license_mixed_review(
     review = _strict_json(review_payload, label="independent review")
     if (
         not isinstance(review, dict)
-        or review.get("schema") != "one-line-license-mixed-independent-review-v1"
+        or review.get("schema")
+        != (
+            "one-line-license-mixed-history-independent-review-v2"
+            if policy is LICENSE_MIXED_HISTORY
+            else "one-line-license-mixed-independent-review-v1"
+        )
         or review.get("full_split_audit_complete") is not True
         or not isinstance(review.get("independent_reviewer_id"), str)
         or not review["independent_reviewer_id"]
@@ -1659,6 +1833,13 @@ def validate_license_mixed_review(
     review_entries = review["rows"]
     if any(not isinstance(entry, dict) for entry in review_entries):
         raise ValueError("LICENSE-MIXED independent review contains an invalid row")
+    allowed_review_types = (
+        {REVIEWED_PUBLIC_HISTORY_SOURCE}
+        if policy is LICENSE_MIXED_HISTORY
+        else PUBLIC_SOURCE_TYPES
+    )
+    if any(entry.get("source_type") not in allowed_review_types for entry in review_entries):
+        raise ValueError("LICENSE-MIXED review contains a source type outside its schema")
     audit = _license_mixed_review_split_audit(review_entries, manifest)
     for entry in review_entries:
         if entry.get("split") in {"train", "development"}:
@@ -1685,6 +1866,9 @@ def validate_license_mixed_review(
     artifact_root = license_mixed_artifact_root(manifest, package_root)
     provenance = _license_mixed_provenance(manifest, artifact_root)
     has_synthetic = any(row.get("source_type") == "synthetic_public_source_task" for row in rows)
+    has_public_history = any(
+        row.get("source_type") == REVIEWED_PUBLIC_HISTORY_SOURCE for row in rows
+    )
     oracle_keys = (
         "oracle_results_path",
         "oracle_results_sha256",
@@ -1697,13 +1881,18 @@ def validate_license_mixed_review(
     has_oracle = all(key in manifest for key in oracle_keys)
     if has_synthetic and (not has_oracle or provenance is None):
         raise ValueError("LICENSE-MIXED synthetic rows lack bound objective/source artifacts")
+    if has_public_history and (
+        policy is not LICENSE_MIXED_HISTORY or not has_oracle or provenance is None
+    ):
+        raise ValueError("LICENSE-MIXED fixed-history rows lack their v2 objective/source package")
     oracle_records = _oracle_results(manifest, artifact_root) if has_oracle else {}
     diagnostics = _oracle_diagnostics(manifest, artifact_root) if has_oracle else {}
     expected_audit_ids = set(oracle_records)
-    if has_synthetic and not {
+    if (has_synthetic or has_public_history) and not {
         str(_license_mixed_id(row))
         for row in rows
-        if row.get("source_type") == "synthetic_public_source_task"
+        if row.get("source_type")
+        in {"synthetic_public_source_task", REVIEWED_PUBLIC_HISTORY_SOURCE}
     }.issubset(expected_audit_ids):
         raise ValueError("LICENSE-MIXED synthetic training rows lack oracle records")
     used_diagnostics: set[tuple[str, str]] = set()
@@ -1780,6 +1969,8 @@ def validate_license_mixed_review(
         bindings = _context_action_bindings(row, tokenizer)
         source_identity = _row_source_identity(row)
         source_type = row.get("source_type")
+        if source_type not in allowed_review_types:
+            raise ValueError("LICENSE-MIXED row source type is outside its policy schema")
         expected = {
             "candidate_id": row_id,
             "split": row.get("split"),
@@ -1884,6 +2075,94 @@ def validate_license_mixed_review(
                 or role_decision.evidence.get("role_evidence_sha256") != role_sha
             ):
                 raise ValueError("LICENSE-MIXED synthetic row lacks verified blind role evidence")
+        elif source_type == REVIEWED_PUBLIC_HISTORY_SOURCE:
+            if policy is not LICENSE_MIXED_HISTORY:
+                raise ValueError("LICENSE-MIXED v1 cannot accept fixed-history rows")
+            state = EditState.from_mapping(row["state"])
+            if (
+                row.get("history_order") != "synthetic_fixed_before_provider"
+                or state.relevant
+                or not state.history
+                or provenance is None
+            ):
+                raise ValueError("LICENSE-MIXED fixed-history row declaration is invalid")
+            artifact_bindings = validate_license_mixed_source_artifacts(
+                row, package_root=artifact_root
+            )
+            if any(entry.get(key) != value for key, value in artifact_bindings.items()):
+                raise ValueError("LICENSE-MIXED review differs from fixed-history source artifacts")
+            record_tuple = oracle_records.get(row_id)
+            if record_tuple is None:
+                raise ValueError("LICENSE-MIXED fixed-history row has no objective result")
+            record, result_sha256 = record_tuple
+            fixture_sha256 = _validate_public_history_provenance_row(
+                row, record, provenance
+            )
+            fixture = provenance["fixture_by_seed"][str(row["seed_id"])]
+            proof = _verified_oracle_record(
+                row,
+                record,
+                manifest=manifest,
+                artifact_root=artifact_root,
+                expected_fixture_sha256=fixture_sha256,
+                expected_fixture_artifact=provenance["fixture_ref"],
+                expected_runtime_sha256=_runtime_sha256(fixture),
+                fixture_task=fixture,
+                fixture_objective=fixture["oracle"],
+                diagnostics=diagnostics,
+            )
+            if (
+                entry.get("oracle_result_sha256") != result_sha256
+                or entry.get("fixture_sha256") != proof["fixture_sha256"]
+                or entry.get("evaluator_sha256") != proof["evaluator_sha256"]
+                or entry.get("runtime_sha256") != proof["runtime_sha256"]
+                or entry.get("history_order") != row.get("history_order")
+            ):
+                raise ValueError("LICENSE-MIXED review does not bind fixed-history oracle evidence")
+            role_path = entry.get("role_evidence_artifact_path")
+            role_sha = entry.get("role_evidence_sha256")
+            role_bytes = entry.get("role_evidence_bytes")
+            if (
+                not isinstance(role_path, str)
+                or not isinstance(role_sha, str)
+                or _SHA256.fullmatch(role_sha) is None
+                or type(role_bytes) is not int
+                or role_bytes < 1
+            ):
+                raise ValueError("LICENSE-MIXED fixed-history role evidence is unpinned")
+            role_proof_ref = row.get("role_execution_proof_ref")
+            if not isinstance(role_proof_ref, Mapping):
+                raise ValueError("LICENSE-MIXED fixed-history runner proof is unpinned")
+            if entry.get("role_execution_proof_ref") != role_proof_ref:
+                raise ValueError("LICENSE-MIXED review differs from fixed-history runner proof")
+            proof_role_path = (
+                str(role_proof_ref.get("root", ""))
+                + "/"
+                + str(role_proof_ref.get("role_evidence_path", ""))
+            )
+            if (
+                role_path != proof_role_path
+                or role_sha != role_proof_ref.get("role_evidence_sha256")
+                or role_bytes != role_proof_ref.get("role_evidence_bytes")
+            ):
+                raise ValueError(
+                    "LICENSE-MIXED fixed-history role evidence differs from runner proof"
+                )
+            from .fixed_state_role_receipts import verify_fixed_state_role_execution_proof
+
+            role_decision = verify_fixed_state_role_execution_proof(
+                row, role_proof_ref, package_root=package_root, tokenizer=tokenizer
+            )
+            if (
+                not role_decision.accepted
+                or role_decision.evidence.get("role_evidence_sha256") != role_sha
+                or role_decision.evidence.get("functional_status")
+                != "not_evaluated_by_role_runner"
+            ):
+                raise ValueError(
+                    "LICENSE-MIXED fixed-history runner proof failed portable verification"
+                )
+            used_diagnostics.update((row_id, name) for name in record["variants"])
         elif source_type == "muse_author_public_candidate":
             if row.get("id") != row_id:
                 raise ValueError("LICENSE-MIXED Muse row must preserve its package candidate ID")
@@ -1921,8 +2200,8 @@ def validate_license_mixed_review(
 def validate_pilot_row(
     row: Mapping[str, Any], policy: PilotDataPolicy, *, package_root: Path | None = None
 ) -> None:
-    if policy == LICENSE_MIXED:
-        validate_license_mixed_row(row, package_root=package_root)
+    if policy in {LICENSE_MIXED, LICENSE_MIXED_HISTORY}:
+        validate_license_mixed_row(row, package_root=package_root, policy=policy)
         return
     if row.get("source_type") != policy.source_type:
         raise ValueError("pilot shard contains an unapproved source type")
@@ -1959,13 +2238,23 @@ def validate_pilot_row(
 
 
 def validate_license_mixed_row(
-    row: Mapping[str, Any], *, package_root: Path | None = None
+    row: Mapping[str, Any],
+    *,
+    package_root: Path | None = None,
+    policy: PilotDataPolicy = LICENSE_MIXED,
 ) -> None:
     """Check the row shape; the pinned review and outcome artifacts gate use."""
     if package_root is None:
         raise ValueError("LICENSE-MIXED row validation requires an explicit package root")
+    if policy not in {LICENSE_MIXED, LICENSE_MIXED_HISTORY}:
+        raise ValueError("unapproved LICENSE-MIXED row policy")
     source_type = row.get("source_type")
-    if source_type not in PUBLIC_SOURCE_TYPES:
+    allowed_types = (
+        {REVIEWED_PUBLIC_HISTORY_SOURCE}
+        if policy is LICENSE_MIXED_HISTORY
+        else PUBLIC_SOURCE_TYPES
+    )
+    if source_type not in allowed_types:
         raise ValueError("LICENSE-MIXED pilot contains an unapproved source type")
     if row.get("human_chronology_observed", row.get("chronology_observed")) is not False:
         raise ValueError("LICENSE-MIXED row claims unverified human chronology")
@@ -1994,6 +2283,19 @@ def validate_license_mixed_row(
             raise ValueError("synthetic keep requires a visible explicit request")
         if not isinstance(metadata, Mapping):
             raise ValueError("LICENSE-MIXED synthetic row lacks per-file metadata")
+        validate_license_mixed_source_artifacts(row, package_root=package_root)
+    elif source_type == REVIEWED_PUBLIC_HISTORY_SOURCE:
+        if (
+            policy is not LICENSE_MIXED_HISTORY
+            or row.get("history_order") != "synthetic_fixed_before_provider"
+            or not state.history
+            or state.relevant
+            or not isinstance(row.get("seed_id"), str)
+            or not isinstance(metadata, Mapping)
+        ):
+            raise ValueError("LICENSE-MIXED fixed-history row declaration is invalid")
+        if row.get("context_policy") != CONTEXT_POLICY_VERSION:
+            raise ValueError("LICENSE-MIXED fixed-history row context policy is invalid")
         validate_license_mixed_source_artifacts(row, package_root=package_root)
     else:
         reference = row.get("acceptance_package_ref")
