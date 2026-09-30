@@ -1,0 +1,75 @@
+{
+  "argv": [
+    "/kaggle/temp/llama-sweep/build/bin/llama-server",
+    "--log-verbosity",
+    "4",
+    "--model",
+    "/kaggle/temp/sweep-artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "39603",
+    "--ctx-size",
+    "8192",
+    "--batch-size",
+    "256",
+    "--ubatch-size",
+    "64",
+    "--parallel",
+    "1",
+    "--threads",
+    "4",
+    "--threads-batch",
+    "4",
+    "--cache-ram",
+    "0",
+    "--no-cache-idle-slots",
+    "--no-context-shift",
+    "--cache-type-k",
+    "f16",
+    "--cache-type-v",
+    "f16",
+    "--split-mode",
+    "none",
+    "--main-gpu",
+    "0",
+    "--n-gpu-layers",
+    "99",
+    "--no-webui"
+  ],
+  "backend_evidence": {
+    "backend": "unverified",
+    "cuda_device_count": 0,
+    "nvidia_smi_snapshot": {
+      "available": true,
+      "compute_processes": "5316, 1752\n5316, 102",
+      "devices": "0, Tesla T4, 1755, 15360\n1, Tesla T4, 105, 15360"
+    },
+    "offloadable_layers": 29,
+    "offloaded_layers": 29,
+    "runtime_log_evidence": [
+      "0.00.462.482 I cmn  common_param:   - CUDA0   : Tesla T4 (14911 MiB, 14806 MiB free)",
+      "0.00.647.147 I cmn  common_param:   - CUDA1   : Tesla T4 (14911 MiB, 14806 MiB free)",
+      "0.00.647.292 I cmn  common_param: system_info: n_threads = 4 (n_threads_batch = 4) / 4 | CUDA : ARCHS = 750 | NO_VMM = 1 | USE_GRAPHS = 1 | FA_QUANTS = q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 |",
+      "0.00.805.932 I common_memory_breakdown_print: |   - CUDA0 (T4)         | 14911 = 14806 + (1629 =  1396 +     224 +       8) +       -1524 |",
+      "0.00.856.836 I llama_prepare_model_devices: using device CUDA0 (Tesla T4) (0000:00:04.0) - 14806 MiB free",
+      "0.01.028.744 I load_tensors: offloaded 29/29 layers to GPU",
+      "0.01.028.750 I load_tensors:        CUDA0 model buffer size =  1396.39 MiB",
+      "0.01.401.411 I llama_context:  CUDA_Host  output buffer size =     0.17 MiB",
+      "0.01.401.830 I llama_kv_cache:      CUDA0 KV buffer size =   224.00 MiB",
+      "0.01.411.418 I sched_reserve:      CUDA0 compute buffer size =     8.69 MiB",
+      "0.01.411.427 I sched_reserve:  CUDA_Host compute buffer size =     1.75 MiB"
+    ]
+  },
+  "gpu_after_load": {
+    "available": true,
+    "compute_processes": "5316, 1752\n5316, 102",
+    "devices": "0, Tesla T4, 1755, 15360\n1, Tesla T4, 105, 15360"
+  },
+  "gpu_before": {
+    "available": true,
+    "compute_processes": "",
+    "devices": "0, Tesla T4, 0, 15360\n1, Tesla T4, 0, 15360"
+  },
+  "server_pid": 5316
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "sweep-comparison-worker-status-v1",
+  "state": "failed",
+  "session_seconds": 7200,
+  "reserve_seconds": 1200,
+  "training_input_tokens": 0,
+  "input_spec_sha256": "479775887de9d1a6e51ca9328f073d01ddb74c61fbda5ab521f93e029ec4d6a2",
+  "stage": "comparison_quality",
+  "elapsed_session_seconds": 1896.346900338,
+  "failure_stage": "comparison_quality",
+  "error_type": "RuntimeError"
+}

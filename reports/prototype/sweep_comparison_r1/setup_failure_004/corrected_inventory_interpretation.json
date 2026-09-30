@@ -1,0 +1,37 @@
+{
+  "original_gpu_predictions": 0,
+  "new_parser_observation_only": true,
+  "original_server_log_sha256": "95e64614032e03801e889e16215f0d8f57234d5c3c3f1b3f1553601df738a101",
+  "corrected_backend_evidence": {
+    "backend": "CUDA",
+    "cuda_device_count": 2,
+    "cuda_device_count_source": "runtime_device_inventory",
+    "enumerated_cuda_devices": [
+      "CUDA0",
+      "CUDA1"
+    ],
+    "device_inventory_conflict": false,
+    "offloaded_layers": 29,
+    "offloadable_layers": 29,
+    "nvidia_smi_snapshot": {
+      "available": true,
+      "compute_processes": "5316, 1752\n5316, 102",
+      "devices": "0, Tesla T4, 1755, 15360\n1, Tesla T4, 105, 15360"
+    },
+    "runtime_log_evidence": [
+      "0.00.462.482 I cmn  common_param:   - CUDA0   : Tesla T4 (14911 MiB, 14806 MiB free)",
+      "0.00.647.147 I cmn  common_param:   - CUDA1   : Tesla T4 (14911 MiB, 14806 MiB free)",
+      "0.00.647.292 I cmn  common_param: system_info: n_threads = 4 (n_threads_batch = 4) / 4 | CUDA : ARCHS = 750 | NO_VMM = 1 | USE_GRAPHS = 1 | FA_QUANTS = q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 |",
+      "0.00.805.932 I common_memory_breakdown_print: |   - CUDA0 (T4)         | 14911 = 14806 + (1629 =  1396 +     224 +       8) +       -1524 |",
+      "0.00.856.836 I llama_prepare_model_devices: using device CUDA0 (Tesla T4) (0000:00:04.0) - 14806 MiB free",
+      "0.01.028.744 I load_tensors: offloaded 29/29 layers to GPU",
+      "0.01.028.750 I load_tensors:        CUDA0 model buffer size =  1396.39 MiB",
+      "0.01.401.411 I llama_context:  CUDA_Host  output buffer size =     0.17 MiB",
+      "0.01.401.830 I llama_kv_cache:      CUDA0 KV buffer size =   224.00 MiB",
+      "0.01.411.418 I sched_reserve:      CUDA0 compute buffer size =     8.69 MiB",
+      "0.01.411.427 I sched_reserve:  CUDA_Host compute buffer size =     1.75 MiB",
+      "0.01.671.920 I common_memory_breakdown_print: |   - CUDA0 (T4)         | 14911 = 13156 + (1629 =  1396 +     224 +       8) +         125 |"
+    ]
+  },
+  "runner_source_sha256": "0dff7c493df650f4d31182662c752cfa3ec82b963835f37dafec1f1a80c3c5b5"
+}

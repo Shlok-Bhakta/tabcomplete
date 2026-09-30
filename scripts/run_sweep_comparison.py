@@ -986,6 +986,29 @@ def _runtime_backend_evidence(log_path: Path, gpu_snapshot: dict[str, Any]) -> d
         int(match.group(1))
         for match in re.finditer(r"found\s+(\d+)\s+CUDA devices?", content, re.IGNORECASE)
     ]
+    # CUDA's one-time initializer may run before argument parsing configures
+    # logging. The pinned runtime also enumerates its actual devices after
+    # parsing; use that inventory rather than inferring devices from flags,
+    # host buffers, or nvidia-smi alone.
+    enumerated_devices = sorted(
+        {
+            match.group(1)
+            for match in re.finditer(
+                r"(?:^|\s)common_param:\s+-\s+(CUDA\d+)\s*:\s*\S[^\n]*$",
+                content,
+                re.MULTILINE,
+            )
+        }
+    )
+    inventory_conflict = bool(
+        device_counts and max(device_counts) != len(enumerated_devices) and enumerated_devices
+    )
+    if inventory_conflict:
+        device_count, device_count_source = 0, "conflicting_runtime_inventory"
+    elif device_counts:
+        device_count, device_count_source = max(device_counts), "runtime_cuda_initializer"
+    else:
+        device_count, device_count_source = len(enumerated_devices), "runtime_device_inventory"
     offloads = [
         (int(match.group(1)), int(match.group(2)))
         for match in re.finditer(
@@ -999,8 +1022,11 @@ def _runtime_backend_evidence(log_path: Path, gpu_snapshot: dict[str, Any]) -> d
     ][-20:]
     offloaded, total = max(offloads, default=(0, 0))
     return {
-        "backend": "CUDA" if device_counts and offloaded > 0 else "unverified",
-        "cuda_device_count": max(device_counts, default=0),
+        "backend": "CUDA" if device_count > 0 and offloaded > 0 else "unverified",
+        "cuda_device_count": device_count,
+        "cuda_device_count_source": device_count_source,
+        "enumerated_cuda_devices": enumerated_devices,
+        "device_inventory_conflict": inventory_conflict,
         "offloaded_layers": offloaded,
         "offloadable_layers": total,
         "nvidia_smi_snapshot": gpu_snapshot,

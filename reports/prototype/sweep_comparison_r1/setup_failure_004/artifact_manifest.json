@@ -1,0 +1,34 @@
+{
+  "corrected_inventory_interpretation.json": {
+    "sha256": "4d1c446a63f57b24b90d3766b80cafc6a74390f4b0f525527eb7f6326dda61ea",
+    "bytes": 2217
+  },
+  "terminal-observation.json": {
+    "sha256": "2538e631980ee8302059426e791de9830243eee1808f8948ef33ffb0141336e3",
+    "bytes": 405
+  },
+  "monitor_query.json": {
+    "sha256": "2fb73bf243999ee615c6e4837cca99c681839a171f42dacd6ecb8d751bac1cee",
+    "bytes": 205
+  },
+  "cuda-driver-configuration.json": {
+    "sha256": "733c4af7d3f9ee08f040edb110eef1223a5df5f3b9a28ac34de5ac73009c176d",
+    "bytes": 230
+  },
+  "server-startup.log": {
+    "sha256": "95e64614032e03801e889e16215f0d8f57234d5c3c3f1b3f1553601df738a101",
+    "bytes": 15395
+  },
+  "worker-status.json": {
+    "sha256": "1fad9ed21e171be21106c9cb39aeb7de0384a442878b977c1f94559162f1c3bf",
+    "bytes": 399
+  },
+  "comparison-quality.log": {
+    "sha256": "4d38c12f0821d6e74887142dffea9b65116ebeaf0d51738125a1e2208f0df960",
+    "bytes": 715
+  },
+  "backend-startup.json": {
+    "sha256": "fff23ffd2df01bf7c31effe72da07e9093628d55d4bbcf839e30b21f7a8bc595",
+    "bytes": 2636
+  }
+}

@@ -53,6 +53,61 @@ def test_memory_report_uses_process_swap_field() -> None:
     assert report["post_request_retained"]["process_swap_bytes"] == 9
 
 
+def test_runtime_backend_accepts_enumerated_cuda_devices_without_cached_init_log(
+    tmp_path: Path,
+) -> None:
+    log = tmp_path / "server.log"
+    log.write_text(
+        "0.00.462.482 I cmn  common_param:   - CUDA0   : Tesla T4 (14911 MiB)\n"
+        "0.00.647.147 I cmn  common_param:   - CUDA1   : Tesla T4 (14911 MiB)\n"
+        "0.01.028.744 I load_tensors: offloaded 29/29 layers to GPU\n"
+    )
+    evidence = sweep._runtime_backend_evidence(log, {"available": True})
+    assert evidence["backend"] == "CUDA"
+    assert evidence["cuda_device_count"] == 2
+    assert evidence["cuda_device_count_source"] == "runtime_device_inventory"
+    assert evidence["enumerated_cuda_devices"] == ["CUDA0", "CUDA1"]
+    assert evidence["offloaded_layers"] == 29
+
+
+def test_cuda_inventory_alone_does_not_prove_model_offload(tmp_path: Path) -> None:
+    log = tmp_path / "server.log"
+    log.write_text(
+        "common_param: - CUDA0 : Tesla T4\n"
+        "common_param: - CUDA0 : Tesla T4\n"
+        "load_tensors: offloaded 0/29 layers to GPU\n"
+    )
+    evidence = sweep._runtime_backend_evidence(log, {"available": True})
+    assert evidence["cuda_device_count"] == 1
+    assert evidence["backend"] == "unverified"
+
+
+def test_cpu_or_requested_cuda_flags_cannot_replace_device_inventory(tmp_path: Path) -> None:
+    log = tmp_path / "server.log"
+    log.write_text(
+        "argv: --main-gpu 0 --n-gpu-layers 99\n"
+        "common_param: - CPU : Ryzen\n"
+        "common_param: - CUDA_Host : pinned host buffer\n"
+        "load_tensors: offloaded 29/29 layers to GPU\n"
+    )
+    evidence = sweep._runtime_backend_evidence(log, {"available": True, "devices": "Tesla T4"})
+    assert evidence["cuda_device_count"] == 0
+    assert evidence["backend"] == "unverified"
+
+
+def test_explicit_zero_cuda_init_conflicts_with_later_inventory(tmp_path: Path) -> None:
+    log = tmp_path / "server.log"
+    log.write_text(
+        "ggml_cuda_init: found 0 CUDA devices\n"
+        "common_param: - CUDA0 : Tesla T4\n"
+        "load_tensors: offloaded 29/29 layers to GPU\n"
+    )
+    evidence = sweep._runtime_backend_evidence(log, {"available": True})
+    assert evidence["cuda_device_count"] == 0
+    assert evidence["backend"] == "unverified"
+    assert evidence["device_inventory_conflict"] is True
+
+
 def test_runtime_backend_requires_log_confirmed_cuda_offload(tmp_path: Path) -> None:
     log = tmp_path / "server.log"
     gpu = {"available": True, "devices": "0, Tesla T4, 8000, 15360"}

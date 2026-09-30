@@ -1,0 +1,9 @@
+{
+  "observed_at": "2026-09-30T12:11:59.357066+00:00",
+  "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+  "source": "authenticated kaggle kernels status",
+  "exit_code": 0,
+  "stdout": "shlokbhakta/tabcomplete-sweep-comparison-r1-final has status \"KernelWorkerStatus.ERROR\"",
+  "stdout_sha256": "702c106bbb415d5acb25b04ec41530fc40dcc7d6458c6eacd15da10263c27dbf",
+  "state": "ERROR"
+}
