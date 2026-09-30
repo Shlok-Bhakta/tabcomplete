@@ -6,14 +6,18 @@ That report is recorded as an authorization basis, not independently verified.
 
 from __future__ import annotations
 
+import base64
 import fcntl
+import hashlib
 import json
 import os
 import re
 import socket
+import stat
 import subprocess
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TextIO
@@ -34,6 +38,15 @@ AUTHOR_CANDIDATE_OPEN = "<AUTHOR_CANDIDATE>"
 AUTHOR_CANDIDATE_CLOSE = "</AUTHOR_CANDIDATE>"
 MAX_AUTHOR_MESSAGE_BYTES = 16_384
 MAX_AUTHOR_JSON_BYTES = 8_192
+MAX_FAILURE_CAPTURE_BYTES = 64 * 1024
+FAILURE_CAPTURE_ROOT = Path(
+    "/mnt/ssd/tabcomplete-public-mechanism-pilot-r1-v2/transport-diagnostic-r1/failure-capture"
+)
+_FAILURE_STAGES = frozenset({"session.create", "session.prompt"})
+_SAFE_CONTENT_TYPE = re.compile(
+    r"[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+"
+    r"(?:;\s*charset=[A-Za-z0-9._-]+)?"
+)
 
 
 class TeacherPolicyError(ValueError):
@@ -46,6 +59,71 @@ class TeacherBudgetError(ValueError):
 
 class TeacherTransportError(RuntimeError):
     """A provider transport or response failed without exposing payloads."""
+
+    def __init__(
+        self, message: str, *, stage: str | None = None, request_id: str | None = None
+    ) -> None:
+        super().__init__(message)
+        self.stage = stage
+        self.request_id = request_id
+
+
+class TeacherResponseValidationError(TeacherTransportError):
+    """A successful HTTP response could not establish usable output or usage.
+
+    This is deliberately separate from transport failure. The request may have
+    reached the provider, but this client cannot prove whether generation
+    completed or what it consumed. Callers must keep the full reservation and
+    must not retry it.
+    """
+
+    def __init__(
+        self,
+        *,
+        stage: Literal["session.create", "session.prompt"],
+        request_id: str,
+        failure_kind: Literal[
+            "invalid_json",
+            "invalid_envelope",
+            "provider_error",
+            "invalid_model",
+            "invalid_usage",
+            "invalid_content",
+        ],
+    ) -> None:
+        super().__init__(
+            "OpenCode returned an unusable successful HTTP response",
+            stage=stage,
+            request_id=request_id,
+        )
+        self.failure_kind = failure_kind
+        self.provider_completion: Literal["unknown"] = "unknown"
+        self.usage_status: Literal["unknown"] = "unknown"
+        self.retry_permitted = False
+
+
+class TeacherCompletedResponseError(RuntimeError):
+    """A provider completed, but the result cannot proceed as an ordinary role output."""
+
+    def __init__(
+        self,
+        *,
+        request_id: str,
+        response: TeacherResponse,
+        failure_status: Literal[
+            "completed_budget_overrun",
+            "completed_accounting_failure",
+            "completed_response_persistence_failure",
+        ],
+        evidence_sha256: str | None,
+        ledger_reconciled: bool,
+    ) -> None:
+        super().__init__("OpenCode completed a response that requires terminal handling")
+        self.request_id = request_id
+        self.response = response
+        self.failure_status = failure_status
+        self.evidence_sha256 = evidence_sha256
+        self.ledger_reconciled = ledger_reconciled
 
 
 class TeacherCandidateError(ValueError):
@@ -531,21 +609,23 @@ class TeacherResponse:
 def _isolated_env(
     *, structured_output_only: bool = False, config_home: Path | None = None
 ) -> dict[str, str]:
-    """Keep only launch essentials and the local OpenCode credential store path."""
+    """Isolate OpenCode config while retaining only its existing credential store."""
+    if config_home is None:
+        raise TeacherPolicyError("OpenCode requires isolated config home")
     keys = ("PATH", "HOME", "USER", "SHELL", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME")
     env = {key: os.environ[key] for key in keys if key in os.environ}
+    config_home.mkdir(parents=True, exist_ok=True)
+    env["XDG_CONFIG_HOME"] = str(config_home)
+    env["OPENCODE_DISABLE_PROJECT_CONFIG"] = "1"
     config: dict[str, object] = {
         "model": MODEL_ID,
         "small_model": MODEL_ID,
         "permission": "deny",
         "tools": {"*": False},
+        "plugin": [],
+        "mcp": {},
     }
     if structured_output_only:
-        if config_home is None:
-            raise TeacherPolicyError("structured output mode requires isolated config home")
-        config_home.mkdir(parents=True, exist_ok=True)
-        env["XDG_CONFIG_HOME"] = str(config_home)
-        env["OPENCODE_DISABLE_PROJECT_CONFIG"] = "1"
         config = {
             "model": MODEL_ID,
             "small_model": MODEL_ID,
@@ -571,10 +651,18 @@ class OpenCodeTeacherClient:
         *,
         startup_seconds: float = 20.0,
         structured_output_only: bool = False,
+        failure_capture_dir: Path | None = None,
     ):
         self.ledger = ledger
         self.startup_seconds = startup_seconds
         self.structured_output_only = structured_output_only
+        self.failure_capture_dir = None
+        if failure_capture_dir is not None:
+            capture_root = FAILURE_CAPTURE_ROOT.resolve(strict=False)
+            capture_dir = Path(failure_capture_dir).resolve(strict=False)
+            if not capture_dir.is_relative_to(capture_root):
+                raise ValueError("failure capture path must stay under private capture root")
+            self.failure_capture_dir = capture_dir
         self._temporary: tempfile.TemporaryDirectory[str] | None = None
         self._process: subprocess.Popen[bytes] | None = None
         self._client: httpx.Client | None = None
@@ -637,16 +725,108 @@ class OpenCodeTeacherClient:
             self._temporary.cleanup()
             self._temporary = None
 
-    @staticmethod
-    def _json_response(response: httpx.Response) -> dict[str, object]:
+    def _capture_http_failure(
+        self, response: httpx.Response, *, stage: str, request_id: str
+    ) -> None:
+        """Privately preserve a bounded non-200 body for an explicitly enabled diagnosis."""
+        directory = self.failure_capture_dir
+        if directory is None or stage not in _FAILURE_STAGES:
+            return
+        created = False
+        descriptor: int | None = None
+        target: Path | None = None
+        try:
+            directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+            directory_info = directory.lstat()
+            if (
+                not stat.S_ISDIR(directory_info.st_mode)
+                or directory_info.st_uid != os.getuid()
+                or directory_info.st_mode & 0o077
+            ):
+                return
+            body = response.content
+            request_hash = hashlib.sha256(request_id.encode("utf-8")).hexdigest()
+            target = directory / f"{request_hash}.{stage.replace('.', '-')}.json"
+            content_type = response.headers.get("content-type", "")[:128]
+            if not _SAFE_CONTENT_TYPE.fullmatch(content_type):
+                content_type = ""
+            capture = {
+                "capture_version": 1,
+                "route_stage": stage,
+                "http_status": response.status_code,
+                "request_id_sha256": request_hash,
+                "content_type": content_type or None,
+                "response_body_bytes": len(body),
+                "response_body_sha256": hashlib.sha256(body).hexdigest(),
+                "captured_body_bytes": min(len(body), MAX_FAILURE_CAPTURE_BYTES),
+                "truncated": len(body) > MAX_FAILURE_CAPTURE_BYTES,
+                "response_body_prefix_base64": base64.b64encode(
+                    body[:MAX_FAILURE_CAPTURE_BYTES]
+                ).decode("ascii"),
+            }
+            encoded = (json.dumps(capture, sort_keys=True, separators=(",", ":")) + "\n").encode(
+                "ascii"
+            )
+            directory_fd = os.open(
+                directory,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+            )
+            try:
+                descriptor = os.open(
+                    target.name,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                    0o600,
+                    dir_fd=directory_fd,
+                )
+                created = True
+                if os.fstat(descriptor).st_mode & 0o077:
+                    raise OSError("private capture file permissions unavailable")
+                with os.fdopen(descriptor, "wb") as handle:
+                    descriptor = None
+                    handle.write(encoded)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        except (OSError, ValueError, TypeError):
+            if descriptor is not None:
+                os.close(descriptor)
+            if created and target is not None:
+                try:
+                    target.unlink()
+                except OSError:
+                    pass
+
+    def _json_response(
+        self,
+        response: httpx.Response,
+        *,
+        stage: Literal["session.create", "session.prompt"],
+        request_id: str,
+    ) -> dict[str, object]:
         if response.status_code != 200:
-            raise TeacherTransportError(f"OpenCode HTTP status {response.status_code}")
+            if stage is not None and request_id is not None:
+                self._capture_http_failure(response, stage=stage, request_id=request_id)
+            raise TeacherTransportError(
+                f"OpenCode HTTP status {response.status_code}",
+                stage=stage,
+                request_id=request_id,
+            )
         try:
             body = response.json()
-        except ValueError as exc:
-            raise TeacherTransportError("OpenCode response was not JSON") from exc
+        except ValueError:
+            raise TeacherResponseValidationError(
+                stage=stage,
+                request_id=request_id,
+                failure_kind="invalid_json",
+            ) from None
         if not isinstance(body, dict):
-            raise TeacherTransportError("OpenCode response shape invalid")
+            raise TeacherResponseValidationError(
+                stage=stage,
+                request_id=request_id,
+                failure_kind="invalid_envelope",
+            )
         return body
 
     def run_role(
@@ -661,6 +841,7 @@ class OpenCodeTeacherClient:
         reserve_output_tokens: int = 4_096,
         output_schema: dict[str, object] | None = None,
         system_instruction: str | None = None,
+        persist_completed_response: Callable[[TeacherResponse], str] | None = None,
     ) -> TeacherResponse:
         """Run one isolated role; never retry after ambiguous transport failure."""
         assert_opencode_request_allowed(
@@ -675,21 +856,37 @@ class OpenCodeTeacherClient:
         if self.structured_output_only and output_schema is None:
             raise TeacherPolicyError("structured output mode requires a JSON schema")
         if self._client is None:
-            raise TeacherTransportError("OpenCode server is not running")
+            raise TeacherTransportError(
+                "OpenCode server is not running", stage="session.create", request_id=request_id
+            )
         self.ledger.reserve(
             request_id, input_tokens=reserve_input_tokens, max_output_tokens=reserve_output_tokens
         )
+        stage: Literal["session.create", "session.prompt"] = "session.create"
         try:
             session = self._json_response(
                 self._client.post(
                     "/session",
                     json={"title": f"one-line-{purpose}-{request_id}"},
                     timeout=30.0,
-                )
+                ),
+                stage="session.create",
+                request_id=request_id,
             )
-            session_id = session["id"]
+            try:
+                session_id = session["id"]
+            except KeyError:
+                raise TeacherResponseValidationError(
+                    stage="session.create",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                ) from None
             if not isinstance(session_id, str):
-                raise ValueError("session ID")
+                raise TeacherResponseValidationError(
+                    stage="session.create",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                )
             message_body: dict[str, object] = {
                 "model": {"providerID": "opencode-go", "modelID": "muse-spark-1.3-contributor"},
                 "parts": [{"type": "text", "text": prompt}],
@@ -700,61 +897,145 @@ class OpenCodeTeacherClient:
                 message_body["system"] = system_instruction
             if output_schema is not None:
                 message_body["format"] = {"type": "json_schema", "schema": output_schema}
+            stage = "session.prompt"
             response = self._json_response(
                 self._client.post(
                     f"/session/{session_id}/message",
                     json=message_body,
                     timeout=120.0,
-                )
+                ),
+                stage="session.prompt",
+                request_id=request_id,
             )
-            info = response["info"]
-            parts = response["parts"]
+            try:
+                info = response["info"]
+                parts = response["parts"]
+            except KeyError:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                ) from None
             if not isinstance(info, dict) or not isinstance(parts, list):
-                raise ValueError("response envelope")
-            model_id = f"{info['providerID']}/{info['modelID']}"
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                )
+            try:
+                model_id = f"{info['providerID']}/{info['modelID']}"
+            except KeyError:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                ) from None
             if model_id != MODEL_ID:
-                raise ValueError("unexpected response model")
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_model",
+                )
             if info.get("error") is not None:
-                raise ValueError("OpenCode assistant reported an error")
-            tokens = info["tokens"]
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="provider_error",
+                )
+            try:
+                tokens = info["tokens"]
+            except KeyError:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_usage",
+                ) from None
             if not isinstance(tokens, dict):
-                raise ValueError("usage envelope")
-            input_tokens = tokens["input"]
-            output_tokens = tokens["output"]
-            reasoning_tokens = tokens["reasoning"]
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_usage",
+                )
+            try:
+                input_tokens = tokens["input"]
+                output_tokens = tokens["output"]
+                reasoning_tokens = tokens["reasoning"]
+            except KeyError:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_usage",
+                ) from None
             total_tokens = tokens.get("total")
-            self.ledger._positive(input_tokens, "input tokens")
-            self.ledger._positive(output_tokens, "output tokens")
-            self.ledger._positive(reasoning_tokens, "reasoning tokens")
-            if total_tokens is not None:
-                self.ledger._positive(total_tokens, "total tokens")
             cache = tokens.get("cache", {})
             if not isinstance(cache, dict):
-                raise ValueError("cache usage envelope")
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_usage",
+                )
             cached_read = cache.get("read", 0)
             cached_write = cache.get("write", 0)
-            self.ledger._positive(cached_read, "cached read tokens")
-            self.ledger._positive(cached_write, "cached write tokens")
+            try:
+                self.ledger._positive(input_tokens, "input tokens")
+                self.ledger._positive(output_tokens, "output tokens")
+                self.ledger._positive(reasoning_tokens, "reasoning tokens")
+                if total_tokens is not None:
+                    self.ledger._positive(total_tokens, "total tokens")
+                self.ledger._positive(cached_read, "cached read tokens")
+                self.ledger._positive(cached_write, "cached write tokens")
+            except TeacherBudgetError:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_usage",
+                ) from None
             text_parts: list[str] = []
             for part in parts:
                 if isinstance(part, dict) and part.get("type") == "text":
                     value = part.get("text")
                     if not isinstance(value, str):
-                        raise ValueError("invalid final text")
+                        raise TeacherResponseValidationError(
+                            stage="session.prompt",
+                            request_id=request_id,
+                            failure_kind="invalid_content",
+                        )
                     text_parts.append(value)
             structured = info.get("structured")
             if output_schema is not None:
                 if not isinstance(structured, dict):
-                    raise ValueError("missing structured tool output")
+                    raise TeacherResponseValidationError(
+                        stage="session.prompt",
+                        request_id=request_id,
+                        failure_kind="invalid_content",
+                    )
                 content = json.dumps(structured, ensure_ascii=False, separators=(",", ":"))
             elif text_parts:
                 content = "".join(text_parts)
             else:
-                raise ValueError("missing final text")
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_content",
+                )
+            try:
+                response_id = info["id"]
+            except KeyError:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                ) from None
+            if not isinstance(response_id, str) or not response_id:
+                raise TeacherResponseValidationError(
+                    stage="session.prompt",
+                    request_id=request_id,
+                    failure_kind="invalid_envelope",
+                )
             result = TeacherResponse(
                 content=content,
                 session_id=session_id,
-                response_id=str(info["id"]),
+                response_id=response_id,
                 model_id=model_id,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
@@ -767,11 +1048,102 @@ class OpenCodeTeacherClient:
                     float(info["cost"]) if isinstance(info.get("cost"), (int, float)) else None
                 ),
             )
-            self.ledger.settle(
-                request_id,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens + reasoning_tokens,
+            metered_output_tokens = output_tokens + reasoning_tokens
+            reservation_exceeded = (
+                input_tokens > reserve_input_tokens
+                or metered_output_tokens > reserve_output_tokens
             )
+            evidence_sha256: str | None = None
+            if persist_completed_response is not None:
+                try:
+                    evidence_sha256 = persist_completed_response(result)
+                except Exception as exc:
+                    raise TeacherCompletedResponseError(
+                        request_id=request_id,
+                        response=result,
+                        failure_status="completed_response_persistence_failure",
+                        evidence_sha256=None,
+                        ledger_reconciled=False,
+                    ) from exc
+                if not isinstance(evidence_sha256, str) or re.fullmatch(
+                    r"[a-f0-9]{64}", evidence_sha256
+                ) is None:
+                    raise TeacherCompletedResponseError(
+                        request_id=request_id,
+                        response=result,
+                        failure_status="completed_response_persistence_failure",
+                        evidence_sha256=None,
+                        ledger_reconciled=False,
+                    )
+            if persist_completed_response is not None and evidence_sha256 is None:
+                # Do not attempt settlement until a durable response+usage receipt exists.
+                raise TeacherCompletedResponseError(
+                    request_id=request_id,
+                    response=result,
+                    failure_status="completed_response_persistence_failure",
+                    evidence_sha256=None,
+                    ledger_reconciled=False,
+                )
+            if reservation_exceeded and evidence_sha256 is None:
+                # Keep the full reservation when an overrun has no durable receipt.
+                raise TeacherCompletedResponseError(
+                    request_id=request_id,
+                    response=result,
+                    failure_status="completed_budget_overrun",
+                    evidence_sha256=None,
+                    ledger_reconciled=False,
+                )
+            try:
+                self.ledger.settle(
+                    request_id,
+                    input_tokens=input_tokens,
+                    output_tokens=metered_output_tokens,
+                )
+            except TeacherBudgetError as exc:
+                if reservation_exceeded and evidence_sha256 is not None:
+                    try:
+                        self.ledger.settle_overrun(
+                            request_id,
+                            input_tokens=input_tokens,
+                            output_tokens=metered_output_tokens,
+                            evidence_sha256=evidence_sha256,
+                        )
+                        ledger_reconciled = True
+                    except TeacherBudgetError:
+                        ledger_reconciled = False
+                    raise TeacherCompletedResponseError(
+                        request_id=request_id,
+                        response=result,
+                        failure_status="completed_budget_overrun",
+                        evidence_sha256=evidence_sha256,
+                        ledger_reconciled=ledger_reconciled,
+                    ) from exc
+                if "cap exceeded" in str(exc):
+                    raise TeacherCompletedResponseError(
+                        request_id=request_id,
+                        response=result,
+                        failure_status="completed_accounting_failure",
+                        evidence_sha256=evidence_sha256,
+                        ledger_reconciled=False,
+                    ) from exc
+                raise TeacherCompletedResponseError(
+                    request_id=request_id,
+                    response=result,
+                    failure_status="completed_accounting_failure",
+                    evidence_sha256=evidence_sha256,
+                    ledger_reconciled=False,
+                ) from exc
             return result
-        except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
-            raise TeacherTransportError("OpenCode request failed or usage was invalid") from exc
+        except (TeacherCompletedResponseError, TeacherResponseValidationError):
+            raise
+        except httpx.HTTPError:
+            raise TeacherTransportError(
+                "OpenCode request transport failed", stage=stage, request_id=request_id
+            ) from None
+        except (KeyError, TypeError, ValueError):
+            # Unexpected response-shape failures are quarantined as unknown usage.
+            raise TeacherResponseValidationError(
+                stage=stage,
+                request_id=request_id,
+                failure_kind=("invalid_usage" if stage == "session.prompt" else "invalid_envelope"),
+            ) from None
