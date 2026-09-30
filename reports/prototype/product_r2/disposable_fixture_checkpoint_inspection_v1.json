@@ -1,0 +1,26 @@
+{
+  "schema": "disposable-checkpoint-inspection-v1",
+  "checkpoint_sha256": "6320f33dcfb04f424537e5dccf263ce2fa1fd22d39b8bccf704db54f83e11bfd",
+  "fingerprint": "608fd005060ae34bb21740143a9c9c35558072585b41d76a9303656743b7c5f2",
+  "stored_tensor_keys": 291,
+  "all_export_tensors_exact_fp16_conversion": true,
+  "all_export_tensors_finite": true,
+  "optimizer_state_present": true,
+  "scheduler_state_present": true,
+  "scaler_state_present": true,
+  "cpu_and_cuda_rng_state_present": true,
+  "cursor": {
+    "attempted_updates": 32,
+    "completed_updates": 32,
+    "epoch": 1,
+    "next_example_index": 64,
+    "skipped_updates": 0,
+    "supervised_target_tokens": 408,
+    "training_input_tokens": 10592
+  },
+  "cpu_deserialization_after_training_process_exit": true,
+  "gpu_resume_execution_verified": false,
+  "elapsed_seconds": 10.295079950941727,
+  "torch": "2.14.0+cpu",
+  "quality_evidence": false
+}

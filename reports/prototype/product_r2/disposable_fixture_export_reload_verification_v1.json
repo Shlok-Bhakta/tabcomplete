@@ -1,0 +1,48 @@
+{
+  "comparison_warning": "CPU FP32 from stored F16 and torch2.14 differ from T4 autocast FP16 and torch2.10. This is not a pure precision ablation or deployed Q4 service benchmark.",
+  "gpu_resume_execution_verified": false,
+  "parameters": 494032768,
+  "plan_sha256": "8dfe6f0820aa319dce303d01a89357f76bdd0bf7fe77d031ce78d77ddf863da5",
+  "private_observation_sha256s": [
+    "d2f2f15665b0436f5b4af5ef7d3fa7fc6a50b6d6929ada60d53ae906d3341f1c",
+    "8cd1422ca2bd306e6de71b75b1d86a3dec4c56d2a0921121a4cfda18376b441e"
+  ],
+  "process_count": 2,
+  "process_exit_and_inference_reload_verified": true,
+  "processes": [
+    {
+      "exact_eos_probes": 16,
+      "generation_seconds": 42.976711702067405,
+      "load_seconds_warm_filesystem": 0.6799370809458196,
+      "observed_peak_rss_bytes": 2559352832,
+      "pid": 125685,
+      "retained_rss_bytes": 2559352832,
+      "runtime": {
+        "backend": "CPU FP32 from stored F16",
+        "threads": 2,
+        "torch": "2.14.0+cpu",
+        "transformers": "5.17.0"
+      }
+    },
+    {
+      "exact_eos_probes": 16,
+      "generation_seconds": 42.10929600382224,
+      "load_seconds_warm_filesystem": 0.63963705196511,
+      "observed_peak_rss_bytes": 2559737856,
+      "pid": 126513,
+      "retained_rss_bytes": 2559737856,
+      "runtime": {
+        "backend": "CPU FP32 from stored F16",
+        "threads": 2,
+        "torch": "2.14.0+cpu",
+        "transformers": "5.17.0"
+      }
+    }
+  ],
+  "quality_evidence": false,
+  "schema": "disposable-export-reload-verification-v1",
+  "scope": "answer-cued disposable fixture implementation verification only",
+  "source_export_tokenizer_parity_cases_per_process": 64,
+  "tied_embeddings": true,
+  "wire_differences_across_processes": 0
+}

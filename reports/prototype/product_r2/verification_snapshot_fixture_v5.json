@@ -1,0 +1,63 @@
+{
+  "bun_collector_analysis": {
+    "failed": 0,
+    "passed": 38
+  },
+  "bun_collector_server": {
+    "failed": 0,
+    "passed": 56
+  },
+  "bun_gateway": {
+    "failed": 0,
+    "passed": 16
+  },
+  "covered_sources": {
+    "kaggle/one_line_gpu_pilot_r1/build_pilot.py": "4fddad5e3ceacaa77e9f09aa7df44a70738a4bf58f22d029f60419b22ba177a2",
+    "kaggle/one_line_gpu_pilot_r1/run.py": "9d5aacbfb9e434b74b5095b7893c1bf67156766b84fcc81086d6042cc0c42ef8",
+    "scripts/fixed_history_recipe_inventory.py": "0df9424cadfa93e4c5aa8c50245409abcf13c63fe295076dfe9a11601b9a5833",
+    "scripts/run_fixed_state_role_pilot.py": "7d82dd12641fafbd939f1428dffaf562118479d52aeebb849b3d44bbd3536978",
+    "src/tinycomplete/one_line/fixed_state_roles.py": "4d45ac1f29e67b0ff29c3182f49d5f4a1a701c618fc98d5c06a2339328c58d3b",
+    "src/tinycomplete/one_line/pilot_data.py": "d1a6a19b8a9683b8634d4b33c38738a59b33ca2af18dfc9fa09bcd09235e1ba5",
+    "tests/test_fixed_history_recipe_inventory.py": "65799a90822b3c7dc993f32c084126efc88fbf54e37feb75b0743cdd50efbba0",
+    "tests/test_fixed_state_role_pilot_runner.py": "ca8f68eb6474f2d2e5e3b1aa14d6d5f6572277aa155bc449e2267438f66ce6e9",
+    "tests/test_fixed_state_roles.py": "72ebaae336f76891a67554a9ae305b136a282581e2237834e0f906128f317a14",
+    "tests/test_license_mixed_gpu_staging.py": "70af3aa34e738b9290975754e0cb40f878a7331089fca9f7b10500e91ae48566",
+    "tests/test_license_mixed_pilot_policy.py": "b30faaff7ad2c8e03b06d28d353f9ffd0d8dd51ee809a753d9d2f18d5d963a48"
+  },
+  "gpu_job": "shlokbhakta/tabcomplete-disposable-fixture-v5",
+  "gpu_result": "pending",
+  "later_root_changes": "Storage reuse counts unique hard-link inodes and fixture run ID now includes frozen plan identity; 17 focused tests pass. These later changes are not covered by the prior full 898-test snapshot.",
+  "lua_collector_and_single_line": {
+    "failed": 0,
+    "passed": 68
+  },
+  "mypy_core_and_two_new_tools": {
+    "source_files": 82,
+    "status": "passed"
+  },
+  "mypy_two_kaggle_files": "passed",
+  "new_provider_calls": 0,
+  "personalization_enabled": false,
+  "python_clean_gpu_checkout": {
+    "failed": 0,
+    "passed": 744,
+    "seconds": 42.9,
+    "skipped": 1
+  },
+  "python_full_working_tree": {
+    "failed": 0,
+    "passed": 898,
+    "private_log_sha256": "31dc9321376d4e5a692e37292c4021bda930a9e042a51f42789f452daf7229bb",
+    "seconds": 129.58,
+    "skipped": 1
+  },
+  "quality_claim": false,
+  "ruff_repository": "passed",
+  "schema": "tabcomplete-verification-snapshot-v1",
+  "source_commit_gpu": "78fafdf5f447741a867deb4c60c8836e92643395",
+  "typescript_checks": {
+    "failed": 0,
+    "passed": 3
+  },
+  "working_tree_includes_declared_uncommitted_agent_changes": true
+}

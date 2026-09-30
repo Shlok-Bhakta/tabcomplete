@@ -241,7 +241,7 @@ def test_fixture_telemetry_preserves_owned_cuda_environment(tmp_path, monkeypatc
 
     builder = _builder()
     template = Path(builder.__file__).with_name("run.py").read_text()
-    session = {"session_seconds": 7200, "reserve_seconds": 1200}
+    session = {"session_seconds": 7200, "reserve_seconds": 1200, "plan_sha256": "f" * 64}
     source = template.replace('"__SESSION_LITERAL__"', repr(json.dumps(session)))
     worker = {"__name__": "fixture_environment_test"}
     exec(compile(source, "fixture_environment_test.py", "exec"), worker)
@@ -266,8 +266,28 @@ def test_fixture_telemetry_preserves_owned_cuda_environment(tmp_path, monkeypatc
     assert worker["_run_disposable_training_fixture"](tmp_path, owned_environment) == 10592
     assert owned_environment.items() <= received.items()
     assert received["TABCOMPLETE_CAMPAIGN_ID"] == "tabcomplete-product-r2"
-    assert received["TABCOMPLETE_RUN_ID"].startswith("run-")
+    assert received["TABCOMPLETE_RUN_ID"] == "run-" + "f" * 32
+    metadata = tmp_path / "fixture-observability-run.json"
+    stored = json.loads(metadata.read_text())
+    assert stored["run_id"] == received["TABCOMPLETE_RUN_ID"]
+    stored["run_id"] = "run-" + "e" * 32
+    metadata.write_text(json.dumps(stored))
+    with pytest.raises(ValueError, match="different frozen plan"):
+        worker["_run_disposable_training_fixture"](tmp_path, owned_environment)
     assert set(owned_environment) == {
         "CUDA_VISIBLE_DEVICES", "LD_LIBRARY_PATH", "HF_HUB_OFFLINE",
         "TRANSFORMERS_OFFLINE", "TABCOMPLETE_PILOT_STARTED_MONOTONIC",
     }
+
+
+def test_storage_budget_counts_reused_hard_links_once(tmp_path):
+    import os
+    import shutil
+
+    original = tmp_path / "original"
+    original.write_bytes(b"synthetic")
+    os.link(original, tmp_path / "reused")
+    (tmp_path / "alias").symlink_to(original.name)
+    assert _builder()._directory_bytes(tmp_path) == len(b"synthetic")
+    shutil.copyfile(original, tmp_path / "new-copy")
+    assert _builder()._directory_bytes(tmp_path) == 2 * len(b"synthetic")

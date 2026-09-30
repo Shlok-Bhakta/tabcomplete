@@ -1,0 +1,128 @@
+{
+  "accepted_training": 0,
+  "artifact_integrity": {
+    "artifact_integrity_verified": true,
+    "checkpoint_sha256": "6320f33dcfb04f424537e5dccf263ce2fa1fd22d39b8bccf704db54f83e11bfd",
+    "complete_export": true,
+    "implementation_only": true,
+    "plan_sha256": "eb5f6e551c3b5ce9d346c8cb906c7ece599052c20fe15ad2ff7e90d8052cc380",
+    "quality_evidence": false,
+    "status": "complete",
+    "training_input_tokens": 10592,
+    "worker_failure_type": null,
+    "worker_state": "disposable_verified_complete"
+  },
+  "campaign_training_input_tokens_including_prior_runs": 559459,
+  "changed_norm_parameter_elements": 896,
+  "checkpoint_sha256": "6320f33dcfb04f424537e5dccf263ce2fa1fd22d39b8bccf704db54f83e11bfd",
+  "deployment_permitted": false,
+  "gpu_resume_execution_verified": false,
+  "implementation_viability": {
+    "criterion": "For each N/R/I/D action, at least 3 of 4 fixed probes decode to the exact canonical action and terminate with EOS after one complete disposable pass.",
+    "failure_reasons": [],
+    "passed": true,
+    "per_action": {
+      "delete_line": {
+        "exact_actions": 4,
+        "examples": 4,
+        "minimum_exact_actions": 3,
+        "terminated_by_eos": 4,
+        "valid_actions": 4
+      },
+      "insert_before": {
+        "exact_actions": 4,
+        "examples": 4,
+        "minimum_exact_actions": 3,
+        "terminated_by_eos": 4,
+        "valid_actions": 4
+      },
+      "keep": {
+        "exact_actions": 4,
+        "examples": 4,
+        "minimum_exact_actions": 3,
+        "terminated_by_eos": 4,
+        "valid_actions": 4
+      },
+      "replace_line": {
+        "exact_actions": 4,
+        "examples": 4,
+        "minimum_exact_actions": 3,
+        "terminated_by_eos": 4,
+        "valid_actions": 4
+      }
+    },
+    "quality_evidence": false,
+    "schema": "single-line-disposable-implementation-viability-v1",
+    "scope": "answer-cued_disposable_codec_only",
+    "status": "pass",
+    "total_observations": 16,
+    "training_complete": true
+  },
+  "inference_export_files": {
+    "chat_template.jinja": {
+      "bytes": 2427,
+      "sha256": "44d5f08f3f72b837eaad09f13a54c1f9f4eb58d75240334548b7fd52a5437fa5"
+    },
+    "config.json": {
+      "bytes": 1284,
+      "sha256": "32f65bf9489178e70fff5ba7da6138c7df5092b14740e9f90c7dfa927b9e8802"
+    },
+    "generation_config.json": {
+      "bytes": 139,
+      "sha256": "689c1e2b6769259cc773777319bae6f2bd6020ea1aa432b437578da46c994e8a"
+    },
+    "model.safetensors": {
+      "bytes": 1260367152,
+      "sha256": "0f85d11e610bb86d9b1ff22073ba4d5c090a9ca199f101611aa2073b99e8d95c"
+    },
+    "tokenizer.json": {
+      "bytes": 11421892,
+      "sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8"
+    },
+    "tokenizer_config.json": {
+      "bytes": 694,
+      "sha256": "31f3ca2a2b90487393bdc778c41bfc6dab379646865aeef19068e726804126f1"
+    }
+  },
+  "kernel_id": "shlokbhakta/tabcomplete-disposable-fixture-v5",
+  "monitoring": {
+    "actual_run_query_state": "ok",
+    "known_run_identity_collision": "V4 and V5 metadata paths generated the same logical run ID; attempts differ. Raw IDs preserved; future worker run IDs now bind the frozen plan. Do not merge scientific outcomes across attempts.",
+    "offline_import_completed": true,
+    "run_attempt_id": "attempt-7ef9469d-9141-4141-8cf7-4ab25e40315a",
+    "run_id": "run-1aedaa1cd42cd9e06b269d3f1803839c",
+    "trace_id": "ebd7fe9a2999e916a2bd1cd9f6b847b3"
+  },
+  "optimizer": "bitsandbytes.AdamW8bit",
+  "plan_revision": 5,
+  "plan_sha256": "eb5f6e551c3b5ce9d346c8cb906c7ece599052c20fe15ad2ff7e90d8052cc380",
+  "private_evidence_hashes": {
+    "fixture-telemetry.jsonl": "612af30aa965f75db4d45e0c6710e113f460aed3205b7bc5633fcbf48bc2905b",
+    "fixture-v5-artifact-verification.json": "e2823da863926c01906d05005ce7d4528435ac871a3df1f6ed9883687e21651d",
+    "run_result.json": "3d089ef4c6ee778bbdebd51031aa2b7f819b355c772dca5c3d312f37b21958d7",
+    "worker-status.json": "542da53b638683df963844b21172ca2c2a87edee5144e184daa1cf6437f0d3c2"
+  },
+  "quality_evidence": false,
+  "quota_after": {
+    "active_jobs": [],
+    "observed_at": "2026-09-30T21:42:55.496603+00:00",
+    "remaining": 41.6,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "units": "Kaggle account GPU-hours"
+  },
+  "schema": "one-line-disposable-fixture-gpu-observation-v1",
+  "source_commit": "78fafdf5f447741a867deb4c60c8836e92643395",
+  "token_counts": {
+    "attempted_updates": 32,
+    "completed_updates": 32,
+    "epoch": 1,
+    "next_example_index": 64,
+    "skipped_updates": 0,
+    "supervised_target_tokens": 408,
+    "training_input_tokens": 10592
+  },
+  "training_seconds": 29.759485325000014,
+  "worker_elapsed_seconds": 215.578347383,
+  "worker_state": "disposable_verified_complete"
+}

@@ -755,7 +755,18 @@ def inspect_training(
 
 
 def _directory_bytes(path: Path) -> int:
-    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file() and not p.is_symlink())
+    # Reused hard links are one stored artifact, not another downloaded copy.
+    seen: set[tuple[int, int]] = set()
+    total = 0
+    for item in path.rglob("*"):
+        if not item.is_file() or item.is_symlink():
+            continue
+        info = item.stat()
+        identity = (info.st_dev, info.st_ino)
+        if identity not in seen:
+            total += info.st_size
+            seen.add(identity)
+    return total
 
 
 def _stage_file(source: Path, target: Path) -> dict[str, Any]:

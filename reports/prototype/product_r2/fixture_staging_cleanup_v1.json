@@ -1,0 +1,41 @@
+{
+  "after_bytes_unique_inodes": 7515415657,
+  "before_bytes_unique_inodes": 11467806953,
+  "checkpoint_files_removed": 0,
+  "entries": [
+    {
+      "bytes": 988097824,
+      "path": "disposable-fixture-v3-bundle/dataset/model.safetensors",
+      "reason": "Terminal or superseded root-created staging copy; original immutable cached weights remain.",
+      "reuse_source": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/model.safetensors",
+      "sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    },
+    {
+      "bytes": 988097824,
+      "path": "disposable-fixture-v4-bundle/dataset/model.safetensors",
+      "reason": "Terminal or superseded root-created staging copy; original immutable cached weights remain.",
+      "reuse_source": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/model.safetensors",
+      "sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    },
+    {
+      "bytes": 988097824,
+      "path": "disposable-fixture-v4-final-bundle/dataset/model.safetensors",
+      "reason": "Terminal or superseded root-created staging copy; original immutable cached weights remain.",
+      "reuse_source": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/model.safetensors",
+      "sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    },
+    {
+      "bytes": 988097824,
+      "path": "disposable-fixture-v5-bundle/dataset/model.safetensors",
+      "reason": "Terminal or superseded root-created staging copy; original immutable cached weights remain.",
+      "reuse_source": "/home/crabcake/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-0.5B/snapshots/8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301/model.safetensors",
+      "sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    }
+  ],
+  "original_source_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+  "prepared_bundle_resume_valid": false,
+  "removed_bytes": 3952391296,
+  "schema": "research-staging-cleanup-v1",
+  "selected_runtime_files_changed": 0,
+  "source_verified": true
+}

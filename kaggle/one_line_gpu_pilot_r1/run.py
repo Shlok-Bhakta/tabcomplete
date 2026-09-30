@@ -696,8 +696,17 @@ def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
     from tinycomplete.observability.runs import run_scope
     from tinycomplete.observability.spans import operation
 
-    seed = RunContext.new(campaign_id="tabcomplete-product-r2")
-    with seed.activate(), run_scope(OUT / "fixture-observability-run.json", "disposable-fixture"):
+    seed = RunContext.new(
+        campaign_id="tabcomplete-product-r2", run_id="run-" + SESSION["plan_sha256"][:32]
+    )
+    metadata_path = OUT / "fixture-observability-run.json"
+    identity = {"campaign_id": seed.campaign_id, "run_id": seed.run_id}
+    if metadata_path.exists():
+        if load(metadata_path) != identity:
+            raise ValueError("fixture telemetry belongs to a different frozen plan")
+    else:
+        save(metadata_path, identity)
+    with seed.activate(), run_scope(metadata_path, "disposable-fixture"):
         with operation("campaign.phase", attributes={"tabcomplete.phase": "disposable-fixture"}):
             child_env = dict(env)
             child_env.update(subprocess_environment(env))
