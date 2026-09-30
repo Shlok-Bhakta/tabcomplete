@@ -205,10 +205,24 @@ worker deadline, including compilation, with a 20-minute finalization reserve.
 The four prior conservative bounds total 9,381.212425 seconds; adding its
 4,800-second limit gives 14,181.212425 seconds, below the same 14,400-second cap.
 Authenticated quota at 13:03:22.771137 UTC showed 42.94 remaining of 45 account
-GPU-hours, 2.06 used, the same renewal, and no active jobs. The job was observed
-RUNNING after submission. This is execution status, not a quality result.
+GPU-hours, 2.06 used, the same renewal, and no active jobs. The job reached ERROR at 13:36:55.909207 UTC after 1,906.626927
+worker seconds. CUDA validation passed, but a legacy 30-minute per-request guard
+double-counted the worker finalization reserve. It refused the first generation.
+There are zero predictions, so this allocation supplies no quality score.
 The [submission record](sweep_comparison_r1/submission_005.json) preserves the
 source, plan, quota, and private bundle hashes.
+
+The [fifth failure evidence](sweep_comparison_r1/setup_failure_005/artifact_manifest.json)
+preserves the actual terminal status, startup placement, and monitoring errors.
+The conservative five-allocation wall bound is 11,394.350495 seconds.
+Three timeout regression cases failed before correction; the corrected suite
+passed all 26 tests. The shared transport retains its historical default for
+other callers. Sweep now bounds a request to 120 seconds or the remaining
+worker time, whose deadline already excludes finalization. This scheduling
+change requires a new plan; historical model, prompt, fixtures and scoring stay
+unchanged. An explicitly authorized sixth allocation is being frozen separately
+with a two-hour session, 20-minute reserve, and six-hour aggregate bound.
+There is no automatic seventh allocation or renewed quota consumption.
 
 The GPU runner preserves the existing raw-causal strict200 and line180 prompts,
 96-token ceiling and scoring rules. They are task-mismatch code controls for a
