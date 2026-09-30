@@ -16,6 +16,7 @@ from tinycomplete.one_line.train import (
     batch_order_sha256,
     bucketed_batches,
     collate_examples,
+    disposable_fixture_rows,
     encode_training_row,
     enforce_training_budget,
     example_weighted_causal_loss,
@@ -54,6 +55,35 @@ def test_response_and_eos_are_the_only_supervised_positions() -> None:
     assert counts["supervised_response_and_eos_tokens"] == (
         keep.response_tokens + replacement.response_tokens
     )
+
+
+def test_disposable_training_fixture_exercises_all_actions_and_eos() -> None:
+    from collections import Counter
+
+    from tinycomplete.one_line.contract import apply_action, decode_action
+
+    rows = disposable_fixture_rows()
+    assert len(rows) == len({row["id"] for row in rows}) == 64
+    assert Counter(row["action"]["kind"] for row in rows) == {
+        "keep": 16,
+        "replace_line": 16,
+        "insert_before": 16,
+        "delete_line": 16,
+    }
+    for row in rows:
+        state = EditState.from_mapping(row["state"])
+        action = EditAction(**row["action"])
+        # The fake tokenizer counts characters, so allow sufficient total label
+        # room here; the real pinned tokenizer is checked by CPU preparation.
+        encoded = encode_training_row(CharacterTokenizer(), state, action)
+        assert encoded.labels[-1] == CharacterTokenizer.eos_token_id
+        assert encoded.labels[: encoded.prompt_tokens] == (IGNORE_INDEX,) * encoded.prompt_tokens
+        decoded = decode_action(
+            encoded.response, terminated=True, generated_tokens=encoded.response_tokens
+        )
+        assert decoded.action == action
+        assert apply_action(state, action) == row["after_source"]
+        assert row["quality_evidence"] is False and row["split"] == "train"
 
 
 def test_padding_is_masked_by_position_even_when_pad_equals_eos() -> None:

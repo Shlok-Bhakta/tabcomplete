@@ -222,7 +222,7 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     names = set(files)
     required_names = REQUIRED_INPUTS
     if data_schema == "one-line-constructive-pilot-v1":
-        required_names = required_names | {"independent_review.json"}
+        required_names = required_names | {"independent_review.json", "training-fixture.jsonl"}
     expected_names = required_names | OPTIONAL_MODEL_FILES
     if not required_names <= names or not names <= expected_names:
         raise ValueError("input package contains missing or unapproved files")
@@ -304,6 +304,8 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     if data_schema == "one-line-constructive-pilot-v1":
         prior_tokens = budgets.get("prior_training_input_tokens")
         prior_seconds = budgets.get("prior_session_wall_seconds")
+        fixture = training.get("disposable_fixture", {})
+        fixture_tokens = fixture.get("nonpadding_training_input_tokens")
         if (
             type(prior_tokens) is not int
             or type(prior_seconds) is not int
@@ -311,7 +313,18 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
             or prior_seconds < 0
             or prior_tokens != SESSION.get("prior_training_input_tokens")
             or prior_seconds != SESSION.get("prior_session_wall_seconds")
-            or prior_tokens + training["planned_nonpadding_input_tokens"] > 100_000_000
+            or fixture != SESSION.get("disposable_fixture")
+            or fixture.get("schema") != "single-line-disposable-training-fixture-v1"
+            or fixture.get("examples") != 64
+            or fixture.get("epochs") != 1
+            or fixture.get("peak_learning_rate") != 1e-4
+            or fixture.get("quality_evidence") is not False
+            or fixture.get("sha256") != files["training-fixture.jsonl"]["sha256"]
+            or type(fixture_tokens) is not int
+            or fixture_tokens <= 0
+            or fixture_tokens + training["planned_nonpadding_input_tokens"] > 2_000_000
+            or prior_tokens + fixture_tokens + training["planned_nonpadding_input_tokens"]
+            > 100_000_000
             or prior_seconds + SESSION["session_seconds"] > 24 * 3600
         ):
             raise ValueError("constructive worker aggregate campaign accounting mismatch")
@@ -491,10 +504,13 @@ def _evaluation_command(
     ]
 
 
-def _verify_training_output() -> tuple[dict[str, Any], Path]:
-    result = load(TRAIN_OUT / "run_result.json")
-    latest = load(TRAIN_OUT / "latest.json")
-    checkpoint = TRAIN_OUT / Path(latest["checkpoint"]).name
+def _verify_training_output(
+    output: Path | None = None, *, phase: str = "pilot"
+) -> tuple[dict[str, Any], Path]:
+    output = output or TRAIN_OUT
+    result = load(output / "run_result.json")
+    latest = load(output / "latest.json")
+    checkpoint = output / Path(latest["checkpoint"]).name
     marker = load(checkpoint.with_suffix(checkpoint.suffix + ".complete.json"))
     digest = sha(checkpoint)
     if digest != latest.get("sha256") or digest != marker.get("sha256"):
@@ -503,14 +519,82 @@ def _verify_training_output() -> tuple[dict[str, Any], Path]:
         raise ValueError("training and checkpoint fingerprints differ")
     if result.get("cursor") != latest.get("cursor"):
         raise ValueError("latest checkpoint does not cover the reported cursor")
-    if result.get("identity", {}).get("phase") != "pilot":
-        raise ValueError("trainer result is not from the pilot phase")
+    if result.get("identity", {}).get("phase") != phase:
+        raise ValueError("trainer result is not from the expected training phase")
     if (
         result.get("identity", {}).get("source", {}).get("model_weight_sha256")
         != SESSION["model_weight_sha256"]
     ):
         raise ValueError("trainer initialized from a different model")
     return result, checkpoint
+
+
+def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
+    """Actual pretrained q25 update check, discarded as quality evidence."""
+    spec = SESSION["disposable_fixture"]
+    path = dataset / "training-fixture.jsonl"
+    if sha(path) != spec["sha256"]:
+        raise ValueError("disposable training fixture hash mismatch")
+    output = OUT / "disposable-training-fixture"
+    stage(
+        [
+            sys.executable,
+            str(REPO / "scripts/train_one_line.py"),
+            "--config",
+            str(dataset / "config.yaml"),
+            "--plan",
+            str(dataset / "plan.json"),
+            "--model",
+            str(dataset),
+            "--data",
+            str(path),
+            "--data-sha256",
+            spec["sha256"],
+            "--phase",
+            "fixture",
+            "--epochs",
+            "1",
+            "--output",
+            str(output),
+            "--session-minutes",
+            str(min(30.0, remaining_seconds() / 60)),
+            "--reserve-minutes",
+            "20",
+            "--external-campaign-tokens",
+            str(SESSION.get("prior_training_input_tokens", 0)),
+            "--execute",
+        ],
+        "disposable-training-fixture",
+        timeout=10 * 60,
+        cwd=REPO,
+        env=env,
+    )
+    result, checkpoint = _verify_training_output(output, phase="fixture")
+    counts = result.get("cursor", {})
+    observation = result.get("disposable_fixture", {})
+    if (
+        result.get("status") != "complete"
+        or result.get("examples") != 64
+        or counts.get("completed_updates") != 2
+        or counts.get("skipped_updates") != 0
+        or counts.get("training_input_tokens") != spec["nonpadding_training_input_tokens"]
+        or counts.get("supervised_target_tokens") != spec["supervised_response_and_eos_tokens"]
+        or observation.get("response_and_eos_positions_supervised") is not True
+        or observation.get("changed_parameter_elements", 0) <= 0
+    ):
+        raise ValueError("disposable fixture did not prove the declared updates and supervision")
+    save(
+        OUT / "disposable-fixture-verification.json",
+        {
+            "quality_evidence": False,
+            "actual_gpu_updates": counts["completed_updates"],
+            "checkpoint_sha256": sha(checkpoint),
+            "token_counts": counts,
+            "parameter_update_evidence": observation,
+            "main_pilot_initializer": "untouched_pretrained_in_separate_process",
+        },
+    )
+    return int(counts["training_input_tokens"])
 
 
 def _output_bytes() -> int:
@@ -647,6 +731,13 @@ def main() -> int:
         env = _offline_environment()
         runtime = _check_t4_and_logits_support()
         status.update(runtime)
+        fixture_tokens = 0
+        if SESSION.get("data_schema") == "one-line-constructive-pilot-v1":
+            status["state"] = "disposable_training_fixture"
+            save(OUT / "worker-status.json", status)
+            fixture_tokens = _run_disposable_training_fixture(dataset, env)
+            status = load(OUT / "worker-status.json")
+            status["disposable_fixture_training_input_tokens"] = fixture_tokens
         status["state"] = "baseline_evaluation"
         save(OUT / "worker-status.json", status)
         stage(
@@ -704,7 +795,7 @@ def main() -> int:
             "--checkpoint-every-updates",
             "25",
             "--external-campaign-tokens",
-            str(SESSION.get("prior_training_input_tokens", 0)),
+            str(SESSION.get("prior_training_input_tokens", 0) + fixture_tokens),
             "--execute",
         ]
         stage(
@@ -720,6 +811,16 @@ def main() -> int:
         status["training_result_fingerprint"] = result["fingerprint"]
         status["checkpoint_sha256"] = sha(checkpoint)
         status["training_input_tokens"] = result.get("cursor", {}).get("training_input_tokens")
+        status["total_session_training_input_tokens"] = (
+            fixture_tokens + status["training_input_tokens"]
+        )
+        if (
+            status["total_session_training_input_tokens"] > SESSION["maximum_training_tokens"]
+            or SESSION.get("prior_training_input_tokens", 0)
+            + status["total_session_training_input_tokens"]
+            > 100_000_000
+        ):
+            raise ValueError("fixture and pilot exceeded the aggregate training token budget")
         status["session_elapsed_seconds"] = time.monotonic() - STARTED
 
         if result["status"] == "deadline_stop":

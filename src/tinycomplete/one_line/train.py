@@ -14,7 +14,7 @@ import random
 import tempfile
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -23,12 +23,58 @@ from tinycomplete.one_line.context import (
     MAX_TOTAL_TOKENS,
     serialize_state_bounded,
 )
-from tinycomplete.one_line.contract import MAX_ACTION_TOKENS, EditAction, EditState, encode_action
+from tinycomplete.one_line.contract import (
+    MAX_ACTION_TOKENS,
+    ActionKind,
+    EditAction,
+    EditState,
+    apply_action,
+    encode_action,
+)
 
 IGNORE_INDEX = -100
 EFFECTIVE_BATCH = 32
 MAX_CAMPAIGN_INPUT_TOKENS = 100_000_000
 CHECKPOINT_VERSION = 1
+DISPOSABLE_FIXTURE_SCHEMA = "single-line-disposable-training-fixture-v1"
+
+
+def disposable_fixture_rows() -> list[dict[str, Any]]:
+    """64 explicit codec exercises, never a development or quality benchmark.
+
+    The instruction deliberately names the desired action. These are training
+    mechanics checks, not evidence that an editor intent can be inferred.
+    """
+    rows = []
+    kinds: tuple[ActionKind, ...] = ("keep", "replace_line", "insert_before", "delete_line")
+    for index in range(16):
+        for kind in kinds:
+            text = (
+                f'value_{index} = "λ{index}"' if kind in ("replace_line", "insert_before") else None
+            )
+            action = EditAction(kind, text)
+            state = EditState(
+                "fixture/example.py",
+                "python",
+                f"value_{index} = {index}\n",
+                0,
+                0,
+                relevant=(f"Disposable codec exercise: emit {encode_action(action)!r}.",),
+            )
+            rows.append(
+                {
+                    "id": f"disposable-{index:02d}-{kind}",
+                    "schema": DISPOSABLE_FIXTURE_SCHEMA,
+                    "split": "train",
+                    "source_type": "synthetic_disposable_codec_fixture",
+                    "source_license": "MIT",
+                    "quality_evidence": False,
+                    "state": asdict(state),
+                    "action": asdict(action),
+                    "after_source": apply_action(state, action),
+                }
+            )
+    return rows
 
 
 @dataclass(frozen=True)

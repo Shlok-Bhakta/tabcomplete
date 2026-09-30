@@ -114,6 +114,16 @@ def test_constructive_plan_enforces_prior_campaign_exposure() -> None:
         dataset_license=policy.dataset_license,
         source_file_license_status=policy.file_license_status,
     )
+    plan["training"]["disposable_fixture"] = {
+        "schema": "single-line-disposable-training-fixture-v1",
+        "sha256": "4" * 64,
+        "examples": 64,
+        "epochs": 1,
+        "peak_learning_rate": 1e-4,
+        "nonpadding_training_input_tokens": 10_000,
+        "supervised_response_and_eos_tokens": 400,
+        "quality_evidence": False,
+    }
     with pytest.raises(ValueError, match="aggregate campaign"):
         builder._validate_plan(plan, config)
     plan["budgets"].update(
@@ -188,6 +198,59 @@ def _worker_module(tmp_path: Path, session: dict[str, Any]):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_worker_fixture_requires_actual_updates_and_counts_both_phases(
+    tmp_path, monkeypatch
+) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    fixture_file = dataset / "training-fixture.jsonl"
+    fixture_file.write_text("synthetic test payload\n")
+    session = {
+        "session_seconds": 7200,
+        "reserve_seconds": 1200,
+        "prior_training_input_tokens": 538_275,
+        "disposable_fixture": {
+            "sha256": _sha(fixture_file),
+            "nonpadding_training_input_tokens": 10_000,
+            "supervised_response_and_eos_tokens": 400,
+        },
+    }
+    worker = _worker_module(tmp_path, session)
+    worker.OUT = tmp_path / "outputs"
+    worker.OUT.mkdir()
+    checkpoint = tmp_path / "fixture-checkpoint"
+    checkpoint.write_bytes(b"synthetic checkpoint")
+    commands = []
+    monkeypatch.setattr(worker, "stage", lambda command, *a, **kw: commands.append(command))
+    result = {
+        "status": "complete",
+        "examples": 64,
+        "cursor": {
+            "completed_updates": 2,
+            "skipped_updates": 0,
+            "training_input_tokens": 10_000,
+            "supervised_target_tokens": 400,
+        },
+        "disposable_fixture": {
+            "response_and_eos_positions_supervised": True,
+            "changed_parameter_elements": 3,
+        },
+    }
+    monkeypatch.setattr(worker, "_verify_training_output", lambda *a, **kw: (result, checkpoint))
+    assert worker._run_disposable_training_fixture(dataset, {}) == 10_000
+    assert commands[0][commands[0].index("--phase") + 1] == "fixture"
+    assert commands[0][commands[0].index("--model") + 1] == str(dataset)
+    evidence = json.loads((worker.OUT / "disposable-fixture-verification.json").read_text())
+    assert evidence["quality_evidence"] is False
+    result["cursor"]["skipped_updates"] = 1
+    with pytest.raises(ValueError, match="prove the declared updates"):
+        worker._run_disposable_training_fixture(dataset, {})
+    result["cursor"]["skipped_updates"] = 0
+    result["disposable_fixture"]["changed_parameter_elements"] = 0
+    with pytest.raises(ValueError, match="prove the declared updates"):
+        worker._run_disposable_training_fixture(dataset, {})
 
 
 def test_python311_bootstrap_preserves_deadline_and_uses_isolated_uv(

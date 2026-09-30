@@ -107,6 +107,45 @@ def read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def disposable_fixture_input(model_dir: Path) -> tuple[bytes, dict[str, Any]]:
+    """CPU-only preparation for the actual, separate training mechanics pass."""
+    from transformers import AutoTokenizer
+
+    from tinycomplete.one_line.contract import EditAction, EditState
+    from tinycomplete.one_line.train import (
+        DISPOSABLE_FIXTURE_SCHEMA,
+        disposable_fixture_rows,
+        encode_training_row,
+        token_counts,
+    )
+
+    rows = disposable_fixture_rows()
+    payload = (
+        "".join(json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n" for row in rows)
+    ).encode("utf-8")
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_dir, local_files_only=True, trust_remote_code=False
+    )
+    counts = token_counts(
+        [
+            encode_training_row(
+                tokenizer, EditState.from_mapping(row["state"]), EditAction(**row["action"])
+            )
+            for row in rows
+        ]
+    )
+    return payload, {
+        "schema": DISPOSABLE_FIXTURE_SCHEMA,
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "examples": 64,
+        "epochs": 1,
+        "peak_learning_rate": 1e-4,
+        "nonpadding_training_input_tokens": counts["nonpadding_training_input_tokens"],
+        "supervised_response_and_eos_tokens": counts["supervised_response_and_eos_tokens"],
+        "quality_evidence": False,
+    }
+
+
 def _run(args: list[str], *, timeout: int = 90) -> str:
     result = subprocess.run(args, capture_output=True, text=True, check=False, timeout=timeout)
     if result.returncode:
@@ -195,9 +234,24 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
     ):
         raise ValueError("pilot budget contract differs from the fixed campaign limits")
     if policy is CONSTRUCTIVE:
+        fixture = training.get("disposable_fixture", {})
+        if (
+            fixture.get("schema") != "single-line-disposable-training-fixture-v1"
+            or fixture.get("examples") != 64
+            or fixture.get("epochs") != 1
+            or fixture.get("peak_learning_rate") != 1e-4
+            or fixture.get("quality_evidence") is not False
+            or HEX_SHA256.fullmatch(str(fixture.get("sha256", ""))) is None
+            or type(fixture.get("nonpadding_training_input_tokens")) is not int
+            or fixture["nonpadding_training_input_tokens"] <= 0
+        ):
+            raise ValueError("constructive pilot requires the frozen disposable training fixture")
         validate_aggregate_budget(
             budgets,
-            planned_tokens=training["planned_nonpadding_input_tokens"],
+            planned_tokens=(
+                training["planned_nonpadding_input_tokens"]
+                + fixture["nonpadding_training_input_tokens"]
+            ),
             session_seconds=SESSION_SECONDS,
         )
     frozen_quota = plan.get("quota_at_freeze", {})
@@ -508,7 +562,12 @@ def inspect_training(
             "--reserve-minutes",
             "20",
             "--external-campaign-tokens",
-            str(plan["budgets"].get("prior_training_input_tokens", 0)),
+            str(
+                plan["budgets"].get("prior_training_input_tokens", 0)
+                + plan["training"]
+                .get("disposable_fixture", {})
+                .get("nonpadding_training_input_tokens", 0)
+            ),
         ]
         result = subprocess.run(
             command,
@@ -598,9 +657,10 @@ def prepare_bundle(
         raise ValueError("bundle branch differs from the frozen plan")
     if not HEX_SHA1.fullmatch(identity[1]):
         raise ValueError("bundle Git commit is invalid")
-    if git_identity is None and sha256_file(ROOT / policy.repository_plan_path) != checked[
-        "plan_sha256"
-    ]:
+    if (
+        git_identity is None
+        and sha256_file(ROOT / policy.repository_plan_path) != checked["plan_sha256"]
+    ):
         raise ValueError("committed pilot plan differs from the selected staged plan")
 
     if inspection is None:
@@ -614,12 +674,20 @@ def prepare_bundle(
             output_parent=output.parent,
         )
     training = plan["training"]
+    fixture_payload: bytes | None = None
+    fixture_spec: dict[str, Any] = {}
+    if policy is CONSTRUCTIVE:
+        fixture_payload, fixture_spec = disposable_fixture_input(model_dir)
+        if fixture_spec != training["disposable_fixture"]:
+            raise ValueError("disposable fixture tokenizer exposure differs from frozen plan")
     actual_tokens = inspection.get("planned_training_input_tokens")
     if (
         inspection.get("examples") != plan["data"]["train_count"]
         or actual_tokens != training["planned_nonpadding_input_tokens"]
         or not isinstance(actual_tokens, int)
         or actual_tokens > MAX_TRAINING_TOKENS
+        or actual_tokens + fixture_spec.get("nonpadding_training_input_tokens", 0)
+        > MAX_TRAINING_TOKENS
     ):
         raise ValueError("tokenizer preflight differs from the frozen two-million-token plan")
 
@@ -647,6 +715,7 @@ def prepare_bundle(
     review_path = manifest_path.parent / "independent_review.json"
     if policy is CONSTRUCTIVE:
         projected += review_path.stat().st_size
+        projected += len(fixture_payload or b"")
     if projected > MAX_NEW_STORAGE_BYTES:
         raise ValueError("pilot bundle exceeds the 12 GiB campaign artifact limit")
     output_parent = output.parent
@@ -684,6 +753,12 @@ def prepare_bundle(
         files["independent_review.json"] = _stage_file(
             review_path, dataset_dir / "independent_review.json"
         )
+        fixture_file = dataset_dir / "training-fixture.jsonl"
+        fixture_file.write_bytes(fixture_payload or b"")
+        files["training-fixture.jsonl"] = {
+            "bytes": fixture_file.stat().st_size,
+            "sha256": sha256_file(fixture_file),
+        }
     input_manifest = {
         "schema": INPUT_SCHEMA,
         "plan_sha256": checked["plan_sha256"],
@@ -742,6 +817,7 @@ def prepare_bundle(
         "epochs": 1,
         "phase": "pilot",
         "peak_learning_rate": training["peak_learning_rate"],
+        "disposable_fixture": fixture_spec,
         "quota_before_prepare": quota,
     }
     template = (Path(__file__).parent / "run.py").read_text(encoding="utf-8")

@@ -294,7 +294,7 @@ def main() -> None:
         raise ValueError("context serializer identity changed")
     if args.epochs not in (1, 2) or args.epochs > config["training"]["maximum_epochs"]:
         raise ValueError("at most two frozen training epochs are permitted")
-    if args.phase.startswith("probe") and args.epochs != 1:
+    if args.phase in ("fixture", "probe_1e-5", "probe_3e-5") and args.epochs != 1:
         raise ValueError("LR probes have one fixed pass")
     if args.phase == "pilot" and args.epochs != 1:
         raise ValueError("pilot has one fixed pass")
@@ -322,8 +322,19 @@ def main() -> None:
         ):
             raise ValueError("pilot plan or session budget differs from the frozen contract")
         if pilot_policy is CONSTRUCTIVE:
+            fixture_tokens = (
+                plan["training"]
+                .get("disposable_fixture", {})
+                .get("nonpadding_training_input_tokens")
+            )
+            if type(fixture_tokens) is not int or fixture_tokens <= 0:
+                raise ValueError("constructive pilot lacks disposable fixture token accounting")
             validate_aggregate_budget(
-                plan["budgets"],
+                {
+                    **plan["budgets"],
+                    "prior_training_input_tokens": plan["budgets"]["prior_training_input_tokens"]
+                    + fixture_tokens,
+                },
                 planned_tokens=plan["training"]["planned_nonpadding_input_tokens"],
                 session_seconds=plan["budgets"]["max_session_seconds"],
                 external_campaign_tokens=args.external_campaign_tokens,
@@ -338,6 +349,11 @@ def main() -> None:
         minimum_main_train=config["data"]["minimum_main_train"],
         pilot_schema=plan.get("data", {}).get("schema", INSTINCT.data_schema),
     )
+    if args.phase == "fixture":
+        from tinycomplete.one_line.train import disposable_fixture_rows
+
+        if rows != disposable_fixture_rows():
+            raise ValueError("fixture rows differ from the disposable codec exercises")
     if args.phase in ("main", "pilot"):
         if args.data_manifest is None:
             raise ValueError("main/pilot run needs a frozen data manifest")
@@ -491,6 +507,11 @@ def main() -> None:
     model.gradient_checkpointing_enable()
     device = torch.device("cuda:0")
     model.to(device)
+    # One small, declared Qwen2 final-norm parameter proves an actual update.
+    # Sampling occurs only outside the training hot loop.
+    fixture_before = (
+        model.model.norm.weight.detach().float().cpu().clone() if args.phase == "fixture" else None
+    )
     optimizer, optimizer_name = _optimizer(model)
     scheduler = CosineUpdateSchedule(
         optimizer,
@@ -614,6 +635,34 @@ def main() -> None:
             "latest_checkpoint": str(latest_path) if latest_path else None,
         }
     )
+    if fixture_before is not None:
+        fixture_after = model.model.norm.weight.detach().float().cpu()
+        delta = (fixture_after - fixture_before).abs()
+        summary["disposable_fixture"] = {
+            "quality_evidence": False,
+            "generation_quality_status": "not_measured_by_training_mechanics_check",
+            "response_and_eos_positions_supervised": all(
+                example.labels[: example.prompt_tokens] == (-100,) * example.prompt_tokens
+                and example.labels[-1] == tokenizer.eos_token_id
+                for example in encoded
+            ),
+            "observed_parameter": "model.norm.weight",
+            "changed_parameter_elements": int((delta > 0).sum().item()),
+            "maximum_absolute_parameter_delta": float(delta.max().item()),
+            "initial_parameter_sha256": hashlib.sha256(
+                fixture_before.numpy().tobytes()
+            ).hexdigest(),
+            "final_parameter_sha256": hashlib.sha256(fixture_after.numpy().tobytes()).hexdigest(),
+        }
+        atomic_json(args.output / "run_result.json", summary)
+        if (
+            run.status != "complete"
+            or run.cursor.completed_updates != len(batches)
+            or run.cursor.skipped_updates
+            or not summary["disposable_fixture"]["changed_parameter_elements"]
+            or not summary["disposable_fixture"]["response_and_eos_positions_supervised"]
+        ):
+            raise RuntimeError("disposable fixture failed actual update or supervision checks")
     if run.status == "complete":
         summary["inference_export"] = _export_inference(
             model,
