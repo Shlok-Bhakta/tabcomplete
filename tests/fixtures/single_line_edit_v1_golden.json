@@ -1,0 +1,359 @@
+{
+  "actions": [
+    {
+      "action": {
+        "kind": "replace_line",
+        "text": "    return \"hello ✓, \" + name"
+      },
+      "after_source": "def greet(name: str):\r\n    return \"hello ✓, \" + name\n# finished ✓\r\n",
+      "name": "replace_mixed_crlf",
+      "state": {
+        "cursor_col": 12,
+        "file_id": "src/greeter.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def greet(name: str):",
+            "old_text": "def greet(name):",
+            "row": 0
+          }
+        ],
+        "relevant": [
+          "from typing import Any",
+          "unicode note: 東京"
+        ],
+        "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+        "target_row": 1
+      },
+      "state_name": "mixed_unicode_crlf",
+      "wire": "R\t    return \"hello ✓, \" + name"
+    },
+    {
+      "action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "after_source": "def greet(name: str):\r\n# finished ✓\r\n",
+      "name": "delete_mixed_line",
+      "state": {
+        "cursor_col": 12,
+        "file_id": "src/greeter.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def greet(name: str):",
+            "old_text": "def greet(name):",
+            "row": 0
+          }
+        ],
+        "relevant": [
+          "from typing import Any",
+          "unicode note: 東京"
+        ],
+        "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+        "target_row": 1
+      },
+      "state_name": "mixed_unicode_crlf",
+      "wire": "D"
+    },
+    {
+      "action": {
+        "kind": "insert_before",
+        "text": "    # café"
+      },
+      "after_source": "def greet(name: str):\r\n    # café\n    return \"hi, \" + name\n# finished ✓\r\n",
+      "name": "insert_mixed_line",
+      "state": {
+        "cursor_col": 12,
+        "file_id": "src/greeter.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def greet(name: str):",
+            "old_text": "def greet(name):",
+            "row": 0
+          }
+        ],
+        "relevant": [
+          "from typing import Any",
+          "unicode note: 東京"
+        ],
+        "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+        "target_row": 1
+      },
+      "state_name": "mixed_unicode_crlf",
+      "wire": "I\t    # café"
+    },
+    {
+      "action": {
+        "kind": "keep",
+        "text": null
+      },
+      "after_source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+      "name": "keep",
+      "state": {
+        "cursor_col": 12,
+        "file_id": "src/greeter.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def greet(name: str):",
+            "old_text": "def greet(name):",
+            "row": 0
+          }
+        ],
+        "relevant": [
+          "from typing import Any",
+          "unicode note: 東京"
+        ],
+        "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+        "target_row": 1
+      },
+      "state_name": "mixed_unicode_crlf",
+      "wire": "N"
+    },
+    {
+      "action": {
+        "kind": "insert_before",
+        "text": "// tail ✓"
+      },
+      "after_source": "fn main() {\n    println!(\"✓\");\n}\n// tail ✓",
+      "name": "insert_unterminated_eof",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "examples/main.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn main() {\n    println!(\"✓\");\n}",
+        "target_row": 3
+      },
+      "state_name": "eof_unterminated",
+      "wire": "I\t// tail ✓"
+    },
+    {
+      "action": {
+        "kind": "insert_before",
+        "text": "package main"
+      },
+      "after_source": "package main",
+      "name": "insert_empty_eof",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "src/new.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "",
+        "target_row": 0
+      },
+      "state_name": "empty_eof",
+      "wire": "I\tpackage main"
+    }
+  ],
+  "bounded_contexts": [
+    {
+      "expected_history_count": 0,
+      "expected_input_tokens": 759,
+      "expected_prompt": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"src/window.ts\"\nFiletype: typescript\nTarget row (zero based): 25\nCursor byte column: 4\nPhysical line count: 51\nCurrent source lines (JSON strings; indices are original rows):\n23 [LF] \"let symbol_23 = \\\"value-23-東京\\\";\"\n24 [LF] \"let symbol_24 = \\\"value-24-東京\\\";\"\n25 [LF] \"let symbol_25 = \\\"value-25-東京\\\";\"\n26 [LF] \"let symbol_26 = \\\"value-26-東京\\\";\"\n27 [LF] \"let symbol_27 = \\\"value-27-東京\\\";\"\nRecent edits, oldest to newest (JSON old and new text):\nRelevant definitions and imports (JSON strings):\n2 \"// nearby source symbol: λ\"\n</single-line-edit-v1>\nAction:",
+      "expected_relevant_count": 1,
+      "expected_rows": [
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "max_input_tokens": 760,
+      "name": "bounded_many_rows_history_relevant",
+      "state": {
+        "cursor_col": 4,
+        "file_id": "src/window.ts",
+        "filetype": "typescript",
+        "history": [
+          {
+            "new_text": "let symbol_3 = \"changed\";",
+            "old_text": "let symbol_3 = \"value-3-東京\";",
+            "row": 3
+          },
+          {
+            "new_text": "let symbol_8 = \"updated\";",
+            "old_text": "let symbol_8 = \"value-8-東京\";",
+            "row": 8
+          }
+        ],
+        "relevant": [
+          "import { helper } from \"./helper\";",
+          "export type Mode = \"fast\" | \"safe\";",
+          "// nearby source symbol: λ"
+        ],
+        "source": "let symbol_0 = \"value-0-東京\";\nlet symbol_1 = \"value-1-東京\";\nlet symbol_2 = \"value-2-東京\";\nlet symbol_3 = \"value-3-東京\";\nlet symbol_4 = \"value-4-東京\";\nlet symbol_5 = \"value-5-東京\";\nlet symbol_6 = \"value-6-東京\";\nlet symbol_7 = \"value-7-東京\";\nlet symbol_8 = \"value-8-東京\";\nlet symbol_9 = \"value-9-東京\";\nlet symbol_10 = \"value-10-東京\";\nlet symbol_11 = \"value-11-東京\";\nlet symbol_12 = \"value-12-東京\";\nlet symbol_13 = \"value-13-東京\";\nlet symbol_14 = \"value-14-東京\";\nlet symbol_15 = \"value-15-東京\";\nlet symbol_16 = \"value-16-東京\";\nlet symbol_17 = \"value-17-東京\";\nlet symbol_18 = \"value-18-東京\";\nlet symbol_19 = \"value-19-東京\";\nlet symbol_20 = \"value-20-東京\";\nlet symbol_21 = \"value-21-東京\";\nlet symbol_22 = \"value-22-東京\";\nlet symbol_23 = \"value-23-東京\";\nlet symbol_24 = \"value-24-東京\";\nlet symbol_25 = \"value-25-東京\";\nlet symbol_26 = \"value-26-東京\";\nlet symbol_27 = \"value-27-東京\";\nlet symbol_28 = \"value-28-東京\";\nlet symbol_29 = \"value-29-東京\";\nlet symbol_30 = \"value-30-東京\";\nlet symbol_31 = \"value-31-東京\";\nlet symbol_32 = \"value-32-東京\";\nlet symbol_33 = \"value-33-東京\";\nlet symbol_34 = \"value-34-東京\";\nlet symbol_35 = \"value-35-東京\";\nlet symbol_36 = \"value-36-東京\";\nlet symbol_37 = \"value-37-東京\";\nlet symbol_38 = \"value-38-東京\";\nlet symbol_39 = \"value-39-東京\";\nlet symbol_40 = \"value-40-東京\";\nlet symbol_41 = \"value-41-東京\";\nlet symbol_42 = \"value-42-東京\";\nlet symbol_43 = \"value-43-東京\";\nlet symbol_44 = \"value-44-東京\";\nlet symbol_45 = \"value-45-東京\";\nlet symbol_46 = \"value-46-東京\";\nlet symbol_47 = \"value-47-東京\";\nlet symbol_48 = \"value-48-東京\";\nlet symbol_49 = \"value-49-東京\";\nlet symbol_50 = \"value-50-東京\";\n",
+        "target_row": 25
+      }
+    }
+  ],
+  "context_policy_version": "single-line-context-v2",
+  "contexts": [
+    {
+      "expected_prompt": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"src/greeter.py\"\nFiletype: python\nTarget row (zero based): 1\nCursor byte column: 12\nPhysical line count: 3\nCurrent source lines (JSON strings; indices are original rows):\n0 [CRLF] \"def greet(name: str):\"\n1 [LF] \"    return \\\"hi, \\\" + name\"\n2 [CRLF] \"# finished ✓\"\nRecent edits, oldest to newest (JSON old and new text):\n0 row=0 old=\"def greet(name):\" new=\"def greet(name: str):\"\nRelevant definitions and imports (JSON strings):\n0 \"from typing import Any\"\n1 \"unicode note: 東京\"\n</single-line-edit-v1>\nAction:",
+      "expected_rows": [
+        0,
+        1,
+        2
+      ],
+      "name": "mixed_unicode_crlf",
+      "state": {
+        "cursor_col": 12,
+        "file_id": "src/greeter.py",
+        "filetype": "python",
+        "history": [
+          {
+            "new_text": "def greet(name: str):",
+            "old_text": "def greet(name):",
+            "row": 0
+          }
+        ],
+        "relevant": [
+          "from typing import Any",
+          "unicode note: 東京"
+        ],
+        "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+        "target_row": 1
+      }
+    },
+    {
+      "expected_prompt": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"examples/main.rs\"\nFiletype: rust\nTarget row (zero based): 3\nCursor byte column: 0\nPhysical line count: 3\nCurrent source lines (JSON strings; indices are original rows):\n0 [LF] \"fn main() {\"\n1 [LF] \"    println!(\\\"✓\\\");\"\n2 [EOF] \"}\"\n3 [APPEND AT EOF]\nRecent edits, oldest to newest (JSON old and new text):\nRelevant definitions and imports (JSON strings):\n</single-line-edit-v1>\nAction:",
+      "expected_rows": [
+        0,
+        1,
+        2
+      ],
+      "name": "eof_unterminated",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "examples/main.rs",
+        "filetype": "rust",
+        "history": [],
+        "relevant": [],
+        "source": "fn main() {\n    println!(\"✓\");\n}",
+        "target_row": 3
+      }
+    },
+    {
+      "expected_prompt": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"src/new.go\"\nFiletype: go\nTarget row (zero based): 0\nCursor byte column: 0\nPhysical line count: 0\nCurrent source lines (JSON strings; indices are original rows):\n0 [APPEND AT EOF]\nRecent edits, oldest to newest (JSON old and new text):\nRelevant definitions and imports (JSON strings):\n</single-line-edit-v1>\nAction:",
+      "expected_rows": [],
+      "name": "empty_eof",
+      "state": {
+        "cursor_col": 0,
+        "file_id": "src/new.go",
+        "filetype": "go",
+        "history": [],
+        "relevant": [],
+        "source": "",
+        "target_row": 0
+      }
+    }
+  ],
+  "decode_cases": [
+    {
+      "action": {
+        "kind": "keep",
+        "text": null
+      },
+      "generated_tokens": 1,
+      "name": "no_edit",
+      "status": "ok",
+      "stop_type": "eos",
+      "wire": "N"
+    },
+    {
+      "action": {
+        "kind": "delete_line",
+        "text": null
+      },
+      "generated_tokens": 1,
+      "name": "delete",
+      "status": "ok",
+      "stop_type": "eos",
+      "wire": "D"
+    },
+    {
+      "action": {
+        "kind": "replace_line",
+        "text": ""
+      },
+      "generated_tokens": 2,
+      "name": "empty_replace",
+      "status": "ok",
+      "stop_type": "eos",
+      "wire": "R\t"
+    },
+    {
+      "action": {
+        "kind": "replace_line",
+        "text": " \t"
+      },
+      "generated_tokens": 4,
+      "name": "whitespace_replace",
+      "status": "ok",
+      "stop_type": "eos",
+      "wire": "R\t \t"
+    },
+    {
+      "action": {
+        "kind": "insert_before",
+        "text": "λ🙂"
+      },
+      "generated_tokens": 5,
+      "name": "unicode_insert",
+      "status": "ok",
+      "stop_type": "eos",
+      "wire": "I\tλ🙂"
+    },
+    {
+      "action": {
+        "kind": "insert_before",
+        "text": "x"
+      },
+      "generated_tokens": 64,
+      "name": "exact_ceiling",
+      "status": "ok",
+      "stop_type": "eos",
+      "wire": "I\tx"
+    },
+    {
+      "action": null,
+      "generated_tokens": 2,
+      "name": "wrong_newline",
+      "status": "malformed",
+      "stop_type": "eos",
+      "wire": "N\n"
+    },
+    {
+      "action": null,
+      "generated_tokens": 5,
+      "name": "multiline",
+      "status": "malformed",
+      "stop_type": "eos",
+      "wire": "R\tfirst\nsecond"
+    },
+    {
+      "action": null,
+      "generated_tokens": 1,
+      "name": "length_cutoff",
+      "status": "incomplete",
+      "stop_type": "length",
+      "wire": "N"
+    },
+    {
+      "action": null,
+      "generated_tokens": 65,
+      "name": "over_ceiling",
+      "status": "incomplete",
+      "stop_type": "eos",
+      "wire": "D"
+    }
+  ],
+  "schema": "single-line-edit-v1-python-lua-golden-v1",
+  "wire_version": "single-line-edit-v1"
+}

@@ -6,6 +6,7 @@ local collector = require("tabcomplete_trajectory")
 local buffers = require("tabcomplete_trajectory.buffers")
 local repository = require("tabcomplete_trajectory.repository")
 local sse = require("tabcomplete_trajectory.sse")
+local single_line_v1 = require("tabcomplete_trajectory.single_line_v1")
 
 local ns = vim.api.nvim_create_namespace("TabCompletePredict")
 local allowed_modes = { manual = true, automatic = true, shadow = true, off = true }
@@ -14,6 +15,7 @@ local opts = {
   model = "unconfigured", model_revision = "unconfigured", precision = "Q4_K_M",
   adapter_identity = "none", runtime_config_hash = "unconfigured",
   context_policy_version = "compact-next-edit-context-v1", mode = "manual",
+  protocol_version = "compact-next-edit-v1", single_line_input_tokens = 1024,
   experimental_auto_opt_in = false, automatic_quality_validated = false,
   automatic_personalization_enabled = false, debounce_ms = 250, expiry_ms = 30000,
   max_buffer_bytes = 1048576, max_prompt_tokens = 2048, target_prompt_tokens = 1024,
@@ -98,6 +100,29 @@ local function emit(state, kind, payload)
   payload.file = state.path
   return collector.emit(state.bufnr, kind, payload)
 end
+local function record_request(state)
+  collector.anchor_prediction(state.bufnr)
+  collector.store_prediction_blob(state.prompt, function() end)
+  local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+  local ev = emit(state, "prediction_requested", {
+    provider = "tabcomplete-local", model = opts.model, model_revision = opts.model_revision,
+    model_gguf_sha256 = opts.model_revision, precision = opts.precision,
+    adapter_identity = opts.adapter_identity, runtime_config_hash = opts.runtime_config_hash,
+    context_policy_version = is_v1 and single_line_v1.CONTEXT_POLICY_VERSION
+      or opts.context_policy_version,
+    requested_at_ms = state.requested_at_ms,
+    context_hash = state.context_hash, context_blob_hash = state.context_hash,
+    pre_state_hash = state.content_hash, pre_state_sequence = state.pre_state_sequence,
+    file_identity = state.file_identity, cursor = state.cursor,
+    editable_range = state.editable_range or { start_row = state.row, start_col = state.start_col,
+      end_row = state.row, end_col = state.end_col },
+    max_output_tokens = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96,
+    temperature = 0, wire_version = opts.protocol_version,
+    human_verified = false, mode = mode, display_policy = mode,
+  })
+  state.request_event_id = ev and ev.event_id
+  counters.requested = counters.requested + 1
+end
 local function lifecycle(state, outcome, reason)
   if not state then return end
   emit(state, "heartbeat", { prediction_lifecycle = outcome, reason = reason,
@@ -133,8 +158,15 @@ local function acquire_lock(state)
   return true
 end
 local function state_fingerprint(state)
-  return util.sha256hex(table.concat({ state.path, state.repo_identity, state.content_hash,
+  return util.sha256hex(table.concat({ opts.protocol_version, state.path, state.repo_identity, state.content_hash,
     tostring(state.row), tostring(state.start_col), tostring(state.changedtick) }, "\0"))
+end
+local function normalized_filetype(filetype)
+  if filetype == "python" then return "python" end
+  if filetype == "typescript" or filetype == "typescriptreact" then return "typescript" end
+  if filetype == "rust" then return "rust" end
+  if filetype == "go" then return "go" end
+  return nil
 end
 local function buffer_state()
   local buf = vim.api.nvim_get_current_buf()
@@ -187,12 +219,41 @@ local function buffer_state()
       .. "\n</actual-recent-edit>\n"
   end
   local filetype = vim.bo[buf].filetype
+  local cache = repository.cache
+  local identity = cache.root and (cache.root .. ":" .. (cache.head or "")) or path
+  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+    local canonical_filetype = normalized_filetype(filetype)
+    if not canonical_filetype then return nil, "single-line-edit-v1 does not support " .. filetype end
+    local history_items = {}
+    if latest and not latest.deleted_text:find("\n", 1, true)
+        and not latest.inserted_text:find("\n", 1, true) then
+      history_items[1] = { row = latest.start_row, old_text = latest.deleted_text,
+        new_text = latest.inserted_text }
+    end
+    local contract_state = {
+      file_id = path, filetype = canonical_filetype, source = content_of(buf), target_row = row,
+      cursor_col = col, history = history_items, relevant = {},
+    }
+    local state_ok = pcall(single_line_v1.new_context, contract_state)
+    if not state_ok then return nil, "buffer is outside the single-line-edit-v1 source contract" end
+    local state = {
+      bufnr = buf, path = path, row = row, start_col = col, end_col = #line,
+      prefix_line = line:sub(1, col), region = line,
+      changedtick = vim.api.nvim_buf_get_changedtick(buf), repo_identity = identity,
+      content_hash = util.sha256hex(contract_state.source), source = contract_state.source,
+      contract_state = contract_state, prompt = nil, context_hash = nil,
+      requested_at_ms = now(), prediction_id = util.uuid(), request_id = util.uuid(),
+      filetype = filetype, file_identity = util.file_id(util.abspath(path), cache.root, cache.root_name),
+      pre_state_sequence = collector.seq, cursor = { row = row, col = col },
+      editable_range = { start_row = row, start_col = 0, end_row = row, end_col = #line },
+    }
+    state.fingerprint = state_fingerprint(state)
+    return state
+  end
   local prompt = "<repo " .. path .. ">\n<filetype " .. filetype .. ">\n"
     .. history .. "<file " .. path .. ">\n" .. before .. "[[EDIT]]" .. region
     .. "[[/EDIT]]" .. after .. "\n</file>\n<P " .. path .. " " .. region_start .. ">\n"
     .. "Return one compact next-edit action: N\\n for no edit or R\\n followed by exact replacement text. End with EOS.\n"
-  local cache = repository.cache
-  local identity = cache.root and (cache.root .. ":" .. (cache.head or "")) or path
   local state = {
     bufnr = buf, path = path, row = row, start_col = col, end_col = #line,
     prefix_line = line:sub(1, col), region = region,
@@ -213,7 +274,12 @@ local function still_current(state)
   local pos = vim.api.nvim_win_get_cursor(0)
   if pos[1] - 1 ~= state.row or pos[2] ~= state.start_col then return false end
   local line = vim.api.nvim_buf_get_lines(state.bufnr, state.row, state.row + 1, false)[1]
-  if not line or line:sub(state.start_col + 1, state.end_col) ~= state.region then return false end
+  if not line then return false end
+  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+    if #line ~= state.end_col or not utf8_boundary(line, state.start_col) then return false end
+    return content_of(state.bufnr) == state.source
+  end
+  if line:sub(state.start_col + 1, state.end_col) ~= state.region then return false end
   if not utf8_boundary(line, state.start_col) or not utf8_boundary(line, state.end_col) then return false end
   return util.sha256hex(content_of(state.bufnr)) == state.content_hash
 end
@@ -233,6 +299,35 @@ local function classify_delta(state, delta)
   local key = collector.last_key_event
   local key_correlated = opts.synthetic or (key and key.bufnr == state.bufnr
     and key.mode and key.mode:find("^i") and now() - key.timestamp_ms <= 250)
+  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+    if delta and key_correlated and delta.start_row == state.row then
+      local action = state.action
+      local matched = false
+      local offered = action.text or ""
+      if action.kind == "replace_line" then
+        matched = delta.old_end_row == state.row + 1 and delta.new_end_row == state.row + 1
+          and delta.deleted_text == state.region and delta.inserted_text == offered
+      elseif action.kind == "insert_before" then
+        matched = delta.old_end_row == state.row and delta.new_end_row == state.row + 1
+          and delta.deleted_text == "" and delta.inserted_text == offered
+      elseif action.kind == "delete_line" then
+        matched = delta.old_end_row == state.row + 1 and delta.new_end_row == state.row
+          and delta.deleted_text == state.region and delta.inserted_text == ""
+      end
+      if matched then
+        result = "typed_match"
+        matched_bytes = #offered
+      elseif action.kind ~= "delete_line" and offered ~= ""
+          and delta.inserted_text ~= "" and offered:sub(1, #delta.inserted_text) == delta.inserted_text
+          and delta.start_row == state.row then
+        result = "typed_partial_match"
+        matched_bytes = #delta.inserted_text
+      else
+        result = "rejected_implicit_typing"
+      end
+    end
+    return result, visible_ms, matched_bytes, key_correlated and key or nil
+  end
   if delta and delta.start_row <= state.row and delta.new_end_row > state.row
       and util.current_mode():find("^i") and key_correlated then
     local new_line = vim.api.nvim_buf_get_lines(state.bufnr, state.row, state.row + 1, false)[1] or ""
@@ -307,6 +402,59 @@ local function invalidate(reason)
   phase = pending and "request_running" or "idle"
 end
 local function show(state, action)
+  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+    if action.kind == "keep" then
+      lifecycle(state, "model_no_edit", "model emitted N")
+      counters.model_no_edit = counters.model_no_edit + 1
+      last_status = "model_no_edit"
+      return
+    end
+    if action.kind == "replace_line" and action.text == state.region then
+      lifecycle(state, "model_no_edit", "unchanged line replacement")
+      counters.model_no_edit = counters.model_no_edit + 1
+      last_status = "unchanged replacement"
+      return
+    end
+    action.action = action.kind
+    state.action = action
+    state.action_range = single_line_v1.action_range(state.contract_state, action)
+    state.shown_at_ms = now()
+    local label
+    if action.kind == "delete_line" then
+      label = "[delete line: " .. state.region .. "]"
+    elseif action.kind == "insert_before" then
+      label = "[insert before: " .. action.text .. "]"
+    else
+      label = "[replace line: " .. action.text .. "]"
+    end
+    vim.api.nvim_buf_set_extmark(state.bufnr, ns, state.row, 0,
+      { virt_text = { { label, "Comment" } }, virt_text_pos = "eol", hl_mode = "combine" })
+    active = state
+    phase = "suggestion_displayed"
+    local shown = emit(state, "prediction_shown", {
+      proposed_start = { row = state.action_range.start_row, col = state.action_range.start_col },
+      proposed_end = { row = state.action_range.end_row, col = state.action_range.end_col },
+      proposed_start_byte = state.action_range.start_byte,
+      proposed_end_byte = state.action_range.end_byte,
+      proposed_range_end_exclusive = state.action_range.end_exclusive,
+      proposed_range_includes_terminator = state.action_range.includes_terminator,
+      proposed_text = action.text, action = action.kind, shown_at_ms = state.shown_at_ms,
+      context_hash = state.context_hash, pre_state_hash = state.content_hash,
+      active_buffer = true, focused = not vim.g.tabcomplete_predictor_focus_lost,
+      display_policy = mode, action_blob_hash = state.action_blob_hash,
+      wire_version = single_line_v1.WIRE_VERSION,
+    })
+    state.shown_event_id = shown and shown.event_id
+    counters.displayed = counters.displayed + 1
+    if not expiry then expiry = vim.uv.new_timer() end
+    stop_timer(expiry)
+    local id = state.prediction_id
+    expiry:start(opts.expiry_ms, 0, function()
+      vim.schedule(function() if active and active.prediction_id == id then dismiss("expired") end end)
+    end)
+    last_status = "proposal shown"
+    return
+  end
   if action.action == "no_edit" then
     lifecycle(state, "model_no_edit", "model emitted N")
     counters.model_no_edit = counters.model_no_edit + 1
@@ -379,6 +527,9 @@ local function finished(request, result)
     if request.obsolete then
       last_status = "stale response discarded"
       counters.stale_discarded = counters.stale_discarded + 1
+    elseif request.context_error then
+      lifecycle(state, "invalidated_unseen", request.context_error)
+      last_status = request.context_error
     elseif request.parser and request.parser.error then
       lifecycle(state, "invalid_output", request.parser.error)
       counters.invalid_output = counters.invalid_output + 1
@@ -395,7 +546,10 @@ local function finished(request, result)
       counters.stale_discarded = counters.stale_discarded + 1
       last_status = "stale response discarded"
     else
-      local action, raw_or_err = sse.finish(request.parser)
+      local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+      local action, raw_or_err
+      if is_v1 then action, raw_or_err = sse.finish_single_line(request.parser)
+      else action, raw_or_err = sse.finish(request.parser) end
       if not action then
         lifecycle(state, "invalid_output", raw_or_err)
         counters.invalid_output = counters.invalid_output + 1
@@ -407,23 +561,42 @@ local function finished(request, result)
         local raw_response = table.concat(request.parser.raw_chunks)
         state.raw_response_hash = util.sha256hex(raw_response)
         collector.store_prediction_blob(raw_response, function() end)
-        if action.action == "replace" then
+        if is_v1 then
+          action.text = action.text or ""
+          local canonical_action = vim.json.encode({ kind = action.kind, text =
+            (action.kind == "keep" or action.kind == "delete_line") and vim.NIL or action.text })
+          state.action_blob_hash = util.sha256hex(canonical_action)
+          collector.store_prediction_blob(canonical_action, function() end)
+          emit(state, "prediction_generated", { raw_response_hash = state.raw_response_hash,
+            action_blob_hash = state.action_blob_hash, canonical_action = action.kind,
+            stop_type = request.parser.terminal.stop_type, context_hash = state.context_hash,
+            context_policy_version = single_line_v1.CONTEXT_POLICY_VERSION,
+            wire_version = single_line_v1.WIRE_VERSION,
+            prompt_tokens = state.prompt_tokens, max_output_tokens = single_line_v1.MAX_ACTION_TOKENS,
+            first_chunk_at_ms = request.first_chunk_at_ms,
+            first_token_at_ms = request.first_token_at_ms,
+            completed_at_ms = state.responded_at_ms,
+            model_elapsed_ms = state.responded_at_ms - state.requested_at_ms,
+            backend_timings = request.parser.terminal.timings })
+        elseif action.action == "replace" then
           state.action_blob_hash = action.text == "" and state.raw_response_hash
             or util.sha256hex(action.text)
           if action.text ~= "" then collector.store_prediction_blob(action.text, function() end) end
         else
           state.action_blob_hash = state.raw_response_hash
         end
-        emit(state, "prediction_generated", { raw_response_hash = state.raw_response_hash,
-          action_blob_hash = state.action_blob_hash, canonical_action = action.action,
-          stop_type = request.parser.terminal.stop_type, context_hash = state.context_hash,
-          prompt_tokens = state.prompt_tokens, context_expanded = state.prompt_tokens
-            and state.prompt_tokens > opts.target_prompt_tokens or false,
-          first_chunk_at_ms = request.first_chunk_at_ms,
-          first_token_at_ms = request.first_token_at_ms,
-          completed_at_ms = state.responded_at_ms,
-          model_elapsed_ms = state.responded_at_ms - state.requested_at_ms,
-          backend_timings = request.parser.terminal.timings })
+        if not is_v1 then
+          emit(state, "prediction_generated", { raw_response_hash = state.raw_response_hash,
+            action_blob_hash = state.action_blob_hash, canonical_action = action.action,
+            stop_type = request.parser.terminal.stop_type, context_hash = state.context_hash,
+            prompt_tokens = state.prompt_tokens, context_expanded = state.prompt_tokens
+              and state.prompt_tokens > opts.target_prompt_tokens or false,
+            first_chunk_at_ms = request.first_chunk_at_ms,
+            first_token_at_ms = request.first_token_at_ms,
+            completed_at_ms = state.responded_at_ms,
+            model_elapsed_ms = state.responded_at_ms - state.requested_at_ms,
+            backend_timings = request.parser.terminal.timings })
+        end
         last_latency_ms = state.responded_at_ms - state.requested_at_ms
         if mode == "shadow" then
           lifecycle(state, "shadow_only", "proposal was not displayed")
@@ -441,7 +614,9 @@ local function start_generation(request)
   local state = request.state
   request.kind = "generation"
   request.parser = sse.new(opts.max_response_bytes)
-  local body = vim.json.encode({ prompt = state.prompt, n_predict = 96, temperature = 0,
+  local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+  local body = vim.json.encode({ prompt = state.prompt,
+    n_predict = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96, temperature = 0,
     stream = true, cache_prompt = true, id_slot = 0, n_keep = 0 })
   local function chunk(data)
     if data and data ~= "" then
@@ -464,7 +639,91 @@ local function start_generation(request)
   end
   phase = "request_running"
 end
+local function count_prompt_tokens(request, prompt, callback)
+  request.kind = "tokenize"
+  local function complete(result)
+    vim.schedule(function()
+      if pending ~= request then return end
+      if request.obsolete then finished(request, { code = 0 }); return end
+      local ok, decoded = pcall(vim.json.decode, result.stdout or "")
+      if result.code ~= 0 or not ok or type(decoded) ~= "table"
+          or type(decoded.tokens) ~= "table" then
+        finished(request, { code = result.code ~= 0 and result.code or 1 })
+        return
+      end
+      if request.process then request.process = nil end
+      callback(#decoded.tokens)
+    end)
+  end
+  local body = vim.json.encode({ content = prompt, add_special = true, parse_special = true })
+  if M._tokenize_impl then
+    request.process = M._tokenize_impl(prompt, true, true, complete)
+  else
+    request.process = vim.system({ "curl", "-sS", "-f", "-m", "5", "-X", "POST",
+      "-H", "Content-Type: application/json", "--data-binary", "@-", opts.url .. "/tokenize" },
+      { stdin = body, text = true, timeout = 6000 }, complete)
+  end
+end
+local function tokenize_single_line(request)
+  local state = request.state
+  local context = single_line_v1.new_context(state.contract_state)
+  local input_budget = opts.single_line_input_tokens
+  if type(input_budget) ~= "number" or input_budget % 1 ~= 0 or input_budget < 1
+      or input_budget + single_line_v1.MAX_ACTION_TOKENS > single_line_v1.MAX_TOTAL_TOKENS then
+    request.context_error = "single-line input token budget is outside the validated total context"
+    finished(request, { code = 0 })
+    return
+  end
+  local function context_failure(reason)
+    request.context_error = reason
+    finished(request, { code = 0 })
+  end
+  local function fit_prompt(prompt, on_fit)
+    count_prompt_tokens(request, prompt, function(count)
+      if count > input_budget or count + single_line_v1.MAX_ACTION_TOKENS
+          > single_line_v1.MAX_TOTAL_TOKENS then
+        on_fit(false, count)
+      else
+        on_fit(true, count)
+      end
+    end)
+  end
+  local function take_next()
+    local candidate = context:next_prompt()
+    if not candidate then
+      local prompt = context:prompt()
+      fit_prompt(prompt, function(fits, count)
+        if not fits then context_failure("mandatory target and markers exceed input budget")
+        else
+          state.prompt, state.prompt_tokens = prompt, count
+          state.context_hash = util.sha256hex(prompt)
+          request.context_included = context:included()
+          record_request(state)
+          start_generation(request)
+        end
+      end)
+      return
+    end
+    fit_prompt(candidate, function(fits, count)
+      context:resolve(fits)
+      if fits then request.last_context_count = count end
+      take_next()
+    end)
+  end
+  local initial = context:prompt()
+  fit_prompt(initial, function(fits, count)
+    if not fits then context_failure("mandatory target and markers exceed input budget")
+    else
+      request.last_context_count = count
+      take_next()
+    end
+  end)
+end
 local function tokenize(request)
+  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+    tokenize_single_line(request)
+    return
+  end
   local state = request.state
   if M._request_impl then start_generation(request); return end
   request.kind = "tokenize"
@@ -517,26 +776,12 @@ function M.predict()
   end
   latest_wanted = false
   last_fingerprint = state.fingerprint
-  local request = { state = state, kind = "tokenize", has_lock = not M._request_impl }
+  local request = { state = state, kind = "tokenize",
+    has_lock = not M._request_impl and not M._tokenize_impl }
   pending = request -- set before an immediate test callback can run
   phase = "request_running"
   collector.anchor_prediction(state.bufnr)
-  collector.store_prediction_blob(state.prompt, function() end)
-  local ev = emit(state, "prediction_requested", {
-    provider = "tabcomplete-local", model = opts.model, model_revision = opts.model_revision,
-    model_gguf_sha256 = opts.model_revision, precision = opts.precision,
-    adapter_identity = opts.adapter_identity, runtime_config_hash = opts.runtime_config_hash,
-    context_policy_version = opts.context_policy_version, requested_at_ms = state.requested_at_ms,
-    context_hash = state.context_hash, context_blob_hash = state.context_hash,
-    pre_state_hash = state.content_hash, pre_state_sequence = state.pre_state_sequence,
-    file_identity = state.file_identity, cursor = state.cursor,
-    editable_range = { start_row = state.row, start_col = state.start_col,
-      end_row = state.row, end_col = state.end_col },
-    max_output_tokens = 96, temperature = 0, wire_version = "compact-next-edit-v1",
-    human_verified = false, mode = mode, display_policy = mode,
-  })
-  state.request_event_id = ev and ev.event_id
-  counters.requested = counters.requested + 1
+  if opts.protocol_version ~= single_line_v1.WIRE_VERSION then record_request(state) end
   tokenize(request)
   return true
 end
@@ -544,6 +789,35 @@ function M.accept()
   if not active or not active.action then return false, "no active proposal" end
   local state = active
   if not still_current(state) then dismiss("navigation"); return false, "stale proposal" end
+  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+    if state.action.kind == "keep" then return false, "no edit" end
+    applying = true
+    local applied, apply_err = single_line_v1.apply_to_buffer(state.bufnr, state.contract_state, state.action)
+    applying = false
+    if not applied then
+      last_status = "acceptance blocked: " .. tostring(apply_err)
+      return false, last_status
+    end
+    accepted_tick[state.bufnr] = vim.api.nvim_buf_get_changedtick(state.bufnr)
+    local delta_sequence = collector.seq
+    local accepted_text = state.action.text or ""
+    emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
+      accepted_chars = vim.fn.strchars(accepted_text),
+      accepted_lines = state.action.kind == "delete_line" and 0 or 1,
+      total_chars = vim.fn.strchars(accepted_text), applied_through_sequence = delta_sequence,
+      visible_duration_ms = now() - state.shown_at_ms,
+      action = state.action.kind, wire_version = single_line_v1.WIRE_VERSION,
+      editable_range = state.action_range,
+      proposed_start_byte = state.action_range.start_byte,
+      proposed_end_byte = state.action_range.end_byte })
+    counters.accepted = counters.accepted + 1
+    close_preview()
+    active = nil
+    stop_timer(expiry)
+    phase = "idle"
+    last_status = "accepted"
+    return true
+  end
   if state.action.action ~= "replace" then return false, "no edit" end
   local replacement = vim.split(state.action.text, "\n", { plain = true })
   vim.bo[state.bufnr].undolevels = vim.bo[state.bufnr].undolevels
@@ -587,6 +861,11 @@ end
 function M.status()
   local cs = collector.status()
   return { mode = mode, stage = phase, state = last_status, model = opts.model,
+    protocol_version = opts.protocol_version,
+    context_policy_version = opts.protocol_version == single_line_v1.WIRE_VERSION
+      and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version,
+    input_token_budget = opts.protocol_version == single_line_v1.WIRE_VERSION
+      and opts.single_line_input_tokens or opts.max_prompt_tokens,
     revision = opts.model_revision, precision = opts.precision,
     automatic_state = mode == "automatic" and "automatic experimental" or "inactive",
     quality = opts.automatic_quality_validated and "validated" or "uncalibrated",
@@ -655,6 +934,10 @@ local function refresh_repo_async(buf)
 end
 function M.setup(options)
   opts = vim.tbl_deep_extend("force", opts, options or {})
+  if opts.protocol_version ~= "compact-next-edit-v1"
+      and opts.protocol_version ~= single_line_v1.WIRE_VERSION then
+    error("unsupported TabComplete prediction protocol")
+  end
   if group then pcall(vim.api.nvim_del_augroup_by_id, group) end
   invalidate("setup")
   recent_edit = {}

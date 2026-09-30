@@ -1,0 +1,59 @@
+{
+  "accepted_training": 0,
+  "examples": 64,
+  "fixture_payload_sha256": "aecd539fba9f90785df36c8e8f6772063664e61bfc2df8d376a5e1b4c2fb7ddf",
+  "input_bytes": 995187642,
+  "live_service": {
+    "active": true,
+    "health": "ok",
+    "host": "crabcake",
+    "model_unchanged": true,
+    "personalization_enabled": false,
+    "pid": 3343901
+  },
+  "observed_at": "2026-09-30T20:34:47.424410+00:00",
+  "plan_sha256": "79797ddf5ea7a28c7bc88b8d1c74ff2d552e4fcaea0a14c33e6f5057f677246b",
+  "planned_updates": 32,
+  "quality_evidence": false,
+  "quota": {
+    "active_jobs": [],
+    "observed_at": "2026-09-30T20:32:29.976810+00:00",
+    "remaining": 41.74,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 3.26
+  },
+  "schema": "disposable-fixture-cpu-preflight-v3",
+  "source_commit": "7650ffdad9a474b2f40c334953cc2eda5bcc2bbc",
+  "status": "cpu_preflight_passed_gpu_submission_in_progress",
+  "token_counts_one_pass": {
+    "examples": 64,
+    "max_sequence_tokens": 179,
+    "nonpadding_training_input_tokens": 10592,
+    "prompt_tokens": 10184,
+    "supervised_response_and_eos_tokens": 408
+  },
+  "validation": {
+    "bun": {
+      "analysis_passed": 38,
+      "failed": 0,
+      "gateway_passed": 16,
+      "server_passed": 56
+    },
+    "lua": {
+      "failed": 0,
+      "passed": 68
+    },
+    "mypy": "80core files and2Kagglefiles passed",
+    "python": {
+      "note": "Full suite before final canonical fixture identity fix; subsequent targeted tests14passed including roundtrip regression.",
+      "passed": 867,
+      "seconds": 124.71,
+      "skipped": 1
+    },
+    "ruff": "passed",
+    "typescript": "three checks passed"
+  }
+}

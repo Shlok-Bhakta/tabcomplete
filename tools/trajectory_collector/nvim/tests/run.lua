@@ -1549,6 +1549,10 @@ ok("paused-status-emits-nothing", function()
   vim.api.nvim_buf_delete(b, { force = true })
 end)
 
+-- Shared Python/Lua golden contract tests for the opt-in line-edit adapter.
+dofile(tests_dir .. "/single_line_v1.lua")(ok, assert_eq, assert_true)
+dofile(tests_dir .. "/predict_single_line_v1.lua")(ok, assert_eq, assert_true)
+
 print(("--\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
   print("FAILURES:")

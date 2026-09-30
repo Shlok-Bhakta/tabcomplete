@@ -61,4 +61,18 @@ function M.finish(parser)
   return nil, "malformed compact action"
 end
 
+function M.finish_single_line(parser)
+  if parser.error then return nil, parser.error end
+  if not parser.terminal then return nil, "missing terminal SSE event" end
+  if parser.terminal.stop_type ~= "eos" then
+    return nil, "incomplete: " .. tostring(parser.terminal.stop_type)
+  end
+  local raw = table.concat(parser.pieces)
+  local predicted = parser.terminal.tokens_predicted
+  local action, err = require("tabcomplete_trajectory.single_line_v1").decode_action(
+    raw, parser.terminal.stop_type, predicted)
+  if not action then return nil, err end
+  return action, raw
+end
+
 return M

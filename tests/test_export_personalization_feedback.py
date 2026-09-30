@@ -1,3 +1,5 @@
+import gzip
+import hashlib
 import json
 import sqlite3
 import sys
@@ -152,7 +154,238 @@ def test_same_state_opposite_decisions_are_ambiguous_candidate_pair(tmp_path: Pa
     conn.close()
     result = extract(db)
     assert len(result["candidate_preference_pairs"]) == 1
+    expected_legacy_hash = hashlib.sha256(
+        json.dumps({"action": "replace", "text": "x"}, sort_keys=True).encode()
+    ).hexdigest()
+    assert result["evidence"][0]["proposal_sha256"] == expected_legacy_hash
     assert result["candidate_preference_pairs"][0]["ambiguity_flags"] == [
         "missing_pre_state_anchor", "replay_not_verified",
     ]
     assert result["readiness"]["defensible_preference_pairs"] == 0
+
+
+def test_v1_actions_use_verified_blobs_and_keep_legacy_hash_semantics(tmp_path: Path) -> None:
+    db = tmp_path / "collector.sqlite"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+        "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+    )
+    conn.execute(
+        "CREATE TABLE blobs (sha256 TEXT PRIMARY KEY, original_bytes INTEGER, "
+        "stored_bytes INTEGER, compression TEXT, content BLOB)"
+    )
+    actions = [
+        ("replace", "replace_line", "λ = 2", {"row": 4, "col": 0}, {"row": 4, "col": 6},
+         300, 306),
+        ("delete", "delete_line", None, {"row": 5, "col": 0}, {"row": 6, "col": 0},
+         400, 410),
+        ("insert", "insert_before", "new_call()", {"row": 6, "col": 0}, {"row": 6, "col": 0},
+         500, 500),
+        ("noedit", "keep", None, None, None, None, None),
+    ]
+    sequence = 0
+    for prediction_id, kind, text, start, end, start_byte, end_byte in actions:
+        sequence += 1
+        requested = {
+            "prediction_id": prediction_id,
+            "file": "repo:demo:src/example.py",
+            "context_hash": "context-hash",
+            "pre_state_hash": "state-hash",
+            "synthetic": True,
+        }
+        conn.execute(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            (f"{prediction_id}-request", "s-v1", sequence, "prediction_requested", sequence,
+             json.dumps(requested)),
+        )
+        action_bytes = json.dumps(
+            {"kind": kind, "text": text}, ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8")
+        action_hash = hashlib.sha256(action_bytes).hexdigest()
+        if kind == "keep":
+            raw_bytes = b"N"
+        elif kind == "delete_line":
+            raw_bytes = b"D"
+        else:
+            raw_bytes = ("R\t" + (text or "")).encode("utf-8")
+        raw_hash = hashlib.sha256(raw_bytes).hexdigest()
+        for blob_hash, content in ((action_hash, action_bytes), (raw_hash, raw_bytes)):
+            stored = gzip.compress(content)
+            conn.execute(
+                "INSERT OR IGNORE INTO blobs VALUES (?,?,?,?,?)",
+                (blob_hash, len(content), len(stored), "gzip", stored),
+            )
+        sequence += 1
+        generated = {
+            "prediction_id": prediction_id,
+            "action_blob_hash": action_hash,
+            "raw_response_hash": raw_hash,
+            "canonical_action": kind,
+            "wire_version": "single-line-edit-v1",
+        }
+        conn.execute(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            (f"{prediction_id}-generated", "s-v1", sequence, "prediction_generated", sequence,
+             json.dumps(generated)),
+        )
+        if kind == "keep":
+            sequence += 1
+            conn.execute(
+                "INSERT INTO events VALUES (?,?,?,?,?,?)",
+                (f"{prediction_id}-noedit", "s-v1", sequence, "heartbeat", sequence,
+                 json.dumps({"prediction_id": prediction_id,
+                             "prediction_lifecycle": "model_no_edit"})),
+            )
+            continue
+        sequence += 1
+        shown = {
+            "prediction_id": prediction_id,
+            "action": kind,
+            "proposed_text": "" if kind == "delete_line" else text,
+            "proposed_start": start,
+            "proposed_end": end,
+            "proposed_start_byte": start_byte,
+            "proposed_end_byte": end_byte,
+            "proposed_range_end_exclusive": True,
+            "proposed_range_includes_terminator": kind == "delete_line",
+            "wire_version": "single-line-edit-v1",
+        }
+        conn.execute(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            (f"{prediction_id}-shown", "s-v1", sequence, "prediction_shown", sequence,
+             json.dumps(shown)),
+        )
+        sequence += 1
+        conn.execute(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            (
+                f"{prediction_id}-accepted",
+                "s-v1",
+                sequence,
+                "prediction_accepted",
+                sequence,
+                json.dumps({
+                    "prediction_id": prediction_id,
+                    "wire_version": "single-line-edit-v1",
+                    "action": kind,
+                    "editable_range": {
+                        "start_row": start["row"],
+                        "start_col": start["col"],
+                        "end_row": end["row"],
+                        "end_col": end["col"],
+                        "start_byte": start_byte,
+                        "end_byte": end_byte,
+                        "end_exclusive": True,
+                        "includes_terminator": kind == "delete_line",
+                    },
+                }),
+            ),
+        )
+    conn.commit()
+    conn.close()
+
+    result = extract(db)
+    assert result["schema_version"] == "personalization-feedback-evidence-v4"
+    evidence = {row["prediction_id"]: row for row in result["evidence"]}
+    for prediction_id, kind, text, start, end, start_byte, end_byte in actions:
+        row = evidence[prediction_id]
+        assert row["proposal_protocol_version"] == "single-line-edit-v1"
+        assert row["canonical_action_kind"] == kind
+        assert row["proposal_action_source"] == "verified_action_blob"
+        if kind == "keep":
+            assert row["shown"] is False
+            assert row["proposal_sha256"] is None
+            assert row["proposal_identity_sha256"] is None
+            assert row["proposed_byte_range"] is None
+        else:
+            assert row["shown"] is True
+            assert row["proposal_sha256"] is not None
+            assert row["proposal_identity_sha256"] is not None
+            expected_compatibility_hash = hashlib.sha256(
+                json.dumps(
+                    {"action": "replace", "text": "" if kind == "delete_line" else text},
+                    sort_keys=True,
+                ).encode("utf-8")
+            ).hexdigest()
+            assert row["proposal_sha256"] == expected_compatibility_hash
+            assert row["proposed_byte_range"] == {
+                "start": {"row": start["row"], "byte_col": start["col"]},
+                "end": {"row": end["row"], "byte_col": end["col"]},
+                "start_byte": start_byte,
+                "end_byte": end_byte,
+                "byte_interval_end_exclusive": True,
+                "includes_terminator": kind == "delete_line",
+                "row_base": 0,
+                "column_unit": "utf8_byte",
+            }
+            assert row["proposal_sha256_semantics"] == (
+                "legacy_replacement_equivalence_comparison_only"
+            )
+            assert row["accepted_action_byte_range"] == row["proposed_byte_range"]
+            assert "accepted_action_range_mismatch" not in row["ambiguity_flags"]
+        assert "proposed_text" not in row
+    encoded_result = json.dumps(result, ensure_ascii=False)
+    assert "new_call()" not in encoded_result
+    assert "λ = 2" not in encoded_result
+
+
+def test_v1_blob_mismatch_does_not_fall_back_to_display_text(tmp_path: Path) -> None:
+    db = tmp_path / "collector.sqlite"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+        "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+    )
+    conn.execute(
+        "CREATE TABLE blobs (sha256 TEXT PRIMARY KEY, original_bytes INTEGER, "
+        "stored_bytes INTEGER, compression TEXT, content BLOB)"
+    )
+    action_bytes = b'{"kind":"delete_line","text":null}'
+    action_hash = hashlib.sha256(action_bytes).hexdigest()
+    raw = b"D"
+    raw_hash = hashlib.sha256(raw).hexdigest()
+    conn.executemany(
+        "INSERT INTO blobs VALUES (?,?,?,?,?)",
+        [
+            (action_hash, len(action_bytes), len(action_bytes), "raw", action_bytes),
+            (raw_hash, len(raw), len(raw), "raw", raw),
+        ],
+    )
+    events = [
+        ("r", "prediction_requested", {"prediction_id": "p"}),
+        ("g", "prediction_generated", {
+            "prediction_id": "p", "wire_version": "single-line-edit-v1",
+            "canonical_action": "delete_line", "action_blob_hash": action_hash,
+            "raw_response_hash": raw_hash,
+        }),
+        ("s", "prediction_shown", {
+            "prediction_id": "p", "wire_version": "single-line-edit-v1",
+            "action": "replace_line", "proposed_text": "forged display text",
+            "proposed_start": {"row": 0, "col": 0},
+            "proposed_end": {"row": 0, "col": 4},
+        }),
+        ("a", "prediction_accepted", {
+            "prediction_id": "p", "wire_version": "single-line-edit-v1",
+            "editable_range": {
+                "start_row": 0, "start_col": 0, "end_row": 0, "end_col": 4,
+                "start_byte": 0, "end_byte": 4, "end_exclusive": True,
+                "includes_terminator": False,
+            },
+        }),
+    ]
+    conn.executemany(
+        "INSERT INTO events VALUES (?,?,?,?,?,?)",
+        [
+            (event_id, "s", index, event_type, index, json.dumps(payload))
+            for index, (event_id, event_type, payload) in enumerate(events, start=1)
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    row = extract(db)["evidence"][0]
+    assert row["proposal_sha256"] is None
+    assert row["proposal_identity_sha256"] is None
+    assert "action_blob_display_mismatch" in row["ambiguity_flags"]
+    assert "accepted_action_range_mismatch" in row["ambiguity_flags"]
