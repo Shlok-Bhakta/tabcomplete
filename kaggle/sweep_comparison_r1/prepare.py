@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -48,6 +49,18 @@ def checked_quota(expected_renewal: str) -> dict:
     return value
 
 
+def validate_plan(plan: dict, runner: Path, fixtures: Path) -> None:
+    payload = {k: v for k, v in plan.items() if k != "plan_sha256"}
+    digest = hashlib.sha256((json.dumps(
+        payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n").encode()).hexdigest()
+    if plan.get("schema") != "sweep-comparison-plan-v1" or plan.get("plan_sha256") != digest:
+        raise ValueError("expected an intact frozen Sweep comparison plan")
+    if (plan["code"]["runner_sha256"] != worker.digest(runner)
+            or plan["comparison"]["next_edit"]["fixture_input_sha256"] != worker.digest(fixtures)):
+        raise ValueError("Sweep frozen source or fixture identity mismatch")
+
+
 def prepare(
     plan: Path, line_suite: Path, next_edit_fixtures: Path, output: Path, q4_artifact: Path
 ) -> None:
@@ -72,8 +85,8 @@ def prepare(
     plan_value = json.loads(plan.read_text())
     # The serving runner validates its full model/prompt/runtime/fixture plan.
     # This check also catches selecting an unrelated JSON file accidentally.
-    if plan_value.get("schema") != "sweep-comparison-plan-v1":
-        raise ValueError("expected a frozen Sweep comparison plan")
+    validate_plan(plan_value, runner, next_edit_fixtures)
+
     temporary = output.with_name(output.name + ".incomplete")
     if temporary.exists():
         raise FileExistsError("incomplete Sweep preparation already exists")

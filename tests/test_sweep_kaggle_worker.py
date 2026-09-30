@@ -102,6 +102,7 @@ def test_canonical_q4_staging_checks_identity_and_reuses(tmp_path, monkeypatch):
     monkeypatch.setattr(worker, "Q4_BYTES", artifact.stat().st_size)
     monkeypatch.setattr(worker, "Q4_SHA256", worker.digest(artifact))
     scratch = tmp_path / "scratch"
+    monkeypatch.setattr(worker, "STORAGE_ROOT", scratch)
     worker.stage_canonical_q4(source, scratch)
     assert (scratch / worker.Q4_FILE).read_bytes() == artifact.read_bytes()
     worker.stage_canonical_q4(source, scratch)
@@ -117,3 +118,12 @@ def test_bad_canonical_q4_never_stages(tmp_path):
     with pytest.raises(ValueError, match="identity"):
         worker.stage_canonical_q4(tmp_path, scratch)
     assert not scratch.exists()
+
+
+def test_storage_budget_accounts_existing_files_before_more_work(tmp_path, monkeypatch):
+    monkeypatch.setattr(worker, "STORAGE_ROOT", tmp_path)
+    monkeypatch.setattr(worker, "STORAGE_CAP", 100)
+    (tmp_path / "existing").write_bytes(b"x" * 80)
+    with pytest.raises(RuntimeError, match="cap"):
+        worker.check_storage(21)
+    worker.check_storage(20)

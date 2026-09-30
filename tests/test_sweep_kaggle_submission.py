@@ -98,3 +98,26 @@ def test_records_unknown_push_outcome_before_command_and_refuses_retry(tmp_path,
     monkeypatch.setattr(preparer, "cli", lambda argv: pytest.fail("no blind second push"))
     with pytest.raises(RuntimeError, match="already attempted"):
         preparer.submit(path)
+
+
+def test_full_plan_identity_checked_without_gpu_setup(tmp_path):
+    import hashlib
+    runner = tmp_path / "runner"
+    fixtures = tmp_path / "inputs"
+    runner.write_text("public source")
+    fixtures.write_text("public fixtures")
+    plan = {
+        "schema": "sweep-comparison-plan-v1",
+        "code": {"runner_sha256": preparer.worker.digest(runner)},
+        "comparison": {"next_edit": {"fixture_input_sha256": preparer.worker.digest(fixtures)}},
+    }
+    plan["plan_sha256"] = hashlib.sha256((json.dumps(
+        plan, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n").encode()).hexdigest()
+    preparer.validate_plan(plan, runner, fixtures)
+    fixtures.write_text("changed")
+    with pytest.raises(ValueError, match="identity"):
+        preparer.validate_plan(plan, runner, fixtures)
+    plan["schema"] = "changed"
+    with pytest.raises(ValueError, match="intact"):
+        preparer.validate_plan(plan, runner, fixtures)

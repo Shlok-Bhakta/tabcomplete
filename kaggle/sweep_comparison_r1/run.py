@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import platform
 import shutil
 import signal
 import subprocess
@@ -30,6 +31,9 @@ Q4_BYTES = 883_289_056
 OUT = Path("/kaggle/working/sweep_comparison_r1")
 REPO = Path("/kaggle/temp/tabcomplete-sweep")
 RUNTIME = Path("/kaggle/temp/llama-sweep")
+STORAGE_ROOT = Path("/kaggle/temp")
+STORAGE_CAP = 12 * 1024**3
+DISK_RESERVE = 2 * 1024**3
 
 
 def digest(path: Path) -> str:
@@ -47,17 +51,37 @@ def remaining_seconds(now: float | None = None) -> float:
     return remaining
 
 
+def check_storage(additional_bytes: int = 0) -> None:
+    STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+    total = sum(p.stat().st_size for p in STORAGE_ROOT.rglob("*")
+                if p.is_file() and not p.is_symlink())
+    if total + additional_bytes > STORAGE_CAP:
+        raise RuntimeError("Sweep temporary artifact cap exceeded")
+    if shutil.disk_usage(STORAGE_ROOT).free - additional_bytes < DISK_RESERVE:
+        raise RuntimeError("Sweep filesystem reserve would be violated")
+
+
 def run(argv: list[str], label: str, cwd: Path | None = None) -> None:
+    if STORAGE_ROOT.exists():
+        check_storage()
     # Never include raw process exception messages or credentials in status.
     with (OUT / (label + ".log")).open("w") as handle:
-        timeout = remaining_seconds()
+        timeout_deadline = time.monotonic() + remaining_seconds()
         process = subprocess.Popen(
             argv, cwd=cwd, stdout=handle, stderr=subprocess.STDOUT,
             start_new_session=True,
         )
         try:
-            process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
+            while process.poll() is None:
+                try:
+                    left = min(remaining_seconds(), timeout_deadline - time.monotonic())
+                    if left <= 0:
+                        raise TimeoutError("Sweep stage exceeded session deadline")
+                    process.wait(timeout=min(15, left))
+                except subprocess.TimeoutExpired:
+                    if STORAGE_ROOT.exists():
+                        check_storage()
+        except (TimeoutError, RuntimeError):
             # Include owned compiler/server children when enforcing the budget.
             os.killpg(process.pid, signal.SIGTERM)
             try:
@@ -65,7 +89,7 @@ def run(argv: list[str], label: str, cwd: Path | None = None) -> None:
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=5)
-            raise TimeoutError("Sweep stage exceeded session deadline") from None
+            raise
     if process.returncode:
         raise RuntimeError(label + " failed; inspect private stage log")
 
@@ -108,6 +132,7 @@ def stage_canonical_q4(input_dir: Path, scratch: Path) -> None:
     source = input_dir / Q4_FILE
     if source.stat().st_size != Q4_BYTES or digest(source) != Q4_SHA256:
         raise ValueError("canonical Q4 artifact identity mismatch")
+    check_storage(Q4_BYTES)
     scratch.mkdir(parents=True, exist_ok=True)
     target = scratch / Q4_FILE
     if target.exists():
@@ -138,6 +163,7 @@ def main() -> None:
             if digest(input_dir / name) != sha:
                 raise ValueError("Sweep input artifact hash mismatch")
         status["input_spec_sha256"] = digest(specs[0])
+        check_storage(1024**3)
         stage = "python_setup"
         if os.environ.get("TABCOMPLETE_SWEEP_PY311") != "1":
             run([sys.executable, "-m", "pip", "install", "uv==0.12.3"], "install-uv")
@@ -156,12 +182,14 @@ def main() -> None:
              "opentelemetry-api==1.44.0", "opentelemetry-sdk==1.44.0",
              "opentelemetry-exporter-otlp-proto-http==1.44.0"], "dependencies")
         stage = "checkout"
+        check_storage(1024**3)
         run(["git", "clone", "--filter=blob:none", "https://github.com/Shlok-Bhakta/tabcomplete.git",
              str(REPO)], "repo-clone")
         run(["git", "checkout", spec["commit"]], "repo-checkout", REPO)
         if digest(REPO / "scripts/run_sweep_comparison.py") != spec["runner_sha256"]:
             raise ValueError("Sweep runner revision mismatch")
         stage = "runtime_build"
+        check_storage(4 * 1024**3)
         run(["git", "clone", "--filter=blob:none", "https://github.com/ggml-org/llama.cpp.git",
              str(RUNTIME)], "runtime-clone")
         run(["git", "checkout", RUNTIME_REVISION], "runtime-checkout", RUNTIME)
@@ -171,6 +199,14 @@ def main() -> None:
             "runtime-configure")
         run(["cmake", "--build", str(RUNTIME / "build"), "--target", "llama-server",
              "llama-quantize", "-j", "2"], "runtime-build")
+        versions = {"python": sys.version, "platform": platform.platform()}
+        for label, command in {
+            "compiler": ["c++", "--version"], "cuda": ["nvcc", "--version"],
+            "cmake": ["cmake", "--version"], "packages": [sys.executable, "-m", "pip", "freeze"],
+        }.items():
+            value = subprocess.run(command, capture_output=True, text=True, timeout=30)
+            versions[label] = value.stdout.strip() if value.returncode == 0 else "unavailable"
+        (OUT / "runtime-environment.json").write_text(json.dumps(versions, indent=2) + "\n")
         stage = "canonical_q4_staging"
         stage_canonical_q4(input_dir, Path("/kaggle/temp/sweep-artifacts"))
         stage = "comparison"
@@ -178,8 +214,15 @@ def main() -> None:
                      .replace("{runtime}", str(RUNTIME))
                      .replace("{scratch}", "/kaggle/temp/sweep-artifacts")
                      for part in spec["runner_arguments"]]
-        os.environ.update(PYTHONPATH=str(REPO / "src"), TABCOMPLETE_OBSERVABILITY_MODE="offline",
-                          TABCOMPLETE_SWEEP_DEADLINE=str(DEADLINE))
+        os.environ.update(
+            PYTHONPATH=str(REPO / "src"), TABCOMPLETE_OBSERVABILITY_MODE="offline",
+            TABCOMPLETE_OBSERVABILITY_ENABLED="1",
+            TABCOMPLETE_OBSERVABILITY_CAPTURE_CONTENT="1",
+            TABCOMPLETE_OBSERVABILITY_OFFLINE_BUNDLE=str(OUT / "telemetry/offline.jsonl"),
+            TABCOMPLETE_OBSERVABILITY_ARTIFACT_ROOT=str(OUT / "telemetry/artifacts"),
+            TABCOMPLETE_OBSERVABILITY_OFFLINE_MAX_BYTES=str(128 * 1024**2),
+            TABCOMPLETE_SWEEP_DEADLINE=str(DEADLINE),
+        )
         for mode in spec["runner_modes"]:
             stage = "comparison_" + mode
             status.update(state="running", stage=stage,
