@@ -36,12 +36,17 @@ def bundle(tmp_path, *, attempt=1, retry_after=None, prior_attempts=None):
         "model_revision": preparer.worker.MODEL_REVISION,
         "model_sha256": preparer.worker.MODEL_SHA256,
         "runtime_revision": preparer.worker.RUNTIME_REVISION,
-        "session_seconds": preparer.SESSION_SECONDS, "reserve_seconds": 1200,
+        "session_seconds": preparer._session_seconds_for_attempt(attempt),
+        "reserve_seconds": preparer.RESERVE_SECONDS,
         "training_enabled": False, "campaign_attempt_number": attempt,
         "campaign_max_attempts": preparer._campaign_attempt_cap(attempt),
         "prior_wall_upper_bound_seconds": prior_wall,
         "campaign_wall_cap_seconds": preparer.AGGREGATE_WALL_SECONDS,
-        "runner_sha256": "b" * 64, "runner_arguments": ["--plan", "{input}/plan.json"],
+        "runner_sha256": preparer.worker.digest(
+            preparer.ROOT / "scripts/run_sweep_comparison.py"
+        ),
+        "fifth_attempt_plan_sha256": None,
+        "runner_arguments": ["--plan", "{input}/plan.json"],
         "runner_modes": ["download", "quantize", "quality", "next-edit"],
         "files": {"plan.json": manifest["plan_sha256"],
                   "next_edit_inputs.jsonl": preparer.worker.digest(diagnostic)},
@@ -71,16 +76,30 @@ def bundle(tmp_path, *, attempt=1, retry_after=None, prior_attempts=None):
         spec["files"]["next_edit_inputs.jsonl"] = preparer.worker.digest(diagnostic)
         spec_path.write_text(json.dumps(spec))
         manifest["input_spec_sha256"] = preparer.worker.digest(spec_path)
+    elif attempt == 5:
+        source_fixtures = (
+            preparer.ROOT / "reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl"
+        )
+        diagnostic.write_bytes(source_fixtures.read_bytes())
+        plan_value = synthetic_plan_v9(prior_attempts, diagnostic)
+        plan_path = tmp_path / "dataset/plan.json"
+        plan_path.write_text(json.dumps(plan_value, indent=2, sort_keys=True) + "\n")
+        manifest["plan_sha256"] = preparer.worker.digest(plan_path)
+        spec["fifth_attempt_plan_sha256"] = manifest["plan_sha256"]
+        spec["files"]["plan.json"] = manifest["plan_sha256"]
+        spec["files"]["next_edit_inputs.jsonl"] = preparer.worker.digest(diagnostic)
+        spec_path.write_text(json.dumps(spec))
+        manifest["input_spec_sha256"] = preparer.worker.digest(spec_path)
     manifest.update({
         "kernel_id": kernel_id, "kernel_title": kernel_title, "attempt_number": attempt,
         "maximum_attempts": preparer._campaign_attempt_cap(attempt),
         "aggregate_wall_cap_seconds": preparer.AGGREGATE_WALL_SECONDS,
-        "planned_session_seconds": preparer.SESSION_SECONDS,
+        "planned_session_seconds": preparer._session_seconds_for_attempt(attempt),
         "retry_after": str(retry_after) if retry_after is not None else None,
         "prior_attempts": prior_attempts,
         "prior_wall_upper_bound_seconds": prior_wall,
         "aggregate_wall_upper_bound_with_this_session_seconds": (
-            prior_wall + preparer.SESSION_SECONDS
+            prior_wall + preparer._session_seconds_for_attempt(attempt)
         ),
     })
     (tmp_path / "bundle-manifest.json").write_text(json.dumps(manifest))
@@ -183,6 +202,65 @@ def synthetic_plan_v8(prior_attempts, fixtures):
         },
         "verified_prior_attempts": prior_attempts,
         "aggregate_wall_upper_bound_with_fourth_attempt_seconds": planned_total,
+        "remaining_aggregate_wall_margin_seconds": round(
+            preparer.AGGREGATE_WALL_SECONDS - planned_total, 6
+        ),
+        "allocation_source_identity": {
+            key: preparer.worker.digest(path) for key, path in source_paths.items()
+        },
+    }
+    canonical = json.dumps(
+        {key: value for key, value in plan.items() if key != "plan_sha256"},
+        sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n"
+    plan["plan_sha256"] = hashlib.sha256(canonical.encode()).hexdigest()
+    return plan
+
+
+def synthetic_plan_v9(prior_attempts, fixtures):
+    import hashlib
+
+    previous_path = preparer.ROOT / "reports/prototype/sweep_comparison_r1/plan-v8.json"
+    previous = json.loads(previous_path.read_text())
+    assert previous["comparison"]["next_edit"]["fixture_input_sha256"] == (
+        preparer.worker.digest(fixtures)
+    )
+    runner = preparer.ROOT / "scripts/run_sweep_comparison.py"
+    test = preparer.ROOT / "tests/test_sweep_comparison.py"
+    prior_wall = preparer._finite_wall_sum(prior_attempts)
+    planned_total = round(prior_wall + preparer.FIFTH_SESSION_SECONDS, 6)
+    source_paths = {
+        "prepare_sha256": Path(preparer.__file__),
+        "prepare_test_sha256": preparer.ROOT / "tests/test_sweep_kaggle_submission.py",
+        "worker_sha256": Path(preparer.__file__).with_name("run.py"),
+        "worker_test_sha256": preparer.ROOT / "tests/test_sweep_kaggle_worker.py",
+    }
+    plan = dict(previous)
+    plan["code"] = dict(previous["code"])
+    plan["code"]["runner_sha256"] = preparer.worker.digest(runner)
+    plan["code"]["test_sha256"] = preparer.worker.digest(test)
+    plan["allocation_amendment_v9"] = {
+        "schema": "sweep-allocation-amendment-v9",
+        "number": 9,
+        "supersedes_plan_sha256": previous["plan_sha256"],
+        "supersedes_plan_file_sha256": preparer.worker.digest(previous_path),
+        "attempt_limits": {
+            "maximum_total_attempts": 5,
+            "attempts_already_used": 4,
+            "additional_attempts_remaining": 1,
+            "per_attempt_session_wall_seconds_max": preparer.FIFTH_SESSION_SECONDS,
+            "finalization_reserve_seconds": preparer.RESERVE_SECONDS,
+            "maximum_work_seconds": (
+                preparer.FIFTH_SESSION_SECONDS - preparer.RESERVE_SECONDS
+            ),
+            "campaign_aggregate_gpu_session_wall_seconds_max": (
+                preparer.AGGREGATE_WALL_SECONDS
+            ),
+            "fifth_attempt_allowed": True,
+        },
+        "verified_prior_attempts": prior_attempts,
+        "prior_wall_upper_bound_seconds": round(prior_wall, 6),
+        "aggregate_wall_upper_bound_with_fifth_attempt_seconds": planned_total,
         "remaining_aggregate_wall_margin_seconds": round(
             preparer.AGGREGATE_WALL_SECONDS - planned_total, 6
         ),
@@ -503,10 +581,10 @@ def test_third_allocation_budget_counts_both_failures(tmp_path, monkeypatch):
         preparer.validate_failed_attempt(second)
 
 
-def test_attempt_cap_has_only_one_fourth_kernel_identity():
-    with pytest.raises(RuntimeError, match="four allocations"):
-        preparer.kernel_identity(5)
-    for attempt in (1, 2, 3, 4):
+def test_attempt_cap_has_only_one_fifth_kernel_identity():
+    with pytest.raises(RuntimeError, match="five allocations"):
+        preparer.kernel_identity(6)
+    for attempt in (1, 2, 3, 4, 5):
         kernel_id, title = preparer.kernel_identity(attempt)
         assert re_slug(title) == kernel_id.split("/", 1)[1]
 
@@ -612,6 +690,25 @@ def fourth_attempt_evidence(walls=(600.0, 600.0, 600.0)):
     ]
 
 
+def fifth_attempt_evidence():
+    plan = json.loads((
+        preparer.ROOT / "reports/prototype/sweep_comparison_r1/plan-v8.json"
+    ).read_text())
+    rows = [dict(row) for row in plan["allocation_amendment_v8"]["verified_prior_attempts"]]
+    rows.append({
+        "attempt_number": 4,
+        "kernel_id": preparer.KERNEL_FINAL_ID,
+        "state": "ERROR",
+        "quota_observed_at": "2026-09-30T11:33:23.479861+00:00",
+        "terminal_observed_at": "2026-09-30T12:11:59.357066+00:00",
+        "conservative_wall_upper_bound_seconds": 2315.877205,
+        "terminal_observation_sha256": (
+            "2538e631980ee8302059426e791de9830243eee1808f8948ef33ffb0141336e3"
+        ),
+    })
+    return rows
+
+
 def test_fourth_attempt_requires_three_authenticated_terminal_errors(tmp_path, monkeypatch):
     from datetime import UTC, datetime, timedelta
 
@@ -715,6 +812,74 @@ def test_fourth_attempt_budget_preserves_actual_remaining_margin():
     assert round(preparer.AGGREGATE_WALL_SECONDS - planned_total, 6) == 134.664780
 
 
+def test_fifth_attempt_budget_uses_four_actual_terminal_errors_and_one_hour_work_window():
+    evidence = fifth_attempt_evidence()
+    prior_wall = preparer._finite_wall_sum(evidence)
+    planned_total = prior_wall + preparer.FIFTH_SESSION_SECONDS
+    assert round(prior_wall, 6) == 9381.212425
+    assert preparer.FIFTH_SESSION_SECONDS == 4800
+    assert preparer.RESERVE_SECONDS == 1200
+    assert preparer.FIFTH_SESSION_SECONDS - preparer.RESERVE_SECONDS == 3600
+    assert round(planned_total, 6) == 14181.212425
+    assert round(preparer.AGGREGATE_WALL_SECONDS - planned_total, 6) == 218.787575
+
+
+def test_plan_v9_fails_closed_on_fourth_error_chain_or_budget_changes(tmp_path):
+    evidence = fifth_attempt_evidence()
+    fixtures = preparer.ROOT / "reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl"
+    runner = preparer.ROOT / "scripts/run_sweep_comparison.py"
+    frozen = synthetic_plan_v9(evidence, fixtures)
+    preparer.validate_plan(frozen, runner, fixtures, attempt_number=5, prior_attempts=evidence)
+
+    changed_limits = json.loads(json.dumps(frozen))
+    changed_limits["allocation_amendment_v9"]["attempt_limits"][
+        "maximum_work_seconds"
+    ] = 4200
+    changed_evidence = json.loads(json.dumps(frozen))
+    changed_evidence["allocation_amendment_v9"]["verified_prior_attempts"][3][
+        "terminal_observation_sha256"
+    ] = "f" * 64
+    changed_total = json.loads(json.dumps(frozen))
+    changed_total["allocation_amendment_v9"][
+        "aggregate_wall_upper_bound_with_fifth_attempt_seconds"
+    ] += 1
+    changed_margin = json.loads(json.dumps(frozen))
+    changed_margin["allocation_amendment_v9"][
+        "remaining_aggregate_wall_margin_seconds"
+    ] -= 1
+    changed_source = json.loads(json.dumps(frozen))
+    changed_source["allocation_amendment_v9"]["allocation_source_identity"][
+        "worker_sha256"
+    ] = "f" * 64
+    changed_science = json.loads(json.dumps(frozen))
+    changed_science["comparison"]["input_budget"] = "changed outside plan-v8"
+    for changed in (
+        changed_limits, changed_evidence, changed_total, changed_margin,
+        changed_source, changed_science,
+    ):
+        rehash_plan(changed)
+        with pytest.raises(ValueError, match="plan-v9"):
+            preparer.validate_plan(
+                changed, runner, fixtures, attempt_number=5, prior_attempts=evidence
+            )
+
+    with pytest.raises(ValueError, match="four verified earlier"):
+        preparer.validate_plan(frozen, runner, fixtures, attempt_number=5, prior_attempts=[])
+
+
+def test_plan_v8_does_not_authorize_fifth_attempt():
+    evidence = fifth_attempt_evidence()
+    fixtures = preparer.ROOT / "reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl"
+    frozen = synthetic_plan_v9(evidence, fixtures)
+    del frozen["allocation_amendment_v9"]
+    rehash_plan(frozen)
+    with pytest.raises(ValueError, match="plan-v9"):
+        preparer.validate_plan(
+            frozen, preparer.ROOT / "scripts/run_sweep_comparison.py", fixtures,
+            attempt_number=5, prior_attempts=evidence,
+        )
+
+
 def test_plan_v8_fails_closed_on_fourth_attempt_evidence_or_limit_changes(tmp_path):
     evidence = fourth_attempt_evidence()
     fixtures = preparer.ROOT / "reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl"
@@ -811,6 +976,46 @@ def test_fourth_submission_uses_unique_slug_and_four_hour_campaign_cap(tmp_path,
     assert re_slug(metadata["title"]) == metadata["id"].split("/", 1)[1]
     push = next(call for call in calls if call[:3] == ["kaggle", "kernels", "push"])
     assert push[push.index("--timeout") + 1] == "7200"
+
+
+def test_fifth_submission_uses_four_error_chain_and_4800_second_timeout(tmp_path, monkeypatch):
+    evidence = fifth_attempt_evidence()
+    path = bundle(tmp_path, attempt=5, retry_after=Path("attempt-4"), prior_attempts=evidence)
+    monkeypatch.setattr(preparer, "validate_failed_attempt", lambda previous: evidence)
+    monkeypatch.setattr(preparer, "checked_quota", lambda renewal: {
+        "remaining": 43.46, "renewal": renewal, "active_jobs": [],
+    })
+    calls = []
+
+    def fake_cli(argv):
+        calls.append(argv)
+        if argv[:3] == ["kaggle", "datasets", "list"]:
+            return json.dumps([{"ref": preparer.DATASET_ID}])
+        if argv[:3] == ["kaggle", "datasets", "status"]:
+            return "ready"
+        return "[]"
+
+    monkeypatch.setattr(preparer, "cli", fake_cli)
+    preparer.submit(path)
+    manifest = json.loads((path / "bundle-manifest.json").read_text())
+    spec = json.loads((path / "dataset/sweep-worker-spec.json").read_text())
+    metadata = json.loads((path / "kernel/kernel-metadata.json").read_text())
+    assert manifest["attempt_number"] == 5
+    assert manifest["maximum_attempts"] == 5
+    assert round(manifest["aggregate_wall_upper_bound_with_this_session_seconds"], 6) == (
+        14181.212425
+    )
+    assert spec["campaign_attempt_number"] == 5
+    assert spec["campaign_max_attempts"] == 5
+    assert spec["session_seconds"] == 4800
+    assert spec["reserve_seconds"] == 1200
+    assert spec["prior_wall_upper_bound_seconds"] == pytest.approx(9381.212425)
+    assert spec["fifth_attempt_plan_sha256"] == manifest["plan_sha256"]
+    assert metadata["id"] == preparer.KERNEL_ID + "-attempt-5"
+    assert metadata["title"] == "TabComplete Sweep comparison R1 attempt 5"
+    assert re_slug(metadata["title"]) == metadata["id"].split("/", 1)[1]
+    push = next(call for call in calls if call[:3] == ["kaggle", "kernels", "push"])
+    assert push[push.index("--timeout") + 1] == "4800"
 
 
 def re_slug(value):

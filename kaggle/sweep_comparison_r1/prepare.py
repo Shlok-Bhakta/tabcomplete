@@ -31,7 +31,10 @@ KERNEL_VERIFIED_ID = KERNEL_ID + "-verified"
 KERNEL_FINAL_ID = KERNEL_ID + "-final"
 MAX_KERNEL_ATTEMPTS = 4
 LEGACY_MAX_KERNEL_ATTEMPTS = 3
+FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS = 5
 SESSION_SECONDS = 7200
+FIFTH_SESSION_SECONDS = 4800
+RESERVE_SECONDS = 1200
 AGGREGATE_WALL_SECONDS = 14400
 LINE_SHA = "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
 
@@ -62,11 +65,21 @@ def checked_quota(expected_renewal: str) -> dict:
 def _campaign_attempt_cap(attempt_number: int) -> int:
     if not isinstance(attempt_number, int) or isinstance(attempt_number, bool):
         raise ValueError("Sweep attempt number must be an integer")
-    if attempt_number < 1 or attempt_number > MAX_KERNEL_ATTEMPTS:
-        raise ValueError("Sweep attempt number is outside the four-allocation cap")
+    if attempt_number < 1 or attempt_number > FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS:
+        raise ValueError("Sweep attempt number is outside the five-allocation cap")
+    if attempt_number == FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS:
+        return FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS
     if attempt_number == MAX_KERNEL_ATTEMPTS:
         return MAX_KERNEL_ATTEMPTS
     return LEGACY_MAX_KERNEL_ATTEMPTS
+
+
+def _session_seconds_for_attempt(attempt_number: int) -> int:
+    if attempt_number == FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS:
+        return FIFTH_SESSION_SECONDS
+    if 1 <= attempt_number <= MAX_KERNEL_ATTEMPTS:
+        return SESSION_SECONDS
+    raise ValueError("Sweep allocation attempt number is outside the approved range")
 
 
 def _finite_wall_sum(prior_attempts: list[dict]) -> float:
@@ -245,6 +258,120 @@ def _validate_fourth_attempt_amendment(plan: dict, prior_attempts: list[dict]) -
         raise ValueError("frozen plan-v8 allocation helper source identity changed")
 
 
+def _validate_fifth_attempt_amendment(plan: dict, prior_attempts: list[dict]) -> None:
+    amendment = plan.get("allocation_amendment_v9")
+    if (
+        not isinstance(amendment, dict)
+        or amendment.get("schema") != "sweep-allocation-amendment-v9"
+        or amendment.get("number") != 9
+    ):
+        raise ValueError("fifth Sweep attempt requires frozen plan-v9 allocation amendment")
+    if (
+        len(prior_attempts) != 4
+        or [row.get("attempt_number") for row in prior_attempts] != [1, 2, 3, 4]
+    ):
+        raise ValueError("fifth Sweep attempt requires four verified earlier allocations")
+    expected_ids = [kernel_identity(attempt)[0] for attempt in (1, 2, 3, 4)]
+    if [row.get("kernel_id") for row in prior_attempts] != expected_ids:
+        raise ValueError("fifth Sweep attempt prior kernel identities are not sequential")
+    if any(row.get("state") != "ERROR" for row in prior_attempts):
+        raise ValueError(
+            "fifth Sweep attempt requires all four allocations to be terminal errors"
+        )
+
+    prior_wall = _finite_wall_sum(prior_attempts)
+    planned_session = _session_seconds_for_attempt(5)
+    planned_total = prior_wall + planned_session
+    margin = AGGREGATE_WALL_SECONDS - planned_total
+    if margin < 0:
+        raise ValueError("fifth Sweep attempt would exceed its aggregate wall-time cap")
+
+    limits = amendment.get("attempt_limits")
+    if not isinstance(limits, dict) or limits != {
+        "maximum_total_attempts": FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS,
+        "attempts_already_used": 4,
+        "additional_attempts_remaining": 1,
+        "per_attempt_session_wall_seconds_max": FIFTH_SESSION_SECONDS,
+        "finalization_reserve_seconds": RESERVE_SECONDS,
+        "maximum_work_seconds": FIFTH_SESSION_SECONDS - RESERVE_SECONDS,
+        "campaign_aggregate_gpu_session_wall_seconds_max": AGGREGATE_WALL_SECONDS,
+        "fifth_attempt_allowed": True,
+    }:
+        raise ValueError(
+            "frozen plan-v9 allocation limits do not authorize one bounded fifth attempt"
+        )
+
+    recorded = amendment.get("verified_prior_attempts")
+    if not isinstance(recorded, list) or len(recorded) != 4:
+        raise ValueError("frozen plan-v9 lacks all four verified prior-attempt observations")
+    keys = (
+        "attempt_number", "kernel_id", "state", "quota_observed_at",
+        "terminal_observed_at", "conservative_wall_upper_bound_seconds",
+        "terminal_observation_sha256",
+    )
+    for expected, actual in zip(prior_attempts, recorded, strict=True):
+        if not isinstance(actual, dict) or any(actual.get(key) != expected[key] for key in keys):
+            raise ValueError(
+                "frozen plan-v9 prior-attempt evidence differs from authenticated status checks"
+            )
+
+    expected_total = round(planned_total, 6)
+    expected_margin = round(margin, 6)
+    if (
+        amendment.get("prior_wall_upper_bound_seconds") != round(prior_wall, 6)
+        or amendment.get("aggregate_wall_upper_bound_with_fifth_attempt_seconds")
+        != expected_total
+        or amendment.get("remaining_aggregate_wall_margin_seconds") != expected_margin
+        or expected_margin < 0
+    ):
+        raise ValueError("frozen plan-v9 aggregate wall-time bound is inconsistent")
+
+    previous_path = ROOT / "reports/prototype/sweep_comparison_r1/plan-v8.json"
+    previous_plan = json.loads(previous_path.read_text())
+    previous_payload = {
+        key: value for key, value in previous_plan.items()
+        if key != "plan_sha256"
+    }
+    previous_digest = hashlib.sha256((json.dumps(
+        previous_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n").encode()).hexdigest()
+    if previous_plan.get("plan_sha256") != previous_digest:
+        raise ValueError("frozen plan-v8 comparison identity is invalid")
+    if (
+        amendment.get("supersedes_plan_sha256") != previous_plan.get("plan_sha256")
+        or amendment.get("supersedes_plan_file_sha256") != worker.digest(previous_path)
+    ):
+        raise ValueError("plan-v9 does not preserve the frozen plan-v8 comparison")
+
+    comparison_payload = {
+        key: value for key, value in plan.items()
+        if key not in {"plan_sha256", "allocation_amendment_v8", "allocation_amendment_v9"}
+    }
+    expected_payload = {
+        key: value for key, value in previous_payload.items()
+        if key != "allocation_amendment_v8"
+    }
+    expected_code = dict(expected_payload["code"])
+    expected_code["runner_sha256"] = plan["code"]["runner_sha256"]
+    expected_code["test_sha256"] = plan["code"]["test_sha256"]
+    expected_payload["code"] = expected_code
+    if comparison_payload != expected_payload:
+        raise ValueError("plan-v9 changed frozen plan-v8 scientific inputs")
+
+    source_identity = amendment.get("allocation_source_identity")
+    source_paths = {
+        "prepare_sha256": Path(__file__),
+        "prepare_test_sha256": ROOT / "tests/test_sweep_kaggle_submission.py",
+        "worker_sha256": Path(__file__).with_name("run.py"),
+        "worker_test_sha256": ROOT / "tests/test_sweep_kaggle_worker.py",
+    }
+    if not isinstance(source_identity, dict) or any(
+        source_identity.get(key) != worker.digest(path)
+        for key, path in source_paths.items()
+    ):
+        raise ValueError("frozen plan-v9 allocation helper source identity changed")
+
+
 def validate_plan(
     plan: dict,
     runner: Path,
@@ -262,7 +389,7 @@ def validate_plan(
     if (plan["code"]["runner_sha256"] != worker.digest(runner)
             or plan["comparison"]["next_edit"]["fixture_input_sha256"] != worker.digest(fixtures)):
         raise ValueError("Sweep frozen source or fixture identity mismatch")
-    if attempt_number in {3, 4} and plan["code"].get("test_sha256") != worker.digest(
+    if attempt_number in {3, 4, 5} and plan["code"].get("test_sha256") != worker.digest(
         ROOT / "tests/test_sweep_comparison.py"
     ):
         raise ValueError("Sweep plan scoring test identity mismatch")
@@ -270,6 +397,8 @@ def validate_plan(
         _validate_third_attempt_amendment(plan, prior_attempts or [])
     elif attempt_number == 4:
         _validate_fourth_attempt_amendment(plan, prior_attempts or [])
+    elif attempt_number == 5:
+        _validate_fifth_attempt_amendment(plan, prior_attempts or [])
 
 
 def kernel_identity(attempt: int) -> tuple[str, str]:
@@ -280,11 +409,12 @@ def kernel_identity(attempt: int) -> tuple[str, str]:
         2: (KERNEL_RETRY_ID, "TabComplete Sweep comparison R1 retry"),
         3: (KERNEL_VERIFIED_ID, "TabComplete Sweep comparison R1 verified"),
         4: (KERNEL_FINAL_ID, "TabComplete Sweep comparison R1 final"),
+        5: (KERNEL_ID + "-attempt-5", "TabComplete Sweep comparison R1 attempt 5"),
     }
     try:
         kernel_id, title = identities[attempt]
     except KeyError as exc:
-        raise RuntimeError("Sweep campaign maximum of four allocations reached") from exc
+        raise RuntimeError("Sweep campaign maximum of five allocations reached") from exc
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     if slug != kernel_id.partition("/")[2]:
         raise ValueError("Sweep kernel title does not match its unique ID slug")
@@ -357,8 +487,8 @@ def validate_failed_attempt(previous: Path) -> list[dict]:
         current = Path(parent).resolve()
 
     chain = list(reversed(reverse_chain))
-    if not 1 <= len(chain) < MAX_KERNEL_ATTEMPTS:
-        raise RuntimeError("Sweep prior-attempt count is outside the four-allocation cap")
+    if not 1 <= len(chain) < FIFTH_ATTEMPT_MAX_KERNEL_ATTEMPTS:
+        raise RuntimeError("Sweep prior-attempt count is outside the five-allocation cap")
 
     summaries: list[dict] = []
     campaign_renewal: str | None = None
@@ -408,7 +538,8 @@ def validate_failed_attempt(previous: Path) -> list[dict]:
         })
 
     prior_bound = _finite_wall_sum(summaries)
-    if prior_bound + SESSION_SECONDS > AGGREGATE_WALL_SECONDS:
+    next_session = _session_seconds_for_attempt(len(chain) + 1)
+    if prior_bound + next_session > AGGREGATE_WALL_SECONDS:
         raise RuntimeError("next Sweep allocation exceeds the aggregate wall-time budget")
     return summaries
 
@@ -421,9 +552,10 @@ def prepare(
         raise FileExistsError("Sweep bundle already exists; inspect before resuming")
     prior_attempts = validate_failed_attempt(retry_after) if retry_after is not None else []
     attempt_number = len(prior_attempts) + 1
+    planned_session = _session_seconds_for_attempt(attempt_number)
     kernel_id, kernel_title = kernel_identity(attempt_number)
     prior_wall_bound = _finite_wall_sum(prior_attempts)
-    if prior_wall_bound + SESSION_SECONDS > AGGREGATE_WALL_SECONDS:
+    if prior_wall_bound + planned_session > AGGREGATE_WALL_SECONDS:
         raise RuntimeError("planned Sweep allocation exceeds the aggregate wall-time budget")
     if worker.digest(line_suite) != LINE_SHA:
         raise ValueError("corrected 180-case line fixture identity changed")
@@ -464,11 +596,12 @@ def prepare(
     spec = {
         "schema": "sweep-comparison-kaggle-input-v1", "commit": commit,
         "model_revision": worker.MODEL_REVISION, "model_sha256": worker.MODEL_SHA256,
-        "runtime_revision": worker.RUNTIME_REVISION, "session_seconds": SESSION_SECONDS,
-        "reserve_seconds": 1200, "training_enabled": False,
+        "runtime_revision": worker.RUNTIME_REVISION, "session_seconds": planned_session,
+        "reserve_seconds": RESERVE_SECONDS, "training_enabled": False,
         "campaign_attempt_number": attempt_number,
         "campaign_max_attempts": _campaign_attempt_cap(attempt_number),
         "prior_wall_upper_bound_seconds": prior_wall_bound,
+        "fifth_attempt_plan_sha256": worker.digest(plan) if attempt_number == 5 else None,
         "campaign_wall_cap_seconds": AGGREGATE_WALL_SECONDS,
         "runner_sha256": worker.digest(runner),
         "files": {name: worker.digest(dataset / name)
@@ -484,6 +617,8 @@ def prepare(
         "runner_modes": ["download", "quantize", "quality", "next-edit"],
     }
     worker.validate_spec(spec)
+    if attempt_number == 5:
+        worker.validate_fifth_attempt_plan(dataset / "plan.json", spec)
     write(dataset / "sweep-worker-spec.json", spec)
     write(dataset / "dataset-metadata.json", {
         "id": DATASET_ID, "title": "TabComplete Sweep comparison inputs R1",
@@ -509,10 +644,12 @@ def prepare(
         "attempt_number": attempt_number,
         "maximum_attempts": _campaign_attempt_cap(attempt_number),
         "aggregate_wall_cap_seconds": AGGREGATE_WALL_SECONDS,
-        "planned_session_seconds": SESSION_SECONDS,
+        "planned_session_seconds": planned_session,
         "prior_attempts": prior_attempts,
         "prior_wall_upper_bound_seconds": prior_wall_bound,
-        "aggregate_wall_upper_bound_with_this_session_seconds": prior_wall_bound + SESSION_SECONDS,
+        "aggregate_wall_upper_bound_with_this_session_seconds": (
+            prior_wall_bound + planned_session
+        ),
     })
     temporary.rename(output)
 
@@ -537,9 +674,10 @@ def submit(bundle: Path) -> None:
         raise ValueError("Sweep prior-attempt evidence changed after preparation")
     prior_wall_bound = _finite_wall_sum(prior_attempts)
     campaign_attempt_cap = _campaign_attempt_cap(attempt_number)
-    planned_seconds = manifest.get("planned_session_seconds", SESSION_SECONDS)
+    planned_session = _session_seconds_for_attempt(attempt_number)
+    planned_seconds = manifest.get("planned_session_seconds", planned_session)
     if (
-        not isinstance(planned_seconds, int) or planned_seconds != SESSION_SECONDS
+        not isinstance(planned_seconds, int) or planned_seconds != planned_session
         or isinstance(planned_seconds, bool)
         or prior_wall_bound + planned_seconds > AGGREGATE_WALL_SECONDS
         or manifest.get("maximum_attempts") != campaign_attempt_cap
@@ -562,6 +700,10 @@ def submit(bundle: Path) -> None:
         or spec.get("campaign_max_attempts") != campaign_attempt_cap
         or spec.get("prior_wall_upper_bound_seconds") != prior_wall_bound
         or spec.get("campaign_wall_cap_seconds") != AGGREGATE_WALL_SECONDS
+        or spec.get("session_seconds") != planned_session
+        or spec.get("reserve_seconds") != RESERVE_SECONDS
+        or spec.get("fifth_attempt_plan_sha256")
+        != (manifest["plan_sha256"] if attempt_number == 5 else None)
     ):
         raise ValueError("Sweep worker campaign budget does not match its verified attempt history")
     metadata = json.loads((bundle / "kernel/kernel-metadata.json").read_text())
@@ -570,14 +712,19 @@ def submit(bundle: Path) -> None:
     for name, sha in spec["files"].items():
         if worker.digest(bundle / "dataset" / name) != sha:
             raise ValueError("Sweep staged dataset input was modified")
-    if attempt_number in {3, 4}:
+    if attempt_number in {3, 4, 5}:
+        plan_value = json.loads((bundle / "dataset/plan.json").read_text())
         validate_plan(
-            json.loads((bundle / "dataset/plan.json").read_text()),
+            plan_value,
             ROOT / "scripts/run_sweep_comparison.py",
             bundle / "dataset/next_edit_inputs.jsonl",
             attempt_number=attempt_number,
             prior_attempts=prior_attempts,
         )
+        if attempt_number == 5:
+            worker.validate_fifth_attempt_plan(
+                bundle / "dataset/plan.json", spec
+            )
     quota = checked_quota(manifest["renewal"])
     if state["state"] == "prepared":
         datasets = json.loads(cli(["kaggle", "datasets", "list", "--mine", "--page-size", "100",
@@ -607,7 +754,7 @@ def submit(bundle: Path) -> None:
     write(state_path, {"state": "submission_started", "quota_before": quota,
                        "submitted_at": datetime.now(UTC).isoformat()})
     cli(["kaggle", "kernels", "push", "-p", str(bundle / "kernel"),
-         "--timeout", "7200", "--accelerator", "NvidiaTeslaT4"])
+         "--timeout", str(planned_session), "--accelerator", "NvidiaTeslaT4"])
     write(state_path, {"state": "kernel_pushed", "kernel_id": kernel_id,
                        "attempt_number": attempt_number, "quota_before": quota,
                        "submitted_at": datetime.now(UTC).isoformat()})

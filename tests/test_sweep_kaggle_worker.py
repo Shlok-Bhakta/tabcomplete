@@ -24,6 +24,9 @@ def valid_spec():
         "session_seconds": 7200,
         "reserve_seconds": 1200,
         "training_enabled": False,
+        "campaign_attempt_number": 1,
+        "campaign_max_attempts": 3,
+        "fifth_attempt_plan_sha256": None,
         "commit": "a" * 40,
         "files": {"plan.json": "b" * 64},
         "runner_sha256": "c" * 64,
@@ -55,6 +58,138 @@ def test_rejects_unapproved_identity_and_input_paths(field, value):
 
 def test_accepts_exact_authorized_spec():
     worker.validate_spec(valid_spec())
+
+
+def test_fifth_attempt_accepts_only_reduced_approved_session():
+    spec = valid_spec()
+    spec.update(
+        session_seconds=worker.FIFTH_SESSION_SECONDS,
+        campaign_attempt_number=5,
+        campaign_max_attempts=5,
+        fifth_attempt_plan_sha256="d" * 64,
+    )
+    spec["files"]["plan.json"] = "d" * 64
+    worker.validate_spec(spec)
+
+
+@pytest.mark.parametrize(("attempt", "session", "max_attempts"), [
+    (4, worker.FIFTH_SESSION_SECONDS, 5),
+    (5, worker.SESSION_SECONDS, 5),
+    (5, worker.FIFTH_SESSION_SECONDS, 4),
+])
+def test_rejects_session_override_without_fifth_attempt_identity(attempt, session, max_attempts):
+    spec = valid_spec()
+    spec.update(
+        campaign_attempt_number=attempt,
+        campaign_max_attempts=max_attempts,
+        session_seconds=session,
+    )
+    with pytest.raises(ValueError, match="identity"):
+        worker.validate_spec(spec)
+
+
+def _fifth_plan(spec):
+    import hashlib
+    import json
+
+    prior = [
+        {
+            "attempt_number": number,
+            "kernel_id": kernel_id,
+            "state": "ERROR",
+            "conservative_wall_upper_bound_seconds": seconds,
+        }
+        for number, (kernel_id, seconds) in enumerate(zip(
+            (
+                "shlokbhakta/tabcomplete-sweep-comparison-r1",
+                "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+                "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+                "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+            ),
+            (1352.229974, 3382.174313, 2330.930933, 2315.877205),
+            strict=True,
+        ), start=1)
+    ]
+    plan = {
+        "schema": "sweep-comparison-plan-v1",
+        "revision": {"number": 2},
+        "code": {"runner_sha256": spec["runner_sha256"]},
+        "allocation_amendment_v9": {
+            "schema": "sweep-allocation-amendment-v9",
+            "number": 9,
+            "attempt_limits": {
+                "maximum_total_attempts": 5,
+                "attempts_already_used": 4,
+                "additional_attempts_remaining": 1,
+                "per_attempt_session_wall_seconds_max": 4800,
+                "finalization_reserve_seconds": 1200,
+                "maximum_work_seconds": 3600,
+                "campaign_aggregate_gpu_session_wall_seconds_max": 14400,
+                "fifth_attempt_allowed": True,
+            },
+            "verified_prior_attempts": prior,
+            "prior_wall_upper_bound_seconds": 9381.212425,
+            "aggregate_wall_upper_bound_with_fifth_attempt_seconds": 14181.212425,
+            "remaining_aggregate_wall_margin_seconds": 218.787575,
+        },
+    }
+    plan["plan_sha256"] = hashlib.sha256((json.dumps(
+        {key: value for key, value in plan.items() if key != "plan_sha256"},
+        sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n").encode()).hexdigest()
+    return plan
+
+
+def test_fifth_attempt_worker_requires_plan_nine_and_matching_budget(tmp_path):
+    import json
+
+    spec = valid_spec()
+    spec.update(
+        session_seconds=worker.FIFTH_SESSION_SECONDS,
+        campaign_attempt_number=5,
+        campaign_max_attempts=5,
+        prior_wall_upper_bound_seconds=9381.212425,
+        campaign_wall_cap_seconds=14400,
+        fifth_attempt_plan_sha256="0" * 64,
+    )
+    plan = _fifth_plan(spec)
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan, sort_keys=True, ensure_ascii=False) + "\n")
+    plan_hash = worker.digest(plan_path)
+    spec["fifth_attempt_plan_sha256"] = plan_hash
+    spec["files"]["plan.json"] = plan_hash
+    worker.validate_spec(spec)
+    worker.validate_fifth_attempt_plan(plan_path, spec)
+
+    changed_limits = json.loads(plan_path.read_text())
+    changed_limits["allocation_amendment_v9"]["attempt_limits"]["maximum_work_seconds"] = 4000
+    changed_limits["plan_sha256"] = "0" * 64
+    changed_path = tmp_path / "changed-plan.json"
+    changed_path.write_text(json.dumps(changed_limits, sort_keys=True) + "\n")
+    changed_spec = {**spec, "fifth_attempt_plan_sha256": worker.digest(changed_path)}
+    changed_spec["files"] = {**spec["files"], "plan.json": worker.digest(changed_path)}
+    with pytest.raises(ValueError, match="self-hash"):
+        worker.validate_fifth_attempt_plan(changed_path, changed_spec)
+
+
+def test_configure_session_applies_fifth_work_deadline(monkeypatch):
+    monkeypatch.setattr(worker, "START", 100.0)
+    monkeypatch.setattr(worker, "SESSION_SECONDS", 7200)
+    monkeypatch.setattr(worker, "DEADLINE", 6100.0)
+    spec = valid_spec()
+    spec.update(
+        session_seconds=worker.FIFTH_SESSION_SECONDS,
+        campaign_attempt_number=5,
+        campaign_max_attempts=5,
+        fifth_attempt_plan_sha256="d" * 64,
+    )
+    spec["files"]["plan.json"] = "d" * 64
+    worker.configure_session(spec)
+    assert worker.SESSION_SECONDS == 4800
+    assert worker.DEADLINE == 3700.0
+    assert worker.remaining_seconds(worker.START + 3599) == 1
+    with pytest.raises(TimeoutError):
+        worker.remaining_seconds(worker.START + 3600)
 
 
 def test_finalization_reserve_is_not_inference_time():

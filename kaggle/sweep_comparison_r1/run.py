@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import platform
 import shutil
@@ -20,6 +21,7 @@ from pathlib import Path
 
 START = float(os.environ.get("TABCOMPLETE_SWEEP_SESSION_START", time.monotonic()))
 SESSION_SECONDS = 7200
+FIFTH_SESSION_SECONDS = 4800
 RESERVE_SECONDS = 1200
 DEADLINE = START + SESSION_SECONDS - RESERVE_SECONDS
 RUNTIME_REVISION = "f072b103714dfa1eee531f80b24512faf38e3dd2"
@@ -95,15 +97,28 @@ def run(argv: list[str], label: str, cwd: Path | None = None) -> None:
 
 
 def validate_spec(spec: dict) -> None:
+    attempt = spec.get("campaign_attempt_number")
+    expected_session = FIFTH_SESSION_SECONDS if attempt == 5 else SESSION_SECONDS
+    expected_max_attempts = 5 if attempt == 5 else 4 if attempt == 4 else 3
     if (
         spec.get("schema") != "sweep-comparison-kaggle-input-v1"
         or spec.get("model_revision") != MODEL_REVISION
         or spec.get("model_sha256") != MODEL_SHA256
         or spec.get("runtime_revision") != RUNTIME_REVISION
-        or spec.get("session_seconds") != SESSION_SECONDS
-        or spec.get("reserve_seconds") != RESERVE_SECONDS
-        or spec.get("training_enabled") is not False
+        or isinstance(attempt, bool)
+        or not isinstance(attempt, int) or not 1 <= attempt <= 5
         or not isinstance(spec.get("files"), dict)
+        or spec.get("session_seconds") != expected_session
+        or spec.get("reserve_seconds") != RESERVE_SECONDS
+        or spec.get("campaign_max_attempts") != expected_max_attempts
+        or (attempt == 5 and (
+            not isinstance(spec.get("fifth_attempt_plan_sha256"), str)
+            or len(spec["fifth_attempt_plan_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in spec["fifth_attempt_plan_sha256"])
+            or spec["files"].get("plan.json") != spec.get("fifth_attempt_plan_sha256")
+        ))
+        or (attempt != 5 and spec.get("fifth_attempt_plan_sha256") is not None)
+        or spec.get("training_enabled") is not False
         or not isinstance(spec.get("runner_arguments"), list)
         or not spec["runner_arguments"]
         or any(not isinstance(item, str) or len(item) > 4096
@@ -125,6 +140,96 @@ def validate_spec(spec: dict) -> None:
             or any(c not in "0123456789abcdef" for c in sha)
         ):
             raise ValueError("Sweep input file identity is invalid")
+
+
+def configure_session(spec: dict) -> None:
+    """Apply only the session size authorized by the validated campaign attempt."""
+    validate_spec(spec)
+    global SESSION_SECONDS, DEADLINE
+    SESSION_SECONDS = spec["session_seconds"]
+    DEADLINE = START + SESSION_SECONDS - RESERVE_SECONDS
+
+
+def validate_fifth_attempt_plan(plan_path: Path, spec: dict) -> None:
+    """Bind the reduced fifth-attempt worker budget to frozen plan-v9."""
+    if spec.get("campaign_attempt_number") != 5:
+        raise ValueError("reduced Sweep worker session is only for attempt 5")
+    plan_hash = digest(plan_path)
+    if (
+        plan_hash != spec.get("fifth_attempt_plan_sha256")
+        or spec.get("files", {}).get("plan.json") != plan_hash
+    ):
+        raise ValueError("Sweep fifth-attempt plan digest mismatch")
+    plan = json.loads(plan_path.read_text())
+    plan_payload = {key: value for key, value in plan.items() if key != "plan_sha256"}
+    canonical = (json.dumps(
+        plan_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n").encode()
+    if hashlib.sha256(canonical).hexdigest() != plan.get("plan_sha256"):
+        raise ValueError("Sweep fifth-attempt plan self-hash mismatch")
+    amendment = plan.get("allocation_amendment_v9")
+    if (
+        plan.get("schema") != "sweep-comparison-plan-v1"
+        or plan.get("revision", {}).get("number") != 2
+        or not isinstance(plan.get("code"), dict)
+        or not isinstance(amendment, dict)
+        or amendment.get("schema") != "sweep-allocation-amendment-v9"
+        or amendment.get("number") != 9
+        or plan.get("code", {}).get("runner_sha256") != spec.get("runner_sha256")
+        or spec.get("session_seconds") != FIFTH_SESSION_SECONDS
+        or spec.get("reserve_seconds") != RESERVE_SECONDS
+    ):
+        raise ValueError("Sweep fifth-attempt plan and worker configuration disagree")
+    limits = amendment.get("attempt_limits")
+    expected_limits = {
+        "maximum_total_attempts": 5,
+        "attempts_already_used": 4,
+        "additional_attempts_remaining": 1,
+        "per_attempt_session_wall_seconds_max": FIFTH_SESSION_SECONDS,
+        "finalization_reserve_seconds": RESERVE_SECONDS,
+        "maximum_work_seconds": FIFTH_SESSION_SECONDS - RESERVE_SECONDS,
+        "campaign_aggregate_gpu_session_wall_seconds_max": 14400,
+        "fifth_attempt_allowed": True,
+    }
+    if limits != expected_limits or spec.get("campaign_max_attempts") != 5:
+        raise ValueError("Sweep fifth-attempt allocation limits are not authorized")
+    prior = amendment.get("verified_prior_attempts")
+    expected_ids = [
+        "shlokbhakta/tabcomplete-sweep-comparison-r1",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+    ]
+    if (
+        not isinstance(prior, list) or len(prior) != 4
+        or any(not isinstance(row, dict) for row in prior)
+        or [row.get("attempt_number") for row in prior] != [1, 2, 3, 4]
+        or [row.get("kernel_id") for row in prior] != expected_ids
+        or any(row.get("state") != "ERROR" for row in prior)
+    ):
+        raise ValueError("Sweep fifth-attempt plan lacks four terminal-error predecessors")
+    prior_wall = amendment.get("prior_wall_upper_bound_seconds")
+    aggregate = amendment.get("aggregate_wall_upper_bound_with_fifth_attempt_seconds")
+    margin = amendment.get("remaining_aggregate_wall_margin_seconds")
+    try:
+        prior_values = [float(row["conservative_wall_upper_bound_seconds"]) for row in prior]
+        if any(not math.isfinite(value) or value < 0 for value in prior_values):
+            raise ValueError("negative or non-finite prior duration")
+        measured_prior_wall = sum(prior_values)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Sweep fifth-attempt predecessor time evidence is invalid") from exc
+    if (
+        isinstance(prior_wall, bool) or not isinstance(prior_wall, (int, float))
+        or not math.isfinite(float(prior_wall)) or prior_wall < 0
+        or round(measured_prior_wall, 6) != round(float(prior_wall), 6)
+        or round(float(prior_wall) + FIFTH_SESSION_SECONDS, 6) != aggregate
+        or not isinstance(aggregate, (int, float)) or aggregate > 14400
+        or round(14400 - float(aggregate), 6) != margin
+        or round(float(spec.get("prior_wall_upper_bound_seconds", -1)), 6)
+        != round(float(prior_wall), 6)
+        or spec.get("campaign_wall_cap_seconds") != 14400
+    ):
+        raise ValueError("Sweep fifth-attempt aggregate wall-time budget is inconsistent")
 
 
 def stage_canonical_q4(input_dir: Path, scratch: Path) -> None:
@@ -179,6 +284,10 @@ def main() -> None:
         input_dir = specs[0].parent
         spec = json.loads(specs[0].read_text())
         validate_spec(spec)
+        if spec["campaign_attempt_number"] == 5:
+            validate_fifth_attempt_plan(input_dir / "plan.json", spec)
+        configure_session(spec)
+        status.update(session_seconds=SESSION_SECONDS, reserve_seconds=RESERVE_SECONDS)
         for name, sha in spec["files"].items():
             if digest(input_dir / name) != sha:
                 raise ValueError("Sweep input artifact hash mismatch")
