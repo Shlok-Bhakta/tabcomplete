@@ -16,20 +16,32 @@ import shutil
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
 from tinycomplete.one_line.context import CONTEXT_POLICY_VERSION
-from tinycomplete.one_line.contract import EditAction, EditState, apply_action, decode_action
+from tinycomplete.one_line.contract import (
+    EditAction,
+    EditState,
+    apply_action,
+    decode_action,
+    encode_action,
+)
 from tinycomplete.one_line.pilot_data import (
     CONSTRUCTIVE,
     INSTINCT,
+    LICENSE_MIXED,
+    _strict_json,
+    license_mixed_artifact_root,
     policy_for_schema,
     validate_aggregate_budget,
     validate_constructive_manifest,
     validate_constructive_review,
     validate_constructive_splits,
+    validate_license_mixed_manifest,
+    validate_license_mixed_review,
+    validate_license_mixed_splits,
     validate_pilot_row,
 )
 from tinycomplete.one_line.train import (
@@ -48,6 +60,11 @@ from tinycomplete.one_line.train import (
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_REVISION = "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301"
 MODEL_ID = "Qwen/Qwen2.5-Coder-0.5B"
+FIXTURE_ACTION_KINDS = ("keep", "replace_line", "insert_before", "delete_line")
+FIXTURE_DIAGNOSTIC_ORDINALS = (0, 5, 10, 15)
+FIXTURE_V2_PLAN_SCHEMA = "single-line-disposable-training-fixture-v2"
+FIXTURE_V1_PLAN_SCHEMA = "single-line-disposable-training-fixture-v1"
+FIXTURE_VIABILITY_SCHEMA = "single-line-disposable-implementation-viability-v1"
 
 
 def sha256_file(path: Path) -> str:
@@ -84,6 +101,174 @@ def directory_bytes(path: Path) -> int:
         if path.exists()
         else 0
     )
+
+
+def session_deadline_from_invocation(started_monotonic: float, session_minutes: float) -> float:
+    """Include artifact preparation and model loading in the allocated session."""
+    if started_monotonic < 0 or session_minutes <= 0:
+        raise ValueError("session deadline needs a valid invocation time and positive duration")
+    return started_monotonic + session_minutes * 60
+
+
+def finalization_reserve_seconds(reserve_minutes: float, last_save_seconds: float) -> float:
+    """Keep the larger of the frozen reserve and observed checkpoint margin."""
+    if reserve_minutes < 0 or last_save_seconds < 0:
+        raise ValueError("finalization reserve values cannot be negative")
+    return max(reserve_minutes * 60, last_save_seconds * 2 + 60)
+
+
+def remaining_training_seconds(deadline_monotonic: float, now_monotonic: float,
+                               reserve_seconds: float) -> float:
+    """Return time available for updates after preserving checkpoint reserve."""
+    if reserve_seconds < 0:
+        raise ValueError("finalization reserve cannot be negative")
+    return deadline_monotonic - now_monotonic - reserve_seconds
+
+
+def disposable_fixture_diagnostic_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Select four fixed examples of each answer-cued action for a bounded check."""
+    by_kind = {
+        kind: [row for row in rows if row.get("action", {}).get("kind") == kind]
+        for kind in FIXTURE_ACTION_KINDS
+    }
+    if any(len(group) < max(FIXTURE_DIAGNOSTIC_ORDINALS) + 1 for group in by_kind.values()):
+        raise ValueError("disposable fixture must provide sixteen examples of every action kind")
+    return [
+        by_kind[kind][ordinal]
+        for kind in FIXTURE_ACTION_KINDS
+        for ordinal in FIXTURE_DIAGNOSTIC_ORDINALS
+    ]
+
+
+def disposable_fixture_implementation_viability(
+    observations: list[dict[str, Any]], *, training_complete: bool
+) -> dict[str, Any]:
+    """Score codec execution separately from model quality or intent inference."""
+    by_kind = {
+        kind: [row for row in observations if row.get("gold_action") == kind]
+        for kind in FIXTURE_ACTION_KINDS
+    }
+    per_action: dict[str, Any] = {}
+    failures: list[str] = []
+    for kind, group in by_kind.items():
+        count = len(group)
+        valid = sum(row.get("valid_action") is True for row in group)
+        terminated = sum(row.get("terminated_by_eos") is True for row in group)
+        exact = sum(row.get("exact_action") is True for row in group)
+        per_action[kind] = {
+            "examples": count,
+            "valid_actions": valid,
+            "terminated_by_eos": terminated,
+            "exact_actions": exact,
+            "minimum_exact_actions": 3,
+        }
+        if count != len(FIXTURE_DIAGNOSTIC_ORDINALS):
+            failures.append(f"{kind}:expected_4_observations")
+        elif min(valid, terminated, exact) < 3:
+            failures.append(f"{kind}:below_3_of_4_decode_threshold")
+    if not training_complete:
+        failures.insert(0, "disposable_training_pass_incomplete")
+    passed = not failures
+    return {
+        "schema": "single-line-disposable-implementation-viability-v1",
+        "status": "pass" if passed else "fail",
+        "passed": passed,
+        "scope": "answer-cued_disposable_codec_only",
+        "quality_evidence": False,
+        "training_complete": training_complete,
+        "total_observations": len(observations),
+        "per_action": per_action,
+        "failure_reasons": failures,
+        "criterion": (
+            "For each N/R/I/D action, at least 3 of 4 fixed probes decode to the exact "
+            "canonical action and terminate with EOS after one complete disposable pass."
+        ),
+    }
+
+
+def disposable_fixture_supervision_by_action(
+    rows: list[dict[str, Any]], encoded: list[EncodedExample], tokenizer: Any
+) -> dict[str, Any]:
+    """Audit per-action wire/EOS labels and prompt masking in the disposable pass."""
+    if len(rows) != len(encoded):
+        raise ValueError("disposable fixture rows and encoded examples differ in count")
+    per_action: dict[str, Any] = {}
+    for kind in FIXTURE_ACTION_KINDS:
+        paired = [
+            (row, example)
+            for row, example in zip(rows, encoded, strict=True)
+            if row.get("action", {}).get("kind") == kind
+        ]
+        exact_target_count = 0
+        masked_prompt_count = 0
+        target_tokens = 0
+        for row, example in paired:
+            action = EditAction(**row["action"])
+            response_ids = tokenizer.encode(encode_action(action), add_special_tokens=False)
+            expected_response = tuple(response_ids) + (tokenizer.eos_token_id,)
+            target = example.input_ids[example.prompt_tokens :]
+            labels = example.labels[example.prompt_tokens :]
+            if target == expected_response and labels == expected_response:
+                exact_target_count += 1
+            if all(label == -100 for label in example.labels[: example.prompt_tokens]):
+                masked_prompt_count += 1
+            target_tokens += example.response_tokens
+        per_action[kind] = {
+            "examples": len(paired),
+            "supervised_response_and_eos_tokens": target_tokens,
+            "exact_wire_and_eos_targets": exact_target_count,
+            "prompt_positions_masked": masked_prompt_count,
+            "passed": (
+                bool(paired)
+                and exact_target_count == len(paired)
+                and masked_prompt_count == len(paired)
+            ),
+        }
+    return {
+        "schema": "single-line-disposable-supervision-audit-v1",
+        "passed": all(item["passed"] for item in per_action.values()),
+        "quality_evidence": False,
+        "per_action": per_action,
+    }
+
+
+def validate_disposable_fixture_plan(
+    plan: dict[str, Any], *, phase: str, epochs: int, microbatch: int
+) -> dict[str, Any] | None:
+    """Validate the new implementation-only fixture plan without changing v1."""
+    if phase != "fixture":
+        return None
+    fixture = plan.get("training", {}).get("disposable_fixture", {})
+    if not isinstance(fixture, dict):
+        raise ValueError("disposable fixture plan must be an object")
+    schema = fixture.get("schema")
+    if schema in (None, FIXTURE_V1_PLAN_SCHEMA):
+        return None
+    if schema != FIXTURE_V2_PLAN_SCHEMA:
+        raise ValueError("unknown disposable fixture plan schema")
+    fixed = {
+        "examples": 64,
+        "epochs": 1,
+        "effective_batch_examples": 2,
+        "microbatch_examples": 2,
+        "peak_learning_rate": 1e-4,
+        "expected_updates": 32,
+        "quality_evidence": False,
+        "implementation_viability_schema": FIXTURE_VIABILITY_SCHEMA,
+        "decode_examples_per_action": 4,
+        "minimum_exact_actions_per_action": 3,
+        "eos_required": True,
+    }
+    if any(fixture.get(key) != value for key, value in fixed.items()):
+        raise ValueError("disposable fixture v2 differs from its frozen implementation contract")
+    if (
+        epochs != 1
+        or microbatch != 2
+        or type(fixture.get("nonpadding_training_input_tokens")) is not int
+        or fixture["nonpadding_training_input_tokens"] <= 0
+    ):
+        raise ValueError("disposable fixture v2 phase or token declaration is invalid")
+    return fixture
 
 
 def verify_artifacts(model_dir: Path, config: dict[str, Any]) -> dict[str, Any]:
@@ -126,6 +311,7 @@ def load_training_rows(
     minimum_main_train: int,
     pilot_schema: str = INSTINCT.data_schema,
     expected_split: str = "train",
+    package_root: Path | None = None,
 ) -> list[dict[str, Any]]:
     if sha256_file(path) != expected_sha256:
         raise ValueError("training JSONL hash mismatch")
@@ -137,7 +323,13 @@ def load_training_rows(
         for line in handle:
             if not line.strip():
                 continue
-            row = json.loads(line)
+            row = (
+                _strict_json(line.encode("utf-8"), label="training row")
+                if pilot_schema == LICENSE_MIXED.data_schema
+                else json.loads(line)
+            )
+            if not isinstance(row, dict):
+                raise ValueError("training JSONL row must be an object")
             if row.get("split", "train") != expected_split:
                 raise ValueError("nontraining split entered the training shard")
             if row.get("source_type", "").startswith("opencode"):
@@ -145,6 +337,15 @@ def load_training_rows(
             if not row.get("source_license"):
                 raise ValueError("training row lacks a source license")
             identifier = row.get("id")
+            if pilot_schema == LICENSE_MIXED.data_schema:
+                candidate_id = row.get("candidate_id")
+                if (
+                    identifier is not None
+                    and candidate_id is not None
+                    and identifier != candidate_id
+                ):
+                    raise ValueError("LICENSE-MIXED candidate ID aliases disagree")
+                identifier = candidate_id if candidate_id is not None else identifier
             if not isinstance(identifier, str) or identifier in ids:
                 raise ValueError("training IDs must be unique strings")
             ids.add(identifier)
@@ -155,7 +356,11 @@ def load_training_rows(
             if phase == "main" and not row.get("validation", {}).get("inferability_reviewed"):
                 raise ValueError("main training requires inferability-reviewed states")
             if phase == "pilot":
-                validate_pilot_row(row, policy_for_schema(pilot_schema))
+                validate_pilot_row(
+                    row,
+                    policy_for_schema(pilot_schema),
+                    package_root=package_root,
+                )
             rows.append(row)
     if phase == "main" and len(rows) < minimum_main_train:
         raise ValueError("main training has fewer than 20,000 accepted states")
@@ -264,6 +469,7 @@ def _export_inference(
 
 
 def main() -> None:
+    invocation_started = time.monotonic()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--plan", type=Path, required=True)
@@ -286,8 +492,15 @@ def main() -> None:
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
+    deadline_monotonic = session_deadline_from_invocation(invocation_started, args.session_minutes)
     config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
+    disposable_fixture_plan = validate_disposable_fixture_plan(
+        plan,
+        phase=args.phase,
+        epochs=args.epochs,
+        microbatch=args.microbatch,
+    )
     if config["suite_revision"] != 3 or plan["suite_revision"] != 3:
         raise ValueError("single-line suite revision mismatch")
     if config["context"]["serializer"] != CONTEXT_POLICY_VERSION:
@@ -304,6 +517,10 @@ def main() -> None:
         raise ValueError("session deadline requires at least 15 minutes for finalization")
     if args.external_campaign_tokens < 0:
         raise ValueError("invalid prior campaign token count")
+    pilot_policy = None
+    data_manifest: dict[str, Any] | None = None
+    pilot_artifact_root: Path | None = None
+    development: list[dict[str, Any]] | None = None
     if args.phase == "pilot":
         pilot_policy = policy_for_schema(plan.get("data", {}).get("schema"))
         if (
@@ -339,6 +556,35 @@ def main() -> None:
                 session_seconds=plan["budgets"]["max_session_seconds"],
                 external_campaign_tokens=args.external_campaign_tokens,
             )
+        if pilot_policy is LICENSE_MIXED:
+            validate_aggregate_budget(
+                plan["budgets"],
+                planned_tokens=plan["training"]["planned_nonpadding_input_tokens"],
+                session_seconds=plan["budgets"]["max_session_seconds"],
+                external_campaign_tokens=args.external_campaign_tokens,
+            )
+    if args.phase in ("main", "pilot"):
+        if args.data_manifest is None:
+            raise ValueError("main/pilot run needs a frozen data manifest")
+        manifest_payload = args.data_manifest.read_bytes()
+        if args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+            parsed_manifest = _strict_json(manifest_payload, label="data manifest")
+        else:
+            parsed_manifest = json.loads(manifest_payload)
+        if not isinstance(parsed_manifest, dict):
+            raise ValueError("data manifest must be a JSON object")
+        data_manifest = parsed_manifest
+        if args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+            validate_license_mixed_manifest(data_manifest)
+            if (
+                plan.get("data", {}).get("manifest_sha256") != sha256_file(args.data_manifest)
+                or plan.get("data", {}).get("train_sha256") != args.data_sha256
+                or data_manifest.get("train_sha256") != args.data_sha256
+            ):
+                raise ValueError("LICENSE-MIXED data manifest is not pinned by the pilot plan")
+            pilot_artifact_root = license_mixed_artifact_root(
+                data_manifest, args.data_manifest.parent
+            )
     source_identity = verify_artifacts(args.model, config)
     if sha256_file(args.config) != plan["config_sha256"]:
         raise ValueError("frozen configuration hash mismatch")
@@ -348,16 +594,15 @@ def main() -> None:
         phase=args.phase,
         minimum_main_train=config["data"]["minimum_main_train"],
         pilot_schema=plan.get("data", {}).get("schema", INSTINCT.data_schema),
+        package_root=pilot_artifact_root,
     )
     if args.phase == "fixture":
         from tinycomplete.one_line.train import disposable_fixture_rows
 
-        if rows != disposable_fixture_rows():
+        if canonical_sha256(rows) != canonical_sha256(disposable_fixture_rows()):
             raise ValueError("fixture rows differ from the disposable codec exercises")
     if args.phase in ("main", "pilot"):
-        if args.data_manifest is None:
-            raise ValueError("main/pilot run needs a frozen data manifest")
-        data_manifest = json.loads(args.data_manifest.read_text(encoding="utf-8"))
+        assert data_manifest is not None
         if args.phase == "main":
             if (
                 data_manifest.get("accepted_train", 0) < config["data"]["minimum_main_train"]
@@ -365,16 +610,19 @@ def main() -> None:
                 or not data_manifest.get("split_manifest_sha256")
             ):
                 raise ValueError("main data diversity/split manifest gate failed")
-        elif (
-            data_manifest.get("schema") != pilot_policy.data_schema
-            or data_manifest.get("train_sha256") != args.data_sha256
-            or data_manifest.get("train_count") != len(rows)
-            or data_manifest.get("dev_count", 0) < 64
-            or not data_manifest.get("file_groups_disjoint")
-            or plan.get("data", {}).get("train_sha256") != args.data_sha256
-            or plan.get("data", {}).get("manifest_sha256") != sha256_file(args.data_manifest)
-        ):
-            raise ValueError("pilot data manifest gate failed")
+        elif args.phase == "pilot":
+            assert pilot_policy is not None and args.data_manifest is not None
+            if (
+                data_manifest.get("schema") != pilot_policy.data_schema
+                or data_manifest.get("train_sha256") != args.data_sha256
+                or data_manifest.get("train_count") != len(rows)
+                or data_manifest.get("dev_count", 0) < 64
+                or not data_manifest.get("file_groups_disjoint")
+                or plan.get("data", {}).get("train_sha256") != args.data_sha256
+                or plan.get("data", {}).get("manifest_sha256")
+                != sha256_file(args.data_manifest)
+            ):
+                raise ValueError("pilot data manifest gate failed")
         if args.phase == "pilot" and pilot_policy is CONSTRUCTIVE:
             validate_constructive_manifest(data_manifest)
             if args.development_data is None:
@@ -397,8 +645,32 @@ def main() -> None:
                 [*rows, *development],
                 args.data_manifest.parent / "independent_review.json",
             )
+        elif args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+            if args.development_data is None or pilot_artifact_root is None:
+                raise ValueError("LICENSE-MIXED pilot needs its frozen development shard")
+            development = load_training_rows(
+                args.development_data,
+                plan["data"]["development_sha256"],
+                phase="pilot",
+                minimum_main_train=config["data"]["minimum_main_train"],
+                pilot_schema=pilot_policy.data_schema,
+                expected_split="development",
+                package_root=pilot_artifact_root,
+            )
+            if (
+                data_manifest.get("development_sha256")
+                != plan["data"]["development_sha256"]
+                or data_manifest.get("dev_count") != len(development)
+            ):
+                raise ValueError("LICENSE-MIXED development shard differs from frozen manifest")
+            validate_license_mixed_splits([*rows, *development])
     chosen_rows = phase_rows(rows, args.phase)
     peak_lr = peak_learning_rate(args.phase, args.selection)
+    effective_batch_examples = (
+        disposable_fixture_plan["effective_batch_examples"]
+        if disposable_fixture_plan is not None
+        else config["training"]["effective_batch_examples"]
+    )
     output_cap = config["budget"]["maximum_new_persistent_local_research_bytes"]
     _storage_preflight(
         args.output,
@@ -412,6 +684,15 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(
         args.model, local_files_only=True, trust_remote_code=False
     )
+    if args.phase == "pilot" and pilot_policy is LICENSE_MIXED:
+        assert args.data_manifest is not None and data_manifest is not None
+        assert development is not None and pilot_artifact_root is not None
+        validate_license_mixed_review(
+            data_manifest,
+            [*rows, *development],
+            tokenizer=tokenizer,
+            package_root=args.data_manifest.parent,
+        )
     encoded: list[EncodedExample] = []
     for row in chosen_rows:
         encoded.append(
@@ -427,10 +708,24 @@ def main() -> None:
     batches = bucketed_batches(
         encoded,
         epochs=args.epochs,
-        effective_batch=config["training"]["effective_batch_examples"],
+        effective_batch=effective_batch_examples,
     )
     counts = token_counts(encoded)
     planned_tokens = counts["nonpadding_training_input_tokens"] * args.epochs
+    fixture_supervision_audit: dict[str, Any] | None = None
+    if disposable_fixture_plan is not None:
+        if (
+            len(encoded) != disposable_fixture_plan["examples"]
+            or len(batches) != disposable_fixture_plan["expected_updates"]
+            or planned_tokens
+            != disposable_fixture_plan["nonpadding_training_input_tokens"]
+        ):
+            raise ValueError("disposable fixture v2 counts differ from the frozen phase plan")
+        fixture_supervision_audit = disposable_fixture_supervision_by_action(
+            chosen_rows, encoded, tokenizer
+        )
+        if not fixture_supervision_audit["passed"]:
+            raise ValueError("disposable fixture v2 response/EOS supervision audit failed")
     if args.phase == "pilot" and planned_tokens > 2_000_000:
         raise ValueError("pilot planned input exposure exceeds 2,000,000 tokens")
     if args.phase == "pilot" and planned_tokens != plan["training"].get(
@@ -463,7 +758,7 @@ def main() -> None:
         "peak_lr": peak_lr,
         "epochs": args.epochs,
         "microbatch": args.microbatch,
-        "effective_batch": config["training"]["effective_batch_examples"],
+        "effective_batch": effective_batch_examples,
         "torch": _installed_version("torch"),
         "transformers": _installed_version("transformers"),
         "external_campaign_tokens": args.external_campaign_tokens,
@@ -476,8 +771,21 @@ def main() -> None:
         "token_counts_one_pass": counts,
         "planned_training_input_tokens": planned_tokens,
         "planned_updates": len(batches),
+        "effective_batch_examples": effective_batch_examples,
         "status": "inspected" if not args.execute else "prepared",
     }
+    if disposable_fixture_plan is not None:
+        identity["disposable_fixture_plan"] = disposable_fixture_plan
+        summary["disposable_fixture_preflight"] = {
+            "plan_schema": FIXTURE_V2_PLAN_SCHEMA,
+            "implementation_viability_schema": FIXTURE_VIABILITY_SCHEMA,
+            "supervision_audit": fixture_supervision_audit,
+            "implementation_viability_status": "pending_gpu_fixture_execution",
+            "quality_evidence": False,
+        }
+        fingerprint = canonical_sha256(identity)
+        summary["fingerprint"] = fingerprint
+        summary["identity"] = identity
     if not args.execute:
         print(json.dumps(summary, sort_keys=True))
         return
@@ -551,6 +859,34 @@ def main() -> None:
     log_path = args.output / "updates.jsonl"
     last_save_seconds = 0.0
 
+    reserve_seconds = finalization_reserve_seconds(args.reserve_minutes, last_save_seconds)
+    training_window_seconds = remaining_training_seconds(
+        deadline_monotonic, time.monotonic(), reserve_seconds
+    )
+    if training_window_seconds <= 0:
+        summary.update(
+            {
+                "status": "deadline_stop_before_training",
+                "cursor": asdict(cursor),
+                "invocation_elapsed_seconds": time.monotonic() - invocation_started,
+                "training_window_seconds_at_start": training_window_seconds,
+                "finalization_reserve_seconds": reserve_seconds,
+                "latest_checkpoint": str(latest_path) if latest_path else None,
+            }
+        )
+        atomic_json(args.output / "run_result.json", summary)
+        print(
+            json.dumps(
+                {
+                    "status": summary["status"],
+                    "cursor": asdict(cursor),
+                    "result": str(args.output / "run_result.json"),
+                },
+                sort_keys=True,
+            )
+        )
+        return
+
     def save(cursor_at_boundary: TrainingCursor) -> None:
         nonlocal latest_path, last_save_seconds
         started = time.monotonic()
@@ -604,7 +940,6 @@ def main() -> None:
         with log_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
 
-    deadline = time.monotonic() + args.session_minutes * 60
     run = train_encoded(
         model,
         encoded,
@@ -618,9 +953,9 @@ def main() -> None:
         microbatch_examples=args.microbatch,
         max_input_tokens=config["budget"]["maximum_nonpadding_training_input_tokens"],
         external_campaign_tokens=args.external_campaign_tokens,
-        deadline_monotonic=deadline,
-        finalization_reserve_seconds=lambda: max(
-            args.reserve_minutes * 60, last_save_seconds * 2 + 60
+        deadline_monotonic=deadline_monotonic,
+        finalization_reserve_seconds=lambda: finalization_reserve_seconds(
+            args.reserve_minutes, last_save_seconds
         ),
         checkpoint_every_updates=args.checkpoint_every_updates,
         on_checkpoint=save,
@@ -642,7 +977,15 @@ def main() -> None:
         model.eval()
         # Four deliberately exposed codec exercises. Actual greedy stopping is
         # observed separately from correctly supervising EOS in the loss.
-        for row, example in zip(chosen_rows[:4], encoded[:4], strict=True):
+        diagnostic_rows = (
+            disposable_fixture_diagnostic_rows(chosen_rows)
+            if disposable_fixture_plan is not None
+            else chosen_rows[:4]
+        )
+        diagnostic_ids = {row["id"] for row in diagnostic_rows}
+        for row, example in zip(chosen_rows, encoded, strict=True):
+            if row["id"] not in diagnostic_ids:
+                continue
             ids = torch.tensor([example.input_ids[: example.prompt_tokens]], device=device)
             with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
                 generated = model.generate(
@@ -654,10 +997,13 @@ def main() -> None:
                     pad_token_id=tokenizer.eos_token_id,
                 )[0, ids.shape[1] :].tolist()
             terminated = bool(generated and generated[-1] == tokenizer.eos_token_id)
-            wire = tokenizer.decode(
-                generated[:-1] if terminated else generated,
-                skip_special_tokens=False,
-                clean_up_tokenization_spaces=False,
+            wire = cast(
+                str,
+                tokenizer.decode(
+                    generated[:-1] if terminated else generated,
+                    skip_special_tokens=False,
+                    clean_up_tokenization_spaces=False,
+                ),
             )
             decoded = decode_action(wire, terminated=terminated, generated_tokens=len(generated))
             generated_observations.append(
@@ -671,7 +1017,7 @@ def main() -> None:
                     "exact_action": decoded.action == EditAction(**row["action"]),
                 }
             )
-        summary["disposable_fixture"] = {
+        fixture_summary = {
             "quality_evidence": False,
             "generation_quality_status": "four_exposed_training_exercises_not_quality_evidence",
             "greedy_generation_observations": generated_observations,
@@ -688,6 +1034,30 @@ def main() -> None:
             ).hexdigest(),
             "final_parameter_sha256": hashlib.sha256(fixture_after.numpy().tobytes()).hexdigest(),
         }
+        if disposable_fixture_plan is not None:
+            training_complete = (
+                run.status == "complete"
+                and run.cursor.completed_updates == disposable_fixture_plan["expected_updates"]
+                and run.cursor.skipped_updates == 0
+            )
+            viability = disposable_fixture_implementation_viability(
+                generated_observations,
+                training_complete=training_complete,
+            )
+            fixture_summary.update(
+                {
+                    "plan_schema": FIXTURE_V2_PLAN_SCHEMA,
+                    "effective_batch_examples": effective_batch_examples,
+                    "microbatch_examples": args.microbatch,
+                    "planned_updates": len(batches),
+                    "supervision_audit": fixture_supervision_audit,
+                    "generation_quality_status": (
+                        "answer_cued_implementation_viability_only_no_quality_evidence"
+                    ),
+                    "implementation_viability": viability,
+                }
+            )
+        summary["disposable_fixture"] = fixture_summary
         atomic_json(args.output / "run_result.json", summary)
         if (
             run.status != "complete"
@@ -695,6 +1065,10 @@ def main() -> None:
             or run.cursor.skipped_updates
             or not summary["disposable_fixture"]["changed_parameter_elements"]
             or not summary["disposable_fixture"]["response_and_eos_positions_supervised"]
+            or (
+                disposable_fixture_plan is not None
+                and not summary["disposable_fixture"]["implementation_viability"]["passed"]
+            )
         ):
             raise RuntimeError("disposable fixture failed actual update or supervision checks")
     if run.status == "complete":

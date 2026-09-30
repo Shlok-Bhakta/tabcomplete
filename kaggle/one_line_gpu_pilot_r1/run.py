@@ -184,6 +184,8 @@ def stage(
 
 
 def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
+    if SESSION.get("fixture_only") is True:
+        return _safe_fixture_input(path)
     data_schema = SESSION.get("data_schema", "one-line-instinct-pilot-v1")
     if data_schema == "one-line-instinct-pilot-v1":
         source_dataset = "continuedev/instinct-data"
@@ -195,6 +197,12 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         file_license_status = "own_synthetic_source"
         if SESSION.get("dataset_license") != "MIT":
             raise ValueError("constructive pilot source license mismatch")
+    elif data_schema == "one-line-license-mixed-pilot-v1":
+        source_dataset = "public-source/license-mixed-pilot-r1"
+        plan_schema = "one-line-license-mixed-pilot-plan-v1"
+        file_license_status = "per_file_scope_pinned"
+        if SESSION.get("dataset_license") != "LICENSE-MIXED":
+            raise ValueError("mixed-license pilot must preserve per-file licenses")
     else:
         raise ValueError("unapproved bounded-pilot data schema")
     if SESSION.get("source_dataset_id", source_dataset) != source_dataset:
@@ -223,6 +231,24 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     required_names = REQUIRED_INPUTS
     if data_schema == "one-line-constructive-pilot-v1":
         required_names = required_names | {"independent_review.json", "training-fixture.jsonl"}
+    elif data_schema == "one-line-license-mixed-pilot-v1":
+        proof_files = SESSION.get("proof_files")
+        if not isinstance(proof_files, dict) or not 1 <= len(proof_files) <= 32768:
+            raise ValueError("mixed-license input needs its frozen proof inventory")
+        for name, identity in proof_files.items():
+            relative = Path(name)
+            if (
+                relative.is_absolute()
+                or ".." in relative.parts
+                or len(relative.parts) < 2
+                or relative.as_posix() != name
+                or any(part.startswith(".") for part in relative.parts)
+                or not isinstance(identity, dict)
+                or set(identity) != {"bytes", "sha256"}
+                or files.get(name) != identity
+            ):
+                raise ValueError("mixed-license proof inventory is unsafe or inconsistent")
+        required_names = required_names | {"training-fixture.jsonl"} | set(proof_files)
     expected_names = required_names | OPTIONAL_MODEL_FILES
     if not required_names <= names or not names <= expected_names:
         raise ValueError("input package contains missing or unapproved files")
@@ -301,7 +327,7 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("frozen pilot plan violates the model, data, or budget contract")
-    if data_schema == "one-line-constructive-pilot-v1":
+    if data_schema in {"one-line-constructive-pilot-v1", "one-line-license-mixed-pilot-v1"}:
         prior_tokens = budgets.get("prior_training_input_tokens")
         prior_seconds = budgets.get("prior_session_wall_seconds")
         fixture = training.get("disposable_fixture", {})
@@ -314,7 +340,12 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
             or prior_tokens != SESSION.get("prior_training_input_tokens")
             or prior_seconds != SESSION.get("prior_session_wall_seconds")
             or fixture != SESSION.get("disposable_fixture")
-            or fixture.get("schema") != "single-line-disposable-training-fixture-v1"
+            or fixture.get("schema")
+            != (
+                "single-line-disposable-training-fixture-v2"
+                if data_schema == "one-line-license-mixed-pilot-v1"
+                else "single-line-disposable-training-fixture-v1"
+            )
             or fixture.get("examples") != 64
             or fixture.get("epochs") != 1
             or fixture.get("peak_learning_rate") != 1e-4
@@ -328,6 +359,32 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
             or prior_seconds + SESSION["session_seconds"] > 24 * 3600
         ):
             raise ValueError("constructive worker aggregate campaign accounting mismatch")
+        if data_schema == "one-line-license-mixed-pilot-v1":
+            expected_proof_files = {
+                item["path"]: {"bytes": item["bytes"], "sha256": item["sha256"]}
+                for item in data_plan.get("proof_files", [])
+            }
+            if expected_proof_files != SESSION["proof_files"]:
+                raise ValueError("mixed-license proof files differ from the frozen plan")
+            if data_manifest.get("artifact_root", ".") != ".":
+                raise ValueError("mixed-license input must preserve the portable package root")
+            if any(
+                fixture.get(key) != value
+                for key, value in {
+                    "effective_batch_examples": 2,
+                    "microbatch_examples": 2,
+                    "expected_updates": 32,
+                    "decode_examples_per_action": 4,
+                    "minimum_exact_actions_per_action": 3,
+                    "eos_required": True,
+                    "implementation_viability_schema": (
+                        "single-line-disposable-implementation-viability-v1"
+                    ),
+                }.items()
+            ):
+                raise ValueError(
+                    "mixed-license input lacks the declared fixture-v2 viability check"
+                )
     if sha(manifest_path.parent / "train.jsonl") != SESSION["train_sha256"]:
         raise ValueError("training shard differs from the frozen session")
     if sha(manifest_path.parent / "development.jsonl") != SESSION["development_sha256"]:
@@ -340,6 +397,72 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         raise ValueError("input manifest does not pin the approved model weights")
     if files["tokenizer.json"]["sha256"] != SESSION["tokenizer_sha256"]:
         raise ValueError("input manifest does not pin the approved tokenizer")
+    return manifest_path.parent, manifest
+
+
+def _safe_fixture_input(path: Path) -> tuple[Path, dict[str, Any]]:
+    """Only the exact disposable implementation fixture, never an adaptation corpus."""
+    matches = [
+        candidate
+        for candidate in path.rglob("input-manifest.json")
+        if sha(candidate) == SESSION["input_manifest_sha256"]
+    ]
+    if len(matches) != 1:
+        raise ValueError("expected exactly one frozen disposable input manifest")
+    manifest_path = matches[0]
+    manifest = load(manifest_path)
+    if (
+        manifest.get("schema") != "one-line-disposable-fixture-input-v2"
+        or manifest.get("branch") != SESSION["branch"]
+        or manifest.get("commit") != SESSION["commit"]
+        or manifest.get("plan_sha256") != SESSION["plan_sha256"]
+    ):
+        raise ValueError("disposable fixture input identity differs from the frozen session")
+    required = {
+        "model.safetensors",
+        "config.json",
+        "tokenizer.json",
+        "config.yaml",
+        "plan.json",
+        "training-fixture.jsonl",
+    }
+    files = manifest.get("files")
+    if not isinstance(files, dict) or not required <= set(files) <= required | OPTIONAL_MODEL_FILES:
+        raise ValueError("disposable fixture contains missing or unapproved files")
+    approved_names = set(files) | {"input-manifest.json", "dataset-metadata.json"}
+    for candidate in manifest_path.parent.rglob("*"):
+        if candidate.is_symlink() or (
+            candidate.is_file()
+            and (candidate.parent != manifest_path.parent or candidate.name not in approved_names)
+        ):
+            raise ValueError("disposable fixture contains an unapproved artifact")
+    for name, identity in files.items():
+        candidate = manifest_path.parent / name
+        if (
+            candidate.is_symlink()
+            or not candidate.is_file()
+            or candidate.stat().st_size != identity.get("bytes")
+            or sha(candidate) != identity.get("sha256")
+        ):
+            raise ValueError("disposable fixture input hash or size mismatch")
+    plan = load(manifest_path.parent / "plan.json")
+    if (
+        sha(manifest_path.parent / "plan.json") != SESSION["plan_sha256"]
+        or sha(manifest_path.parent / "config.yaml") != SESSION["config_sha256"]
+        or plan.get("schema") != "one-line-disposable-fixture-plan-v2"
+        or plan.get("quality_evidence") is not False
+        or plan.get("accepted_training") != 0
+        or plan.get("training", {}).get("disposable_fixture") != SESSION["disposable_fixture"]
+        or plan.get("budgets", {}).get("max_session_seconds") != SESSION["session_seconds"]
+        or SESSION["session_seconds"] != 7200
+        or SESSION["reserve_seconds"] != 1200
+        or plan.get("budgets", {}).get("reserve_seconds") != 1200
+        or plan.get("budgets", {}).get("no_automatic_renewal") is not True
+        or SESSION["disposable_fixture"].get("schema")
+        != "single-line-disposable-training-fixture-v2"
+        or SESSION["disposable_fixture"]["nonpadding_training_input_tokens"] > 20000
+    ):
+        raise ValueError("disposable fixture violates the frozen implementation-only contract")
     return manifest_path.parent, manifest
 
 
@@ -357,15 +480,20 @@ def _verify_model(directory: Path) -> None:
 
 
 def _verify_reviewed_inputs(directory: Path) -> None:
-    if SESSION.get("data_schema") != "one-line-constructive-pilot-v1":
+    schema = SESSION.get("data_schema")
+    if schema not in {"one-line-constructive-pilot-v1", "one-line-license-mixed-pilot-v1"}:
         return
     sys.path.insert(0, str(REPO / "src"))
     from tinycomplete.one_line.contract import EditAction, EditState, apply_action
     from tinycomplete.one_line.pilot_data import (
         CONSTRUCTIVE,
+        LICENSE_MIXED,
         validate_constructive_manifest,
         validate_constructive_review,
         validate_constructive_splits,
+        validate_license_mixed_manifest,
+        validate_license_mixed_review,
+        validate_license_mixed_splits,
         validate_pilot_row,
     )
 
@@ -376,6 +504,16 @@ def _verify_reviewed_inputs(directory: Path) -> None:
         for line in (directory / filename).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    if schema == LICENSE_MIXED.data_schema:
+        from transformers import AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            directory, local_files_only=True, trust_remote_code=False
+        )
+        validate_license_mixed_manifest(manifest)
+        validate_license_mixed_splits(rows)
+        validate_license_mixed_review(manifest, rows, tokenizer=tokenizer, package_root=directory)
+        return
     validate_constructive_manifest(manifest)
     for row in rows:
         validate_pilot_row(row, CONSTRUCTIVE)
@@ -417,14 +555,27 @@ def _clone_frozen_commit() -> None:
     repository_plan = "reports/research/one_line_gpu_pilot_r1/plan.json"
     if SESSION.get("data_schema") == "one-line-constructive-pilot-v1":
         repository_plan = "reports/prototype/product_r2/constructive_pilot_plan.json"
+    elif SESSION.get("data_schema") == "one-line-license-mixed-pilot-v1":
+        repository_plan = "reports/prototype/product_r2/license_mixed_pilot_plan.json"
+    elif SESSION.get("fixture_only") is True:
+        repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v3.json"
     if sha(REPO / repository_plan) != SESSION["plan_sha256"]:
         raise ValueError("pushed pilot plan does not match the attached frozen plan")
+    if SESSION.get("fixture_only") is True:
+        plan = load(REPO / repository_plan)
+        for name, digest in plan["source_files"].items():
+            relative = Path(name)
+            if relative.is_absolute() or ".." in relative.parts or sha(REPO / relative) != digest:
+                raise ValueError("worker source differs from frozen fixture plan")
     if sha(REPO / "configs/research/one_line_r1.yaml") != SESSION["config_sha256"]:
         raise ValueError("pushed training config differs from the attached frozen config")
 
 
 def _check_t4_and_logits_support() -> dict[str, str]:
-    if SESSION.get("data_schema") == "one-line-constructive-pilot-v1":
+    if SESSION.get("fixture_only") is True or SESSION.get("data_schema") in {
+        "one-line-constructive-pilot-v1",
+        "one-line-license-mixed-pilot-v1",
+    }:
         if sys.version_info[:2] != (3, 11):
             raise RuntimeError("constructive pilot requires Python 3.11")
     import torch
@@ -573,22 +724,41 @@ def _run_disposable_training_fixture(dataset: Path, env: dict[str, str]) -> int:
     counts = result.get("cursor", {})
     observation = result.get("disposable_fixture", {})
     generations = observation.get("greedy_generation_observations", [])
+    version2 = spec.get("schema") == "single-line-disposable-training-fixture-v2"
     if (
         result.get("status") != "complete"
         or result.get("examples") != 64
-        or counts.get("completed_updates") != 2
+        or counts.get("completed_updates") != (32 if version2 else 2)
         or counts.get("skipped_updates") != 0
         or counts.get("training_input_tokens") != spec["nonpadding_training_input_tokens"]
         or counts.get("supervised_target_tokens") != spec["supervised_response_and_eos_tokens"]
         or observation.get("response_and_eos_positions_supervised") is not True
         or observation.get("changed_parameter_elements", 0) <= 0
         or not isinstance(generations, list)
-        or len(generations) != 4
+        or len(generations) != (16 if version2 else 4)
         or {row.get("gold_action") for row in generations}
         != {"keep", "replace_line", "insert_before", "delete_line"}
         or any(type(row.get("terminated_by_eos")) is not bool for row in generations)
     ):
         raise ValueError("disposable fixture did not prove the declared updates and supervision")
+    if version2:
+        if observation.get("implementation_viability", {}).get("passed") is not True:
+            raise ValueError("fixture-v2 decode viability failed; real data training is forbidden")
+        for kind in ("keep", "replace_line", "insert_before", "delete_line"):
+            subset = [row for row in generations if row.get("gold_action") == kind]
+            if (
+                len(subset) != 4
+                or sum(
+                    row.get("terminated_by_eos") is True
+                    and row.get("valid_action") is True
+                    and row.get("exact_action") is True
+                    for row in subset
+                )
+                < 3
+            ):
+                raise ValueError(
+                    "fixture-v2 action/EOS check failed; real data training is forbidden"
+                )
     save(
         OUT / "disposable-fixture-verification.json",
         {
@@ -691,7 +861,7 @@ def main() -> int:
         "model_config_sha256": SESSION["model_config_sha256"],
         "session_limit_seconds": SESSION["session_seconds"],
         "reserve_seconds": RESERVE_SECONDS,
-        "phase": "pilot",
+        "phase": SESSION.get("phase", "pilot"),
         "epochs": 1,
         "stages": [],
     }
@@ -713,7 +883,11 @@ def main() -> int:
         status["input_file_count"] = len(input_manifest["files"])
         save(OUT / "worker-status.json", status)
 
-        if SESSION.get("data_schema") == "one-line-constructive-pilot-v1" and not resumed_setup:
+        if (
+            SESSION.get("fixture_only") is True
+            or SESSION.get("data_schema")
+            in {"one-line-constructive-pilot-v1", "one-line-license-mixed-pilot-v1"}
+        ) and not resumed_setup:
             _prepare_python311()
         if not resumed_setup:
             stage(
@@ -739,7 +913,38 @@ def main() -> int:
         runtime = _check_t4_and_logits_support()
         status.update(runtime)
         fixture_tokens = 0
-        if SESSION.get("data_schema") == "one-line-constructive-pilot-v1":
+        if SESSION.get("fixture_only") is True:
+            status["state"] = "disposable_training_fixture"
+            save(OUT / "worker-status.json", status)
+            fixture_tokens = _run_disposable_training_fixture(dataset, env)
+            status = load(OUT / "worker-status.json")
+            fixture_result = load(OUT / "disposable-training-fixture/run_result.json")
+            fixture_latest = load(OUT / "disposable-training-fixture/latest.json")
+            status.update(
+                training_status=fixture_result["status"],
+                checkpoint_sha256=fixture_latest["sha256"],
+                state="disposable_verified_complete",
+                quality_evidence=False,
+                accepted_training=0,
+                training_input_tokens=fixture_tokens,
+                session_elapsed_seconds=time.monotonic() - STARTED,
+            )
+            save(OUT / "worker-status.json", status)
+            print(
+                json.dumps(
+                    {
+                        "state": status["state"],
+                        "quality_evidence": False,
+                        "training_input_tokens": fixture_tokens,
+                    }
+                ),
+                flush=True,
+            )
+            return 0
+        if SESSION.get("data_schema") in {
+            "one-line-constructive-pilot-v1",
+            "one-line-license-mixed-pilot-v1",
+        }:
             status["state"] = "disposable_training_fixture"
             save(OUT / "worker-status.json", status)
             fixture_tokens = _run_disposable_training_fixture(dataset, env)

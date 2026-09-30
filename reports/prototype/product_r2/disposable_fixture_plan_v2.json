@@ -1,0 +1,251 @@
+{
+  "accepted_training": 0,
+  "base_commit": "9f645a83bce238059d0f51fc0da55eab785650e5",
+  "branch": "prototype/product-r2",
+  "budgets": {
+    "max_new_storage_bytes": 12884901888,
+    "max_session_seconds": 7200,
+    "maximum_new_allocations": 1,
+    "maximum_new_fixture_input_tokens": 20000,
+    "no_automatic_renewal": true,
+    "prior_session_wall_seconds": 28261,
+    "prior_training_input_tokens": 538275,
+    "quota_gpu_hours_multiplier": 2,
+    "reserve_seconds": 1200
+  },
+  "config_sha256": "52aa2fcd8b115a9654a041bf017f245224de5448269eaab16ea7bc31c38a0b29",
+  "kaggle": {
+    "dataset_id": "shlokbhakta/tabcomplete-disposable-fixture-v2-inputs",
+    "kernel_id": "shlokbhakta/tabcomplete-disposable-fixture-v2"
+  },
+  "prior_accounting": {
+    "session_wall_seconds_basis": "Conservative ceiling: two earlier 7200-second pilot allocations plus 13861 seconds rounded-up aggregate six Sweep allocation bounds. This is not billed GPU-hours.",
+    "training_input_tokens_source": "reports/research/one_line_gpu_pilot_r1/result_summary.json"
+  },
+  "purpose": "Actual training implementation check. Answer-cued disposable states are not model-quality evidence and cannot be deployed.",
+  "quality_evidence": false,
+  "quota_at_freeze": {
+    "active_jobs": [],
+    "job_statuses": [
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-final has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry",
+        "status": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1",
+        "status": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-r1-conversion has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-heldout",
+        "status": "shlokbhakta/tabcomplete-r1-heldout has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+        "status": "shlokbhakta/tabcomplete-r1-lfm-q4-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-context",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-context has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-evaluation",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-evaluation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-baseline has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "unknown",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-09-30T20:09:12.643537+00:00"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/notebookd2edcfa65c",
+        "status": "unknown",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-09-30T20:09:12.643537+00:00"
+      }
+    ],
+    "observed_at": "2026-09-30T20:08:43.498684+00:00",
+    "remaining": 41.74,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 3.26
+  },
+  "resume": "Only exact model/config/data/source/runtime fingerprints. No automatic new allocation or quota renewal.",
+  "runtime": {
+    "bitsandbytes": "0.50.2",
+    "compute": "T4 CUDA0 FP16 compute with FP32 master weights",
+    "other_gpu_training_ranks": 0,
+    "python": "3.11.15",
+    "torch": "2.10.0",
+    "transformers": "5.17.0"
+  },
+  "schema": "one-line-disposable-fixture-plan-v2",
+  "selection": "No deployment or student selection is permitted from this disposable diagnostic.",
+  "source_files": {
+    "kaggle/one_line_gpu_pilot_r1/build_pilot.py": "118733c111fd1d77e7f5be4a7b0a47868c116776522d0e3c551c28c840c77a77",
+    "kaggle/one_line_gpu_pilot_r1/run.py": "4781dc35f7f80889960133c665d859c7f39894527ae13239679390fac7cc3ffc",
+    "scripts/train_one_line.py": "d00c471dcf679ba41c290f4d8aac6414be60647bd48e1b0a30504e4a4ae541bf",
+    "src/tinycomplete/one_line/context.py": "a21c436942b62a58d81a6bfa7e31a3cf5945c5aacbd8ff0d441900bca640f51b",
+    "src/tinycomplete/one_line/contract.py": "2e308d8626d85f457244df28c545578246d677f3734a7e28261a34eed558da7f",
+    "src/tinycomplete/one_line/pilot_data.py": "70ae9d2774835a61f01a328a0c93cb68514c97d510bb4df0fb394ab4efe99e53",
+    "src/tinycomplete/one_line/train.py": "7d4c619f0263a0f626afe170114ef11205f517213858064d17ea1ff52e60f328",
+    "tests/test_license_mixed_gpu_staging.py": "c4686ad37bbe8af174246d5a37b1e2ae26001f145b87984fc071bce84df6f42f",
+    "tests/test_train_one_line_session_deadline.py": "ca20ca4cd33769d1abd0021ce4e8538eb93552ebcf881d8214c2dd1d7a57d4c0"
+  },
+  "student": {
+    "config_sha256": "e6bf24d1cf58278dcb4ded7e885b71cb1c56299b34c8046b1b64395d17b1891f",
+    "initializer": "untouched_pretrained",
+    "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+    "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+  },
+  "suite_revision": 3,
+  "training": {
+    "disposable_fixture": {
+      "decode_examples_per_action": 4,
+      "effective_batch_examples": 2,
+      "eos_required": true,
+      "epochs": 1,
+      "examples": 64,
+      "expected_updates": 32,
+      "implementation_viability_schema": "single-line-disposable-implementation-viability-v1",
+      "microbatch_examples": 2,
+      "minimum_exact_actions_per_action": 3,
+      "nonpadding_training_input_tokens": 10592,
+      "peak_learning_rate": 0.0001,
+      "quality_evidence": false,
+      "schema": "single-line-disposable-training-fixture-v2",
+      "sha256": "aecd539fba9f90785df36c8e8f6772063664e61bfc2df8d376a5e1b4c2fb7ddf",
+      "supervised_response_and_eos_tokens": 408
+    },
+    "phase": "fixture",
+    "planned_nonpadding_input_tokens": 10592
+  }
+}

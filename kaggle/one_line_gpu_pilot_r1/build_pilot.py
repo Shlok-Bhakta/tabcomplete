@@ -29,11 +29,17 @@ import yaml
 from tinycomplete.one_line.pilot_data import (
     CONSTRUCTIVE,
     INSTINCT,
+    LICENSE_MIXED,
+    PUBLIC_SOURCE_TYPES,
+    license_mixed_artifact_root,
     policy_for_schema,
     validate_aggregate_budget,
     validate_constructive_manifest,
     validate_constructive_review,
     validate_constructive_splits,
+    validate_license_mixed_manifest,
+    validate_license_mixed_review,
+    validate_license_mixed_splits,
     validate_pilot_row,
 )
 
@@ -107,7 +113,9 @@ def read_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def disposable_fixture_input(model_dir: Path) -> tuple[bytes, dict[str, Any]]:
+def disposable_fixture_input(
+    model_dir: Path, *, version2: bool = False
+) -> tuple[bytes, dict[str, Any]]:
     """CPU-only preparation for the actual, separate training mechanics pass."""
     from transformers import AutoTokenizer
 
@@ -134,7 +142,7 @@ def disposable_fixture_input(model_dir: Path) -> tuple[bytes, dict[str, Any]]:
             for row in rows
         ]
     )
-    return payload, {
+    spec = {
         "schema": DISPOSABLE_FIXTURE_SCHEMA,
         "sha256": hashlib.sha256(payload).hexdigest(),
         "examples": 64,
@@ -144,6 +152,22 @@ def disposable_fixture_input(model_dir: Path) -> tuple[bytes, dict[str, Any]]:
         "supervised_response_and_eos_tokens": counts["supervised_response_and_eos_tokens"],
         "quality_evidence": False,
     }
+    if version2:
+        spec.update(
+            {
+                "schema": "single-line-disposable-training-fixture-v2",
+                "effective_batch_examples": 2,
+                "microbatch_examples": 2,
+                "expected_updates": 32,
+                "implementation_viability_schema": (
+                    "single-line-disposable-implementation-viability-v1"
+                ),
+                "decode_examples_per_action": 4,
+                "minimum_exact_actions_per_action": 3,
+                "eos_required": True,
+            }
+        )
+    return payload, spec
 
 
 def _run(args: list[str], *, timeout: int = 90) -> str:
@@ -233,10 +257,15 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("pilot budget contract differs from the fixed campaign limits")
-    if policy is CONSTRUCTIVE:
+    if policy in (CONSTRUCTIVE, LICENSE_MIXED):
         fixture = training.get("disposable_fixture", {})
         if (
-            fixture.get("schema") != "single-line-disposable-training-fixture-v1"
+            fixture.get("schema")
+            != (
+                "single-line-disposable-training-fixture-v2"
+                if policy is LICENSE_MIXED
+                else "single-line-disposable-training-fixture-v1"
+            )
             or fixture.get("examples") != 64
             or fixture.get("epochs") != 1
             or fixture.get("peak_learning_rate") != 1e-4
@@ -246,6 +275,21 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
             or fixture["nonpadding_training_input_tokens"] <= 0
         ):
             raise ValueError("constructive pilot requires the frozen disposable training fixture")
+        if policy is LICENSE_MIXED and any(
+            fixture.get(key) != value
+            for key, value in {
+                "effective_batch_examples": 2,
+                "microbatch_examples": 2,
+                "expected_updates": 32,
+                "decode_examples_per_action": 4,
+                "minimum_exact_actions_per_action": 3,
+                "eos_required": True,
+                "implementation_viability_schema": (
+                    "single-line-disposable-implementation-viability-v1"
+                ),
+            }.items()
+        ):
+            raise ValueError("mixed-license pilot requires the declared fixture-v2 viability check")
         validate_aggregate_budget(
             budgets,
             planned_tokens=(
@@ -374,6 +418,7 @@ def _rows(
     expected_split: str,
     source_type: str,
     data_schema: str = INSTINCT.data_schema,
+    package_root: Path | None = None,
 ) -> list[dict[str, Any]]:
     from tinycomplete.one_line.contract import EditAction, EditState, apply_action  # noqa: PLC0415
 
@@ -386,13 +431,19 @@ def _rows(
             row = json.loads(line)
             if row.get("split") != expected_split:
                 raise ValueError("pilot shard contains a row from another split")
-            if row.get("source_type") != source_type:
+            policy = policy_for_schema(data_schema)
+            approved_type = (
+                row.get("source_type") in PUBLIC_SOURCE_TYPES
+                if policy is LICENSE_MIXED
+                else row.get("source_type") == source_type
+            )
+            if not approved_type:
                 raise ValueError("pilot shard contains an unapproved source type")
             if not row.get("source_license"):
                 raise ValueError("pilot row lacks its declared dataset license field")
             if row.get("validation", {}).get("replay_verified") is not True:
                 raise ValueError("pilot row is not replay-verified")
-            validate_pilot_row(row, policy_for_schema(data_schema))
+            validate_pilot_row(row, policy, package_root=package_root)
             identifier = row.get("id")
             if not isinstance(identifier, str) or not identifier or identifier in ids:
                 raise ValueError("pilot IDs must be unique nonempty strings")
@@ -417,6 +468,81 @@ def _file_group(row: dict[str, Any]) -> str:
     if not isinstance(group, str) or not group:
         raise ValueError("pilot row lacks a stable file-group identity")
     return group
+
+
+def _mixed_proof_files(
+    plan: dict[str, Any], manifest: dict[str, Any], package_root: Path
+) -> dict[str, Path]:
+    """Stage only a frozen, explicit inventory, never a recursive research directory."""
+    entries = plan.get("data", {}).get("proof_files")
+    if not isinstance(entries, list) or not 1 <= len(entries) <= 32768:
+        raise ValueError("mixed-license pilot needs its explicit proof-file inventory")
+    approved_suffixes = {
+        "",
+        ".json",
+        ".jsonl",
+        ".txt",
+        ".md",
+        ".py",
+        ".go",
+        ".rs",
+        ".ts",
+        ".source",
+        ".blob",
+        ".license",
+    }
+    root = package_root.resolve(strict=True)
+    files: dict[str, Path] = {}
+    total = 0
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != {"path", "bytes", "sha256"}:
+            raise ValueError("mixed-license proof inventory entry is malformed")
+        name = entry["path"]
+        if not isinstance(name, str) or not name:
+            raise ValueError("mixed-license proof path is missing")
+        relative = Path(name)
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or relative.as_posix() != name
+            or len(relative.parts) < 2
+            or any(part.startswith(".") for part in relative.parts)
+            or relative.suffix.casefold() not in approved_suffixes
+            or name in files
+        ):
+            raise ValueError("mixed-license proof path is unsafe or duplicated")
+        source = root / relative
+        cursor = root
+        for part in relative.parts:
+            cursor /= part
+            if cursor.is_symlink():
+                raise ValueError("mixed-license proof path contains a symlink")
+        if not source.is_file() or not source.resolve(strict=True).is_relative_to(root):
+            raise ValueError("mixed-license proof file is outside the reviewed package")
+        size = entry["bytes"]
+        if (
+            type(size) is not int
+            or size < 1
+            or size > 8 * 1024**2
+            or not isinstance(entry["sha256"], str)
+            or HEX_SHA256.fullmatch(entry["sha256"]) is None
+            or source.stat().st_size != size
+            or sha256_file(source) != entry["sha256"]
+        ):
+            raise ValueError("mixed-license proof file hash or size mismatch")
+        total += size
+        if total > 512 * 1024**2:
+            raise ValueError("mixed-license proof inventory exceeds 512 MiB")
+        files[name] = source
+    review = manifest["independent_review_path"]
+    identities = {entry["path"]: entry for entry in entries}
+    if (
+        review not in identities
+        or identities[review]["sha256"] != manifest["independent_review_sha256"]
+        or identities[review]["bytes"] != manifest["independent_review_bytes"]
+    ):
+        raise ValueError("mixed-license proof inventory omits the bound independent review")
+    return files
 
 
 def validate_inputs(
@@ -450,6 +576,13 @@ def validate_inputs(
     if manifest_sha != data_plan["manifest_sha256"]:
         raise ValueError("pilot data-manifest hash mismatch")
     manifest = read_json(manifest_path)
+    package_root = None
+    if policy is LICENSE_MIXED:
+        validate_license_mixed_manifest(manifest)
+        if manifest.get("artifact_root", ".") != ".":
+            raise ValueError("Kaggle mixed-license package must use a portable root of '.'")
+        package_root = license_mixed_artifact_root(manifest, manifest_path.parent)
+        _mixed_proof_files(plan, manifest, package_root)
     if (
         manifest.get("schema") != policy.data_schema
         or manifest.get("dataset_id") != data_plan["dataset_id"]
@@ -472,12 +605,14 @@ def validate_inputs(
         expected_split="train",
         source_type=policy.source_type,
         data_schema=policy.data_schema,
+        package_root=package_root,
     )
     dev_rows = _rows(
         development_path,
         expected_split="development",
         source_type=policy.source_type,
         data_schema=policy.data_schema,
+        package_root=package_root,
     )
     if not MIN_TRAIN_ROWS <= len(train_rows) <= MAX_TRAIN_ROWS:
         raise ValueError("pilot training row count is outside 128..1024")
@@ -496,6 +631,17 @@ def validate_inputs(
         validate_constructive_manifest(manifest)
         validate_constructive_review(
             manifest, [*train_rows, *dev_rows], manifest_path.parent / "independent_review.json"
+        )
+    elif policy is LICENSE_MIXED:
+        from transformers import AutoTokenizer  # noqa: PLC0415
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_dir, local_files_only=True, trust_remote_code=False
+        )
+        assert package_root is not None
+        validate_license_mixed_splits([*train_rows, *dev_rows])
+        validate_license_mixed_review(
+            manifest, [*train_rows, *dev_rows], tokenizer=tokenizer, package_root=package_root
         )
     return {
         "plan": plan,
@@ -676,8 +822,10 @@ def prepare_bundle(
     training = plan["training"]
     fixture_payload: bytes | None = None
     fixture_spec: dict[str, Any] = {}
-    if policy is CONSTRUCTIVE:
-        fixture_payload, fixture_spec = disposable_fixture_input(model_dir)
+    if policy in (CONSTRUCTIVE, LICENSE_MIXED):
+        fixture_payload, fixture_spec = disposable_fixture_input(
+            model_dir, version2=policy is LICENSE_MIXED
+        )
         if fixture_spec != training["disposable_fixture"]:
             raise ValueError("disposable fixture tokenizer exposure differs from frozen plan")
     actual_tokens = inspection.get("planned_training_input_tokens")
@@ -713,8 +861,13 @@ def prepare_bundle(
         for path in (train_path, development_path, manifest_path, config_path, plan_path)
     )
     review_path = manifest_path.parent / "independent_review.json"
+    proof_files: dict[str, Path] = {}
     if policy is CONSTRUCTIVE:
         projected += review_path.stat().st_size
+        projected += len(fixture_payload or b"")
+    elif policy is LICENSE_MIXED:
+        proof_files = _mixed_proof_files(plan, checked["data_manifest"], manifest_path.parent)
+        projected += sum(path.stat().st_size for path in proof_files.values())
         projected += len(fixture_payload or b"")
     if projected > MAX_NEW_STORAGE_BYTES:
         raise ValueError("pilot bundle exceeds the 12 GiB campaign artifact limit")
@@ -753,6 +906,10 @@ def prepare_bundle(
         files["independent_review.json"] = _stage_file(
             review_path, dataset_dir / "independent_review.json"
         )
+    for name, source in proof_files.items():
+        (dataset_dir / name).parent.mkdir(parents=True, exist_ok=True)
+        files[name] = _stage_file(source, dataset_dir / name)
+    if policy in (CONSTRUCTIVE, LICENSE_MIXED):
         fixture_file = dataset_dir / "training-fixture.jsonl"
         fixture_file.write_bytes(fixture_payload or b"")
         files["training-fixture.jsonl"] = {
@@ -818,6 +975,7 @@ def prepare_bundle(
         "phase": "pilot",
         "peak_learning_rate": training["peak_learning_rate"],
         "disposable_fixture": fixture_spec,
+        "proof_files": {name: files[name] for name in proof_files},
         "quota_before_prepare": quota,
     }
     template = (Path(__file__).parent / "run.py").read_text(encoding="utf-8")
@@ -875,6 +1033,204 @@ def _csv_refs(command: list[str]) -> set[str]:
     return {str(row.get("ref", "")) for row in rows}
 
 
+def validate_fixture_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
+    if (
+        plan.get("schema") != "one-line-disposable-fixture-plan-v2"
+        or plan.get("suite_revision") != 3
+        or plan.get("quality_evidence") is not False
+        or plan.get("accepted_training") != 0
+        or plan.get("branch") != LICENSE_MIXED.branch
+        or not HEX_SHA1.fullmatch(str(plan.get("base_commit", "")))
+        or plan.get("student", {}).get("weight_sha256") != WEIGHT_SHA256
+        or plan.get("student", {}).get("tokenizer_sha256") != TOKENIZER_SHA256
+        or config.get("student", {}).get("weight_sha256") != WEIGHT_SHA256
+        or config.get("student", {}).get("tokenizer_sha256") != TOKENIZER_SHA256
+    ):
+        raise ValueError("invalid implementation-only fixture plan")
+    spec = plan.get("training", {}).get("disposable_fixture", {})
+    expected = {
+        "schema": "single-line-disposable-training-fixture-v2",
+        "examples": 64,
+        "epochs": 1,
+        "effective_batch_examples": 2,
+        "microbatch_examples": 2,
+        "expected_updates": 32,
+        "peak_learning_rate": 1e-4,
+        "decode_examples_per_action": 4,
+        "minimum_exact_actions_per_action": 3,
+        "eos_required": True,
+        "quality_evidence": False,
+        "implementation_viability_schema": "single-line-disposable-implementation-viability-v1",
+    }
+    if any(spec.get(key) != value for key, value in expected.items()):
+        raise ValueError("invalid disposable fixture-v2 implementation contract")
+    tokens = spec.get("nonpadding_training_input_tokens")
+    if type(tokens) is not int or not 0 < tokens <= 20000:
+        raise ValueError("disposable fixture exceeds its 20000 input-token ceiling")
+    budgets = plan.get("budgets", {})
+    if (
+        budgets.get("max_session_seconds") != SESSION_SECONDS
+        or budgets.get("reserve_seconds") != RESERVE_SECONDS
+        or budgets.get("max_new_storage_bytes") != MAX_NEW_STORAGE_BYTES
+        or budgets.get("quota_gpu_hours_multiplier") != QUOTA_GPU_HOURS_MULTIPLIER
+        or budgets.get("no_automatic_renewal") is not True
+    ):
+        raise ValueError("disposable fixture budget differs from its fixed limits")
+    validate_aggregate_budget(budgets, planned_tokens=tokens, session_seconds=SESSION_SECONDS)
+    _check_live_quota(plan, plan["quota_at_freeze"])
+
+
+def verify_frozen_sources(plan: dict[str, Any], root: Path) -> None:
+    inventory = plan.get("source_files")
+    if not isinstance(inventory, dict) or not inventory:
+        raise ValueError("fixture plan lacks frozen source identities")
+    for name, digest in inventory.items():
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError("unsafe frozen source path")
+        path = root / relative
+        if path.is_symlink() or not path.is_file() or sha256_file(path) != digest:
+            raise ValueError("fixture source changed after freeze")
+
+
+def prepare_fixture_bundle(
+    *,
+    config_path: Path,
+    plan_path: Path,
+    model_dir: Path,
+    output: Path,
+    quota_reader: Callable[[], dict[str, Any]] = live_quota,
+) -> dict[str, Any]:
+    """CPU preparation of a separate mechanics check with no real corpus exposure."""
+    if output.exists() or output.with_name(output.name + ".incomplete").exists():
+        raise FileExistsError("disposable fixture bundle destination already exists")
+    plan = read_json(plan_path)
+    config = yaml.safe_load(config_path.read_text())
+    validate_fixture_plan(plan, config)
+    verify_frozen_sources(plan, ROOT)
+    if sha256_file(config_path) != plan["config_sha256"]:
+        raise ValueError("disposable fixture config changed after freeze")
+    for name, expected in (
+        ("model.safetensors", WEIGHT_SHA256),
+        ("tokenizer.json", TOKENIZER_SHA256),
+        ("config.json", MODEL_CONFIG_SHA256),
+    ):
+        if sha256_file(model_dir / name) != expected:
+            raise ValueError("disposable fixture model artifact identity mismatch")
+    payload, spec = disposable_fixture_input(model_dir, version2=True)
+    if spec != plan["training"]["disposable_fixture"]:
+        raise ValueError("disposable fixture bytes or tokenizer exposure differs from frozen plan")
+    quota = quota_reader()
+    _check_live_quota(plan, quota)
+    identity = _git_identity(plan["branch"], plan["base_commit"])
+    if sha256_file(ROOT / "reports/prototype/product_r2/disposable_fixture_plan_v3.json") != (
+        sha256_file(plan_path)
+    ):
+        raise ValueError("disposable fixture plan is not committed at its expected path")
+    model_names = tuple(name for name in ALLOWED_MODEL_FILES if (model_dir / name).is_file())
+    projected = sum((model_dir / name).stat().st_size for name in model_names)
+    projected += len(payload) + config_path.stat().st_size + plan_path.stat().st_size
+    research_root = Path("/mnt/ssd/tabcomplete-product-r2")
+    if _directory_bytes(research_root) + projected > MAX_NEW_STORAGE_BYTES:
+        raise ValueError("disposable fixture would exceed research storage cap")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if shutil.disk_usage(output.parent).free < projected + 2 * 1024**3:
+        raise OSError("disposable fixture cannot retain 2 GiB storage headroom")
+    temporary = output.with_name(output.name + ".incomplete")
+    dataset_dir, kernel_dir = temporary / "dataset", temporary / "kernel"
+    dataset_dir.mkdir(parents=True)
+    kernel_dir.mkdir()
+    files = {name: _stage_file(model_dir / name, dataset_dir / name) for name in model_names}
+    files["config.yaml"] = _stage_file(config_path, dataset_dir / "config.yaml")
+    files["plan.json"] = _stage_file(plan_path, dataset_dir / "plan.json")
+    fixture_path = dataset_dir / "training-fixture.jsonl"
+    fixture_path.write_bytes(payload)
+    files[fixture_path.name] = {"bytes": len(payload), "sha256": sha256_file(fixture_path)}
+    write_json(
+        dataset_dir / "input-manifest.json",
+        {
+            "schema": "one-line-disposable-fixture-input-v2",
+            "files": files,
+            "branch": identity[0],
+            "commit": identity[1],
+            "plan_sha256": sha256_file(plan_path),
+        },
+    )
+    dataset_id, kernel_id = plan["kaggle"]["dataset_id"], plan["kaggle"]["kernel_id"]
+    validate_kaggle_refs(dataset_id, kernel_id)
+    write_json(
+        dataset_dir / "dataset-metadata.json",
+        {
+            "id": dataset_id,
+            "title": "TabComplete disposable implementation fixture v2",
+            "licenses": [{"name": "other"}],
+            "description": "Private mechanics check. Qwen2.5-Coder Apache-2.0; synthetic code MIT. "
+            "No model quality evidence, no adaptation corpus, no automatic publication.",
+        },
+    )
+    session = {
+        "fixture_only": True,
+        "data_schema": spec["schema"],
+        "phase": "fixture",
+        "branch": identity[0],
+        "commit": identity[1],
+        "base_commit": plan["base_commit"],
+        "plan_sha256": sha256_file(plan_path),
+        "config_sha256": sha256_file(config_path),
+        "input_manifest_sha256": sha256_file(dataset_dir / "input-manifest.json"),
+        "model_weight_sha256": WEIGHT_SHA256,
+        "tokenizer_sha256": TOKENIZER_SHA256,
+        "model_config_sha256": MODEL_CONFIG_SHA256,
+        "session_seconds": SESSION_SECONDS,
+        "reserve_seconds": RESERVE_SECONDS,
+        "disposable_fixture": spec,
+        "development_sha256": None,
+        "development_count": 0,
+        "prior_training_input_tokens": plan["budgets"]["prior_training_input_tokens"],
+    }
+    template = (Path(__file__).parent / "run.py").read_text()
+    (kernel_dir / "run.py").write_text(
+        template.replace('"__SESSION_LITERAL__"', repr(json.dumps(session, sort_keys=True)))
+    )
+    write_json(
+        kernel_dir / "kernel-metadata.json",
+        {
+            "id": kernel_id,
+            "title": kernel_id.split("/", 1)[1],
+            "code_file": "run.py",
+            "language": "python",
+            "kernel_type": "script",
+            "is_private": True,
+            "enable_gpu": True,
+            "enable_internet": True,
+            "machine_shape": "NvidiaTeslaT4",
+            "dataset_sources": [dataset_id],
+            "kernel_sources": [],
+            "competition_sources": [],
+        },
+    )
+    record = {
+        "schema": "one-line-instinct-pilot-bundle-v1",
+        "fixture_only": True,
+        "branch": identity[0],
+        "commit": identity[1],
+        "plan_sha256": session["plan_sha256"],
+        "input_manifest_sha256": session["input_manifest_sha256"],
+        "dataset_id": dataset_id,
+        "kernel_id": kernel_id,
+        "planned_training_tokens": spec["nonpadding_training_input_tokens"],
+        "session_seconds": SESSION_SECONDS,
+        "reserve_seconds": RESERVE_SECONDS,
+        "quota_at_prepare": quota,
+        "projected_input_bytes": projected,
+        "quality_evidence": False,
+        "accepted_training": 0,
+    }
+    write_json(temporary / "bundle-manifest.json", record)
+    os.replace(temporary, output)
+    return record
+
+
 def submit_bundle(
     bundle: Path, *, quota_reader: Callable[[], dict[str, Any]] = live_quota
 ) -> dict[str, Any]:
@@ -885,7 +1241,10 @@ def submit_bundle(
     config_path = bundle / "dataset/config.yaml"
     plan = read_json(plan_path)
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    _validate_plan(plan, config)
+    if manifest.get("fixture_only") is True:
+        validate_fixture_plan(plan, config)
+    else:
+        _validate_plan(plan, config)
     if sha256_file(plan_path) != manifest["plan_sha256"]:
         raise ValueError("staged pilot plan changed after preparation")
     if sha256_file(bundle / "dataset/input-manifest.json") != manifest["input_manifest_sha256"]:
@@ -944,6 +1303,55 @@ def submit_bundle(
     return state
 
 
+def _verify_fixture_evidence(
+    root: Path,
+    status: dict[str, Any],
+    result: dict[str, Any],
+    latest: dict[str, Any],
+    checkpoint_sha: str,
+) -> None:
+    observation = result.get("disposable_fixture", {})
+    generations = observation.get("greedy_generation_observations", [])
+    counts = result.get("cursor", {})
+    verification = read_json(root / "disposable-fixture-verification.json")
+    if (
+        status.get("quality_evidence") is not False
+        or status.get("accepted_training") != 0
+        or result.get("status") != "complete"
+        or result.get("identity", {}).get("phase") != "fixture"
+        or result.get("identity", {}).get("source", {}).get("model_weight_sha256") != WEIGHT_SHA256
+        or status.get("source_weight_sha256") != WEIGHT_SHA256
+        or counts != latest.get("cursor")
+        or result.get("examples") != 64
+        or counts.get("completed_updates") != 32
+        or counts.get("skipped_updates") != 0
+        or counts.get("training_input_tokens") != status.get("training_input_tokens")
+        or observation.get("response_and_eos_positions_supervised") is not True
+        or observation.get("changed_parameter_elements", 0) <= 0
+        or observation.get("implementation_viability", {}).get("passed") is not True
+        or verification.get("quality_evidence") is not False
+        or verification.get("checkpoint_sha256") != checkpoint_sha
+        or verification.get("token_counts") != counts
+        or verification.get("actual_generation_observations") != generations
+        or not isinstance(generations, list)
+        or len(generations) != 16
+    ):
+        raise ValueError("fixture output lacks bound implementation evidence")
+    for kind in ("keep", "replace_line", "insert_before", "delete_line"):
+        subset = [row for row in generations if row.get("gold_action") == kind]
+        if (
+            len(subset) != 4
+            or sum(
+                row.get("terminated_by_eos") is True
+                and row.get("valid_action") is True
+                and row.get("exact_action") is True
+                for row in subset
+            )
+            < 3
+        ):
+            raise ValueError("fixture output failed per-action EOS viability")
+
+
 def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dict[str, Any]:
     status_path = path / "one_line_gpu_pilot_r1/worker-status.json"
     if not status_path.is_file():
@@ -953,7 +1361,8 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
         raise ValueError("pilot output status schema mismatch")
     if expected_plan_sha256 and status.get("plan_sha256") != expected_plan_sha256:
         raise ValueError("pilot output plan hash mismatch")
-    training = status_path.parent / "training"
+    fixture_only = status.get("state") == "disposable_verified_complete"
+    training = status_path.parent / ("disposable-training-fixture" if fixture_only else "training")
     result = read_json(training / "run_result.json")
     latest = read_json(training / "latest.json")
     checkpoint = training / Path(latest["checkpoint"]).name
@@ -969,7 +1378,9 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
     if status.get("training_status") != result.get("status"):
         raise ValueError("pilot worker and trainer terminal statuses disagree")
     worker_state = status.get("state")
-    if worker_state == "failed":
+    if fixture_only:
+        _verify_fixture_evidence(status_path.parent, status, result, latest, checkpoint_sha)
+    elif worker_state == "failed":
         if status.get("failure_stage") != "adapted_evaluation":
             raise ValueError("failed pilot worker did not finish both quality evaluations")
     elif worker_state == "verified_complete":
@@ -987,7 +1398,7 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
         export = result.get("inference_export")
         if not isinstance(export, dict):
             raise ValueError("complete pilot output lacks its inference export")
-        export_dir = Path(export["path"])
+        export_dir = training / "inference-f16" if fixture_only else Path(export["path"])
         if not export_dir.is_absolute() or not export_dir.exists():
             export_dir = training / "inference-f16"
         for filename, identity in export.get("files", {}).items():
@@ -1000,7 +1411,9 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
         source = export_manifest.get("source", {})
         if source.get("model_weight_sha256") != status.get("source_weight_sha256"):
             raise ValueError("pilot inference export source-weight identity mismatch")
-        for evaluation_name in ("baseline-evaluation.json", "adapted-evaluation.json"):
+        for evaluation_name in (
+            () if fixture_only else ("baseline-evaluation.json", "adapted-evaluation.json")
+        ):
             evaluation = read_json(status_path.parent / evaluation_name)
             if evaluation.get("identity", {}).get("development_sha256") != status.get(
                 "development_sha256"
@@ -1019,6 +1432,8 @@ def verify_output(path: Path, *, expected_plan_sha256: str | None = None) -> dic
         "checkpoint_sha256": checkpoint_sha,
         "training_input_tokens": result.get("cursor", {}).get("training_input_tokens"),
         "complete_export": result.get("status") == "complete",
+        "quality_evidence": False if fixture_only else None,
+        "implementation_only": fixture_only,
     }
 
 
@@ -1033,6 +1448,11 @@ def main() -> None:
     prepare.add_argument("--development", type=Path, required=True)
     prepare.add_argument("--data-manifest", type=Path, required=True)
     prepare.add_argument("--output", type=Path, required=True)
+    fixture = sub.add_parser("prepare-fixture", help="stage the disposable GPU mechanics check")
+    fixture.add_argument("--config", type=Path, default=ROOT / "configs/research/one_line_r1.yaml")
+    fixture.add_argument("--plan", type=Path, required=True)
+    fixture.add_argument("--model", type=Path, required=True)
+    fixture.add_argument("--output", type=Path, required=True)
     submit = sub.add_parser(
         "submit", help="explicitly upload the private inputs and submit one job"
     )
@@ -1047,6 +1467,19 @@ def main() -> None:
         return
     if args.command == "submit":
         print(json.dumps(submit_bundle(args.bundle), sort_keys=True))
+        return
+    if args.command == "prepare-fixture":
+        print(
+            json.dumps(
+                prepare_fixture_bundle(
+                    config_path=args.config,
+                    plan_path=args.plan,
+                    model_dir=args.model,
+                    output=args.output,
+                ),
+                sort_keys=True,
+            )
+        )
         return
     record = prepare_bundle(
         config_path=args.config,
