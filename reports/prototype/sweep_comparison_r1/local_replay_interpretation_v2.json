@@ -1,0 +1,254 @@
+{
+  "content_and_quality_boundary": {
+    "frozen_plan_modified": false,
+    "gold_labels_read": false,
+    "prediction_bodies_read_or_judged_for_this_revision": false,
+    "quality_claims_added": false,
+    "raw_run_files_modified": false
+  },
+  "fixture_and_transition_coverage": {
+    "fixed_fixture_states": 24,
+    "interpretation": "This is 24 fixed varied source states across 21 file identities, not 24 real editor transitions or the requested interactive trajectories.",
+    "language_counts": {
+      "c": 2,
+      "csharp": 1,
+      "java": 3,
+      "javascript": 5,
+      "python": 4,
+      "rust": 5,
+      "typescript": 4
+    },
+    "measured_changed_state_definition": "A request used a different frozen fixture prompt/state than the prior request in the sequence.",
+    "not_measured": [
+      "No genuine live typing/edit trajectories were captured.",
+      "No sequence of actual user insertions, cursor movements, replacements, early-file edits, rejection/divergence, or A-to-B-to-A navigation was replayed as one evolving buffer.",
+      "Same-prompt repeats are cache probes, not user transitions."
+    ],
+    "recent_diff_entries_per_fixture": {
+      "1": 24
+    },
+    "unique_current_state_hashes": 24,
+    "unique_file_path_identities": 21
+  },
+  "input_token_distribution": {
+    "coverage_caveat": "No prompt reached the nominal 2048 +/-25% band; longest actual prompt was 1107 tokens.",
+    "descriptive_bands": {
+      "counts_and_ranges": {
+        "1024": {
+          "count": 2,
+          "descriptive_actual_token_window_inclusive": [
+            768,
+            1280
+          ],
+          "max": 1107,
+          "median": 989.0,
+          "min": 871,
+          "p95_nearest_rank": 1107
+        },
+        "2048": {
+          "count": 0,
+          "descriptive_actual_token_window_inclusive": [
+            1536,
+            2560
+          ],
+          "max": null,
+          "median": null,
+          "min": null,
+          "p95_nearest_rank": null
+        },
+        "512": {
+          "count": 7,
+          "descriptive_actual_token_window_inclusive": [
+            384,
+            640
+          ],
+          "max": 563,
+          "median": 501,
+          "min": 387,
+          "p95_nearest_rank": 563
+        }
+      },
+      "outside_all_three_bands": 15,
+      "rule": "post hoc inclusive +/-25% around each nominal center; these are not fixture-assigned plan buckets"
+    },
+    "measured_tokenizer": "pinned llama.cpp /tokenize endpoint; same actual length for Q4 and Q8 per case",
+    "nominal_requested_centers": [
+      512,
+      1024,
+      2048
+    ],
+    "overall_actual_tokens_min_median_p95_max": {
+      "max": 1107,
+      "median": 319.0,
+      "min": 113,
+      "p95_nearest_rank": 871
+    },
+    "unique_fixed_prompts": 24
+  },
+  "memory_scope_and_unattributed_components": {
+    "allocation_attribution_unavailable": [
+      "The runtime did not separately report allocated bytes for active KV state, optional snapshots, or work buffers.",
+      "FP16 KV, one 3072-token slot, cache RAM 0, no idle snapshots, and zero context checkpoints are configuration settings, not measured allocation breakdowns.",
+      "Aggregate RSS/PSS cannot be decomposed into weights, active KV state, allocator overhead, and work buffers from these records."
+    ],
+    "included_and_excluded": {
+      "background_q25": "Measured separately by PID and excluded from candidate incremental RSS/PSS above.",
+      "benchmark_client_and_other_desktop_processes": "Not included in candidate server-tree RSS/PSS; their effects are partly visible in host available memory and pressure snapshots.",
+      "candidate_server_tree": "RSS/PSS sampler aggregates the llama-server process tree, including any helper descendants; a per-child/helper split was not retained."
+    },
+    "measurements_by_precision": {
+      "q4_k_m": {
+        "background_q25_service_separate": {
+          "cpu_seconds_delta_from_process_cpu_snapshots": 0.030000000000000027,
+          "pid": 3343901,
+          "pss_bytes_before_after": [
+            468111360,
+            466194432
+          ],
+          "rss_bytes_before_after": [
+            472080384,
+            472080384
+          ]
+        },
+        "candidate_service_process_tree": {
+          "helper_descendants_included_in_aggregate": true,
+          "peak_pss_bytes": 1011420160,
+          "peak_rss_bytes": 1017303040,
+          "per_descendant_helper_memory_breakdown_available": false,
+          "retained_anon_bytes": 122920960,
+          "retained_file_rss_bytes": 894382080,
+          "retained_pss_bytes": 1011405824,
+          "retained_rss_bytes": 1017303040,
+          "retained_swap_bytes": 0,
+          "sample_count": 1506,
+          "sample_period_seconds": 0.5
+        },
+        "io_pressure_totals_delta_microseconds": {
+          "full": 2960345,
+          "some": 3072214
+        },
+        "memory_available_min_bytes": 11114774528,
+        "memory_pressure_totals_delta_microseconds": {
+          "full": 11135,
+          "some": 13775
+        },
+        "swap_activity_delta_pages": {
+          "pswpin": 175,
+          "pswpout": 0
+        },
+        "swap_occupancy_used_bytes": {
+          "after": 1810313216,
+          "before": 1810325504
+        },
+        "window_utc": {
+          "elapsed_seconds": 739.560338,
+          "end": "2026-09-30T09:13:23.406068+00:00",
+          "start": "2026-09-30T09:01:03.845730+00:00"
+        }
+      },
+      "q8_0": {
+        "background_q25_service_separate": {
+          "cpu_seconds_delta_from_process_cpu_snapshots": 0.050000000000000044,
+          "pid": 3343901,
+          "pss_bytes_before_after": [
+            468111360,
+            466095104
+          ],
+          "rss_bytes_before_after": [
+            472080384,
+            472080384
+          ]
+        },
+        "candidate_service_process_tree": {
+          "helper_descendants_included_in_aggregate": true,
+          "peak_pss_bytes": 1665375232,
+          "peak_rss_bytes": 1671397376,
+          "per_descendant_helper_memory_breakdown_available": false,
+          "retained_anon_bytes": 122941440,
+          "retained_file_rss_bytes": 1548455936,
+          "retained_pss_bytes": 1665375232,
+          "retained_rss_bytes": 1671397376,
+          "retained_swap_bytes": 0,
+          "sample_count": 1805,
+          "sample_period_seconds": 0.5
+        },
+        "io_pressure_totals_delta_microseconds": {
+          "full": 4040275,
+          "some": 4195689
+        },
+        "memory_available_min_bytes": 11144318976,
+        "memory_pressure_totals_delta_microseconds": {
+          "full": 10844,
+          "some": 12214
+        },
+        "swap_activity_delta_pages": {
+          "pswpin": 4,
+          "pswpout": 0
+        },
+        "swap_occupancy_used_bytes": {
+          "after": 1810284544,
+          "before": 1810313216
+        },
+        "window_utc": {
+          "elapsed_seconds": 954.163676,
+          "end": "2026-09-30T09:29:17.857744+00:00",
+          "start": "2026-09-30T09:13:23.694068+00:00"
+        }
+      }
+    },
+    "server_configuration": {
+      "context_checkpoints": 0,
+      "context_tokens": 3072,
+      "idle_slot_snapshots": false,
+      "kv_cache_k": "f16",
+      "kv_cache_v": "f16",
+      "optional_cache_ram_mib": 0,
+      "parallel_slots": 1
+    },
+    "swap_interpretation": "Swap occupancy was already nonzero; recorded swap-in/out deltas and PSI totals are provided per window. Occupancy alone is not treated as thrashing evidence."
+  },
+  "revision_reason": "Adds actual token-length distribution and explicit coverage/memory-attribution limits; preserves v1 and does not edit the frozen plan or run records.",
+  "same_prompt_cache_and_repeat_hashes": {
+    "q4_k_m": {
+      "changed_state_cache_n_median_tokens": 2.0,
+      "changed_state_prompt_n_median_tokens": 317.0,
+      "changed_state_requests": 48,
+      "changed_state_requests_with_verified_nonzero_cache_n": 47,
+      "changed_vs_repeat_raw_output_hash_different_pairs": 2,
+      "changed_vs_repeat_raw_output_hash_equal_pairs": 46,
+      "interpretation_limit": "Hash equality is byte-level repeat consistency only; this report does not inspect or judge output content or quality.",
+      "pairs_with_equal_prompt_sha256": 48,
+      "raw_output_hash_differences_had_verified_cache_reuse": true,
+      "repeat_cache_n_median_tokens": 318.0,
+      "repeat_prompt_n_median_tokens": 1.0,
+      "repeat_requests_with_verified_nonzero_cache_n": 48,
+      "same_prompt_repeat_pairs": 48
+    },
+    "q8_0": {
+      "changed_state_cache_n_median_tokens": 2.0,
+      "changed_state_prompt_n_median_tokens": 317.0,
+      "changed_state_requests": 48,
+      "changed_state_requests_with_verified_nonzero_cache_n": 47,
+      "changed_vs_repeat_raw_output_hash_different_pairs": 2,
+      "changed_vs_repeat_raw_output_hash_equal_pairs": 46,
+      "interpretation_limit": "Hash equality is byte-level repeat consistency only; this report does not inspect or judge output content or quality.",
+      "pairs_with_equal_prompt_sha256": 48,
+      "raw_output_hash_differences_had_verified_cache_reuse": true,
+      "repeat_cache_n_median_tokens": 318.0,
+      "repeat_prompt_n_median_tokens": 1.0,
+      "repeat_requests_with_verified_nonzero_cache_n": 48,
+      "same_prompt_repeat_pairs": 48
+    }
+  },
+  "schema": "sweep-local-replay-interpretation-v2",
+  "source_identities": {
+    "interpretation_v1_sha256": "93b6713f75824163901122f99790591ae95360d109bf9587837425e7deb8f0bf",
+    "plan_file_sha256": "e6109e562ff37a9afddead276e46d77f59be4e484a7866f353c35871c4dd5c2e",
+    "prompt_bundle_sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+    "q4_measurement_sha256": "6b582f872ebcfe20c2a65b29d9839b69d98e8e2d67763182a4ef4f8dd988767c",
+    "q4_prediction_jsonl_sha256": "9540cb5f4cd2385bc1af46057a84d0182ec301b16e46590aade8075c111ea043",
+    "q8_measurement_sha256": "27ef562a5b47eea32b723d89abdb6ee6fc641af178458d08fb67cc484f2581e2",
+    "q8_prediction_jsonl_sha256": "e54d583502c8e9c79495de2f070afd80af4dab2118df66258546f30f1b7b25be",
+    "run_summary_sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465"
+  }
+}

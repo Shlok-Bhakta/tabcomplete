@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -161,7 +162,7 @@ def _canonical_image_id(raw_id: str) -> str:
     return "sha256:" + digest
 
 
-def _resolve_images(cases: list[NextEditCase] | list[BenchmarkCase]) -> dict[str, str]:
+def _resolve_images(cases: Sequence[NextEditCase | BenchmarkCase]) -> dict[str, str]:
     runtime = _container_runtime()
     if runtime is None:
         raise RuntimeError("pinned sandbox runtime is unavailable; refusing to freeze scoring")
@@ -231,6 +232,8 @@ def _sandbox_identity(image_ids: dict[str, str]) -> dict[str, Any]:
 
 def _verify_sandbox(sandbox: dict[str, Any]) -> None:
     runtime = _container_runtime()
+    if runtime is None:
+        raise ValueError("active sandbox runtime is unavailable")
     executable = shutil.which(str(sandbox["runtime"]))
     if runtime != sandbox["runtime"] or executable is None:
         raise ValueError("active sandbox runtime differs from the frozen scoring plan")

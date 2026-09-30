@@ -2,7 +2,7 @@
 
 ## Status
 
-The user authorized this specific model, Q4 comparison, the existing benchmarks, and free Kaggle comparisons on 2026-09-30. No Sweep model has replaced the installed automatic q25 provider. The first GPU allocation failed during CMake configuration before model loading. The tested CUDA driver-library lookup fix was submitted in the one bounded retry, which is now RUNNING. Q4 completed all 96 local replay requests; Q8 is running next. Quality and replay summaries are still pending.
+The user authorized this specific model, Q4 comparison, the existing benchmarks, and free Kaggle comparisons on 2026-09-30. No Sweep model has replaced the installed automatic q25 provider. The first GPU allocation failed during CMake configuration before model loading. The tested CUDA allocator fix compiled successfully in attempt2. Its benchmark stopped at the logging-based GPU guard before generating predictions. The local Q4/Q8 replay is complete,192requests; quality scoring and a new bounded recovery plan remain pending.
 
 ## Identity and format
 
@@ -45,3 +45,22 @@ Authenticated quota was 44.59 GPU-hours remaining before attempt 1 and 44.57 at 
 The first retry push was rejected, leaving a deliberately ambiguous `submission_started` ledger. Authenticated exact-status and full account notebook listing found no retry notebook; the initial notebook retained its previous execution timestamp. The retry title did not resolve to its requested slug. Installed Kaggle CLI source documents this mismatch. The original state and metadata were preserved privately, the title was corrected to match the retry slug, and a new fresh all-job/quota gate was started before retrying submission. The discarded API error text prevents a confirmed causal claim about the title. This administrative retry does not count as a GPU allocation unless the provider actually launches a job.
 
 The actual retry was submitted at 2026-09-30T09:06:53.261529Z from committed source `fd6e548ae7cd572654314c0b4906dfb6bdc13bb5`. The fresh authenticated quota observation at 09:06:18.669494Z reports 44.57 GPU-hours remaining and no active jobs before allocation. Plan v5 preserves the scientific comparison and pins the final setup worker. The job is restricted to two session hours, including a 20-minute finalization reserve.
+
+## Completed local replay
+
+Crabcake completed 192 requests, 24 fixed public/synthetic source states × two repetitions × changed-state and immediate-repeat requests × two precisions, in 28 minutes 16.5 seconds. Both owned servers exited. This is varied-state replay, not an observation of ordinary human editing. Input lengths ranged from 113 to 1,107 tokens, median 319. It does not establish 2,048-token performance.
+
+| Precision | Changed-prompt median / p95 | Exact-repeat median / p95 | Peak and retained predictor RSS | Retained PSS | Terminal / requests |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Q4_K_M, no repacking | 9.55 / 30.68 s | 2.82 / 9.29 s | 0.947 GiB | 0.942 GiB | 96 / 96 |
+| Q8_0 | 12.09 / 36.60 s | 4.06 / 13.20 s | 1.557 GiB | 1.550 GiB | 96 / 96 |
+
+The Q4 window initially overlapped private artifact staging; Q8 followed it. Desktop applications and the resident q25 service stayed present. The q25 process accumulated 0.03 and 0.05 CPU seconds respectively during the windows. Its roughly450MiB RSS is reported separately from each candidate, not included as candidate memory. No response hit the output cap. Immediate repeated output hashes matched46/48 pairs per precision, so cache execution is not claimed bitwise identical.
+
+The correct backend cache fields are `timings.cache_n` for reused prompt tokens and `timings.prompt_n` for recomputed prompt tokens. Their changed-state medians were2 and317; exact repeats318 and1. Native `tokens_cached` instead reports post-request retained sequence tokens, and `tokens_evaluated` the full prompt size. The original counters and telemetry are preserved; their presence alone is not evidence of useful cache reuse.
+
+Q4 remains within the memory policy. Q8 exceeds1.5GiB by60,784,640bytes and is a research measurement rather than an automatic-provider choice. Q4's process swap was zero. Host swap-in was175pages with no swap-out during its window; memory-pressure totals were13,775microseconds some /11,135full. Nonzero background swap occupancy is not characterized as thrashing. Both completed-action latency distributions are much slower than the interactive targets. These measurements establish compatibility and resource use, not useful edit quality.
+
+## Actual second allocation failure
+
+Attempt2 compiled the pinned CUDA runtime successfully, using its supported allocator without virtual memory management. It ran for1,948.321623seconds and stopped in `comparison_quality` after model health became ready. The guard could not find CUDA-device or offloaded-layer messages. Pinned `common/log.cpp` maps GGML info messages to verbosity4, while this server defaults to3. Thus missing logs do not establish CPU fallback. No quality predictions were generated. The guard remains mandatory; a separate plan6 is being prepared with verbosity4 and persisted startup diagnostics, before any third allocation. Both historical attempts remain preserved.

@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1810, in <module>
+    main()
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1800, in main
+    run(args)
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1712, in run
+    _run_controls(args, plan, model, precision)
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 1135, in _run_controls
+    with Server(args, model) as server:
+  File "/kaggle/temp/tabcomplete-sweep/scripts/run_sweep_comparison.py", line 794, in __enter__
+    raise RuntimeError(
+RuntimeError: llama-server did not report an available CUDA device

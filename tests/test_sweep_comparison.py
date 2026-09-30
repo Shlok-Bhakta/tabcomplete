@@ -33,7 +33,7 @@ def test_memory_report_uses_process_swap_field() -> None:
             "rss_high_water_bytes": 110,
             "pss_bytes": 90,
             "anonymous_bytes": 50,
-            "file_private_bytes": 40,
+            "private_bytes": 40,
             "process_swap_bytes": 7,
         },
         {
@@ -41,7 +41,7 @@ def test_memory_report_uses_process_swap_field() -> None:
             "rss_high_water_bytes": 130,
             "pss_bytes": 100,
             "anonymous_bytes": 55,
-            "file_private_bytes": 45,
+            "private_bytes": 45,
             "process_swap_bytes": 9,
         },
     ]
@@ -72,6 +72,58 @@ def test_runtime_backend_requires_log_confirmed_cuda_offload(tmp_path: Path) -> 
     no_offload = sweep._runtime_backend_evidence(log, gpu)
     assert no_offload["backend"] == "unverified"
     assert no_offload["offloaded_layers"] == 0
+
+
+@pytest.mark.parametrize("offloaded", [True, False])
+def test_startup_enables_backend_logs_and_preserves_guard_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offloaded: bool
+) -> None:
+    import httpx
+
+    stopped = []
+
+    class Process:
+        pid = 12345
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            stopped.append(True)
+
+        def wait(self, timeout):
+            return 0
+
+    def launch(argv, **kwargs):
+        level = int(argv[argv.index("--log-verbosity") + 1])
+        if level >= 4:
+            layers = 29 if offloaded else 0
+            kwargs["stdout"].write(
+                (f"ggml_cuda_init: found 1 CUDA devices:\n"
+                 f"llama_model_load: offloaded {layers}/29 layers to GPU\n").encode()
+            )
+            kwargs["stdout"].flush()
+        return Process()
+
+    monkeypatch.setattr(sweep.subprocess, "Popen", launch)
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: SimpleNamespace(status_code=200))
+    monkeypatch.setattr(sweep, "_host_snapshot", lambda: {})
+    monkeypatch.setattr(sweep, "_gpu_snapshot", lambda: {"available": True})
+    monkeypatch.setattr(sweep, "deadline_remaining", lambda: 6000)
+    monkeypatch.setattr(sweep.Server, "sample", lambda self: None)
+    args = SimpleNamespace(runtime=tmp_path, output=tmp_path, gpu_layers=99)
+    if offloaded:
+        with sweep.Server(args, tmp_path / "model.gguf") as server:
+            assert server.backend_evidence["offloaded_layers"] == 29
+    else:
+        with pytest.raises(RuntimeError, match="layers offloaded"):
+            with sweep.Server(args, tmp_path / "model.gguf"):
+                pytest.fail("an unverified backend must not enter inference")
+    evidence = list(tmp_path.glob("*.backend-startup.json"))
+    assert len(evidence) == 1
+    record = json.loads(evidence[0].read_text())
+    assert record["backend_evidence"]["offloaded_layers"] == (29 if offloaded else 0)
+    assert stopped == [True]
 
 
 def test_swap_delta_retains_page_units_and_negative_reset_evidence() -> None:

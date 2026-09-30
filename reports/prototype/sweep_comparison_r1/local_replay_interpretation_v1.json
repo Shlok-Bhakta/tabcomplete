@@ -1,0 +1,381 @@
+{
+  "counter_semantics_correction": {
+    "actual_recomputed_prompt_tokens": "server_timings.prompt_n, pinned llama.cpp reports prompt tokens processed for this request (stats.n_prompt_processed).",
+    "actual_reused_prefix_tokens": "server_timings.cache_n, pinned llama.cpp reports cache-hit prompt tokens (stats.n_prompt_cached).",
+    "cache_prompt_flag_alone_is_not_evidence": true,
+    "legacy_server_tokens_cached": "slot.prompt.n_tokens(): retained current slot sequence length, including generated tokens; not count of prompt tokens reused by this request.",
+    "legacy_server_tokens_evaluated": "full task.n_tokens(): total task token count; not count of prompt tokens recomputed by this request.",
+    "raw_historical_counters_preserved": true
+  },
+  "host_and_competition": {
+    "background_q25_is_separate_from_candidate_measurement": true,
+    "cpu_model": "AMD Ryzen 5 PRO 3400GE w/ Radeon Vega Graphics",
+    "host": "crabcake",
+    "live_desktop_workloads_present": true,
+    "logical_cpus": 8,
+    "q25_cpu_seconds_delta_is_from_process_cpu_time_snapshots_not_ps_lifetime_percent": true,
+    "q4_condition": "part of Q4 window overlapped earlier local artifact staging; host also had desktop/application workloads.",
+    "q8_condition": "local artifact staging had ended; desktop/application workloads and the existing Q25 service remained resident.",
+    "ram_total_bytes": 14580572160
+  },
+  "identities": {
+    "plan_file_sha256": "e6109e562ff37a9afddead276e46d77f59be4e484a7866f353c35871c4dd5c2e",
+    "plan_sha256": "00540772e011da95f5aba99e0f92d43300a894fe47f83c9ea89d15b42761f8d2",
+    "prompt_bundle_file_sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+    "prompt_bundle_sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+    "q4_measurement_sha256": "6b582f872ebcfe20c2a65b29d9839b69d98e8e2d67763182a4ef4f8dd988767c",
+    "q4_records_sha256": "9540cb5f4cd2385bc1af46057a84d0182ec301b16e46590aade8075c111ea043",
+    "q8_measurement_sha256": "27ef562a5b47eea32b723d89abdb6ee6fc641af178458d08fb67cc484f2581e2",
+    "q8_records_sha256": "e54d583502c8e9c79495de2f070afd80af4dab2118df66258546f30f1b7b25be",
+    "run_summary_sha256": "63f5f6de54e64edcb01abd76c2b7dafa86629d9fd7f7c450c07cafad9d662465"
+  },
+  "interpretation_revision_reason": "Correctly distinguish llama.cpp prompt-cache counters from legacy aggregate token fields without changing the frozen plan, raw outputs, or runner.",
+  "memory_policy": {
+    "candidate_service_rss_limit_bytes": 1610612736,
+    "candidate_service_scope": "candidate server process tree; RSS/HWM/PSS include any process-tree descendants; separate child breakdown was not retained.",
+    "memory_evidence": "0.5-second /proc process-tree sampling; peak and final post-request retained measurements reported separately.",
+    "q25_is_separately_reported": true
+  },
+  "models": {
+    "q4_k_m": {
+      "artifact": {
+        "bytes": 883289056,
+        "provenance": "requantized from the pinned Q8_0 artifact using llama.cpp; not F16-to-Q4",
+        "quantization": "Q4_K_M",
+        "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+      },
+      "background_q25_predictor_separate_from_candidate": {
+        "after_pss_bytes": 466194432,
+        "after_rss_bytes": 472080384,
+        "before_pss_bytes": 468111360,
+        "before_rss_bytes": 472080384,
+        "compute_observed_flag": true,
+        "cpu_seconds_delta": 0.030000000000000027,
+        "pid": 3343901
+      },
+      "candidate_service_process_tree_memory": {
+        "memory_available_min_bytes": 11114774528,
+        "peak_hwm": {
+          "GiB": 0.947437286,
+          "MiB": 970.175781,
+          "bytes": 1017303040
+        },
+        "peak_rss": {
+          "GiB": 0.947437286,
+          "MiB": 970.175781,
+          "bytes": 1017303040
+        },
+        "post_request_retained_anonymous": {
+          "GiB": 0.114479065,
+          "MiB": 117.226562,
+          "bytes": 122920960
+        },
+        "post_request_retained_file_backed_rss": {
+          "GiB": 0.832958221,
+          "MiB": 852.949219,
+          "bytes": 894382080
+        },
+        "post_request_retained_pss": {
+          "GiB": 0.941945076,
+          "MiB": 964.551758,
+          "bytes": 1011405824
+        },
+        "post_request_retained_rss": {
+          "GiB": 0.947437286,
+          "MiB": 970.175781,
+          "bytes": 1017303040
+        },
+        "post_request_retained_swap": {
+          "GiB": 0.0,
+          "MiB": 0.0,
+          "bytes": 0
+        },
+        "sample_count": 1506,
+        "sample_period_seconds": 0.5,
+        "scope": "summed process tree; any helper descendants are included, but no per-descendant breakdown was retained"
+      },
+      "cpu_observations": {
+        "candidate_process_tree_cpu_seconds_delta": 2902.63,
+        "cpu_frequency_mhz_mean": 3020.4272459329254,
+        "cpu_temperature_peak_celsius": {
+          "hwmon:k10temp:Tctl": 77.5
+        },
+        "system_cpu_percent_mean_sampled": 51.400828335437986
+      },
+      "host_pressure_and_swap": {
+        "io_pressure_totals_delta_microseconds": {
+          "full": 2960345,
+          "some": 3072214
+        },
+        "memory_pressure_totals_delta_microseconds": {
+          "full": 11135,
+          "some": 13775
+        },
+        "swap_activity_pages": {
+          "pswpin": 175,
+          "pswpout": 0
+        },
+        "swap_occupancy_after_bytes": 1810313216,
+        "swap_occupancy_before_bytes": 1810325504
+      },
+      "model_window": {
+        "completed_at_utc": "2026-09-30T09:13:23.406068+00:00",
+        "elapsed_seconds": 739.560338,
+        "load_to_health_seconds": 0.3959560439689085,
+        "server_exit_verified": true,
+        "started_at_utc": "2026-09-30T09:01:03.845730+00:00"
+      },
+      "request_results": {
+        "changed_state": {
+          "actual_eos_or_word_terminal": 48,
+          "cap_count": 0,
+          "client_request_to_complete_terminal_sse_ms": {
+            "median": 9554.612158972304,
+            "p95_nearest_rank": 30681.615586974658
+          },
+          "input_tokens_actual_tokenizer": {
+            "max": 1107,
+            "median": 319.0,
+            "min": 113
+          },
+          "output_hash_equal_to_changed_state_primary": 0,
+          "requests": 48,
+          "server_timings": {
+            "cache_n_reused_prompt_tokens": {
+              "max": 10,
+              "median": 2.0,
+              "min": 0,
+              "requests_with_nonzero": 47
+            },
+            "predicted_ms_median": 2546.6904999999997,
+            "prompt_ms_median": 7088.754,
+            "prompt_n_recomputed_prompt_tokens": {
+              "max": 1104,
+              "median": 317.0,
+              "min": 111
+            }
+          }
+        },
+        "immediate_same_prompt_repeat": {
+          "actual_eos_or_word_terminal": 48,
+          "cap_count": 0,
+          "client_request_to_complete_terminal_sse_ms": {
+            "median": 2815.1644180179574,
+            "p95_nearest_rank": 9287.711768061854
+          },
+          "input_tokens_actual_tokenizer": {
+            "max": 1107,
+            "median": 319.0,
+            "min": 113
+          },
+          "output_hash_equal_to_changed_state_primary": 46,
+          "requests": 48,
+          "server_timings": {
+            "cache_n_reused_prompt_tokens": {
+              "max": 1106,
+              "median": 318.0,
+              "min": 112,
+              "requests_with_nonzero": 48
+            },
+            "predicted_ms_median": 2763.0555,
+            "prompt_ms_median": 42.278,
+            "prompt_n_recomputed_prompt_tokens": {
+              "max": 1,
+              "median": 1.0,
+              "min": 1
+            }
+          }
+        }
+      }
+    },
+    "q8_0": {
+      "artifact": {
+        "bytes": 1537269856,
+        "provenance": "publisher-revision artifact, already staged locally",
+        "quantization": "Q8_0",
+        "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+      },
+      "background_q25_predictor_separate_from_candidate": {
+        "after_pss_bytes": 466095104,
+        "after_rss_bytes": 472080384,
+        "before_pss_bytes": 468111360,
+        "before_rss_bytes": 472080384,
+        "compute_observed_flag": true,
+        "cpu_seconds_delta": 0.050000000000000044,
+        "pid": 3343901
+      },
+      "candidate_service_process_tree_memory": {
+        "memory_available_min_bytes": 11144318976,
+        "peak_hwm": {
+          "GiB": 1.556610107,
+          "MiB": 1593.96875,
+          "bytes": 1671397376
+        },
+        "peak_rss": {
+          "GiB": 1.556610107,
+          "MiB": 1593.96875,
+          "bytes": 1671397376
+        },
+        "post_request_retained_anonymous": {
+          "GiB": 0.114498138,
+          "MiB": 117.246094,
+          "bytes": 122941440
+        },
+        "post_request_retained_file_backed_rss": {
+          "GiB": 1.442111969,
+          "MiB": 1476.722656,
+          "bytes": 1548455936
+        },
+        "post_request_retained_pss": {
+          "GiB": 1.551001549,
+          "MiB": 1588.225586,
+          "bytes": 1665375232
+        },
+        "post_request_retained_rss": {
+          "GiB": 1.556610107,
+          "MiB": 1593.96875,
+          "bytes": 1671397376
+        },
+        "post_request_retained_swap": {
+          "GiB": 0.0,
+          "MiB": 0.0,
+          "bytes": 0
+        },
+        "sample_count": 1805,
+        "sample_period_seconds": 0.5,
+        "scope": "summed process tree; any helper descendants are included, but no per-descendant breakdown was retained"
+      },
+      "cpu_observations": {
+        "candidate_process_tree_cpu_seconds_delta": 3680.01,
+        "cpu_frequency_mhz_mean": 2974.1670939058135,
+        "cpu_temperature_peak_celsius": {
+          "hwmon:k10temp:Tctl": 85.0
+        },
+        "system_cpu_percent_mean_sampled": 50.39463414529334
+      },
+      "host_pressure_and_swap": {
+        "io_pressure_totals_delta_microseconds": {
+          "full": 4040275,
+          "some": 4195689
+        },
+        "memory_pressure_totals_delta_microseconds": {
+          "full": 10844,
+          "some": 12214
+        },
+        "swap_activity_pages": {
+          "pswpin": 4,
+          "pswpout": 0
+        },
+        "swap_occupancy_after_bytes": 1810284544,
+        "swap_occupancy_before_bytes": 1810313216
+      },
+      "model_window": {
+        "completed_at_utc": "2026-09-30T09:29:17.857744+00:00",
+        "elapsed_seconds": 954.163676,
+        "load_to_health_seconds": 0.6139109649229795,
+        "server_exit_verified": true,
+        "started_at_utc": "2026-09-30T09:13:23.694068+00:00"
+      },
+      "request_results": {
+        "changed_state": {
+          "actual_eos_or_word_terminal": 48,
+          "cap_count": 0,
+          "client_request_to_complete_terminal_sse_ms": {
+            "median": 12086.884992546402,
+            "p95_nearest_rank": 36600.39255407173
+          },
+          "input_tokens_actual_tokenizer": {
+            "max": 1107,
+            "median": 319.0,
+            "min": 113
+          },
+          "output_hash_equal_to_changed_state_primary": 0,
+          "requests": 48,
+          "server_timings": {
+            "cache_n_reused_prompt_tokens": {
+              "max": 10,
+              "median": 2.0,
+              "min": 0,
+              "requests_with_nonzero": 47
+            },
+            "predicted_ms_median": 4040.2349999999997,
+            "prompt_ms_median": 8270.1855,
+            "prompt_n_recomputed_prompt_tokens": {
+              "max": 1104,
+              "median": 317.0,
+              "min": 111
+            }
+          }
+        },
+        "immediate_same_prompt_repeat": {
+          "actual_eos_or_word_terminal": 48,
+          "cap_count": 0,
+          "client_request_to_complete_terminal_sse_ms": {
+            "median": 4058.0322705209255,
+            "p95_nearest_rank": 13204.203117988072
+          },
+          "input_tokens_actual_tokenizer": {
+            "max": 1107,
+            "median": 319.0,
+            "min": 113
+          },
+          "output_hash_equal_to_changed_state_primary": 46,
+          "requests": 48,
+          "server_timings": {
+            "cache_n_reused_prompt_tokens": {
+              "max": 1106,
+              "median": 318.0,
+              "min": 112,
+              "requests_with_nonzero": 48
+            },
+            "predicted_ms_median": 3984.5649999999996,
+            "prompt_ms_median": 59.376000000000005,
+            "prompt_n_recomputed_prompt_tokens": {
+              "max": 1,
+              "median": 1.0,
+              "min": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "overall_campaign_wall": {
+    "completed_at_utc": "2026-09-30T09:29:18.047700+00:00",
+    "completed_requests": 192,
+    "elapsed_seconds": 1696.506838,
+    "expected_requests": 192,
+    "started_at_utc": "2026-09-30T09:01:01.540862+00:00"
+  },
+  "runtime": {
+    "backend": "CPU; --n-gpu-layers 0; both runtime logs report no usable GPU found.",
+    "batch_tokens": 256,
+    "binary_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+    "cache_prompt_requested": true,
+    "context_checkpoints": 0,
+    "context_tokens": 3072,
+    "idle_slot_snapshots": false,
+    "kv_cache_k": "f16",
+    "kv_cache_v": "f16",
+    "microbatch_tokens": 64,
+    "optional_cache_ram_mib": 0,
+    "single_slot": true,
+    "source_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "speculative_decoding": "none",
+    "threads": 4,
+    "warmup": false
+  },
+  "schema": "sweep-local-replay-interpretation-v1",
+  "scope": {
+    "changed_state_requests_per_precision": 48,
+    "fixed_varied_source_state_count": 24,
+    "gold_labels_loaded": false,
+    "immediate_same_prompt_repeat_requests_per_precision": 48,
+    "prompt_transition_scope": "fixed varied prompt/source-state replay, not a live near-cursor editor trajectory or a general everyday-latency estimate.",
+    "purpose": "CPU-only runtime latency, memory, and prompt-cache reuse diagnostic; not model-quality evidence.",
+    "quality_evidence": false,
+    "repetitions_per_state": 2,
+    "timing_scope": "client request start through complete terminal SSE response, including HTTP client setup; excludes editor debounce/context construction and separately measured tokenization endpoint calls.",
+    "training_or_personalization": false
+  }
+}

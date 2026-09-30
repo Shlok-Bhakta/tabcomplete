@@ -769,6 +769,8 @@ class Server:
             "--n-gpu-layers",
             str(self.args.gpu_layers),
             "--no-webui",
+            "--log-verbosity",
+            "4",
         ]
         self.argv = argv
         self.log = log
@@ -789,6 +791,16 @@ class Server:
                         self.gpu_after_load = _gpu_snapshot()
                         self.backend_evidence = _runtime_backend_evidence(
                             self.log_path, self.gpu_after_load
+                        )
+                        write_json(
+                            self.log_path.with_suffix(".backend-startup.json"),
+                            {
+                                "server_pid": self.process.pid,
+                                "argv": self.argv,
+                                "gpu_before": self.gpu_before,
+                                "gpu_after_load": self.gpu_after_load,
+                                "backend_evidence": self.backend_evidence,
+                            },
                         )
                         if not self.backend_evidence["cuda_device_count"]:
                             raise RuntimeError(
@@ -873,7 +885,9 @@ class Server:
             "rss_high_water_bytes",
             "pss_bytes",
             "anonymous_bytes",
-            "file_private_bytes",
+            "private_bytes",
+            "pss_file_bytes",
+            "pss_anonymous_bytes",
             "process_swap_bytes",
         )
         peaks = {key: max(sample.get(key, 0) for sample in self.samples) for key in keys}
@@ -940,7 +954,7 @@ def _process_memory_snapshot(pid: int) -> dict[str, int | float]:
         "rss_high_water_bytes": status.get("VmHWM", 0),
         "pss_bytes": maps.get("Pss", 0),
         "anonymous_bytes": maps.get("Anonymous", 0),
-        "file_private_bytes": maps.get("Private_Clean", 0) + maps.get("Private_Dirty", 0),
+        "private_bytes": maps.get("Private_Clean", 0) + maps.get("Private_Dirty", 0),
         "pss_file_bytes": maps.get("Pss_File", 0),
         "pss_anonymous_bytes": maps.get("Pss_Anon", 0),
         "process_swap_bytes": max(status.get("VmSwap", 0), maps.get("Swap", 0)),
@@ -1119,6 +1133,11 @@ def _run_controls(
 ) -> None:
 
     from evaluate_causal_line import LineProvider, score_line
+
+    class _NativeLineProvider(LineProvider):
+        def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int | None]:
+            result = self.generate_detailed(prompt, max_new_tokens)
+            return result.text, result.tokens
     from measure_r2_local import NativeProvider
 
     from tinycomplete.eval.code_benchmark import load_suite
@@ -1221,7 +1240,7 @@ def _run_controls(
                 }
             )
             wrapper = _CountingNative(native, token_rows, server)
-            generation_provider = LineProvider(wrapper) if name == "line" else wrapper
+            generation_provider = _NativeLineProvider(wrapper) if name == "line" else wrapper
             predictions = generate_predictions(
                 eligible,
                 generation_provider,
@@ -1306,6 +1325,10 @@ class _CountingNative:
     def generate_detailed(self, prompt: str, max_new_tokens: int):
         self.stop_first_line = False
         return self._generate(prompt, max_new_tokens)
+
+    def generate(self, prompt: str, max_new_tokens: int) -> tuple[str, int | None]:
+        result = self.generate_detailed(prompt, max_new_tokens)
+        return result.text, result.tokens
 
     def generate_line_detailed(self, prompt: str, max_new_tokens: int):
         self.stop_first_line = True

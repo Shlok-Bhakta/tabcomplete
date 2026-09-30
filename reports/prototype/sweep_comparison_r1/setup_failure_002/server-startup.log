@@ -1,0 +1,11 @@
+0.00.000.699 I srv  llama_server: initializing ...
+0.00.263.266 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.263.533 I srv          init: The UI is disabled
+0.00.263.559 I srv          init: Use --ui/--no-ui (or deprecated --webui/--no-webui) to enable/disable
+0.00.263.791 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.265.460 I srv    load_model: loading model '/kaggle/temp/sweep-artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf'
+0.01.433.301 I cmn          init: llama threadpool init, n_threads = 4
+0.01.523.615 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 8192, kv_unified = 'false'
+0.01.527.249 I srv  llama_server: model loaded
+0.01.527.285 I srv  llama_server: listening on http://127.0.0.1:35297
+0.01.628.737 I srv    operator(): operator(): cleaning up before exit...
