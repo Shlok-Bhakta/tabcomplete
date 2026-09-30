@@ -20,8 +20,10 @@ import time
 from pathlib import Path
 
 START = float(os.environ.get("TABCOMPLETE_SWEEP_SESSION_START", time.monotonic()))
-SESSION_SECONDS = 7200
+DEFAULT_SESSION_SECONDS = 7200
+SESSION_SECONDS = DEFAULT_SESSION_SECONDS
 FIFTH_SESSION_SECONDS = 4800
+SIXTH_SESSION_SECONDS = 7200
 RESERVE_SECONDS = 1200
 DEADLINE = START + SESSION_SECONDS - RESERVE_SECONDS
 RUNTIME_REVISION = "f072b103714dfa1eee531f80b24512faf38e3dd2"
@@ -98,15 +100,15 @@ def run(argv: list[str], label: str, cwd: Path | None = None) -> None:
 
 def validate_spec(spec: dict) -> None:
     attempt = spec.get("campaign_attempt_number")
-    expected_session = FIFTH_SESSION_SECONDS if attempt == 5 else SESSION_SECONDS
-    expected_max_attempts = 5 if attempt == 5 else 4 if attempt == 4 else 3
+    expected_session = FIFTH_SESSION_SECONDS if attempt == 5 else DEFAULT_SESSION_SECONDS
+    expected_max_attempts = 6 if attempt == 6 else 5 if attempt == 5 else 4 if attempt == 4 else 3
     if (
         spec.get("schema") != "sweep-comparison-kaggle-input-v1"
         or spec.get("model_revision") != MODEL_REVISION
         or spec.get("model_sha256") != MODEL_SHA256
         or spec.get("runtime_revision") != RUNTIME_REVISION
         or isinstance(attempt, bool)
-        or not isinstance(attempt, int) or not 1 <= attempt <= 5
+        or not isinstance(attempt, int) or not 1 <= attempt <= 6
         or not isinstance(spec.get("files"), dict)
         or spec.get("session_seconds") != expected_session
         or spec.get("reserve_seconds") != RESERVE_SECONDS
@@ -118,6 +120,13 @@ def validate_spec(spec: dict) -> None:
             or spec["files"].get("plan.json") != spec.get("fifth_attempt_plan_sha256")
         ))
         or (attempt != 5 and spec.get("fifth_attempt_plan_sha256") is not None)
+        or (attempt == 6 and (
+            not isinstance(spec.get("sixth_attempt_plan_sha256"), str)
+            or len(spec["sixth_attempt_plan_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in spec["sixth_attempt_plan_sha256"])
+            or spec["files"].get("plan.json") != spec["sixth_attempt_plan_sha256"]
+        ))
+        or (attempt != 6 and spec.get("sixth_attempt_plan_sha256") is not None)
         or spec.get("training_enabled") is not False
         or not isinstance(spec.get("runner_arguments"), list)
         or not spec["runner_arguments"]
@@ -232,6 +241,166 @@ def validate_fifth_attempt_plan(plan_path: Path, spec: dict) -> None:
         raise ValueError("Sweep fifth-attempt aggregate wall-time budget is inconsistent")
 
 
+def validate_sixth_attempt_plan(plan_path: Path, spec: dict) -> None:
+    """Bind the single sixth allocation to plan-v10 and its six-hour cap."""
+    if spec.get("campaign_attempt_number") != 6:
+        raise ValueError("sixth Sweep session is only for attempt 6")
+    plan_hash = digest(plan_path)
+    if (
+        plan_hash != spec.get("sixth_attempt_plan_sha256")
+        or spec.get("files", {}).get("plan.json") != plan_hash
+    ):
+        raise ValueError("Sweep sixth-attempt plan digest mismatch")
+    plan = json.loads(plan_path.read_text())
+    plan_payload = {key: value for key, value in plan.items() if key != "plan_sha256"}
+    canonical = (json.dumps(
+        plan_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    ) + "\n").encode()
+    if hashlib.sha256(canonical).hexdigest() != plan.get("plan_sha256"):
+        raise ValueError("Sweep sixth-attempt plan self-hash mismatch")
+    amendment = plan.get("allocation_amendment_v10")
+    code = plan.get("code")
+    if (
+        plan.get("schema") != "sweep-comparison-plan-v1"
+        or plan.get("revision", {}).get("number") != 2
+        or not isinstance(code, dict)
+        or not isinstance(amendment, dict)
+        or amendment.get("schema") != "sweep-allocation-amendment-v10"
+        or amendment.get("number") != 10
+        or code.get("runner_sha256") != spec.get("runner_sha256")
+        or spec.get("session_seconds") != SIXTH_SESSION_SECONDS
+        or spec.get("reserve_seconds") != RESERVE_SECONDS
+        or spec.get("campaign_max_attempts") != 6
+        or spec.get("campaign_wall_cap_seconds") != 21600
+    ):
+        raise ValueError("Sweep sixth-attempt plan and worker configuration disagree")
+    native_provider_sha = code.get("native_provider_sha256")
+    if (
+        not isinstance(native_provider_sha, str)
+        or len(native_provider_sha) != 64
+        or any(c not in "0123456789abcdef" for c in native_provider_sha)
+    ):
+        raise ValueError("Sweep plan-v10 lacks the pinned native provider source")
+
+    limits = amendment.get("attempt_limits")
+    expected_limits = {
+        "maximum_total_attempts": 6,
+        "attempts_already_used": 5,
+        "additional_attempts_remaining": 1,
+        "per_attempt_session_wall_seconds_max": SIXTH_SESSION_SECONDS,
+        "finalization_reserve_seconds": RESERVE_SECONDS,
+        "maximum_work_seconds": SIXTH_SESSION_SECONDS - RESERVE_SECONDS,
+        "campaign_aggregate_gpu_session_wall_seconds_max": 21600,
+        "sixth_attempt_allowed": True,
+    }
+    if limits != expected_limits:
+        raise ValueError("Sweep plan-v10 does not authorize exactly one sixth attempt")
+    if amendment.get("authorization") != {
+        "basis": "User explicitly authorized one additional free Kaggle allocation.",
+        "additional_model_downloads": False,
+        "automatic_renewal_consumption": False,
+        "maximum_additional_allocations": 1,
+        "paid_compute": False,
+        "training": False,
+    }:
+        raise ValueError("Sweep plan-v10 allocation is not within the authorized scope")
+    if amendment.get("quota_gate") != {
+        "all_relevant_job_statuses_verified": True,
+        "automatic_renewal_consumption": False,
+        "minimum_remaining_gpu_hours": 2.0,
+        "refresh_immediately_before_submission": True,
+        "require_no_active_gpu_jobs": True,
+        "require_same_renewal_as_campaign": True,
+    }:
+        raise ValueError("Sweep plan-v10 quota gate is invalid")
+    observed_quota = amendment.get("fresh_quota_observation_at_freeze")
+    if (
+        not isinstance(observed_quota, dict)
+        or observed_quota.get("source")
+        != "authenticated kaggle quota --format json and kernel statuses"
+        or observed_quota.get("renewal")
+        != plan.get("quota_observation", {}).get("renewal")
+        or observed_quota.get("active_jobs") != []
+        or observed_quota.get("all_relevant_job_statuses_verified") is not True
+        or isinstance(observed_quota.get("remaining"), bool)
+        or not isinstance(observed_quota.get("remaining"), (int, float))
+        or not math.isfinite(float(observed_quota["remaining"]))
+        or float(observed_quota["remaining"]) < 2.0
+    ):
+        raise ValueError("Sweep plan-v10 frozen quota observation is missing or invalid")
+    failure_evidence = amendment.get("attempt_005_failure_evidence")
+    if (
+        not isinstance(failure_evidence, dict)
+        or failure_evidence.get("kernel_id")
+        != "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5"
+        or failure_evidence.get("state") != "ERROR"
+        or failure_evidence.get("predictions") != 0
+        or failure_evidence.get("model_quality_assessed") is not False
+        or failure_evidence.get("conservative_wall_upper_bound_seconds") != 2013.138070
+        or not isinstance(failure_evidence.get("manifest_sha256"), str)
+        or len(failure_evidence["manifest_sha256"]) != 64
+        or any(c not in "0123456789abcdef" for c in failure_evidence["manifest_sha256"])
+        or not isinstance(failure_evidence.get("terminal_observation_sha256"), str)
+        or len(failure_evidence["terminal_observation_sha256"]) != 64
+        or any(
+            c not in "0123456789abcdef"
+            for c in failure_evidence["terminal_observation_sha256"]
+        )
+    ):
+        raise ValueError("Sweep plan-v10 fifth-attempt failure metadata is invalid")
+    if amendment.get("session_enforcement") != {
+        "finalization_reserve_seconds": RESERVE_SECONDS,
+        "kaggle_push_timeout_seconds": SIXTH_SESSION_SECONDS,
+        "monotonic_worker_work_deadline_seconds": SIXTH_SESSION_SECONDS - RESERVE_SECONDS,
+        "native_per_request_timeout_seconds_max": 120,
+        "setup_compile_evaluation_and_saving_included": True,
+        "no_automatic_seventh_allocation": True,
+    }:
+        raise ValueError("Sweep plan-v10 session enforcement is invalid")
+
+    prior = amendment.get("verified_prior_attempts")
+    expected_ids = [
+        "shlokbhakta/tabcomplete-sweep-comparison-r1",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+        "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5",
+    ]
+    if (
+        not isinstance(prior, list) or len(prior) != 5
+        or any(not isinstance(row, dict) for row in prior)
+        or [row.get("attempt_number") for row in prior] != [1, 2, 3, 4, 5]
+        or [row.get("kernel_id") for row in prior] != expected_ids
+        or any(row.get("state") != "ERROR" for row in prior)
+    ):
+        raise ValueError("Sweep plan-v10 lacks five terminal-error predecessors")
+    prior_wall = amendment.get("prior_wall_upper_bound_seconds")
+    aggregate = amendment.get("aggregate_wall_upper_bound_with_sixth_attempt_seconds")
+    margin = amendment.get("remaining_aggregate_wall_margin_seconds")
+    try:
+        values = [float(row["conservative_wall_upper_bound_seconds"]) for row in prior]
+        if any(not math.isfinite(value) or value < 0 for value in values):
+            raise ValueError("invalid duration")
+        measured_prior = sum(values)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Sweep plan-v10 predecessor time evidence is invalid") from exc
+    expected_total = round(measured_prior + SIXTH_SESSION_SECONDS, 6)
+    if (
+        isinstance(prior_wall, bool) or not isinstance(prior_wall, (int, float))
+        or not math.isfinite(float(prior_wall))
+        or round(measured_prior, 6) != round(float(prior_wall), 6)
+        or round(expected_total, 6) != aggregate
+        or not isinstance(aggregate, (int, float)) or aggregate > 21600
+        or round(21600 - float(aggregate), 6) != margin
+        or round(float(spec.get("prior_wall_upper_bound_seconds", -1)), 6)
+        != round(float(prior_wall), 6)
+        or round(float(prior_wall), 6) != 11394.350495
+        or round(float(aggregate), 6) != 18594.350495
+        or round(float(margin), 6) != 3005.649505
+    ):
+        raise ValueError("Sweep sixth-attempt aggregate wall-time budget is inconsistent")
+
+
 def stage_canonical_q4(input_dir: Path, scratch: Path) -> None:
     """Reuse the exact privately staged derivative, without GPU requantization."""
     source = input_dir / Q4_FILE
@@ -286,6 +455,8 @@ def main() -> None:
         validate_spec(spec)
         if spec["campaign_attempt_number"] == 5:
             validate_fifth_attempt_plan(input_dir / "plan.json", spec)
+        if spec["campaign_attempt_number"] == 6:
+            validate_sixth_attempt_plan(input_dir / "plan.json", spec)
         configure_session(spec)
         status.update(session_seconds=SESSION_SECONDS, reserve_seconds=RESERVE_SECONDS)
         for name, sha in spec["files"].items():
