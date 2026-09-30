@@ -1,0 +1,25 @@
+{
+  "schema": "sweep-submission-observation-v1",
+  "state": "kernel_pushed",
+  "kernel_id": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+  "submitted_at": "2026-09-30T10:31:15.194904+00:00",
+  "source_commit": "f1ede76",
+  "plan_file": "plan-v7.json",
+  "plan_sha256": "4c1d6f628132a2f13a787cb457cd1a7b7accd81756c3b1fd9e65f883eb8f80f1",
+  "quota": {
+    "observed_at": "2026-09-30T10:30:44.320548+00:00",
+    "remaining": 44.03,
+    "used": 0.97,
+    "total": 45.0,
+    "renewal": "2026-10-03T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "units": "Kaggle account GPU-hours"
+  },
+  "active_jobs_before": [],
+  "status_rows_checked": 34,
+  "maximum_session_seconds": 7200,
+  "finalization_reserve_seconds": 1200,
+  "prior_conservative_wall_seconds": 4734.404287,
+  "aggregate_cap_seconds": 14400,
+  "quality_outputs_at_submission": 0
+}
