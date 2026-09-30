@@ -1,0 +1,11 @@
+{
+  "additional_allocation_authorized_by_this_revision": false,
+  "corrected_sources": {
+    "scripts/run_sweep_comparison.py": "9a1c6f46cae1140c66146d8837003b0454ce1cafc70ca01d67fd87f6a0ec09bd",
+    "tests/test_sweep_comparison.py": "78ac060e595d7e55c396ac9f7eca35545588ccb420e2a0f2230b40de881e39a6"
+  },
+  "future_execution_requires_new_plan": true,
+  "historical_plan": "plan-v10.json",
+  "historical_runner_sha256": "10b8d4583f1eb4a4b338511e95d6822c6110043942d69230757b5caf6aa72716",
+  "schema": "sweep-measurement-lifecycle-source-revision-v1"
+}

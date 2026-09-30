@@ -1,0 +1,51 @@
+{
+  "frozen_at": "2026-09-30T15:32:21.672081+00:00",
+  "inputs": {
+    "artifact_manifest.json": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/artifact_manifest.json",
+      "sha256": "acc8b18ba65bbbe92545ea0aa4f7f349629b34b5cab689f37eec332d2c42cc1f"
+    },
+    "line/q4_k_m": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/line/q4_k_m/results.jsonl",
+      "sha256": "9909465dfbbdb206719fc38de38e46b98b4bd2e87061d86a7663fc6fc410a8c4"
+    },
+    "line/q8_0": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/line/q8_0/results.jsonl",
+      "sha256": "f0762bfefaad69b13e91e65cf962225ddb53f657471d0e6378cb0c86a89008fa"
+    },
+    "next-edit/q8_0/summary.json": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/next-edit/q8_0/summary.json",
+      "sha256": "22d1d6364b69cc1aac5016d34f94f997500d8f47704f51dcceb49c8368e530c1"
+    },
+    "partial_coverage.json": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/partial_coverage.json",
+      "sha256": "93b0be6675ef84da233d671085d76f0442482642dfa7707e7e381013a2f353de"
+    },
+    "strict/q4_k_m": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/strict/q4_k_m/results.jsonl",
+      "sha256": "85ca2bf052b8117f65e4a55a45261cda61ffa4231ce97c35fa45b8313e2841b2"
+    },
+    "strict/q8_0": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/controller_scoring_gpu006_v10/strict/q8_0/results.jsonl",
+      "sha256": "29d023334a64d322c6a4db5d3ad100ee6f6f775c4f78389c28e841e34a8e137c"
+    }
+  },
+  "metrics": {
+    "line": [
+      "exact",
+      "syntax_pass"
+    ],
+    "strict": [
+      "exact_match",
+      "normalized_exact_match",
+      "functional_valid"
+    ]
+  },
+  "missing_q4_next_edit": "unknown/unscored, excluded from paired next-edit comparisons",
+  "output": "reports/prototype/sweep_comparison_r1/gpu6_quality_summary.json",
+  "paired_method": "unchanged score_sweep_comparison._paired_quality: seed20260930,10000 case bootstrap replicates",
+  "purpose": "Aggregate completed frozen-v10 scores without inference, rescoring or fixture changes",
+  "runner_sha256": "10b8d4583f1eb4a4b338511e95d6822c6110043942d69230757b5caf6aa72716",
+  "schema": "sweep-completed-quality-interpretation-v1",
+  "scorer_sha256": "62ee400663cde8a827094af2bf5d4c2782dd6125b333a26f4df346152d8da01e"
+}

@@ -449,16 +449,16 @@ def test_next_edit_reuses_one_model_hash_and_assigns_unique_request_ids(
             self.started_at = 0.0
             self.loaded_at = 1.0
             self.host_before = {}
-            self.host_after = {}
             self.gpu_before = {}
             self.gpu_after_load = {}
-            self.gpu_after_requests = {}
             self.backend_evidence = {"backend": "test"}
 
         def __enter__(self):
             return self
 
         def __exit__(self, *_args):
+            self.host_after = {"after_context_exit": True}
+            self.gpu_after_requests = {"after_context_exit": True}
             return None
 
         def tokenize(self, _prompt: str) -> int:
@@ -498,6 +498,9 @@ def test_next_edit_reuses_one_model_hash_and_assigns_unique_request_ids(
     assert len(hash_calls) == 1
     assert len(request_ids) == 48
     assert len(set(request_ids)) == 48
+    measurement = json.loads((args.output / "next-edit/q8_0/server-measurement.json").read_text())
+    assert measurement["host_after"] == {"after_context_exit": True}
+    assert measurement["gpu_after_requests"] == {"after_context_exit": True}
 
     sweep.run_next_edit(args, plan, model, "q8_0")
     assert len(hash_calls) == 2

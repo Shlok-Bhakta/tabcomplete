@@ -1,0 +1,156 @@
+{
+  "gpu_after_load": {
+    "available": true,
+    "compute_processes": "5350, 1160\n5350, 102",
+    "devices": "0, Tesla T4, 1163, 15360\n1, Tesla T4, 105, 15360"
+  },
+  "gpu_after_requests": {
+    "available": true,
+    "compute_processes": "5350, 1172\n5350, 102",
+    "devices": "0, Tesla T4, 1175, 15360\n1, Tesla T4, 105, 15360"
+  },
+  "gpu_before": {
+    "available": true,
+    "compute_processes": "",
+    "devices": "0, Tesla T4, 0, 15360\n1, Tesla T4, 0, 15360"
+  },
+  "host": {
+    "cpu_count": 4,
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+    "hostname": "ec9b32f72796",
+    "nvidia_smi": "Tesla T4, 15360 MiB\nTesla T4, 15360 MiB",
+    "platform": "linux",
+    "ram_available_bytes": 32485556224,
+    "ram_bytes": 33659379712
+  },
+  "host_after": {
+    "memory_bytes": {
+      "MemAvailable": 32053284864,
+      "MemTotal": 33659379712,
+      "SwapFree": 0,
+      "SwapTotal": 0
+    },
+    "pressure_io": "some avg10=0.00 avg60=0.08 avg300=0.83 total=51310424\nfull avg10=0.00 avg60=0.08 avg300=0.82 total=50004566",
+    "pressure_memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+    "swap_activity_pages": {
+      "pswpin": 0,
+      "pswpout": 0
+    }
+  },
+  "host_before": {
+    "memory_bytes": {
+      "MemAvailable": 32475586560,
+      "MemTotal": 33659379712,
+      "SwapFree": 0,
+      "SwapTotal": 0
+    },
+    "pressure_io": "some avg10=2.41 avg60=1.20 avg300=1.44 total=51061779\nfull avg10=2.41 avg60=1.19 avg300=1.42 total=49762339",
+    "pressure_memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+    "swap_activity_pages": {
+      "pswpin": 0,
+      "pswpout": 0
+    }
+  },
+  "model": "q4_k_m",
+  "model_load_seconds": 1.5681152770002882,
+  "model_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+  "process_memory": {
+    "peak": {
+      "anonymous_bytes": 225648640,
+      "private_bytes": 524603392,
+      "process_swap_bytes": 0,
+      "pss_anonymous_bytes": 225648640,
+      "pss_bytes": 526595072,
+      "pss_file_bytes": 275780608,
+      "rss_bytes": 529797120,
+      "rss_high_water_bytes": 1282387968
+    },
+    "post_request_retained": {
+      "anonymous_bytes": 225648640,
+      "private_bytes": 524603392,
+      "process_swap_bytes": 0,
+      "pss_anonymous_bytes": 225648640,
+      "pss_bytes": 526595072,
+      "pss_file_bytes": 275780608,
+      "rss_bytes": 529797120,
+      "rss_high_water_bytes": 1282387968,
+      "sampled_at_monotonic_seconds": 2621.764087026
+    },
+    "sample_period_seconds": 0.5,
+    "samples": 685
+  },
+  "runtime_backend_evidence": {
+    "backend": "CUDA",
+    "cuda_device_count": 2,
+    "cuda_device_count_source": "runtime_device_inventory",
+    "device_inventory_conflict": false,
+    "enumerated_cuda_devices": [
+      "CUDA0",
+      "CUDA1"
+    ],
+    "nvidia_smi_snapshot": {
+      "available": true,
+      "compute_processes": "5350, 1160\n5350, 102",
+      "devices": "0, Tesla T4, 1163, 15360\n1, Tesla T4, 105, 15360"
+    },
+    "offloadable_layers": 29,
+    "offloaded_layers": 29,
+    "runtime_log_evidence": [
+      "0.00.473.047 I cmn  common_param:   - CUDA0   : Tesla T4 (14911 MiB, 14806 MiB free)",
+      "0.00.661.776 I cmn  common_param:   - CUDA1   : Tesla T4 (14911 MiB, 14806 MiB free)",
+      "0.00.661.963 I cmn  common_param: system_info: n_threads = 4 (n_threads_batch = 4) / 4 | CUDA : ARCHS = 750 | NO_VMM = 1 | USE_GRAPHS = 1 | FA_QUANTS = q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 |",
+      "0.00.822.066 I common_memory_breakdown_print: |   - CUDA0 (T4)         | 14911 = 14806 + (1037 =   804 +     224 +       8) +        -932 |",
+      "0.00.874.635 I llama_prepare_model_devices: using device CUDA0 (Tesla T4) (0000:00:04.0) - 14806 MiB free",
+      "0.01.021.526 I load_tensors: offloaded 29/29 layers to GPU",
+      "0.01.021.539 I load_tensors:        CUDA0 model buffer size =   804.81 MiB",
+      "0.01.277.443 I llama_context:  CUDA_Host  output buffer size =     0.17 MiB",
+      "0.01.278.014 I llama_kv_cache:      CUDA0 KV buffer size =   224.00 MiB",
+      "0.01.287.775 I sched_reserve:      CUDA0 compute buffer size =     8.69 MiB",
+      "0.01.287.799 I sched_reserve:  CUDA_Host compute buffer size =     1.75 MiB"
+    ]
+  },
+  "server_argv": [
+    "/kaggle/temp/llama-sweep/build/bin/llama-server",
+    "--log-verbosity",
+    "4",
+    "--model",
+    "/kaggle/temp/sweep-artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "43393",
+    "--ctx-size",
+    "8192",
+    "--batch-size",
+    "256",
+    "--ubatch-size",
+    "64",
+    "--parallel",
+    "1",
+    "--threads",
+    "4",
+    "--threads-batch",
+    "4",
+    "--cache-ram",
+    "0",
+    "--no-cache-idle-slots",
+    "--no-context-shift",
+    "--cache-type-k",
+    "f16",
+    "--cache-type-v",
+    "f16",
+    "--split-mode",
+    "none",
+    "--main-gpu",
+    "0",
+    "--n-gpu-layers",
+    "99",
+    "--no-webui"
+  ],
+  "server_binary_sha256": "e6c13f7e96739273329182dd8aa74a1d0fcbe8f8d3676f16eb184dc77cbcc4bc",
+  "server_pid": 5350,
+  "swap_activity_delta_pages": {
+    "pswpin": 0,
+    "pswpout": 0
+  }
+}

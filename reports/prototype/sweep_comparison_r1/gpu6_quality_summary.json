@@ -1,0 +1,220 @@
+{
+  "interpretation_plan_sha256": "46237c968a7608c6aed9acdc1198ddec451ed94eebb0564d8d9e47777d7a50df",
+  "limitations": [
+    "Raw causal code controls are not the trained whole-file next-edit task.",
+    "Q4 was requantized from publisher Q8, not unquantized weights.",
+    "Paired bootstrap intervals do not establish equivalence.",
+    "Missing Q4 next-edit predictions are not quality failures.",
+    "Zero mapped Q8 actions does not imply a zero no-edit false-positive rate."
+  ],
+  "next_edit_q4": {
+    "expected": 48,
+    "generated": 0,
+    "state": "unknown_unscored"
+  },
+  "next_edit_q8": {
+    "intent_groups": {
+      "ambiguous_requirement": {
+        "case_denominator": 6,
+        "exact_reference_match_count": 0,
+        "exact_reference_match_rate": 0.0,
+        "interpretation": "reference agreement only; excluded from clear-intent success",
+        "range_mapped_count": 0,
+        "repetition_denominator": 12,
+        "terminal_valid_count": 12
+      },
+      "clear_functional_intent": {
+        "case_denominator": 11,
+        "clear_intent_functional_success_count": 0,
+        "clear_intent_functional_success_denominator": 22,
+        "clear_intent_functional_success_rate": 0.0,
+        "exact_reference_match_count": 0,
+        "exact_reference_match_rate": 0.0,
+        "objective_checks_unavailable": 0,
+        "range_mapped_count": 0,
+        "repetition_denominator": 22,
+        "terminal_valid_count": 22
+      },
+      "explicit_synthetic_target": {
+        "case_denominator": 2,
+        "exact_reference_match_count": 0,
+        "exact_reference_match_rate": 0.0,
+        "functional_oracle": "unavailable; no source functional check",
+        "range_mapped_count": 0,
+        "repetition_denominator": 4,
+        "synthetic_deletion_exact_count": 0,
+        "terminal_valid_count": 4
+      },
+      "no_edit_plausible": {
+        "case_denominator": 5,
+        "exact_reference_match_count": 0,
+        "exact_reference_match_rate": 0.0,
+        "false_positive_edits": 0,
+        "interpretation": "plausible benchmark no-edit labels, not certain human intent",
+        "range_mapped_count": 0,
+        "reference_no_edit_agreement_count": 0,
+        "repetition_denominator": 10,
+        "terminal_valid_count": 10
+      }
+    },
+    "range_mapped_count": 0,
+    "repetition_consistency": {
+      "cases": 24,
+      "identical_action_count": 24,
+      "identical_response_count": 24
+    },
+    "requested_case_repetitions": 48,
+    "terminal_valid_count": 48
+  },
+  "paired_q4_minus_q8": {
+    "line": {
+      "exact": {
+        "ci95": [
+          -0.03888888888888889,
+          0.016666666666666666
+        ],
+        "interpretation": "descriptive uncertainty interval; not an equivalence test",
+        "method": "paired case-cluster percentile bootstrap; repeated observations averaged within case",
+        "n_paired_cases": 180,
+        "n_skipped": 0,
+        "q4_case_mean": 0.15555555555555556,
+        "q4_minus_q8": -0.011111111111111112,
+        "q4_wins": 2,
+        "q8_case_mean": 0.16666666666666666,
+        "q8_wins": 4,
+        "replicates": 10000,
+        "seed": 20260930,
+        "ties": 174
+      },
+      "syntax_pass": {
+        "ci95": [
+          -0.044444444444444446,
+          0.016666666666666666
+        ],
+        "interpretation": "descriptive uncertainty interval; not an equivalence test",
+        "method": "paired case-cluster percentile bootstrap; repeated observations averaged within case",
+        "n_paired_cases": 180,
+        "n_skipped": 0,
+        "q4_case_mean": 0.8888888888888888,
+        "q4_minus_q8": -0.011111111111111112,
+        "q4_wins": 3,
+        "q8_case_mean": 0.9,
+        "q8_wins": 5,
+        "replicates": 10000,
+        "seed": 20260930,
+        "ties": 172
+      }
+    },
+    "strict": {
+      "exact_match": {
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "interpretation": "descriptive uncertainty interval; not an equivalence test",
+        "method": "paired case-cluster percentile bootstrap; repeated observations averaged within case",
+        "n_paired_cases": 200,
+        "n_skipped": 0,
+        "q4_case_mean": 0.0,
+        "q4_minus_q8": 0.0,
+        "q4_wins": 0,
+        "q8_case_mean": 0.0,
+        "q8_wins": 0,
+        "replicates": 10000,
+        "seed": 20260930,
+        "ties": 200
+      },
+      "functional_valid": {
+        "ci95": [
+          -0.05,
+          0.005
+        ],
+        "interpretation": "descriptive uncertainty interval; not an equivalence test",
+        "method": "paired case-cluster percentile bootstrap; repeated observations averaged within case",
+        "n_paired_cases": 200,
+        "n_skipped": 0,
+        "q4_case_mean": 0.03,
+        "q4_minus_q8": -0.02,
+        "q4_wins": 2,
+        "q8_case_mean": 0.05,
+        "q8_wins": 6,
+        "replicates": 10000,
+        "seed": 20260930,
+        "ties": 192
+      },
+      "normalized_exact_match": {
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "interpretation": "descriptive uncertainty interval; not an equivalence test",
+        "method": "paired case-cluster percentile bootstrap; repeated observations averaged within case",
+        "n_paired_cases": 200,
+        "n_skipped": 0,
+        "q4_case_mean": 0.0,
+        "q4_minus_q8": 0.0,
+        "q4_wins": 0,
+        "q8_case_mean": 0.0,
+        "q8_wins": 0,
+        "replicates": 10000,
+        "seed": 20260930,
+        "ties": 200
+      }
+    }
+  },
+  "quality": {
+    "line": {
+      "q4_k_m": {
+        "counts": {
+          "exact": 28,
+          "syntax_pass": 160
+        },
+        "denominator": 180,
+        "rates": {
+          "exact": 0.15555555555555556,
+          "syntax_pass": 0.8888888888888888
+        }
+      },
+      "q8_0": {
+        "counts": {
+          "exact": 30,
+          "syntax_pass": 162
+        },
+        "denominator": 180,
+        "rates": {
+          "exact": 0.16666666666666666,
+          "syntax_pass": 0.9
+        }
+      }
+    },
+    "strict": {
+      "q4_k_m": {
+        "counts": {
+          "exact_match": 0,
+          "functional_valid": 6,
+          "normalized_exact_match": 0
+        },
+        "denominator": 200,
+        "rates": {
+          "exact_match": 0.0,
+          "functional_valid": 0.03,
+          "normalized_exact_match": 0.0
+        }
+      },
+      "q8_0": {
+        "counts": {
+          "exact_match": 0,
+          "functional_valid": 10,
+          "normalized_exact_match": 0
+        },
+        "denominator": 200,
+        "rates": {
+          "exact_match": 0.0,
+          "functional_valid": 0.05,
+          "normalized_exact_match": 0.0
+        }
+      }
+    }
+  },
+  "schema": "sweep-completed-quality-summary-v1"
+}

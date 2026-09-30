@@ -8,11 +8,46 @@ and local editor-state replay. The installed q25 automatic experimental service
 and collector remain unchanged. No training, teacher, draft model, or other
 model weights were used in this comparison.
 
-Both local replays are complete. The fourth Kaggle allocation reached ERROR,
-observed at 2026-09-30 12:11:59 UTC, without scientific predictions. The fifth
-allocation is running under a new frozen plan and the existing four-hour cap.
-This report does not mark the overall comparison or useful-model objective
-complete.
+Both local replays and the matched code-control scoring are complete. The sixth
+Kaggle allocation generated all 760 strict/line predictions and 48 Q8 next-edit
+predictions. It ended ERROR at 15:09:35.877688 UTC while finalizing next-edit
+memory measurements. The Q4 GPU next-edit phase did not start. Those missing
+48 outputs remain unknown, while completed results remain authoritative.
+Sweep is not selected for the installed one-line editor prototype. The broader
+useful-model objective continues.
+
+## Matched code-control results
+
+The [frozen interpretation](sweep_comparison_r1/gpu6_quality_interpretation_plan.json)
+aggregates the completed [scores](sweep_comparison_r1/gpu6_quality_summary.json)
+without changing fixtures, decoding, scoring rules or generated outputs.
+Both precisions used raw causal prompts, the own model tokenizer, the pinned
+CUDA runtime and the existing deterministic 96-token controls on Kaggle T4.
+These tasks do not use Sweep's trained whole-file next-edit prompt.
+
+| Precision | Strict functional, 200 cases | Strict exact | Line exact, 180 cases | Line syntax |
+|---|---:|---:|---:|---:|
+| Q8_0 | 10/200, 5% | 0/200 | 30/180, 16.67% | 162/180, 90% |
+| Q4_K_M | 6/200, 3% | 0/200 | 28/180, 15.56% | 160/180, 88.89% |
+
+Q4 minus Q8 strict functional success was -2 percentage points, with a paired
+case-bootstrap 95% interval of -5 to +0.5 points. Line exact changed by -1.11
+points, interval -3.89 to +1.67. Q4 won two and lost six strict functional
+cases; it won two and lost four line-exact cases. These small differences do
+not establish equivalence or prove a universal quantization loss.
+
+The publisher-prompt Q8 next-edit diagnostic terminated in all 48 repetitions
+but safely mapped zero actions. None of the 22 clear-intent repetitions
+succeeded functionally. The no-edit slice produced no valid mapped actions,
+so its zero mapped false-positive count is not a zero false-positive rate.
+Repeated null actions do not establish valid-action consistency. Q4 GPU
+next-edit quality is unmeasured. The matched CPU evidence below remains a
+separate prompt/fixture/runtime measurement.
+
+The measurement lifecycle bug was fixed after frozen scoring finished. A
+regression reproducing the actual Server exit lifecycle failed before the fix
+and passed afterward, with 26 focused tests and Ruff passing. Historical plan
+10 and its artifacts remain unchanged. No seventh allocation was launched.
 
 ## Model and precision identities
 
@@ -295,3 +330,30 @@ transport and decisions, not model accuracy or human acceptance. Private logs
 are retained in the final-verification artifact directory. The Python snapshot
 includes preserved uncommitted research work and is not misrepresented as a
 clean checkout-only CI run.
+
+
+## Sixth allocation completion and preservation
+
+[Execution evidence](sweep_comparison_r1/execution_006/failure_metadata.json)
+records 2,380.429593 worker seconds, including compilation. The conservative
+quota-observation-to-terminal bound was 2,465.842227 seconds. Across all six
+allocations it was 13,860.192722 seconds, approximately 3.85 session hours.
+This is a conservative session bound, not an account GPU-hour billing claim.
+Training tokens remain zero. No renewed allocation was consumed.
+
+All 808 generated predictions were scored; the 48 ungenerated Q4 next-edit
+records are explicitly unknown. The existing offline import accepted 2,410
+spans, bundle SHA-256
+`b84d447b11d3287b0bca4ea0436affdd47070fb97d61dd8331a08abcfe3588af`.
+The run CLI query returned ok; the failures query found no error spans for
+this measurement exception. Scientific worker traceback identifies the failure.
+No MCP success is claimed.
+
+Kaggle host `ec9b32f72796` had four Xeon vCPUs, 33,659,379,712 bytes RAM and two
+T4 devices. All 29 layers executed on CUDA0; enumerating CUDA1 allocated a
+small 102 MiB runtime context, reported separately. Q8's CUDA0 process used
+1,762 MiB after requests and Q4 used 1,172 MiB. Host retained RSS was
+555,892,736 and 529,797,120 bytes respectively. Process high-water RSS was
+1,936,252,928 and 1,282,387,968 bytes. These GPU measurements cannot replace
+crabcake CPU deployment memory or latency. The absent Q8 next-edit final
+memory file is not reconstructed as a measured sample.

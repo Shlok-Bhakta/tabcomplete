@@ -1,0 +1,39 @@
+{
+  "all_six_allocations_conservative_seconds": 13860.192722,
+  "allocation_conservative_seconds": 2465.842227,
+  "automatic_seventh_allocation": false,
+  "campaign_plan": "plan-v10.json",
+  "cause": "Next-edit measurement reads host_after and gpu_after_requests before Server.__exit__ populates them.",
+  "failure_stage": "comparison_next-edit",
+  "fix": "Write next-edit measurement after leaving Server context, within run_scope.",
+  "generated_predictions": {
+    "line/q4_k_m": 180,
+    "line/q8_0": 180,
+    "next-edit/q4_k_m": 0,
+    "next-edit/q8_0": 48,
+    "strict/q4_k_m": 200,
+    "strict/q8_0": 200
+  },
+  "kernel": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6",
+  "missing_next_edit_q8_measurement": "unknown; not reconstructed as a measured sample",
+  "observed_at": "2026-09-30T15:34:18.246315+00:00",
+  "regression_after": {
+    "failed": 0,
+    "passed": 26
+  },
+  "regression_before": {
+    "failed": 1,
+    "passed": 25
+  },
+  "ruff": "passed",
+  "schema": "sweep-execution-finalization-failure-v1",
+  "scored_records": 808,
+  "scoring_plan": "scoring_plan_v10.json",
+  "source_commit": "1832987",
+  "telemetry_failure_query": "no_runs; exception outside model spans, scientific traceback authoritative",
+  "training_tokens": 0,
+  "underlying_error_type": "AttributeError",
+  "unknown_unscored_records": 48,
+  "worker_elapsed_seconds": 2380.429592533,
+  "worker_state": "failed"
+}

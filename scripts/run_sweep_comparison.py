@@ -1712,29 +1712,29 @@ def run_next_edit(
                         handle.write(json.dumps(result, sort_keys=True, ensure_ascii=False) + "\n")
                         handle.flush()
                         completed[key] = result
-            write_json(
-                output_dir / "server-measurement.json",
-                {
-                    "model": precision,
-                    "model_sha256": model_sha256,
-                    "server_argv": server.argv,
-                    "server_binary_sha256": digest_file(args.runtime / "build/bin/llama-server"),
-                    "model_load_seconds": server.loaded_at - server.started_at,
-                    "host": _host_info(),
-                    "host_before": server.host_before,
-                    "host_after": server.host_after,
-                    "swap_activity_delta_pages": _swap_activity_delta(
-                        server.host_before, server.host_after
-                    ),
-                    "gpu_before": server.gpu_before,
-                    "gpu_after_load": server.gpu_after_load,
-                    "gpu_after_requests": server.gpu_after_requests,
-                    "runtime_backend_evidence": server.backend_evidence,
-                    "process_memory": server.memory_report(),
-                    "cases": len(completed),
-                    "repetitions": 2,
-                },
-            )
+        write_json(
+            output_dir / "server-measurement.json",
+            {
+                "model": precision,
+                "model_sha256": model_sha256,
+                "server_argv": server.argv,
+                "server_binary_sha256": digest_file(args.runtime / "build/bin/llama-server"),
+                "model_load_seconds": server.loaded_at - server.started_at,
+                "host": _host_info(),
+                "host_before": server.host_before,
+                "host_after": server.host_after,
+                "swap_activity_delta_pages": _swap_activity_delta(
+                    server.host_before, server.host_after
+                ),
+                "gpu_before": server.gpu_before,
+                "gpu_after_load": server.gpu_after_load,
+                "gpu_after_requests": server.gpu_after_requests,
+                "runtime_backend_evidence": server.backend_evidence,
+                "process_memory": server.memory_report(),
+                "cases": len(completed),
+                "repetitions": 2,
+            },
+        )
 
 
 def run(args: argparse.Namespace) -> None:
