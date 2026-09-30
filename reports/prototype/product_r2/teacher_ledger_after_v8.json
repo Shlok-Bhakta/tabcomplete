@@ -1,0 +1,14 @@
+{
+  "calls": 203,
+  "campaign_call_cap": 36,
+  "campaign_calls_remaining": 11,
+  "campaign_calls_used": 25,
+  "prior_unsettled": 5,
+  "schema": "teacher-ledger-after-six-call-verification-v1",
+  "settled": 198,
+  "totals_including_unsettled_reservations": {
+    "calls": 203,
+    "input_tokens": 898073,
+    "output_tokens": 445532
+  }
+}

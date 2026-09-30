@@ -1,0 +1,122 @@
+{
+  "calls": 6,
+  "finish_reasons": [
+    "stop"
+  ],
+  "input_tokens": 18375,
+  "limitations": [
+    "Only two explicitly synthetic source-grounded tasks.",
+    "Functional oracle qualification is distinct from role serialization and reviewer agreement.",
+    "No student model was trained in this run."
+  ],
+  "metered_output_tokens": 11358,
+  "personalization_enabled": false,
+  "plan_sha256": "abead2f6e6106db75e8793a172921354ad4f9499b0fa902a2f5d692828b9f15d",
+  "qualification_sha256": "aad4eb4b6cbb9c61b495695e308443f5b399736b3f7600847760655eeec518dc",
+  "reasoning_tokens": 10685,
+  "retries": 0,
+  "reviewer_flags": [
+    {
+      "ambiguous": false,
+      "case_id": "synthetic-a",
+      "retain": true
+    },
+    {
+      "ambiguous": true,
+      "case_id": "synthetic-b",
+      "retain": false
+    }
+  ],
+  "role_records": [
+    {
+      "finish_reason": "stop",
+      "input_tokens": 3622,
+      "metered_output_tokens": 1075,
+      "output_sha256": "0987a5cfa517818e4a822a157281230dfd1bb0a002d2bd41fbe47b78916390a7",
+      "output_tokens": 206,
+      "prompt_sha256": "f3fb1c5c1590752e2d65f99b530e9cf09c23305ae7578b4ff645837248561f17",
+      "reasoning_tokens": 869,
+      "request_id": "two-seed-source-grounded-v2-author-3b0a7ca3a01569f4af07",
+      "response_evidence_sha256": "5f7706788b1092e08744dd9a292e17bf47414cf230b38a3f8c451411b49b3f78",
+      "role": "author",
+      "session_id": "ses_f0ceccea7ffe60cPkzET7ZbxdF",
+      "source_id": "synthetic-a"
+    },
+    {
+      "finish_reason": "stop",
+      "input_tokens": 4506,
+      "metered_output_tokens": 1064,
+      "output_sha256": "e4dd451754e8f6bad2e579fe8005398a4da02f22a03dcd58e04c5df3af9b9752",
+      "output_tokens": 246,
+      "prompt_sha256": "80750e1ddcc9deb260446bcc3e3cf48bc8248ea19eae4e229a93ab504b71fbae",
+      "reasoning_tokens": 818,
+      "request_id": "two-seed-source-grounded-v2-author-11ae3038c1fe627502b6",
+      "response_evidence_sha256": "782a531d88987d61cfbefe66436195573d49f437f8b0220ca37096cb6b8b7a25",
+      "role": "author",
+      "session_id": "ses_f0cec1325ffebds9zQzog2U76Y",
+      "source_id": "synthetic-b"
+    },
+    {
+      "finish_reason": "stop",
+      "input_tokens": 2434,
+      "metered_output_tokens": 1420,
+      "output_sha256": "f4c1cf9d8214107fe18587fb528f709f608b170d4a189853a4b8946e96349a11",
+      "output_tokens": 30,
+      "prompt_sha256": "204693ca882b61a3abe97914c8091320b1631dcfd2165134d3d8730dd701a512",
+      "reasoning_tokens": 1390,
+      "request_id": "two-seed-source-grounded-v2-solver-3b0a7ca3a01569f4af07",
+      "response_evidence_sha256": "e78a7b29d127553c2ab4bade83e18186db473b2790c136e73f16a4fc5aed2c34",
+      "role": "solver",
+      "session_id": "ses_f0cec88e0ffe0eEtAsR3DVYL7h",
+      "source_id": "synthetic-a"
+    },
+    {
+      "finish_reason": "stop",
+      "input_tokens": 2569,
+      "metered_output_tokens": 3937,
+      "output_sha256": "23e4ee6fd77affb04a27a87252de38d9b51c9decf58933d45288be4fb8f825ea",
+      "output_tokens": 39,
+      "prompt_sha256": "01dd85437c6d2412f2ec8dad158b0fbe7e9edd8c29285e82125b768278c49dda",
+      "reasoning_tokens": 3898,
+      "request_id": "two-seed-source-grounded-v2-solver-11ae3038c1fe627502b6",
+      "response_evidence_sha256": "0d7de84e574190e4089e1ba0768566fd0603c601ba8dfa5309ca3948fb39bcfe",
+      "role": "solver",
+      "session_id": "ses_f0cebc09effe5cW6mZHmSMjfLL",
+      "source_id": "synthetic-b"
+    },
+    {
+      "finish_reason": "stop",
+      "input_tokens": 2479,
+      "metered_output_tokens": 566,
+      "output_sha256": "c03819b46af1f40f5168c1e366403bbd26d2e0e87d58969e011c170ae7d32f22",
+      "output_tokens": 65,
+      "prompt_sha256": "a08c9b8fbb6f3a0460cdda52034e7c2b8f1e9b38f5d0bb80fb2e2f3c76f4fe2b",
+      "reasoning_tokens": 501,
+      "request_id": "two-seed-source-grounded-v2-reviewer-3b0a7ca3a01569f4af07",
+      "response_evidence_sha256": "e2a92be333874c4a3bec463f9dc51e4dfbf8aae52c2c3f005367f67f141a755d",
+      "role": "reviewer",
+      "session_id": "ses_f0cec2791ffe6a35F8njLpnzIu",
+      "source_id": "synthetic-a"
+    },
+    {
+      "finish_reason": "stop",
+      "input_tokens": 2765,
+      "metered_output_tokens": 3296,
+      "output_sha256": "ed6e8046a6cbc409757d5b52fdabc831afd9537e182d89b4fa0c79b302c80598",
+      "output_tokens": 87,
+      "prompt_sha256": "5febfb17eb533105cfde907321293090c9272e58b4a3428711a23e3e0d650f23",
+      "reasoning_tokens": 3209,
+      "request_id": "two-seed-source-grounded-v2-reviewer-11ae3038c1fe627502b6",
+      "response_evidence_sha256": "6900d0bd2091d7b0b4d7beae1ee61986e488bd7e6ccf20433e66d776d5c2c5ae",
+      "role": "reviewer",
+      "session_id": "ses_f0cea9825ffe7eSX9h1X9zvWRm",
+      "source_id": "synthetic-b"
+    }
+  ],
+  "schema": "two-seed-provider-usage-verification-v1",
+  "training_accepted": false,
+  "training_started": false,
+  "unique_provider_sessions": 6,
+  "unique_request_ids": 6,
+  "visible_output_tokens": 673
+}
