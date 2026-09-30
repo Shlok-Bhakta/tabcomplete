@@ -138,7 +138,10 @@ eligible for the existing initial one-line automatic display. Each original
 editable range itself contained zero LF bytes. Multiline output was retained,
 never truncated into a one-line suggestion. All requests ended with EOS and
 none hit the cap. No functional gold labels or human feedback were loaded for
-this replay. Q8 peak RSS was
+this replay. A read-only action-shape diagnostic found that 24/38 mapped Q4
+actions and 18/32 mapped Q8 actions only inserted LF into an empty region.
+This further limits what the range-valid counts establish; scoring was unchanged.
+Q8 peak RSS was
 1,671,602,176 bytes, again above the 1.5 GiB limit. The new prompt policy and
 fixtures both differ from the baseline; the table does not measure a matched
 causal gain from adding LF.

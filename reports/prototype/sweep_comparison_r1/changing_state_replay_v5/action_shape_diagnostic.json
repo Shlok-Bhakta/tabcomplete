@@ -1,0 +1,22 @@
+{
+  "changes_to_scoring": false,
+  "counts": {
+    "q4_k_m": {
+      "mapped_action_original_region_empty": 24,
+      "mapped_action_replacement_is_only_LF": 24,
+      "mapped_actions": 38,
+      "requests": 48
+    },
+    "q8_0": {
+      "mapped_action_original_region_empty": 18,
+      "mapped_action_replacement_is_only_LF": 18,
+      "mapped_actions": 32,
+      "requests": 48
+    }
+  },
+  "functional_or_human_quality_assessed": false,
+  "input_plan": "reports/prototype/sweep_comparison_r1/changing_state_plan-v5.json",
+  "interpretation": "Range validity alone is weak evidence: many mapped actions only insert LF into an empty region. No replacement bytes were changed.",
+  "private_predictions": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/changing_state_replay_v5/20260930T114536Z-06f1e61035",
+  "schema": "sweep-changing-state-action-shape-diagnostic-v1"
+}
