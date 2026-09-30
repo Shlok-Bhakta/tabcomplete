@@ -1,0 +1,278 @@
+{
+  "cache_policy": {
+    "active_sequence_state": "retained for immediate same-prompt repeat; no optional idle or context snapshots",
+    "cache_correctness_evidence": "actual tokens_cached/evaluated counters plus output hashes are recorded separately",
+    "cache_disabled_comparison": "not part of this run; upstream GPU experiment had caching disabled and is not a pure local cache ablation",
+    "cache_ram_mib": 0,
+    "context_checkpoints": 0,
+    "idle_slot_snapshots": false,
+    "request_prompt_cache": true
+  },
+  "campaign": "sweep-local-replay-crabcake-r1",
+  "code": {
+    "httpx": "0.28.1",
+    "measurement_script_path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/measure_sweep_local.py",
+    "measurement_script_sha256": "95ddc9ecb6f136869996ceff0e9ea5b098179cde6620c6fb396994ba38dac746",
+    "opentelemetry_api": "1.44.0",
+    "opentelemetry_sdk": "1.44.0",
+    "python": "3.11.15",
+    "test_path": "/home/crabcake/Projects/tabcomplete-product-r2/tests/test_measure_sweep_local.py",
+    "test_sha256": "2781b5d4cf394b9f3f58d531e8b70b3733fe8604af23b342e724e680ada719ab",
+    "uv": "0.12.3",
+    "uv_lock_sha256": "c304a2a892a76261b286ac4b0da4be52ab77944add671908c63da85664f69c42"
+  },
+  "frozen_at_utc": "2026-09-30T08:54:09.747705+00:00",
+  "hardware": {
+    "competing_applications": "inventory workload processes and pressure; do not stop user services; mark observed overlap in results",
+    "cpu_frequency_mhz_at_plan_freeze": [
+      1280.232,
+      2579.271,
+      3221.314,
+      1282.733,
+      1400.0,
+      1400.0,
+      3203.256,
+      1392.778
+    ],
+    "cpu_model": "AMD Ryzen 5 PRO 3400GE w/ Radeon Vega Graphics",
+    "cpu_temperature_sensors_celsius_at_plan_freeze": {
+      "hwmon:k10temp:Tctl": 38.5
+    },
+    "gpu_used_for_this_measurement": false,
+    "graphics_devices_observed": [
+      "04:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] [1002:15d8] (rev da)"
+    ],
+    "host": "crabcake",
+    "host_load_average_at_plan_freeze": [
+      0.3212890625,
+      0.3349609375,
+      0.31298828125
+    ],
+    "logical_cpus": 8,
+    "other_temperature_sensors_celsius_at_plan_freeze": {
+      "hwmon:amdgpu:edge": 38.0,
+      "hwmon:iwlwifi_1:temp1_input": 37.0,
+      "hwmon:nvme:Composite": 39.85,
+      "hwmon:nvme:Sensor 1": 39.85,
+      "hwmon:nvme:Sensor 2": 37.85,
+      "thermal:iwlwifi_1": 40.0
+    },
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "ram_available_bytes_at_plan_freeze": 11713110016,
+    "ram_total_bytes": 14580572160
+  },
+  "inputs": {
+    "expected_case_ids": [
+      "python/stable_11",
+      "python/stable_12",
+      "python/stable_13",
+      "python/100",
+      "javascript/500",
+      "javascript/501",
+      "javascript/502",
+      "javascript/509",
+      "typescript/0",
+      "typescript/1",
+      "typescript/2",
+      "typescript/3",
+      "rust/1",
+      "rust/5",
+      "rust/6",
+      "rust/8",
+      "java/5",
+      "java/7",
+      "java/8",
+      "csharp/3",
+      "c/stable_12",
+      "c/stable_17",
+      "synthetic/delete-javascript-debug",
+      "synthetic/delete-rust-debug"
+    ],
+    "gold_labels_loaded": false,
+    "prompt_builder_source_path": "/home/crabcake/Projects/tabcomplete-product-r2/scripts/run_sweep_comparison.py",
+    "prompt_builder_source_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+    "prompt_bundle_path": "/home/crabcake/Projects/tabcomplete-product-r2/reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl",
+    "prompt_bundle_sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3",
+    "source_only_inputs": true,
+    "upstream_plan_file_sha256": "8b6f781d153b58284c3c994774cc5cc82bbb9cfbc1615a51f0079080e7573a97",
+    "upstream_plan_sha256": "53256921e9135b432ed029e7a083c3ee12c27619ce200c4be4c5b91dc5200b51"
+  },
+  "interpretation": {
+    "comparison": "best-effort local CPU replay with no quality promotion and no guarantee of a controlled or idle desktop",
+    "historical_gpu_results": "do not combine latency/memory with CPU results as if same backend; generation/action differences are not automatically quality regressions",
+    "q8_over_memory_limit": "researcher-only; do not install as predictor"
+  },
+  "limits": {
+    "candidate_predictor_memory_bytes": 1610612736,
+    "finalization_reserve_seconds": 600,
+    "max_individual_request_timeout_seconds": 600,
+    "max_response_bytes": 2097152,
+    "max_total_raw_prediction_bytes": 536870912,
+    "max_wall_seconds_including_preflight_and_finalization": 5400,
+    "minimum_available_ram_bytes": 4294967296,
+    "no_conversion": true,
+    "no_downloads": true,
+    "no_live_service_changes": true,
+    "no_paid_compute": true,
+    "no_training": true,
+    "request_deadline_enforcement": "absolute asyncio timeout cancels the in-flight HTTP response; owned llama-server process is stopped during cleanup before reserve expires",
+    "request_work_deadline_seconds_from_invocation_start": 4800
+  },
+  "measurements": {
+    "background_q25_service": "sample service resident memory and CPU deltas; report whether computation overlaps each measurement window",
+    "client_end_to_end_ms": "POST start through complete terminal SSE response, including HTTP client setup",
+    "first_content_chunk_ms": "first SSE event containing nonempty text; not first-token latency",
+    "first_token_ids_ms": "first SSE event containing token IDs; runtime observation only",
+    "host_scope": "available RAM, swap occupancy/activity, memory+IO pressure, global CPU, load, CPU temperature/frequency where available and workload process CPU deltas",
+    "memory_process_scope": "candidate server process tree; RSS, HWM, PSS, anon/file, swap, before/peak/retained",
+    "memory_sampler_interval_seconds": 0.5,
+    "model_load_seconds": "process launch through /health; no warmup; source/model hashing is inside the campaign wall budget and file-cache state is uncontrolled",
+    "prompt_tokenization_ms": "separate /tokenize request before replay; not included in generation latency",
+    "server_stage_timings": "record only final-event fields emitted by the pinned llama.cpp build",
+    "temperature_sensor_policy": "only CPU/package/Tctl/Tdie/coretemp labels count as CPU temperature; unrelated sensors retain their identity"
+  },
+  "models": {
+    "active_q25_service": {
+      "handling": "record resident service and CPU deltas; never stop; report overlap",
+      "known_pid_at_plan_freeze": 3343901
+    },
+    "q4_k_m": {
+      "bytes": 883289056,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q4_k_m.gguf",
+      "provenance": "requantized from the pinned Q8_0 artifact using llama.cpp; not F16-to-Q4",
+      "quantization": "Q4_K_M",
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+    },
+    "q8_0": {
+      "bytes": 1537269856,
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/artifacts/sweep-next-edit-1.5b.q8_0.v2.gguf",
+      "provenance": "publisher-revision artifact, already staged locally",
+      "quantization": "Q8_0",
+      "sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da"
+    },
+    "simultaneous_candidate_model_limit": 1
+  },
+  "outputs": {
+    "expected_files": [
+      "metadata.json",
+      "predictions-{precision}.jsonl",
+      "server-measurement-{precision}.json",
+      "observability.jsonl",
+      "observability-run.json",
+      "summary.json"
+    ],
+    "raw_prediction_bytes_ceiling": 536870912,
+    "root": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/local_replay"
+  },
+  "plan_sha256": "70b92fe5b532f0ab43c2e5c94c916e79d08ffedc5020b9a21b760e66daed2e6b",
+  "purpose": "CPU-only runtime latency, memory, and actual prompt-cache reuse diagnostic; not a quality evaluation",
+  "replay": {
+    "actual_terminal_rule": "only runtime stop_type eos or word with truncated != true; cutoff/cancel/EOF are invalid and never repaired",
+    "cache_evidence": "record llama.cpp final-event tokens_cached and tokens_evaluated; cache_prompt=true alone is not reuse evidence",
+    "context_tokens": 3072,
+    "expected_requests": 192,
+    "fixture_count": 24,
+    "fixture_order": [
+      "python/stable_11",
+      "python/stable_12",
+      "python/stable_13",
+      "python/100",
+      "javascript/500",
+      "javascript/501",
+      "javascript/502",
+      "javascript/509",
+      "typescript/0",
+      "typescript/1",
+      "typescript/2",
+      "typescript/3",
+      "rust/1",
+      "rust/5",
+      "rust/6",
+      "rust/8",
+      "java/5",
+      "java/7",
+      "java/8",
+      "csharp/3",
+      "c/stable_12",
+      "c/stable_17",
+      "synthetic/delete-javascript-debug",
+      "synthetic/delete-rust-debug"
+    ],
+    "input_context_buckets": [
+      512,
+      1024,
+      2048
+    ],
+    "input_plus_output_rule": "input_tokens + 512 must be <= 3072; fail before generation, never truncate or context shift",
+    "input_tokens": "actual /tokenize result per fixture; no tokenizer substitution",
+    "output_tokens": 512,
+    "precision_order": [
+      "q4_k_m",
+      "q8_0"
+    ],
+    "quality_evidence": false,
+    "repeat_equality": "compare raw UTF-8 output hashes between each primary and its immediately following exact same-prompt repeat",
+    "repetitions": 2,
+    "request_order_per_fixture_per_repetition": [
+      "changed_state",
+      "immediate_same_prompt_repeat"
+    ],
+    "request_settings": {
+      "cache_prompt": true,
+      "id_slot": 0,
+      "n_predict": 512,
+      "return_tokens": true,
+      "seed": 1,
+      "stop": [
+        "<|file_sep|>",
+        "</s>"
+      ],
+      "stream": true,
+      "temperature": 0
+    },
+    "transition_definition": "distinct frozen source-state prompts sequenced through one slot; not live editor trajectories"
+  },
+  "revision": 2,
+  "revision_reason": "Enforce an absolute 90-minute wall limit with a 10-minute finalization reserve, cancel an in-flight local HTTP request at the deadline, explicitly disable context checkpoints, and separate CPU temperature readings from Wi-Fi/GPU/SSD sensors.",
+  "runtime": {
+    "binary_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+    "binary_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+    "execution_topology": "one loopback llama-server process per precision, sequential; process group owned and stopped by runner",
+    "explicit_backend": "CPU; --n-gpu-layers 0; per-run runtime log evidence is retained",
+    "health_timeout_seconds": 300,
+    "server_settings": {
+      "batch_tokens": 256,
+      "cache_idle_slots": false,
+      "cache_ram_mib": 0,
+      "context_checkpoints": 0,
+      "context_shift": false,
+      "context_tokens": 3072,
+      "gpu_layers": 0,
+      "kv_cache_k": "f16",
+      "kv_cache_v": "f16",
+      "microbatch_tokens": 64,
+      "parallel_slots": 1,
+      "speculative_decoding": "none",
+      "threads": 4,
+      "threads_batch": 4,
+      "warmup": false,
+      "weight_repacking": false
+    },
+    "source_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp",
+    "source_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+    "version_output": [
+      "version: 0.4.1-dev (build 1, commit f072b10)",
+      "built with GNU 13.3.0 for Linux x86_64"
+    ]
+  },
+  "schema": "sweep-local-replay-plan-v1",
+  "supersedes_plan_file": "local_replay_plan-v1.json",
+  "supersedes_plan_sha256": "5d44d79b221b895287ec4b0b1c81f515bafb6cde29adda24fcd4cdf7e1613250",
+  "telemetry": {
+    "capture_content": false,
+    "existing_observability_hooks": true,
+    "metrics_labels": "bounded dimensions only: CPU backend/task/model alias/quantization/context bucket/device type",
+    "mode": "offline",
+    "scientific_outputs_authoritative": true
+  }
+}
