@@ -1,0 +1,53 @@
+{
+  "caps": {
+    "development_rows": 32,
+    "fresh_train_seed_candidates": 5,
+    "private_output_bytes": 268435456,
+    "reserved_test_rows": 0,
+    "response_body_accounting": "all gh stdout and stderr bytes; HTTP framing not exposed by gh",
+    "response_body_bytes": 20971520,
+    "rows_total": 128,
+    "single_response_bytes": 2097152,
+    "train_rows": 96,
+    "wall_seconds": 3600
+  },
+  "github_auth": "existing gh credential store only; token never read or placed in argv",
+  "github_cli_version": "gh version 2.45.0 (2025-07-18 Ubuntu 2.45.0-1ubuntu0.3)",
+  "grouping_module_sha256": "017764bd5c317d4bf3c21008de913b6e3cca1bd74f65c8c7515be31004b11f2a",
+  "output_directory": "/mnt/ssd/tabcomplete-product-r2/commitpackft/source-verification-v1",
+  "plan_identity_sha256": "eb586ae0d2c88a4e0be704085a6b7426ad71510930aa19842c0bd56f34658fd1",
+  "queue_index_bytes": 230590,
+  "queue_index_sha256": "294aadad794507c9caa8ed013973dfd38011a73f2281ba840c5c2111a01c2de7",
+  "queue_manifest_sha256": "8ee43c12b0a91096d78ebf850e831c7fd6c1db99c4af678cb96158a683b930a1",
+  "reconstruction_module_sha256": "026b3c05cfb53cd24c1fbb980c4dbc8016d2d38c93447ec83ad87c1b2c52848f",
+  "revision": 2,
+  "schema": "commit-sequence-exact-source-verification-v2",
+  "selected_row_count": 128,
+  "selected_rows_commitment_sha256": "15d57513951db0375a78da2d180e40898c8e6cac52fab6cdb88c2994fd03e848",
+  "selected_split_counts": {
+    "development": 32,
+    "train": 96
+  },
+  "selector_plan_v4_identity_sha256": "3585d3d6f2f4d3ef4149c6c4425068253897df3fa83826deefe44b17cf25c7f0",
+  "selector_plan_v4_raw_sha256": "de0f9ed37d9fd3cf193ee741d3a422d51333cf4173ae884f115ac447e40a8a79",
+  "selector_sha256": "f46b68916c9373c2e6bed32a66765be5f38e209476d0f30ba5838bdb2d4f1407",
+  "supersedes": {
+    "plan_path": "commit_sequence_source_verification_plan_v1.json",
+    "plan_raw_sha256": "4c52b06b8fa219962e63e0363eaced002865e221b3ac503e0e0f2a17fd6dafa5",
+    "reason": "v1 validation included its embedded self-identity in the frozen-input comparison; execution stopped before authentication, network access, or output"
+  },
+  "test_sha256": "71ddc45b128129a921e9eb2529fb712ee07c3487df40a8bd651950c92e1d4556",
+  "verification_policy": {
+    "base": "only the single first parent of the exact queued child commit; merge commits are skipped",
+    "license_check": "at each revision inspect exact root license metadata, path-ancestor license files and source SPDX headers; require one consistent allowlisted SPDX identifier matching the dataset claim",
+    "model_downloads": 0,
+    "privacy": "run existing sensitive-text filter on exact parent and child source; persist bodies only on private SSD and never in repository outputs",
+    "provider_calls": 0,
+    "reserved_evaluation_access": false,
+    "source": "GitHub REST API through authorized gh CLI",
+    "source_check": "fetch exact parent and child path bytes; require both SHA-256 values to match frozen queue identities",
+    "training_labels": "none; source verification does not establish edit chronology, inferability, or objective correctness",
+    "uncertain_or_mismatched": "skip without weakening queue identity or split assignments"
+  },
+  "verifier_sha256": "e9560e8d1be633c0056982512f4a69cec81c31306bc1cb7359090bd8c01fee55"
+}

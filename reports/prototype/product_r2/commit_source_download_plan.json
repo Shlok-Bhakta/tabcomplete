@@ -1,0 +1,48 @@
+{
+  "created_at_unix": 1790730983.7105403,
+  "dataset": "bigcode/commitpackft",
+  "dataset_card_license": "MIT",
+  "existing_compatible_artifacts_found": false,
+  "files": [
+    {
+      "expected_sha256": null,
+      "path": "README.md",
+      "size": 17288,
+      "url": "https://huggingface.co/datasets/bigcode/commitpackft/resolve/fc56fe33c030c6daa414c2b112c932b8eed085e6/README.md"
+    },
+    {
+      "expected_sha256": "05a65e973fcc6894a234fb382987cc25e26f053d60b032ea83540a5b36a528b8",
+      "path": "data/go/data.jsonl",
+      "size": 12417842,
+      "url": "https://huggingface.co/datasets/bigcode/commitpackft/resolve/fc56fe33c030c6daa414c2b112c932b8eed085e6/data/go/data.jsonl"
+    },
+    {
+      "expected_sha256": "d167da37e1058371c48e057cd8815d03700c867dd8bcf58e61420d4dcd288d73",
+      "path": "data/python/data.jsonl",
+      "size": 135858935,
+      "url": "https://huggingface.co/datasets/bigcode/commitpackft/resolve/fc56fe33c030c6daa414c2b112c932b8eed085e6/data/python/data.jsonl"
+    },
+    {
+      "expected_sha256": "5611f3701026acf3c43ba64da50f4f65a078e84fba56e2bf313e8f2996b0cc68",
+      "path": "data/rust/data.jsonl",
+      "size": 7411711,
+      "url": "https://huggingface.co/datasets/bigcode/commitpackft/resolve/fc56fe33c030c6daa414c2b112c932b8eed085e6/data/rust/data.jsonl"
+    },
+    {
+      "expected_sha256": "43d32596844c62aa23b0e5a8811648f6f20fa07d9ab80499d66507136b844a76",
+      "path": "data/typescript/data.jsonl",
+      "size": 14620423,
+      "url": "https://huggingface.co/datasets/bigcode/commitpackft/resolve/fc56fe33c030c6daa414c2b112c932b8eed085e6/data/typescript/data.jsonl"
+    }
+  ],
+  "max_new_bytes": 200000000,
+  "min_free_bytes": 8589934592,
+  "model_weights_downloaded": false,
+  "no_remote_source_execution": true,
+  "observed_free_bytes": 60025229312,
+  "per_row_license_controls_required": true,
+  "revision": "fc56fe33c030c6daa414c2b112c932b8eed085e6",
+  "schema": "public-commit-source-download-v1",
+  "source_kind": "Git atomic reconstruction, not editor chronology",
+  "training_accepted": false
+}

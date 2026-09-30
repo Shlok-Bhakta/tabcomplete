@@ -1,0 +1,78 @@
+{
+  "schema": "commit-sequence-source-verification-sanitized-v1",
+  "status": "complete",
+  "queue_plan_v4_raw_sha256": "de0f9ed37d9fd3cf193ee741d3a422d51333cf4173ae884f115ac447e40a8a79",
+  "queue_index_sha256": "294aadad794507c9caa8ed013973dfd38011a73f2281ba840c5c2111a01c2de7",
+  "verification_plan_v1": {
+    "raw_sha256": "4c52b06b8fa219962e63e0363eaced002865e221b3ac503e0e0f2a17fd6dafa5",
+    "status": "superseded_before_network_access",
+    "reason": "plan loader compared frozen inputs with an object still containing its embedded self-identity"
+  },
+  "verification_plan_v2": {
+    "path": "commit_sequence_source_verification_plan_v2.json",
+    "raw_sha256": "26af54a339fff90434c42b2f28a86e518e4d4d2336b12b1f15d948d1232e2ebd",
+    "identity_sha256": "eb586ae0d2c88a4e0be704085a6b7426ad71510930aa19842c0bd56f34658fd1"
+  },
+  "verifier_sha256": "e9560e8d1be633c0056982512f4a69cec81c31306bc1cb7359090bd8c01fee55",
+  "test_sha256": "71ddc45b128129a921e9eb2529fb712ee07c3487df40a8bd651950c92e1d4556",
+  "scope": {
+    "rows_selected": 128,
+    "rows_processed": 128,
+    "train_rows": 96,
+    "development_rows": 32,
+    "reserved_evaluation_rows_accessed": 0,
+    "verified_parent_child_source_and_license": 97,
+    "verified_train": 71,
+    "verified_development": 26,
+    "skipped_ambiguous_nearest_license": 5,
+    "skipped_missing_source_or_repository": 5,
+    "skipped_unknown_or_mismatched_license": 21,
+    "verified_by_language": {
+      "go": 25,
+      "python": 33,
+      "rust": 12,
+      "typescript": 27
+    },
+    "verified_by_action": {
+      "delete_line": 28,
+      "insert_before": 30,
+      "replace_line": 39
+    },
+    "verified_license_identifiers": {
+      "apache-2.0": 19,
+      "bsd-2-clause": 4,
+      "bsd-3-clause": 10,
+      "isc": 1,
+      "mit": 63
+    }
+  },
+  "resource_use": {
+    "elapsed_seconds": 908.459,
+    "response_body_bytes_counted": 4142368,
+    "response_body_limit_bytes": 20971520,
+    "private_directory_bytes_including_final_manifest": 752240,
+    "private_directory_limit_bytes": 268435456,
+    "private_directory_mode": "0700",
+    "private_file_mode": "0600"
+  },
+  "private_evidence": {
+    "directory": "/mnt/ssd/tabcomplete-product-r2/commitpackft/source-verification-v1",
+    "manifest_raw_sha256": "3b3f5de211e8836b4e7fed067af7f794c51182f746267d6f4da09c4c8bbc1b0e",
+    "candidate_results_sha256": "fe993904622cb44090c07c42775d621ea82050959435c6004b85e720e2e1efd9",
+    "all_verified_source_and_license_blob_hashes_rechecked": true,
+    "all_file_and_directory_permissions_rechecked": true
+  },
+  "interpretation": {
+    "source_verification_only": true,
+    "candidate_train_seeds_marked_for_possible_later_review": 5,
+    "accepted_training_rows": 0,
+    "observed_human_chronology": false,
+    "inferability_reviewed": false,
+    "objective_oracles_run": false,
+    "teacher_or_provider_calls": 0,
+    "historical_provider_request_overlap": "unknown; the available request ledger has no candidate/source identity mapping",
+    "model_downloads": 0,
+    "raw_source_or_license_text_in_repository": false,
+    "quality_evidence": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "action_eos_token_ceiling": 64,
+  "baseline_version": "visible-identifier-copy-v1",
+  "candidate_accepted_training": false,
+  "input_token_ceiling": 1024,
+  "license_allowlist": [
+    "apache-2.0",
+    "bsd-2-clause",
+    "bsd-3-clause",
+    "isc",
+    "mit"
+  ],
+  "max_candidate_rows": 4096,
+  "max_file_bytes": 16384,
+  "max_new_output_bytes": 536870912,
+  "max_raw_pool_bytes": 268435456,
+  "max_rows_per_repository": 8,
+  "module_sha256": "026b3c05cfb53cd24c1fbb980c4dbc8016d2d38c93447ec83ad87c1b2c52848f",
+  "reconstruction_version": "public-content-sequence-candidates-v1",
+  "runner_sha256": "a7ba6d918e8202c75c8848f85fe1b4a668cef958ffff9486a6dccb0e6ef4b7b9",
+  "schema": "commit-sequence-review-plan-v1",
+  "seed": "public-commit-sequences-r1",
+  "source_manifest_sha256": "1faeca34a3ce2472d2138b8258c4cda591fde9e8b98790d1b2cbd13641bff49d",
+  "split_policy": "connected repo aliases, commits and near duplicates; deterministic 70/15/15 group hash",
+  "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+}

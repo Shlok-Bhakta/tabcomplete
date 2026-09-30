@@ -1,0 +1,56 @@
+{
+  "accepted_training": 0,
+  "actions": {
+    "delete_line": 177,
+    "insert_before": 314,
+    "replace_line": 3605
+  },
+  "baseline_exact": 270,
+  "candidate_bytes": 24364448,
+  "candidate_sha256": "23921525b61ca798d4c85d927a04c2682f30056d1d7b59a832fb8a1d2ca0e2cb",
+  "counts": {
+    "input_go": 5004,
+    "input_python": 56025,
+    "input_rust": 2996,
+    "input_typescript": 5868,
+    "license_excluded": 7520,
+    "normalized_duplicate_excluded": 55,
+    "path_or_rename_excluded": 987,
+    "reconstructed_candidates": 17308,
+    "repository_identity_excluded": 3937,
+    "repository_sampling_cap": 52,
+    "size_or_sensitive_source_excluded": 318,
+    "unsupported_line_encoding": 3
+  },
+  "file_license_scope_reviewed": false,
+  "human_chronology_claimed": false,
+  "languages": {
+    "go": 449,
+    "python": 3040,
+    "rust": 227,
+    "typescript": 380
+  },
+  "no_edit_labels": 0,
+  "plan_sha256": "b9f3e35d9a7037bfaf9559f5912bd297ca5c347febdebe584bafa1d18d0d04ea",
+  "private_candidate_path": "/mnt/ssd/tabcomplete-product-r2/commitpackft/prepared/candidates.jsonl",
+  "schema": "commit-sequence-review-result-v1",
+  "selected_rows": 4096,
+  "source_repositories": 2780,
+  "split_audit": {
+    "groups": 2754,
+    "rows": 4096,
+    "splits": {
+      "development": 674,
+      "test_new_repo": 580,
+      "train": 2842
+    }
+  },
+  "token_counts": {
+    "development_input": 368097,
+    "development_response_eos": 8857,
+    "test_new_repo_input": 316553,
+    "test_new_repo_response_eos": 8022,
+    "train_input": 1549111,
+    "train_response_eos": 37505
+  }
+}

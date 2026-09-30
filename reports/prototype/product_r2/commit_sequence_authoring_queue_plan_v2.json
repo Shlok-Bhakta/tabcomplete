@@ -1,0 +1,75 @@
+{
+  "candidate_pool_bytes": 24364448,
+  "candidate_pool_path": "/mnt/ssd/tabcomplete-product-r2/commitpackft/prepared/candidates.jsonl",
+  "candidate_pool_sha256": "23921525b61ca798d4c85d927a04c2682f30056d1d7b59a832fb8a1d2ca0e2cb",
+  "candidate_training_accepted": false,
+  "candidate_use": "source/license and inferability review only",
+  "caps": {
+    "development_rows": 32,
+    "max_rows": 128,
+    "train_rows": 96
+  },
+  "dataset": "bigcode/commitpackft",
+  "dataset_revision": "fc56fe33c030c6daa414c2b112c932b8eed085e6",
+  "eligible_splits": [
+    "development",
+    "train"
+  ],
+  "group_policy": "one row per connected component over source repo aliases, commit, family, template and normalized near-duplicate key",
+  "grouping_module_sha256": "017764bd5c317d4bf3c21008de913b6e3cca1bd74f65c8c7515be31004b11f2a",
+  "human_chronology_claimed": false,
+  "new_source_downloads": 0,
+  "parent_sequence_plan_sha256": "b9f3e35d9a7037bfaf9559f5912bd297ca5c347febdebe584bafa1d18d0d04ea",
+  "parent_sequence_result_sha256": "f3f6b2639177a21200db44d50ece14ae48d9c8974b482caacf17e96ceba86e75",
+  "parent_split_audit": {
+    "groups": 2754,
+    "rows": 4096,
+    "splits": {
+      "development": 674,
+      "test_new_repo": 580,
+      "train": 2842
+    }
+  },
+  "plan_identity_sha256": "a024897f0f92dfefe6f27e6499d4bd7a99a042b5be6423bd98f94cad95326983",
+  "prior_builder_sha256": "a7ba6d918e8202c75c8848f85fe1b4a668cef958ffff9486a6dccb0e6ef4b7b9",
+  "reconstruction_module_sha256": "026b3c05cfb53cd24c1fbb980c4dbc8016d2d38c93447ec83ad87c1b2c52848f",
+  "reserved_splits_skipped_before_json_decode": [
+    "test_new_repo",
+    "test_new_mechanism"
+  ],
+  "schema": "commit-sequence-source-review-queue-v2",
+  "seed": "commit-sequence-source-review-queue-v2",
+  "selection_policy": "split quotas 96 train/32 development; round-robin language/action strata; within stratum rank visible contract/context signals then seeded candidate id",
+  "selector_sha256": "324e3f7f7fe3b049739c0acadd35d3d03e80e0e47abcfa5842d3f8f76108f2f6",
+  "source_download_plan_sha256": "79279256c61e78bcba95b71b93f9d27e8731e7a0b572eb5b7650905afc443e3e",
+  "source_files": [
+    {
+      "path": "README.md",
+      "sha256": "69799047051e9d487d20e8930d73de1b3023ee1c75cf36dc3d2dfca2643f0bb0",
+      "size": 17288
+    },
+    {
+      "path": "data/go/data.jsonl",
+      "sha256": "05a65e973fcc6894a234fb382987cc25e26f053d60b032ea83540a5b36a528b8",
+      "size": 12417842
+    },
+    {
+      "path": "data/python/data.jsonl",
+      "sha256": "d167da37e1058371c48e057cd8815d03700c867dd8bcf58e61420d4dcd288d73",
+      "size": 135858935
+    },
+    {
+      "path": "data/rust/data.jsonl",
+      "sha256": "5611f3701026acf3c43ba64da50f4f65a078e84fba56e2bf313e8f2996b0cc68",
+      "size": 7411711
+    },
+    {
+      "path": "data/typescript/data.jsonl",
+      "sha256": "43d32596844c62aa23b0e5a8811648f6f20fa07d9ab80499d66507136b844a76",
+      "size": 14620423
+    }
+  ],
+  "source_manifest_sha256": "1faeca34a3ce2472d2138b8258c4cda591fde9e8b98790d1b2cbd13641bff49d",
+  "teacher_or_provider_calls": 0,
+  "test_sha256": "b5ebda8a1192b1f618851bdec15aa5958a4e4f73f42714ddb54bc4f3f6f187e7"
+}
