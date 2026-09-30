@@ -1,0 +1,38 @@
+{
+  "case_id": "python/stable_0",
+  "cli_queries": {
+    "request": {
+      "exit_code": 0,
+      "output_sha256": "749c12035ce1babe89d969248f8f841e7d59425a9475f416534d4f4ab41adc11",
+      "state": "ok"
+    },
+    "trace": {
+      "exit_code": 0,
+      "output_sha256": "e7241b60caf1668553095a1e747631f9f550d32089ff639b431e4327c6ae3e02",
+      "state": "ok"
+    }
+  },
+  "mcp_query_success_claimed": false,
+  "request_id": "request-14816a0a-87d2-4490-af41-22e13885e772",
+  "retrieval": [
+    {
+      "hash_match": true,
+      "http_status": 200,
+      "retrieved_bytes": 88,
+      "sha256": "c030c94e7a9a6d5c8cd89ad8ff473f1d127ecb569019bf7db19b7e020eb4080a"
+    },
+    {
+      "hash_match": true,
+      "http_status": 200,
+      "retrieved_bytes": 365,
+      "sha256": "9867b4db112be35cf52ed75b0e6d4fbe281e91d461caea16195bd9d131930f27"
+    }
+  ],
+  "run_id": "run-de5a3c21-b82e-4d46-a692-66c61e746bec",
+  "schema": "sweep-gpu6-public-payload-verification-v1",
+  "sync": {
+    "accepted": 2,
+    "failed": 0
+  },
+  "trace_id": "7ed6cef159f2f11db3bd0a2ec13d8a81"
+}

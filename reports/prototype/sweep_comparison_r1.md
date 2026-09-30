@@ -357,3 +357,21 @@ small 102 MiB runtime context, reported separately. Q8's CUDA0 process used
 1,936,252,928 and 1,282,387,968 bytes. These GPU measurements cannot replace
 crabcake CPU deployment memory or latency. The absent Q8 next-edit final
 memory file is not reconstructed as a measured sample.
+
+
+The authenticated post-run quota observation at 2026-09-30T15:38:19.306171+00:00 reports
+41.74 of 45 account GPU-hours remaining, 3.26 used, renewal October 3 at
+00:00 UTC. The rounded change from immediately before attempt six is 0.67
+account GPU-hours. This is distinct from the conservative session bound.
+
+The [token/output observations](sweep_comparison_r1/execution_006/token_and_output_observations.json)
+record exact model-token input lengths and decoded byte sizes. Strict Q8/Q4
+hit the 96-token cap in 102/200 and 91/200 cases; line controls in 2/180 and
+1/180. Cap hits remain truncation, not successful EOS. Both precisions had
+identical input-token lengths, ranging 13–739 for strict and 2–3,672 for line.
+
+A [bounded public payload check](sweep_comparison_r1/execution_006/payload_verification.json)
+uploaded only one request/response pair through the existing private gateway.
+Both were retrieved with HTTP 200 and exact SHA-256 matches. Actual request
+`request-14816a0a-87d2-4490-af41-22e13885e772`, trace
+`7ed6cef159f2f11db3bd0a2ec13d8a81`, and their CLI queries returned ok.

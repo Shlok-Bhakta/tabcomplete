@@ -1,0 +1,84 @@
+{
+  "q4_k_m/line": {
+    "actual_input_tokens": {
+      "max": 3672,
+      "median": 136.5,
+      "min": 2,
+      "total": 72861
+    },
+    "decoded_output_bytes": {
+      "max": 242,
+      "median": 15.0,
+      "min": 0,
+      "total": 3529
+    },
+    "finish_reasons": {
+      "eos": 4,
+      "limit": 1,
+      "word": 175
+    },
+    "n": 180,
+    "token_cap_count": 1
+  },
+  "q4_k_m/strict": {
+    "actual_input_tokens": {
+      "max": 739,
+      "median": 49.5,
+      "min": 13,
+      "total": 17008
+    },
+    "decoded_output_bytes": {
+      "max": 521,
+      "median": 249.5,
+      "min": 9,
+      "total": 47396
+    },
+    "finish_reasons": {
+      "eos": 109,
+      "limit": 91
+    },
+    "n": 200,
+    "token_cap_count": 91
+  },
+  "q8_0/line": {
+    "actual_input_tokens": {
+      "max": 3672,
+      "median": 136.5,
+      "min": 2,
+      "total": 72861
+    },
+    "decoded_output_bytes": {
+      "max": 260,
+      "median": 15.5,
+      "min": 0,
+      "total": 3571
+    },
+    "finish_reasons": {
+      "eos": 3,
+      "limit": 2,
+      "word": 175
+    },
+    "n": 180,
+    "token_cap_count": 2
+  },
+  "q8_0/strict": {
+    "actual_input_tokens": {
+      "max": 739,
+      "median": 49.5,
+      "min": 13,
+      "total": 17008
+    },
+    "decoded_output_bytes": {
+      "max": 511,
+      "median": 278.5,
+      "min": 9,
+      "total": 49942
+    },
+    "finish_reasons": {
+      "eos": 98,
+      "limit": 102
+    },
+    "n": 200,
+    "token_cap_count": 102
+  }
+}

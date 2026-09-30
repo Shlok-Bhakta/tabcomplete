@@ -1,0 +1,13 @@
+{
+  "delta_is_rounded_account_observation_not_exact_session_duration": true,
+  "observed_at": "2026-09-30T15:38:19.306171+00:00",
+  "pre_sixth_remaining": 42.41,
+  "remaining": 41.74,
+  "renewal": "2026-10-03T00:00:00",
+  "rounded_account_delta_hours": 0.67,
+  "schema": "sweep-quota-after-v1",
+  "source": "authenticated kaggle quota --format json",
+  "total": 45.0,
+  "units": "Kaggle account GPU-hours",
+  "used": 3.26
+}
