@@ -171,5 +171,14 @@
   "schema": "q25-selected-fim-line-diagnostic-v2-result",
   "skipped_rows": 2,
   "summary_sha256": "f9536de6bd7c5d43486d2216c222d8b3e1c93374d63688a6841ae1555d798ff4",
+  "telemetry": {
+    "CLI_limit": 3,
+    "CLI_page_cursor": "3",
+    "CLI_run_state": "ok",
+    "MCP_verified": false,
+    "imported_spans": 159,
+    "offline_bundle_sha256": "461d6bcbc591651d6a165c9d2ea96023098906926f3158cb4dd493abdaacd9d9",
+    "run_id": "run-bcdbcbc8c70f57ba6e826a5e3f23ae02"
+  },
   "training_started": false
 }
