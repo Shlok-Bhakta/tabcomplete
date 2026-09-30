@@ -1,0 +1,16 @@
+{
+  "accepted": 1,
+  "failed": 0,
+  "retrieval_http_status": 200,
+  "retrieved_hash_matches": true,
+  "observed_at": "2026-09-30T14:29:45.536125+00:00",
+  "run_id": "run-365ab0a6-8e3b-4520-a601-a2297d92da95",
+  "request_id": "request-729228b1-ff36-4f6e-93d6-57b3c9b97313",
+  "trace_id": "9ebef05fca0e7d1d1436d5f099d4259f",
+  "artifact_sha256": "c030c94e7a9a6d5c8cd89ad8ff473f1d127ecb569019bf7db19b7e020eb4080a",
+  "model_generation_succeeded": false,
+  "artifact_kind": "public synthetic benchmark input",
+  "initial_sync_attempt": "missing upload environment; no upload performed",
+  "upload_configuration": "existing private gateway and local restricted upload token file",
+  "mcp_trace_query": "transport error reaching configured private MCP endpoint; not verified"
+}

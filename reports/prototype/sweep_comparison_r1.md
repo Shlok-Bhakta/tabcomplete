@@ -224,6 +224,26 @@ unchanged. An explicitly authorized sixth allocation is being frozen separately
 with a two-hour session, 20-minute reserve, and six-hour aggregate bound.
 There is no automatic seventh allocation or renewed quota consumption.
 
+Sixth allocation `shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6`
+submitted at 14:29:03.705737 UTC from pushed source `1832987`, under
+[plan 10](sweep_comparison_r1/plan-v10.json) and the separately frozen
+[controller scoring plan](sweep_comparison_r1/scoring_plan_v10.json).
+Authenticated quota at 14:28:30.035461 UTC showed 42.41 of 45 account GPU-hours
+remaining, 2.59 used, the same October 3 renewal and no active jobs. The job
+was confirmed RUNNING at 14:31:26.946853 UTC. Its two-hour session includes
+compilation and a 20-minute finalization reserve. The conservative aggregate
+bound is 18,594.350495 seconds below the new 21,600-second cap. This is execution
+status, not a quality result. The
+[submission record](sweep_comparison_r1/submission_006.json) retains actual
+identities and quota evidence.
+
+The fifth failure's captured public input was uploaded through existing
+restricted configuration and retrieved with an exact SHA-256 match. The
+[payload verification](sweep_comparison_r1/gpu5_payload_verification.json)
+records that evidence. The configured MCP trace endpoint returned a transport
+error; its trace query is not claimed verified. Actual CLI failure queries
+passed. No model output exists for that failed allocation.
+
 The GPU runner preserves the existing raw-causal strict200 and line180 prompts,
 96-token ceiling and scoring rules. They are task-mismatch code controls for a
 full-file next-edit model. It also runs the fixed publisher next-edit prompts.
