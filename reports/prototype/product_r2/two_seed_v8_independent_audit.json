@@ -1,0 +1,31 @@
+{
+  "campaign_cap": 36,
+  "campaign_used_before": 19,
+  "checks_passed": [
+    "strict validator against live runtime and ledger",
+    "all plan and manifest hashes",
+    "public parent source and path license evidence",
+    "synthetic prestate transform and exact history replay",
+    "solver visible cue and prompt reconstruction",
+    "no gold or oracle in author or blind solver prompt",
+    "fresh role request identities",
+    "durable completed-response persistence before accounting",
+    "no retry after terminal uncertainty"
+  ],
+  "frozen_ledger_ids": 197,
+  "maximum_calls": 6,
+  "observed_at": "2026-09-30T16:11:26.333218+00:00",
+  "plan_identity_sha256": "abead2f6e6106db75e8793a172921354ad4f9499b0fa902a2f5d692828b9f15d",
+  "plan_sha256": "de41567f02fee65725d29a7984307b5bf5a843165b3a03ebcb3814b1c4f4ae49",
+  "preflight_file_sha256": "12815e64e374d7bf9f5d970ee94c7b0f080c186e8bc425bfaa677e7209ff8eea",
+  "prior_unsettled_reservations_preserved": 5,
+  "private_packet": "/mnt/ssd/tabcomplete-product-r2/next-pilot-frozen-v8",
+  "provider_calls_at_audit": 0,
+  "remaining_after_planned_calls": 11,
+  "reviewer": "cleanup_audit",
+  "sandbox_positive_passes": 2,
+  "sandbox_wrong_or_no_edit_failures_expected": 7,
+  "schema": "two-seed-independent-pre-call-audit-v1",
+  "state": "cleared",
+  "training_ready": false
+}

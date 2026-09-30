@@ -1,0 +1,25 @@
+{
+  "focused_final_pilot": {
+    "passed": 15
+  },
+  "focused_sweep": {
+    "passed": 144,
+    "seconds": 5.12
+  },
+  "full_pytest": {
+    "log_sha256": "0d76301391873c8e07c15b98da787ccc022e95c5d2c2caddd2625439cfd89570",
+    "passed": 768,
+    "scope_note": "Full suite before the final dict-to-tuple validator correction; corrected pilot separately passed15 focusedtests.",
+    "seconds": 118.46,
+    "skipped": 1
+  },
+  "full_ruff": "passed",
+  "later_uncommitted_public_source_policy_not_covered": true,
+  "mypy": {
+    "log_sha256": "f7354aa7b85fbdb5294f2d0b6eac303fd694807789031a8d45ff36f980ab7238",
+    "passed": true,
+    "source_files": 85
+  },
+  "observed_at": "2026-09-30T16:11:26.333516+00:00",
+  "schema": "post-sweep-code-verification-v1"
+}
