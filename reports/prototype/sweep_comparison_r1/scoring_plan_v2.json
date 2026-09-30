@@ -1,0 +1,211 @@
+{
+  "campaign": {
+    "embedded_plan_sha256": "f3c508b85af695da9ed2087d84659c949a58223e2d9dabbd325a6c355fb4b163",
+    "name": "sweep-q8-q4-r1",
+    "path": "reports/prototype/sweep_comparison_r1/plan-v5.json",
+    "raw_file_sha256": "bbb9091b9f2ba91107364f4084ac90f93fddbfd511f777bf78bd3373f120ed15",
+    "runner_sha256": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0"
+  },
+  "frozen_at_utc": "2026-09-30T09:00:34.383511+00:00",
+  "implementation_sha256": {
+    "campaign_runner": "2a896dc411928ad0392444232999f7eeb24da3ba7f6dbb680750dab8ed4b85e0",
+    "causal_evaluator": "a30f50b6f0c87cfd9a733a6f7eb7a5a1b2553ba272d04245451a2141718a7b66",
+    "causal_line_scorer": "375358ed2519db167fe6e028b716fbd0dc68042addf001824f04b1a86845e800",
+    "causal_prompt_and_predictions": "bd1b967181e65ee53a4aa2e927f8aacd58e44ba8a2498cff6a197be0e6d5ac0a",
+    "next_edit_case_contract": "a8649a58f23b059e317851b40c231ed4498796505b6e3ffcf8eb532220791453",
+    "next_edit_protocol": "2b6e28da2f9f28aeec6667c16ec5cc5e385ef1563e94d5107fe581eba487ed45",
+    "scoring_script": "e5da9ecf6d69e767d411ee5ef632476d541323615959e46ed3795abb097e7803",
+    "scoring_tests": "f9c1b78293222199bc135d93f7e08e9fb1e0ba6fb7f73b55aa856f965797627d"
+  },
+  "inputs": {
+    "diagnostic_plan": {
+      "path": "reports/prototype/product_r2/model_diagnostic/diagnostic_plan_v2.json",
+      "sha256": "efa0bf5c245b5edca14df2722b19c6e086e790a3da256656eec1e8db2ed34c34"
+    },
+    "line_suite": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/sweep_comparison_r1/kaggle-bundle-r1/dataset/causal_line_v1-r3.jsonl",
+      "sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
+    },
+    "next_edit_suite": {
+      "path": "data/benchmarks/next_edit_v2.jsonl",
+      "sha256": "69c42041f499ac5839195573bfbe691565d013ca132e8e183b5fc3fa61f0a0ff"
+    },
+    "prompt_inputs": {
+      "path": "reports/prototype/sweep_comparison_r1/next_edit_inputs.jsonl",
+      "sha256": "bc483e98938d6920d4323dac886585330d27eb0fb075debf9cf2e0dc57cf75e3"
+    },
+    "strict_suite": {
+      "path": "data/benchmarks/code_completion_v2.jsonl",
+      "sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4"
+    }
+  },
+  "models": {
+    "q4_k_m_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+    "q8_0_sha256": "1321ea5e5d7529e60f9770c6a0b3a965f89542d16cf4ae51bab267f6a88150da",
+    "repository": "sweepai/sweep-next-edit-1.5B",
+    "revision": "409016591c6c1a94f545f22328a85a3516118f34",
+    "runtime_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2"
+  },
+  "output_contract": {
+    "metrics_have_no_case_uuid_path_prompt_response_or_full_model_hash_labels": true,
+    "per_case_fields": [
+      "case_id",
+      "model_precision",
+      "response_sha256",
+      "terminal_and_mapping_status",
+      "scoring_outcomes",
+      "sandbox_statuses_without_stdout_or_stderr"
+    ],
+    "raw_outputs_are_not_copied": true
+  },
+  "prompt_and_termination": {
+    "editable_mapping": "recompute byte-exact prefix/suffix mapping; score only within-region UTF-8 boundaries",
+    "line": "exact fixture prompt; score_line restores only runtime-reported word-stop LF/CRLF",
+    "line_output_ceiling": 96,
+    "next_edit": "pinned Sweep whole-file prompt and order; no prompt reconstruction for scoring",
+    "next_edit_output_ceiling": 512,
+    "response_repair": "none; no trim, fence stripping, parser repair, or multiline truncation",
+    "strict": "raw causal prompt built by code_generation.build_causal_prompt; no chat template",
+    "strict_output_ceiling": 96,
+    "terminal_acceptance": "explicit_terminal=true, finish_reason in eos/word, hit_token_cap=false"
+  },
+  "revision": 1,
+  "sandbox": {
+    "execution_backend": "container",
+    "image_ids_by_tag": {
+      "docker.io/library/eclipse-temurin:21-jdk": "sha256:f5699e5c9724cd5bc9f639ba77608e169e8fb5675e230882683bc691dfc44622",
+      "docker.io/library/gcc:14": "sha256:69d01b59a6f7e74c94828b6c7e02a334cf56e5b837ec5d88b74eb2be54e8c4b1",
+      "docker.io/library/golang:1.24-bookworm": "sha256:e0cffc405270b9114fac7706d07c373727d1b42b0e47c525b9cd1ab1097779ff",
+      "docker.io/library/node:22-bookworm-slim": "sha256:c72861c6705868ed7f08e1cf22ef4f7ba07a82c19a54ba65d931c442d3575889",
+      "docker.io/library/python:3.12-slim": "sha256:9e87977b867847e186d066f531ef783b006d582a985c341c269446088d90f2c4",
+      "docker.io/library/rust:1.85-slim": "sha256:8573a005bfcb44d5f462a33f6ad6e85d231f51e759b60c8061777422becfcb94",
+      "localhost/tabcomplete-typescript-bench:5.9.2": "sha256:35192dd4199bbe26b6af09944bb7eb9024f1280c17a3d1dc572f54da1624f83f",
+      "mcr.microsoft.com/dotnet/sdk:9.0": "sha256:956d89d4479d7fa25091073fe562026107ccf49eb69347a2673baf6b7d44ed6f"
+    },
+    "network": "none",
+    "pull_policy": "never",
+    "resource_flags": [
+      "--read-only",
+      "--cap-drop=all",
+      "--security-opt=no-new-privileges",
+      "--pids-limit=64",
+      "--memory=768m",
+      "--cpus=1",
+      "--userns=keep-id",
+      "--tmpfs=/tmp:rw,noexec,nosuid,size=64m"
+    ],
+    "runtime": "podman",
+    "runtime_path": "/usr/bin/podman",
+    "runtime_sha256": "859cb7e29723d1ca2f6bec025405b7ed6ea3040709ed129d7fed5f8fca92d2ca",
+    "runtime_version": "podman version 4.9.3"
+  },
+  "schema": "sweep-comparison-scoring-plan-v1",
+  "scoring": {
+    "line": {
+      "implementation": "scripts/evaluate_causal_line.py:score_line",
+      "primary_metrics": [
+        "exact",
+        "syntax"
+      ],
+      "protocol": "causal-line-v1",
+      "whitespace_repair": "none; only registered native word-stop newline restoration"
+    },
+    "next_edit": {
+      "ambiguous": "report reference agreement and objective validity separately; exclude from clear-intent success",
+      "clear_intent_functional_success": "clear_functional_intent only; action/reference exact and original source-case parse/compile/test pass after applying mapped replacement to the observed current state",
+      "functional_oracle": "use original source-suite checks only; generated code runs only in pinned network-none containers",
+      "groups": {
+        "ambiguous_requirement": [
+          "python/stable_13",
+          "typescript/2",
+          "typescript/3",
+          "rust/1",
+          "rust/6",
+          "csharp/3"
+        ],
+        "clear_functional_intent": [
+          "python/stable_11",
+          "python/stable_12",
+          "javascript/501",
+          "javascript/502",
+          "javascript/509",
+          "typescript/1",
+          "rust/8",
+          "java/7",
+          "java/8",
+          "c/stable_12",
+          "c/stable_17"
+        ],
+        "explicit_synthetic_target": [
+          "synthetic/delete-javascript-debug",
+          "synthetic/delete-rust-debug"
+        ],
+        "no_edit_plausible": [
+          "python/100",
+          "javascript/500",
+          "typescript/0",
+          "rust/5",
+          "java/5"
+        ]
+      },
+      "no_edit": "report reference agreement and false-positive edits in the separate plausible-no-edit denominator; not certainty about human intent",
+      "protocol": "sweep-whole-file-v1 mapped to original marked-region source cases",
+      "synthetic_deletions": "report exact action/replacement only; no functional oracle"
+    },
+    "paired_comparison": {
+      "direction": "Q4_K_M minus Q8_0",
+      "interpretation": "paired descriptive evidence only; no equivalence claim",
+      "uncertainty": "10000 deterministic case-cluster bootstrap replicates, seed 20260930, percentile 95% interval",
+      "unit": "paired case; next-edit repeats averaged within case before resampling"
+    },
+    "repetitions": {
+      "consistency": "report full-response hash and mapped-action agreement across repetitions",
+      "count_per_case_and_precision": 2
+    },
+    "strict": {
+      "context_ineligible_rows": "reported separately and omitted without truncation",
+      "every_eligible_output_in_exact_denominator": true,
+      "execution_backend": "network-none container with frozen local image IDs",
+      "implementation": "tinycomplete.eval.code_benchmark.evaluate_prediction/summarize_results",
+      "protocol": "raw-causal-v1"
+    }
+  },
+  "scoring_plan_sha256": "6bc9307142dfc64b500cdc84f165ac17e725a8b9ff9e0726ed25fb68492b558e",
+  "source_suite": {
+    "causal_line_cases": 180,
+    "controller_diagnostic_cases": 24,
+    "next_edit_cases": 200,
+    "prompt_only_rows": 24,
+    "source_oracle_case_ids": [
+      "c/stable_12",
+      "c/stable_17",
+      "csharp/3",
+      "java/5",
+      "java/7",
+      "java/8",
+      "javascript/500",
+      "javascript/501",
+      "javascript/502",
+      "javascript/509",
+      "python/100",
+      "python/stable_11",
+      "python/stable_12",
+      "python/stable_13",
+      "rust/1",
+      "rust/5",
+      "rust/6",
+      "rust/8",
+      "typescript/0",
+      "typescript/1",
+      "typescript/2",
+      "typescript/3"
+    ],
+    "strict_causal_cases": 200
+  },
+  "telemetry": {
+    "actual_model_output_files_remain_authoritative": true,
+    "per_case_eval_and_model_score_spans": true,
+    "prompt_or_prediction_content_capture": false,
+    "run_scope": true
+  }
+}
