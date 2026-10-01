@@ -4,6 +4,13 @@ set -Eeuo pipefail
 unit_relative='systemd/user/tabcomplete-engine.service'
 plugin_relative='lazyvim/lua/plugins/tabcomplete-trajectory.lua'
 config_root="${XDG_CONFIG_HOME:-$HOME/.config}"
+script_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+neovim_binary=$(command -v nvim)
+
+invalidate_owned_spec_cache() {
+  bash "$script_root/invalidate-owned-spec-cache.sh" "$neovim_binary" lazyvim \
+    "$config_root/$plugin_relative" "$backup_root/editor-cache-$1"
+}
 
 rollback() {
   trap - ERR
@@ -22,6 +29,7 @@ rollback() {
       mv -Tf -- "$temporary" "$destination"
     fi
   done
+  invalidate_owned_spec_cache rollback
   systemctl --user daemon-reload
   if test "$(cat "$backup_root/service-enabled")" = enabled; then
     systemctl --user enable tabcomplete-engine.service
@@ -100,6 +108,7 @@ for relative in "$unit_relative" "$plugin_relative"; do
   mv -Tf -- "$temporary" "$destination"
 done
 
+invalidate_owned_spec_cache install
 systemctl --user daemon-reload
 systemctl --user enable tabcomplete-engine.service
 systemctl --user restart tabcomplete-engine.service

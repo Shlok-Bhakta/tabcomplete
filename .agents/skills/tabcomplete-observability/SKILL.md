@@ -114,7 +114,11 @@ standard Q4 KV cache storage as TurboQuant or Q4 weights as KV compression.
 
 For `rust-editor-v1`, record the resident service's actual model digest,
 model protocol, runtime hash, and context layout. Nix's expected hash is not
-proof of the running configuration. Keep `trained-v2`, `cursor-last-v1`, and
+proof of the running configuration. Verify Neovim's actual loaded Lua module
+source paths and digests too. Nix-generated symlink targets can have identical
+size and mtime, causing `vim.loader` to reuse an older compiled plugin spec.
+Back up and invalidate only that owned spec cache entry on install/rollback and
+normal Home Manager linking; preserve all unrelated editor caches. Keep `trained-v2`, `cursor-last-v1`, and
 Sweep's window policy distinct in replay and feedback exports. A prompt-layout
 change requires a new frozen plan and paired action checks, even when it preserves
 all information. Record the binary hash and native crate revision too.

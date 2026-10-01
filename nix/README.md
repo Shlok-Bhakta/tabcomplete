@@ -128,6 +128,17 @@ and restores prior files if startup fails. Run
 `bash ./nix/install-standalone.sh --rollback BACKUP_DIRECTORY` for an explicit
 rollback using the backup directory printed at installation.
 
+Install and rollback also back up and unlink the single Neovim bytecode cache
+entry for the owned `tabcomplete-trajectory.lua` spec. Neovim validates that
+entry using size and timestamp; Nix store replacements can preserve both.
+Other cache entries remain intact. The Home Manager module performs the same
+invalidation after `linkGeneration` on future normal rebuilds. Open a fresh
+editor after an update. Verify the cache collision regression with:
+
+```sh
+bash ./nix/tests/cache-invalidation.sh
+```
+
 ## Permanent Nix configuration
 
 After the tested source is committed publicly, add

@@ -178,6 +178,15 @@ in
     home.packages = [ package ];
     home.sessionVariables.TABCOMPLETE_PREDICTOR_URL = "http://127.0.0.1:${toString cfg.port}";
 
+    home.activation.tabcompleteOwnedSpecCache = lib.mkIf cfg.neovim.enable (
+      lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        run ${pkgs.bash}/bin/bash ${./invalidate-owned-spec-cache.sh} \
+          ${pkgs.neovim}/bin/nvim ${lib.escapeShellArg cfg.neovim.appName} \
+          ${lib.escapeShellArg "${config.xdg.configHome}/${cfg.neovim.appName}/lua/plugins/tabcomplete-trajectory.lua"} \
+          ${lib.escapeShellArg "${config.xdg.stateHome}/tabcomplete-install-backups/home-manager-cache"}
+      ''
+    );
+
     systemd.user.services.tabcomplete-engine = {
       Unit = {
         Description = "TabComplete CPU local next-edit engine";
