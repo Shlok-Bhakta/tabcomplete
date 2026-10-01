@@ -398,8 +398,9 @@ local function classify_delta(state, delta)
   local result = "dismissed_editor_change"
   local matched_bytes = 0
   local key = collector.last_key_event
-  local key_correlated = opts.synthetic or (key and key.bufnr == state.bufnr
-    and key.mode and key.mode:find("^i") and now() - key.timestamp_ms <= 250)
+  local key_correlated = not (delta and delta.change_origin == "buffer_reload")
+    and (opts.synthetic or (key and key.bufnr == state.bufnr
+      and key.mode and key.mode:find("^i") and now() - key.timestamp_ms <= 250))
   if opts.protocol_version == single_line_v1.WIRE_VERSION then
     if delta and key_correlated and delta.start_row == state.row then
       local action = state.action

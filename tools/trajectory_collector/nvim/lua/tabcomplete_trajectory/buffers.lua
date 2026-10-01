@@ -162,6 +162,39 @@ local function on_lines_handler(event, bufnr, changedtick, firstline, lastline, 
   end
 end
 
+-- Neovim reloads (:edit! and :checktime) do not call on_lines. Preserve the
+-- discarded shadow and replacement as one full-buffer delta before anchoring.
+-- This is an editor reload observation, never typing or an implicit rejection.
+local function on_reload_handler(event, bufnr)
+  if event ~= "reload" then return end
+  local util = require("tabcomplete_trajectory.util")
+  if util.is_excluded_buffer(bufnr) then return end
+  local shadow = M.shadows[bufnr]
+  if not shadow then return end
+  local fresh = snapshot_lines(bufnr)
+  local delta = M.compute_delta(shadow.lines, 0, #shadow.lines, fresh)
+  delta.changedtick = vim.api.nvim_buf_get_changedtick(bufnr)
+  delta.cursor_after = util.cursor_zero()
+  delta.change_origin = "buffer_reload"
+  local _, meta = M.canonical_bytes(bufnr)
+  delta.eol_after = meta.eol
+  delta.fileformat_after = meta.fileformat
+  shadow.lines = fresh
+  shadow.delta_count = (shadow.delta_count or 0) + 1
+  local envelope
+  if M.on_emit then
+    local emitted, result = pcall(M.on_emit, bufnr, "edit_delta", delta)
+    if emitted then envelope = result end
+    if not emitted then
+      require("tabcomplete_trajectory.config").warn_once(
+        "emit-reload-delta", "tabcomplete-trajectory: buffer reload capture failed"
+      )
+    end
+  end
+  if M.on_delta then pcall(M.on_delta, bufnr, delta, envelope) end
+  if M.on_anchor then pcall(M.on_anchor, bufnr, "buffer_reload") end
+end
+
 --- Attach to a buffer and initialise its shadow. Idempotent.
 ---@return boolean attached
 function M.attach(bufnr)
@@ -178,13 +211,22 @@ function M.attach(bufnr)
   if not vim.api.nvim_buf_is_loaded(bufnr) then
     return false
   end
+  local previous = M.shadows[bufnr]
+  local fresh = snapshot_lines(bufnr)
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  -- Some reloads unload the buffer and detach Lua callbacks. BufReadPost
+  -- reattaches it; reconcile the retained same-file shadow before replacing it.
+  if previous and previous.file == path and not vim.deep_equal(previous.lines, fresh) then
+    on_reload_handler("reload", bufnr)
+  end
   M.shadows[bufnr] = {
-    lines = snapshot_lines(bufnr),
+    lines = fresh,
     delta_count = 0,
-    file = vim.api.nvim_buf_get_name(bufnr),
+    file = path,
   }
   local ok = pcall(vim.api.nvim_buf_attach, bufnr, false, {
     on_lines = on_lines_handler,
+    on_reload = on_reload_handler,
     on_detach = function(_, b)
       M.attached[b] = nil
       -- keep shadow for potential re-attach comparison; drop on wipeout via autocmd

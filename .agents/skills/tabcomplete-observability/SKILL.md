@@ -66,6 +66,13 @@ IDs. SDK initialization belongs once per process, never once per case.
 
 ## Metric and timing rules
 
+Buffer reloads such as `:edit!` and `:checktime` can bypass `on_lines` or detach
+callbacks. Capture a full-buffer reload delta from the retained same-file shadow
+when reattaching, with `change_origin=buffer_reload` and format/EOL metadata.
+Invalidate proposals as editor changes, never typing rejection. Keep reloads as
+boundaries in later typing-match derivation. Verify same-file reload replay;
+changing test paths to evade a missing reload event is not a fix.
+
 ### Experimental automatic editor suggestions
 
 An explicit `experimental_auto_opt_in` permits automatic suggestion display while

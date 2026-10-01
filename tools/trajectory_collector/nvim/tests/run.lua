@@ -1549,6 +1549,40 @@ ok("paused-status-emits-nothing", function()
   vim.api.nvim_buf_delete(b, { force = true })
 end)
 
+ok("forced-buffer-reload-captures-discarded-edit", function()
+  test_reset()
+  local path = scratch .. "/reload.lua"
+  vim.fn.writefile({ "disk α", "tail" }, path)
+  vim.cmd("edit " .. vim.fn.fnameescape(path))
+  local b = vim.api.nvim_get_current_buf()
+  assert_true(buffers.attach(b), "attach disk buffer")
+  vim.api.nvim_buf_set_lines(b, 0, 1, false, { "unsaved β" })
+  collector.queue = {}
+  vim.cmd("edit!")
+  -- Production BufReadPost reattaches callbacks after a reload that unloads.
+  assert_true(buffers.attach(b), "reattach after forced reload")
+  local reload
+  for _, e in ipairs(collector.queue) do
+    if e.event_type == "edit_delta" and e.payload.change_origin == "buffer_reload" then
+      assert_true(reload == nil, "exactly one reload delta")
+      reload = e
+    end
+  end
+  assert_true(reload ~= nil, "reload delta captured")
+  assert_eq(reload.payload.deleted_text, "unsaved β\ntail", "pre-reload shadow")
+  assert_eq(reload.payload.inserted_text, "disk α\ntail", "new disk source")
+  assert_eq(reload.payload.start_row, 0)
+  assert_eq(reload.payload.old_end_row, 2)
+  assert_eq(reload.payload.new_end_row, 2)
+  assert_eq(reload.payload.fileformat_after, "unix")
+  assert_true(reload.payload.eol_after, "newline metadata")
+  assert_shadow_live(b, "shadow agrees after reload")
+  vim.api.nvim_buf_set_lines(b, 0, 1, false, { "next γ" })
+  local delta = last(collector.queue)
+  assert_eq(delta.payload.deleted_text, "disk α", "next edit chains from reload")
+  vim.api.nvim_buf_delete(b, { force = true })
+end)
+
 -- Shared Python/Lua golden contract tests for the opt-in line-edit adapter.
 dofile(tests_dir .. "/single_line_v1.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/predict_single_line_v1.lua")(ok, assert_eq, assert_true)

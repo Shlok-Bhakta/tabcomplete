@@ -725,6 +725,28 @@ return function(ok, assert_eq, assert_true)
       "undo and acceptance preserve EOL option")
   end)
 
+  ok("buffer-reload-dismissal-is-not-a-typing-rejection", function()
+    predict.setup({ protocol_version = adapter.WIRE_VERSION, mode = "manual",
+      synthetic = true, automatic_prefix_guard = false, persist_mode = false })
+    vim.api.nvim_buf_set_lines(buf, 1, 2, false, { "source retained" })
+    vim.api.nvim_win_set_cursor(0, { 2, 0 })
+    set_model_action("R\tsource retained suffix", "eos", 4)
+    assert_true(predict.predict())
+    assert_true(vim.wait(1000, function() return predict.status().proposal_active end))
+    local before = predict.status().counters.rejected_implicit_typing
+    vim.cmd("edit!")
+    assert_true(buffers.attach(buf), "reattach reloaded proposal buffer")
+    assert_true(not predict.status().proposal_active, "reload invalidates proposal")
+    assert_eq(predict.status().counters.rejected_implicit_typing, before,
+      "scripted reload does not create a human rejection")
+    local dismissal
+    for _, event in ipairs(collector.queue) do
+      if event.event_type == "prediction_dismissed" then dismissal = event end
+    end
+    assert_true(dismissal ~= nil, "reload dismissal recorded")
+    assert_eq(dismissal.payload.outcome, "dismissed_editor_change")
+  end)
+
   ok("automatic-prefix-policy-preserves-unicode-and-does-not-label-suppression-rejection", function()
     assert_true(predict.preserves_typed_prefix("    return λ", { kind = "replace_line", text = "    return λ + 1" }))
     assert_true(not predict.preserves_typed_prefix("    return λ", { kind = "replace_line", text = "    return x" }))
