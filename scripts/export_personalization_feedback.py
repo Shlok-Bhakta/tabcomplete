@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-SCHEMA_VERSION = "personalization-feedback-evidence-v5"
+SCHEMA_VERSION = "personalization-feedback-evidence-v6"
 LEGACY_PROTOCOL_VERSION = "compact-next-edit-v1"
 SINGLE_LINE_PROTOCOL_VERSION = "single-line-edit-v1"
 ACTION_BLOB_MAX_BYTES = 8192
@@ -730,6 +730,10 @@ def extract(db_path: Path) -> dict:
             "action_blob_hash": generated["payload"].get("action_blob_hash") if generated else None,
             "runtime_config_hash": payload.get("runtime_config_hash"),
             "context_policy_version": payload.get("context_policy_version"),
+            "context_layout": payload.get("context_layout"),
+            "model_alias": payload.get("model_alias"),
+            "model_protocol": payload.get("model_protocol"),
+            "model_gguf_sha256": payload.get("model_gguf_sha256"),
             "context_hash": payload.get("context_hash"),
             "pre_state_hash": payload.get("pre_state_hash"),
             "file_sha256": hashlib.sha256(file_path.encode()).hexdigest()

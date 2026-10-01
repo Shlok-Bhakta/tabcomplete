@@ -1,0 +1,46 @@
+[
+  {
+    "state": {
+      "file_id": "sample.py",
+      "filetype": "python",
+      "source": "import os\ndef f(α):\n    return α\n",
+      "target_row": 2,
+      "cursor_col": 11,
+      "history": [
+        {
+          "row": 2,
+          "old_text": "    ",
+          "new_text": "    return α"
+        }
+      ],
+      "relevant": [
+        "def helper(x): return x"
+      ]
+    },
+    "expected": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"sample.py\"\nFiletype: python\nTarget row (zero based): 2\nCursor byte column: 11\nPhysical line count: 3\nCurrent source lines (JSON strings; indices are original rows):\n0 [LF] \"import os\"\n1 [LF] \"def f(α):\"\n2 [LF] \"    return α\"\nRecent edits, oldest to newest (JSON old and new text):\n0 row=2 old=\"    \" new=\"    return α\"\nRelevant definitions and imports (JSON strings):\n0 \"def helper(x): return x\"\n</single-line-edit-v1>\nAction:"
+  },
+  {
+    "state": {
+      "file_id": "sample.rs",
+      "filetype": "rust",
+      "source": "fn f() {\r\n    1\r\n}\r\n",
+      "target_row": 1,
+      "cursor_col": 4,
+      "history": [],
+      "relevant": []
+    },
+    "expected": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"sample.rs\"\nFiletype: rust\nTarget row (zero based): 1\nCursor byte column: 4\nPhysical line count: 3\nCurrent source lines (JSON strings; indices are original rows):\n0 [CRLF] \"fn f() {\"\n1 [CRLF] \"    1\"\n2 [CRLF] \"}\"\nRecent edits, oldest to newest (JSON old and new text):\nRelevant definitions and imports (JSON strings):\n</single-line-edit-v1>\nAction:"
+  },
+  {
+    "state": {
+      "file_id": "empty.ts",
+      "filetype": "typescript",
+      "source": "",
+      "target_row": 0,
+      "cursor_col": 0,
+      "history": [],
+      "relevant": []
+    },
+    "expected": "<single-line-edit-v1>\nActions: N, D, R\t, I\t. R/I prefixes take one source line of text.\nThe gap after R/I is a literal tab. No CR, LF, or explanation; end with tokenizer EOS.\nFile: \"empty.ts\"\nFiletype: typescript\nTarget row (zero based): 0\nCursor byte column: 0\nPhysical line count: 0\nCurrent source lines (JSON strings; indices are original rows):\n0 [APPEND AT EOF]\nRecent edits, oldest to newest (JSON old and new text):\nRelevant definitions and imports (JSON strings):\n</single-line-edit-v1>\nAction:"
+  }
+]

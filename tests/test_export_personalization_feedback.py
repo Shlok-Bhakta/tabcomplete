@@ -352,7 +352,7 @@ def test_v1_actions_use_verified_blobs_and_keep_legacy_hash_semantics(tmp_path: 
     conn.close()
 
     result = extract(db)
-    assert result["schema_version"] == "personalization-feedback-evidence-v5"
+    assert result["schema_version"] == "personalization-feedback-evidence-v6"
     evidence = {row["prediction_id"]: row for row in result["evidence"]}
     for prediction_id, kind, text, start, end, start_byte, end_byte in actions:
         row = evidence[prediction_id]
@@ -474,3 +474,39 @@ def test_automatic_display_suppression_is_not_a_human_rejection(tmp_path: Path) 
     assert result['evidence'][0]['explicit_outcome'] is None
     assert result['candidate_preference_pairs'] == []
     assert result['readiness']['enabled'] is False
+
+
+def test_rust_feedback_retains_actual_model_and_context_identity(tmp_path: Path) -> None:
+    db = tmp_path / "collector.sqlite"
+    with sqlite3.connect(db) as conn:
+        conn.execute(
+            "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+            "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+        )
+        payload = {
+            "prediction_id": "rust-prediction",
+            "synthetic": True,
+            "model_alias": "q25",
+            "model_protocol": "single-line-edit-v1",
+            "model_gguf_sha256": "a" * 64,
+            "context_layout": "cursor-last-v1",
+            "context_policy_version": "single-line-cursor-last-context-v1",
+            "runtime_config_hash": "b" * 64,
+        }
+        conn.execute(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            ("request", "synthetic-session", 1, "prediction_requested", 1, json.dumps(payload)),
+        )
+    result = extract(db)
+    evidence = result["evidence"][0]
+    for key in (
+        "model_alias",
+        "model_protocol",
+        "model_gguf_sha256",
+        "context_layout",
+        "context_policy_version",
+        "runtime_config_hash",
+    ):
+        assert evidence[key] == payload[key]
+    assert result["readiness"]["enabled"] is False
+    assert result["candidate_preference_pairs"] == []

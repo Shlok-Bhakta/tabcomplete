@@ -98,6 +98,42 @@ local stats = predict.status().counters
 assert(stats.requested == 5 and stats.displayed == 3 and stats.accepted == 1)
 assert(stats.rejected_implicit_typing == 1 and stats.typed_match == 1)
 assert(stats.cancelled_unseen >= 1 and stats.model_no_edit == 1)
+-- Blink's floating menu does not necessarily set pumvisible(). Respect its API.
+local previous_blink = package.loaded["blink.cmp"]
+local blink_visible = true
+package.loaded["blink.cmp"] = { is_visible = function() return blink_visible end }
+assert(predict.set_mode("automatic"))
+changed("owned-ui")
+vim.wait(100)
+assert(count == 5, "Blink-owned UI started inference")
+blink_visible = false
+vim.api.nvim_exec_autocmds("User", { pattern = "BlinkCmpMenuClose" })
+assert(vim.wait(500, function() return count == 6 end), "menu close did not debounce latest state")
+response(6, "R\npreview")
+assert(vim.wait(500, function() return predict.status().proposal_active end))
+blink_visible = true
+vim.api.nvim_exec_autocmds("User", { pattern = "BlinkCmpMenuOpen" })
+assert(not predict.status().proposal_active, "Blink menu retained competing proposal")
+local ui_dismissal
+for _, event in ipairs(collector.queue) do
+  if event.event_type == "prediction_dismissed" and event.payload.reason == "completion_ui" then
+    ui_dismissal = event
+  end
+end
+assert(ui_dismissal and ui_dismissal.payload.outcome == "dismissed_editor_change",
+  "completion UI transition invented a human rejection")
+blink_visible = false
+changed("late-ui")
+assert(vim.wait(500, function() return count == 7 end))
+blink_visible = true -- no User event: final display-time safeguard must still work
+response(7, "R\nlate")
+assert(vim.wait(500, function() return not predict.status().in_flight end))
+assert(not predict.status().proposal_active, "late response fought an active Blink menu")
+assert(predict.status().counters.automatic_ui_suppressed == 1)
+package.loaded["blink.cmp"] = previous_blink
+assert(predict.set_mode("off"))
+print("Blink UI ownership checks passed")
+
 -- Late callbacks, focus loss, transport failure and off during debounce.
 predict.setup({ mode = "automatic", experimental_auto_opt_in = true, synthetic = true,
   debounce_ms = 30, persist_mode = false })

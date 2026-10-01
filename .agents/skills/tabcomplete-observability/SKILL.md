@@ -105,6 +105,28 @@ units. `cache_prompt=true` alone does not prove reuse; use backend token counts.
 Keep runtime and context-policy hashes with the scientific record. Do not treat
 standard Q4 KV cache storage as TurboQuant or Q4 weights as KV compression.
 
+For `rust-editor-v1`, record the resident service's actual model digest,
+model protocol, runtime hash, and context layout. Nix's expected hash is not
+proof of the running configuration. Keep `trained-v2`, `cursor-last-v1`, and
+Sweep's window policy distinct in replay and feedback exports. A prompt-layout
+change requires a new frozen plan and paired action checks, even when it preserves
+all information. Record the binary hash and native crate revision too.
+
+The Rust backend owns context selection and exact token budgeting. A model switch
+must invalidate editor proposals, unload the previous resident model, verify the
+new file, and persist the alias only after successful load. Test both the picker
+and restart behavior. HTTP 409 means the bounded worker is occupied; preserve only
+the latest editor state. Verify backend slot release after cancellation rather
+than assuming client process termination stops native decode immediately.
+
+On a Nix-managed editor, evaluate the module and back up its two owned files before
+narrow installation. Never activate unrelated dirty configuration changes merely
+to install this service. Test the installed LazyVim configuration with a persistent
+headless Neovim instance and actual input events in a disposable repository. Mark
+all scripted decisions synthetic. Audit its real SQLite session, blob hashes,
+pre-state references, replay, and duplicate delivery; unit stubs are separate
+integration evidence and cannot establish model quality or human acceptance.
+
 `metrics.PERMITTED_METRIC_ATTRIBUTES` is the tested allowlist:
 service, task, language, backend, model_alias, quantization, outcome,
 context_size_bucket, suite_version, protocol_version, device_type, rank_role,

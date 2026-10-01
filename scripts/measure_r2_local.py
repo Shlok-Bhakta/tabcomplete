@@ -115,6 +115,10 @@ class NativeProvider:
         self.stop_first_line = False
         self.last = {}
         self.timeout_seconds = 1800.0
+        # Optional editor contract fields for the owned resident Rust backend.
+        # Legacy llama-server requests retain their existing payload.
+        self.editor_window = None
+        self.repository_identity = None
 
     def generate_line_detailed(self, prompt, max_new_tokens):
         self.stop_first_line = True
@@ -129,21 +133,26 @@ class NativeProvider:
         tokens, text, arrivals = [], "", {}
         line_at = None
         final = {}
+        payload = {
+            "prompt": prompt,
+            "n_predict": max_new_tokens,
+            "temperature": 0,
+            "stream": True,
+            "return_tokens": True,
+            "cache_prompt": self.cache,
+            "seed": 928173,
+            "id_slot": 0,
+            "stop": ["\n"] if self.stop_first_line else [],
+        }
+        if self.repository_identity is not None:
+            payload["repository_identity"] = self.repository_identity
+        if self.editor_window is not None:
+            payload["window"] = self.editor_window
         with httpx.stream(
             "POST",
             self.url + "/completion",
             timeout=self.timeout_seconds,
-            json={
-                "prompt": prompt,
-                "n_predict": max_new_tokens,
-                "temperature": 0,
-                "stream": True,
-                "return_tokens": True,
-                "cache_prompt": self.cache,
-                "seed": 928173,
-                "id_slot": 0,
-                "stop": ["\n"] if self.stop_first_line else [],
-            },
+            json=payload,
         ) as response:
             response.raise_for_status()
             for line in response.iter_lines():
@@ -185,6 +194,10 @@ class NativeProvider:
             "server_stop_requested": self.stop_first_line,
             "truncated": final.get("truncated"),
             "cache_requested": self.cache,
+            "canonical_action": final.get("canonical_action"),
+            "model_protocol": final.get("model_protocol"),
+            "model_sha256": final.get("model_sha256"),
+            "terminal_observed": bool(final.get("stop")),
         }
         return DetailedGeneration(
             text,

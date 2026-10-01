@@ -5,6 +5,9 @@ vim.opt.rtp:prepend(root)
 local fixture = assert(vim.env.TABCOMPLETE_AUTO_FIXTURE)
 local collector_url = assert(vim.env.TABCOMPLETE_COLLECTOR_URL)
 local revision = assert(vim.env.TABCOMPLETE_MODEL_SHA256)
+local backend = vim.env.TABCOMPLETE_PREDICTOR_BACKEND or "llama-cpp-legacy"
+local predictor_url = vim.env.TABCOMPLETE_PREDICTOR_URL
+  or (backend == "rust-editor-v1" and "http://127.0.0.1:19094" or nil)
 local case
 if vim.env.TABCOMPLETE_AUTO_CASE then
   case = vim.json.decode(table.concat(vim.fn.readfile(vim.env.TABCOMPLETE_AUTO_CASE), "\n"))
@@ -16,6 +19,7 @@ local collector = require("tabcomplete_trajectory").setup({
   periodic_anchor_every = 1,
 })
 local predict = require("tabcomplete_trajectory.predict").setup({
+  backend = backend, url = predictor_url,
   mode = "automatic", experimental_auto_opt_in = true,
   automatic_quality_validated = false, automatic_personalization_enabled = false,
   persist_mode = false, synthetic = true, model = "q25-coder", model_revision = revision,

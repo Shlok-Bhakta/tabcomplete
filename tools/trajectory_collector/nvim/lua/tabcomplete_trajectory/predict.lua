@@ -10,8 +10,15 @@ local single_line_v1 = require("tabcomplete_trajectory.single_line_v1")
 
 local ns = vim.api.nvim_create_namespace("TabCompletePredict")
 local allowed_modes = { manual = true, automatic = true, shadow = true, off = true }
+local default_allowed_models = {
+  q25 = { model_sha256 = "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    model_protocol = "single-line-edit-v1", output_tokens = 64 },
+  sweep = { model_sha256 = "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+    model_protocol = "sweep-full-file-v1", output_tokens = 192 },
+}
 local opts = {
   url = vim.env.TABCOMPLETE_PREDICTOR_URL or "http://127.0.0.1:19093",
+  backend = "llama-cpp-legacy", allowed_models = default_allowed_models,
   model = "unconfigured", model_revision = "unconfigured", precision = "Q4_K_M",
   adapter_identity = "none", runtime_config_hash = "unconfigured",
   context_policy_version = "compact-next-edit-context-v1", mode = "manual",
@@ -35,16 +42,18 @@ local last_status = "idle"
 local last_error = nil
 local last_latency_ms = nil
 local last_decision = nil
+local model_switching = false
 local consecutive_failures, backoff_until_ms = 0, 0
 local counters = { requested = 0, displayed = 0, accepted = 0, cancelled_unseen = 0,
   rejected_explicit = 0, rejected_implicit_typing = 0, typed_match = 0,
   typed_partial_match = 0, dismissed_navigation = 0, expired = 0,
   model_no_edit = 0, request_failed = 0, invalid_output = 0, stale_discarded = 0,
-  automatic_policy_suppressed = 0 }
+  automatic_policy_suppressed = 0, automatic_ui_suppressed = 0 }
 local mapping_key = nil
 local lock_path = "/tmp/tabcomplete-predictor-19093.lock"
 M._request_impl = nil -- deterministic test seam
 M._tokenize_impl = nil -- deterministic test seam
+M._backend_post_impl = nil -- deterministic Rust backend RPC seam
 M._confirm_impl = nil -- deterministic test seam; production uses vim.fn.confirm
 
 local function now() return util.now_ms() end
@@ -59,7 +68,7 @@ local function content_of(buf)
   return content
 end
 local function mode_path()
-  return vim.fn.stdpath("state") .. "/tabcomplete-predictor-mode.json"
+  return opts.mode_state_path or (vim.fn.stdpath("state") .. "/tabcomplete-predictor-mode.json")
 end
 local function save_mode()
   if not opts.persist_mode then return end
@@ -104,23 +113,104 @@ local function emit(state, kind, payload)
   payload.file = state.path
   return collector.emit(state.bufnr, kind, payload)
 end
+local function is_sha256(value)
+  return type(value) == "string" and #value == 64 and value:match("^%x+$") ~= nil
+end
+local function is_integer(value)
+  return type(value) == "number" and value % 1 == 0
+end
+local function model_spec(alias)
+  local configured = opts.allowed_models and opts.allowed_models[alias]
+  if type(configured) ~= "table" then return nil end
+  local layouts
+  if alias == "q25" then
+    layouts = {
+      ["trained-v2"] = "single-line-context-v2",
+      ["cursor-last-v1"] = "single-line-cursor-last-context-v1",
+    }
+  elseif alias == "sweep" then
+    layouts = { ["sweep-window-v1"] = "sweep-window-context-v1" }
+  else
+    layouts = {}
+  end
+  return {
+    model_sha256 = configured.model_sha256 or configured.sha256,
+    model_protocol = configured.model_protocol or configured.protocol,
+    output_tokens = configured.output_tokens or configured.max_output_tokens,
+    context_layout_policies = layouts,
+  }
+end
+local function expected_context_layout(identity, spec)
+  local layout = identity.context_layout
+  if layout == nil then
+    layout = identity.alias == "q25" and "trained-v2"
+      or (identity.alias == "sweep" and "sweep-window-v1" or nil)
+  end
+  local policy = layout and spec.context_layout_policies[layout]
+  if not policy then return nil, nil end
+  return layout, policy
+end
+local function validate_model_identity(identity, expected_alias)
+  if type(identity) ~= "table" or identity.status ~= "ok" then
+    return nil, "missing Rust model identity"
+  end
+  local spec = model_spec(identity.alias)
+  if not spec then return nil, "Rust model alias is not allowlisted" end
+  if expected_alias and identity.alias ~= expected_alias then
+    return nil, "Rust model alias does not match the requested model"
+  end
+  if identity.model_sha256 ~= spec.model_sha256 or not is_sha256(identity.model_sha256) then
+    return nil, "Rust model digest does not match the allowlist"
+  end
+  if identity.model_protocol ~= spec.model_protocol then
+    return nil, "Rust model protocol does not match the allowlist"
+  end
+  if not is_sha256(identity.runtime_config_hash) then
+    return nil, "Rust runtime configuration digest is invalid"
+  end
+  if not is_integer(identity.output_tokens) or identity.output_tokens ~= spec.output_tokens then
+    return nil, "Rust output-token cap does not match the allowlist"
+  end
+  if not is_integer(identity.input_tokens) or identity.input_tokens < 1
+      or identity.input_tokens > opts.single_line_input_tokens then
+    return nil, "Rust input-token budget is outside the configured limit"
+  end
+  if not is_integer(identity.context_size) or identity.context_size < identity.input_tokens + identity.output_tokens then
+    return nil, "Rust model context is smaller than its configured token budgets"
+  end
+  local context_layout = expected_context_layout(identity, spec)
+  if not context_layout then return nil, "Rust model context layout is not allowlisted" end
+  local validated = vim.deepcopy(identity)
+  validated.context_layout_legacy = identity.context_layout == nil
+  validated.context_layout = context_layout
+  return validated, nil, spec
+end
 local function record_request(state)
   collector.anchor_prediction(state.bufnr)
   collector.store_prediction_blob(state.prompt, function() end)
   local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+  local identity = state.model_identity or opts.current_model_identity or {}
+  local rust = opts.backend == "rust-editor-v1"
   local ev = emit(state, "prediction_requested", {
-    provider = "tabcomplete-local", model = opts.model, model_revision = opts.model_revision,
-    model_gguf_sha256 = opts.model_revision, precision = opts.precision,
-    adapter_identity = opts.adapter_identity, runtime_config_hash = opts.runtime_config_hash,
-    context_policy_version = is_v1 and single_line_v1.CONTEXT_POLICY_VERSION
-      or opts.context_policy_version,
+    provider = "tabcomplete-local", model = rust and identity.alias or opts.model,
+    model_revision = rust and identity.model_sha256 or opts.model_revision,
+    model_gguf_sha256 = rust and identity.model_sha256 or opts.model_revision,
+    model_alias = rust and identity.alias or nil,
+    model_protocol = rust and identity.model_protocol or nil,
+    context_layout = rust and identity.context_layout or nil,
+    precision = opts.precision,
+    adapter_identity = opts.adapter_identity,
+    runtime_config_hash = rust and identity.runtime_config_hash or opts.runtime_config_hash,
+    context_policy_version = state.context_policy_version
+      or (is_v1 and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version),
     requested_at_ms = state.requested_at_ms,
     context_hash = state.context_hash, context_blob_hash = state.context_hash,
     pre_state_hash = state.content_hash, pre_state_sequence = state.pre_state_sequence,
     file_identity = state.file_identity, cursor = state.cursor,
     editable_range = state.editable_range or { start_row = state.row, start_col = state.start_col,
       end_row = state.row, end_col = state.end_col },
-    max_output_tokens = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96,
+    max_output_tokens = rust and identity.output_tokens
+      or (is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96),
     temperature = 0, wire_version = opts.protocol_version,
     human_verified = false, mode = mode,
     display_policy = mode == "automatic" and opts.automatic_prefix_guard
@@ -294,6 +384,11 @@ local function can_auto()
   if now() < backoff_until_ms then return false end
   if not util.current_mode():find("^i") then return false end
   if vim.fn.pumvisible() == 1 then return false end
+  local blink = package.loaded["blink.cmp"]
+  if blink and type(blink.is_visible) == "function" then
+    local ok, visible = pcall(blink.is_visible)
+    if not ok or visible then return false end
+  end
   if vim.snippet and vim.snippet.active and vim.snippet.active() then return false end
   if vim.g.tabcomplete_predictor_focus_lost then return false end
   return true
@@ -365,10 +460,11 @@ local function dismiss(reason, delta, envelope)
   if reason == "editor_change" then outcome, visible_ms, matched_bytes, key = classify_delta(state, delta)
   elseif reason == "explicit" then outcome = "rejected_explicit"
   elseif reason == "expired" then outcome = "expired"
+  elseif reason == "completion_ui" then outcome = "dismissed_editor_change"
   elseif reason == "mode_off" or reason == "mode_changed" then outcome = "cancelled_by_mode"
   else outcome = "dismissed_navigation" end
   visible_ms = visible_ms or math.max(0, now() - state.shown_at_ms)
-  local dismissed = emit(state, "prediction_dismissed", { outcome = outcome,
+  local dismissed = emit(state, "prediction_dismissed", { outcome = outcome, reason = reason,
     outcome_source = key and "key_correlated_buffer_delta" or "editor_observation",
     shown_at_ms = state.shown_at_ms, dismissed_at_ms = now(), visible_duration_ms = visible_ms,
     low_exposure = visible_ms < 150,
@@ -399,7 +495,8 @@ local function invalidate(reason)
   stop_timer(debounce)
   if active then
     dismiss(reason == "mode_off" and "mode_off"
-      or reason == "mode changed" and "mode_changed" or "navigation")
+      or reason == "mode changed" and "mode_changed"
+      or reason == "completion UI" and "completion_ui" or "navigation")
   end
   if pending and not pending.obsolete then
     pending.obsolete = true
@@ -417,6 +514,13 @@ function M.preserves_typed_prefix(prefix, action)
   return action.kind == "replace_line" and type(action.text) == "string"
     and action.text:sub(1, #prefix) == prefix
 end
+local function automatic_ui_ready(state)
+  if mode ~= "automatic" or can_auto() then return true end
+  lifecycle(state, "invalidated_unseen", "automatic UI became busy or unfocused")
+  counters.automatic_ui_suppressed = counters.automatic_ui_suppressed + 1
+  last_status = "automatic suggestion skipped: UI busy or unfocused"
+  return false
+end
 local function show(state, action)
   if opts.protocol_version == single_line_v1.WIRE_VERSION then
     if action.kind == "keep" then
@@ -431,6 +535,7 @@ local function show(state, action)
       last_status = "unchanged replacement"
       return
     end
+    if not automatic_ui_ready(state) then return end
     if mode == "automatic" and opts.automatic_prefix_guard
         and not M.preserves_typed_prefix(state.prefix_line, action) then
       lifecycle(state, "automatic_policy_suppressed", "proposal would remove text before cursor")
@@ -463,7 +568,7 @@ local function show(state, action)
       proposed_range_includes_terminator = state.action_range.includes_terminator,
       proposed_text = action.text, action = action.kind, shown_at_ms = state.shown_at_ms,
       context_hash = state.context_hash, pre_state_hash = state.content_hash,
-      active_buffer = true, focused = not vim.g.tabcomplete_predictor_focus_lost,
+      active_buffer = true, ui_attached = #vim.api.nvim_list_uis() > 0, focused = not vim.g.tabcomplete_predictor_focus_lost,
       display_policy = mode, action_blob_hash = state.action_blob_hash,
       wire_version = single_line_v1.WIRE_VERSION,
     })
@@ -490,6 +595,7 @@ local function show(state, action)
     last_status = "unchanged replacement"
     return
   end
+  if not automatic_ui_ready(state) then return end
   if mode == "automatic" and action.text:find("\n", 1, true) then
     lifecycle(state, "automatic_multiline_suppressed", "manual preview required")
     last_status = "multiline action suppressed"
@@ -518,7 +624,7 @@ local function show(state, action)
   local shown = emit(state, "prediction_shown", { proposed_start = { row = state.row, col = state.start_col },
     proposed_end = { row = state.row, col = state.end_col }, proposed_text = action.text,
     action = action.action, shown_at_ms = state.shown_at_ms, context_hash = state.context_hash,
-    pre_state_hash = state.content_hash, active_buffer = true,
+    pre_state_hash = state.content_hash, active_buffer = true, ui_attached = #vim.api.nvim_list_uis() > 0,
     focused = not vim.g.tabcomplete_predictor_focus_lost, display_policy = mode,
     action_blob_hash = state.action_blob_hash })
   state.shown_event_id = shown and shown.event_id
@@ -540,9 +646,23 @@ local function schedule_retry()
     end)
   end)
 end
+local start_generation
 local function finished(request, result)
   vim.schedule(function()
     if pending ~= request then return end
+    if not request.obsolete and opts.backend == "rust-editor-v1"
+        and request.kind == "generation" and result.code == 22
+        and (request.generation_attempts or 0) < 5 then
+      request.generation_attempts = (request.generation_attempts or 0) + 1
+      request.process = nil
+      vim.defer_fn(function()
+        if pending == request then
+          if request.obsolete then finished(request, { code = 0 })
+          else start_generation(request) end
+        end
+      end, 250)
+      return
+    end
     pending = nil
     release_lock(request)
     phase = "idle"
@@ -550,6 +670,11 @@ local function finished(request, result)
     if request.obsolete then
       last_status = "stale response discarded"
       counters.stale_discarded = counters.stale_discarded + 1
+    elseif request.protocol_error then
+      lifecycle(state, "invalid_output", request.protocol_error)
+      counters.invalid_output = counters.invalid_output + 1
+      last_status = request.protocol_error
+      consecutive_failures = consecutive_failures + 1
     elseif request.context_error then
       lifecycle(state, "invalidated_unseen", request.context_error)
       last_status = request.context_error
@@ -570,8 +695,11 @@ local function finished(request, result)
       last_status = "stale response discarded"
     else
       local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+      local is_rust = opts.backend == "rust-editor-v1"
       local action, raw_or_err
-      if is_v1 then action, raw_or_err = sse.finish_single_line(request.parser)
+      if is_rust then action, raw_or_err = sse.finish_rust(request.parser, {
+        model_identity = state.model_identity, contract_state = state.contract_state, window = state.window })
+      elseif is_v1 then action, raw_or_err = sse.finish_single_line(request.parser)
       else action, raw_or_err = sse.finish(request.parser) end
       if not action then
         lifecycle(state, "invalid_output", raw_or_err)
@@ -593,11 +721,19 @@ local function finished(request, result)
           emit(state, "prediction_generated", { raw_response_hash = state.raw_response_hash,
             action_blob_hash = state.action_blob_hash, canonical_action = action.kind,
             stop_type = request.parser.terminal.stop_type, context_hash = state.context_hash,
-            context_policy_version = single_line_v1.CONTEXT_POLICY_VERSION,
+            context_policy_version = state.context_policy_version or single_line_v1.CONTEXT_POLICY_VERSION,
+            model_alias = is_rust and state.model_identity.alias or nil,
+            model_sha256 = is_rust and state.model_identity.model_sha256 or nil,
+            model_protocol = is_rust and state.model_identity.model_protocol or nil,
+            context_layout = is_rust and state.model_identity.context_layout or nil,
+            runtime_config_hash = is_rust and state.model_identity.runtime_config_hash or nil,
             wire_version = single_line_v1.WIRE_VERSION,
-            prompt_tokens = state.prompt_tokens, max_output_tokens = single_line_v1.MAX_ACTION_TOKENS,
+            prompt_tokens = state.prompt_tokens,
+            max_output_tokens = is_rust and state.model_identity.output_tokens or single_line_v1.MAX_ACTION_TOKENS,
             first_chunk_at_ms = request.first_chunk_at_ms,
             first_token_at_ms = request.first_token_at_ms,
+            first_token_observation = request.parser.first_token_source,
+            first_text_at_ms = request.first_text_at_ms,
             completed_at_ms = state.responded_at_ms,
             model_elapsed_ms = state.responded_at_ms - state.requested_at_ms,
             backend_timings = request.parser.terminal.timings })
@@ -613,9 +749,11 @@ local function finished(request, result)
             action_blob_hash = state.action_blob_hash, canonical_action = action.action,
             stop_type = request.parser.terminal.stop_type, context_hash = state.context_hash,
             prompt_tokens = state.prompt_tokens, context_expanded = state.prompt_tokens
-              and state.prompt_tokens > opts.target_prompt_tokens or false,
+            and state.prompt_tokens > opts.target_prompt_tokens or false,
             first_chunk_at_ms = request.first_chunk_at_ms,
             first_token_at_ms = request.first_token_at_ms,
+            first_token_observation = request.parser.first_token_source,
+            first_text_at_ms = request.first_text_at_ms,
             completed_at_ms = state.responded_at_ms,
             model_elapsed_ms = state.responded_at_ms - state.requested_at_ms,
             backend_timings = request.parser.terminal.timings })
@@ -633,20 +771,28 @@ local function finished(request, result)
     if latest_wanted and (mode == "automatic" or mode == "shadow") then schedule_retry() end
   end)
 end
-local function start_generation(request)
+start_generation = function(request)
   local state = request.state
   request.kind = "generation"
   request.parser = sse.new(opts.max_response_bytes)
   local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
-  local body = vim.json.encode({ prompt = state.prompt,
-    n_predict = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96, temperature = 0,
-    stream = true, cache_prompt = true, id_slot = 0, n_keep = 0 })
+  local body_table
+  if opts.backend == "rust-editor-v1" then
+    body_table = { prompt = state.prompt, n_predict = state.model_identity.output_tokens,
+      window = state.window, repository_identity = state.repo_identity, cache_prompt = true }
+  else
+    body_table = { prompt = state.prompt,
+      n_predict = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96, temperature = 0,
+      stream = true, cache_prompt = true, id_slot = 0, n_keep = 0 }
+  end
+  local body = vim.json.encode(body_table)
   local function chunk(data)
     if data and data ~= "" then
       if not request.first_chunk_at_ms then request.first_chunk_at_ms = now() end
       local ok = sse.feed(request.parser, data)
       if not ok and request.process then pcall(request.process.kill, request.process, "sigterm") end
       if request.parser.first_token and not request.first_token_at_ms then request.first_token_at_ms = now() end
+      if request.parser.first_text and not request.first_text_at_ms then request.first_text_at_ms = now() end
     end
   end
   if M._request_impl then
@@ -742,7 +888,237 @@ local function tokenize_single_line(request)
     end
   end)
 end
+local function shadow_source(buf, shadow)
+  local lines = shadow and shadow.lines
+  if type(lines) ~= "table" then return nil end
+  local ok_ff, fileformat = pcall(vim.api.nvim_get_option_value, "fileformat", { buf = buf })
+  local ok_eol, eol = pcall(vim.api.nvim_get_option_value, "eol", { buf = buf })
+  local separator = ok_ff and fileformat == "dos" and "\r\n" or "\n"
+  local total = math.max(0, #lines - 1) * #separator
+  if ok_eol and eol and #lines > 0 then total = total + #separator end
+  for _, line in ipairs(lines) do
+    total = total + #line
+    if total > 65536 then return nil end
+  end
+  local source = table.concat(lines, separator)
+  if ok_eol and eol and #lines > 0 then source = source .. separator end
+  return source
+end
+local function editor_context_buffers(state)
+  local root = repository.cache.root
+  if not root or root == "" then return {} end
+  local root_abs = util.abspath(root):gsub("/+$", "")
+  if root_abs == "" then return {} end
+  local candidates = {}
+  local current_path = util.abspath(state.path)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if buf ~= state.bufnr and vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf)
+        and not util.is_excluded_buffer(buf) and not vim.b[buf].tabcomplete_predictor_off
+        and buffers.is_tracked(buf) then
+      local path = vim.api.nvim_buf_get_name(buf)
+      local full_path = util.abspath(path)
+      local rel = full_path:sub(1, #root_abs + 1) == root_abs .. "/"
+        and full_path:sub(#root_abs + 2) or nil
+      local shadow = buffers.get_shadow(buf)
+      if rel and rel ~= "" and full_path ~= current_path and shadow and shadow.file == path then
+        local source = shadow_source(buf, shadow)
+        if source and #source <= 65536 then
+          local infos = vim.fn.getbufinfo({ bufnr = buf })
+          local recency = infos[1] and infos[1].lastused or buf
+          candidates[#candidates + 1] = { path = rel, source = source,
+            recency = tonumber(recency) or buf, bufnr = buf }
+        end
+      end
+    end
+  end
+  table.sort(candidates, function(a, b)
+    if a.recency == b.recency then return a.bufnr > b.bufnr end
+    return a.recency > b.recency
+  end)
+  local result, seen = {}, {}
+  for _, item in ipairs(candidates) do
+    if not seen[item.path] then
+      result[#result + 1] = { path = item.path, source = item.source, recency = item.recency }
+      seen[item.path] = true
+      if #result == 8 then break end
+    end
+  end
+  return result
+end
+local function post_rust_json(path, body, callback)
+  if M._backend_post_impl then
+    local called = false
+    local function complete(ok, response)
+      if called then return end
+      called = true
+      vim.schedule(function() callback(ok == true, response) end)
+    end
+    local ok, process = pcall(M._backend_post_impl, path, vim.deepcopy(body), complete)
+    if not ok then complete(false, { error = "backend test transport failed" }) end
+    return process
+  end
+  local ok_encode, encoded = pcall(vim.json.encode, body)
+  if not ok_encode then
+    vim.schedule(function() callback(false, { error = "request encoding failed" }) end)
+    return nil
+  end
+  local base = opts.url:gsub("/+$", "")
+  local timeout_ms = path == "/v1/model" and 180000 or 30000
+  return vim.system({ "curl", "-sS", "-m", tostring(math.ceil(timeout_ms / 1000)), "-X", "POST", "-H",
+    "Content-Type: application/json", "--data-binary", "@-", "-w", "\n%{http_code}",
+    base .. path }, { stdin = encoded, text = true, stderr = false, timeout = timeout_ms + 1000 }, function(result)
+      local raw = result.stdout or ""
+      local code_text = raw:match("(%d%d%d)%s*$")
+      local http_code = code_text and tonumber(code_text) or nil
+      local response_body = code_text and raw:gsub("\n?%d%d%d%s*$", "", 1) or ""
+      if result.code ~= 0 then
+        vim.schedule(function() callback(false, { exit_code = result.code, http_code = http_code }) end)
+      elseif http_code and http_code >= 200 and http_code < 300 then
+        local decoded_ok, decoded = pcall(vim.json.decode, response_body)
+        vim.schedule(function()
+          callback(decoded_ok and type(decoded) == "table", decoded_ok and decoded or
+            { http_code = http_code, error = "invalid backend JSON" })
+        end)
+      else
+        vim.schedule(function() callback(false, { http_code = http_code }) end)
+      end
+    end)
+end
+local function validate_editor_context(state, response)
+  if type(response) ~= "table" or type(response.prompt) ~= "string"
+      or not is_integer(response.prompt_tokens) or response.prompt_tokens < 1
+      or type(response.context_hash) ~= "string"
+      or not is_sha256(response.context_hash)
+      or util.sha256hex(response.prompt) ~= response.context_hash then
+    return nil, "Rust editor context response failed prompt validation"
+  end
+  local identity, identity_err = validate_model_identity(response.model_identity)
+  if not identity then return nil, identity_err end
+  if response.model_protocol ~= identity.model_protocol then
+    return nil, "Rust editor context model protocol mismatch"
+  end
+  if response.prompt_tokens > math.min(opts.single_line_input_tokens, identity.input_tokens)
+      or response.prompt_tokens + identity.output_tokens > identity.context_size then
+    return nil, "Rust editor context exceeds the configured token budget"
+  end
+  local expected_layout, expected_policy = expected_context_layout(identity, model_spec(identity.alias))
+  if response.context_layout ~= nil and response.context_layout ~= expected_layout then
+    return nil, "Rust editor context layout does not match the model identity"
+  end
+  if response.context_policy_version ~= expected_policy then
+    return nil, "Rust editor context policy does not match the model protocol"
+  end
+  if type(response.selected_buffers) ~= "table" or #response.selected_buffers > 8 then
+    return nil, "Rust editor context selected an invalid buffer set"
+  end
+  local requested = {}
+  for _, buffer in ipairs(state.context_buffers or {}) do requested[buffer.path] = true end
+  local selected_count, selected_paths = 0, {}
+  for index, path in pairs(response.selected_buffers) do
+    if not is_integer(index) or index < 1 or index > #response.selected_buffers then
+      return nil, "Rust editor context selected a malformed buffer array"
+    end
+    selected_count = selected_count + 1
+    if type(path) ~= "string" or not requested[path] or selected_paths[path] then
+      return nil, "Rust editor context selected an unrequested buffer"
+    end
+    selected_paths[path] = true
+  end
+  if selected_count ~= #response.selected_buffers then
+    return nil, "Rust editor context selected a sparse buffer array"
+  end
+  if identity.model_protocol == "sweep-full-file-v1" then
+    local window = response.window
+    if type(window) ~= "table" or type(window.source) ~= "string"
+        or not is_integer(window.target_row) or window.target_row < 0
+        or not is_integer(window.start_row) or window.start_row < 0 then
+      return nil, "Rust Sweep context window is invalid"
+    end
+    local source_ok, source_lines = pcall(single_line_v1.physical_lines, state.contract_state.source)
+    local window_ok, window_lines = pcall(single_line_v1.physical_lines, window.source)
+    if not source_ok or not window_ok then return nil, "Rust Sweep context contains invalid line endings" end
+    if #window_lines == 0 or window.target_row >= #window_lines
+        or window.start_row + window.target_row ~= state.contract_state.target_row
+        or window.start_row + #window_lines > #source_lines then
+      return nil, "Rust Sweep context window does not cover the target line"
+    end
+    for i, line in ipairs(window_lines) do
+      local original = source_lines[window.start_row + i]
+      if not original or original.content ~= line.content or original.terminator ~= line.terminator then
+        return nil, "Rust Sweep context window diverges from the editor source"
+      end
+    end
+  elseif response.window ~= nil and response.window ~= vim.NIL then
+    return nil, "Rust single-line context unexpectedly included a window"
+  end
+  local window
+  if response.window ~= nil and response.window ~= vim.NIL then window = response.window end
+  return {
+    prompt = response.prompt, prompt_tokens = response.prompt_tokens,
+    context_hash = response.context_hash, context_policy_version = response.context_policy_version,
+    model_identity = identity, model_protocol = response.model_protocol, context_layout = expected_layout,
+    window = window,
+    selected_buffers = response.selected_buffers,
+  }
+end
+local function tokenize_rust(request)
+  local state = request.state
+  state.context_buffers = editor_context_buffers(state)
+  local body = { state = state.contract_state, buffers = state.context_buffers,
+    repository_identity = state.repo_identity }
+  local attempts = 0
+  local function attempt()
+    attempts = attempts + 1
+    request.kind = "context"
+    request.process = post_rust_json("/v1/editor/context", body, function(ok, response)
+      if pending ~= request then return end
+      if request.obsolete then finished(request, { code = 0 }); return end
+      request.process = nil
+      if not ok and response and response.http_code == 409 and attempts < 120 then
+        vim.defer_fn(function()
+          if pending == request then
+            if request.obsolete then finished(request, { code = 0 })
+            else attempt() end
+          end
+        end, 250)
+        return
+      end
+      if not ok then
+        finished(request, { code = 1 })
+        return
+      end
+      local context, err = validate_editor_context(state, response)
+      if not context then
+        request.protocol_error = err
+        finished(request, { code = 0 })
+        return
+      end
+      if not still_current(state) then
+        finished(request, { code = 0 })
+        return
+      end
+      state.prompt, state.prompt_tokens = context.prompt, context.prompt_tokens
+      state.context_hash, state.context_policy_version = context.context_hash, context.context_policy_version
+      state.model_identity, state.model_protocol = context.model_identity, context.model_protocol
+      state.context_layout = context.context_layout
+      state.window, state.selected_buffers = context.window, context.selected_buffers
+      opts.current_model_identity = context.model_identity
+      opts.model = context.model_identity.alias
+      opts.model_revision = context.model_identity.model_sha256
+      opts.model_protocol = context.model_identity.model_protocol
+      opts.runtime_config_hash = context.model_identity.runtime_config_hash
+      opts.context_policy_version = context.context_policy_version
+      record_request(state)
+      start_generation(request)
+    end)
+  end
+  attempt()
+end
 local function tokenize(request)
+  if opts.backend == "rust-editor-v1" then
+    tokenize_rust(request)
+    return
+  end
   if opts.protocol_version == single_line_v1.WIRE_VERSION then
     tokenize_single_line(request)
     return
@@ -912,12 +1288,63 @@ function M.set_mode(next_mode)
   last_status = next_mode
   return true
 end
+function M.set_model(alias, callback)
+  if opts.backend ~= "rust-editor-v1" then return false, "model switching requires the Rust backend" end
+  if not model_spec(alias) then return false, "model alias is not allowlisted" end
+  if model_switching then return false, "model switch already in progress" end
+  local previous_mode = mode
+  model_switching = true
+  M.set_mode("off") -- cancels in-flight work before the service model request
+  last_status = "switching model"
+  local attempts = 0
+  local function restore(ok, message)
+    model_switching = false
+    M.set_mode(previous_mode)
+    last_status = ok and ("model switched to " .. alias) or ("model switch failed: " .. message)
+    if callback then callback(ok, message) end
+  end
+  local function attempt()
+    attempts = attempts + 1
+    post_rust_json("/v1/model", { alias = alias }, function(ok, identity)
+      if not ok and identity and identity.http_code == 409 and attempts < 120 then
+        vim.defer_fn(attempt, 250)
+        return
+      end
+      if not ok then restore(false, "Rust service did not accept the model switch"); return end
+      local validated, err = validate_model_identity(identity, alias)
+      if not validated then restore(false, err); return end
+      opts.current_model_identity = validated
+      opts.model = validated.alias
+      opts.model_revision = validated.model_sha256
+      opts.model_protocol = validated.model_protocol
+      opts.runtime_config_hash = validated.runtime_config_hash
+      local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
+      opts.context_policy_version = expected_policy
+      last_fingerprint = nil
+      restore(true, nil)
+    end)
+  end
+  attempt()
+  return true
+end
+function M.model_aliases()
+  local aliases = {}
+  for alias in pairs(opts.allowed_models or {}) do aliases[#aliases + 1] = alias end
+  table.sort(aliases)
+  return aliases
+end
 function M.status()
   local cs = collector.status()
   return { mode = mode, stage = phase, state = last_status, model = opts.model,
+    backend = opts.backend,
+    model_alias = opts.current_model_identity and opts.current_model_identity.alias or nil,
+    model_protocol = opts.current_model_identity and opts.current_model_identity.model_protocol
+      or opts.model_protocol,
+    context_layout = opts.current_model_identity and opts.current_model_identity.context_layout or nil,
     protocol_version = opts.protocol_version,
-    context_policy_version = opts.protocol_version == single_line_v1.WIRE_VERSION
-      and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version,
+    context_policy_version = opts.current_model_identity and opts.context_policy_version
+      or (opts.protocol_version == single_line_v1.WIRE_VERSION
+        and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version),
     input_token_budget = opts.protocol_version == single_line_v1.WIRE_VERSION
       and opts.single_line_input_tokens or opts.max_prompt_tokens,
     revision = opts.model_revision, precision = opts.precision,
@@ -989,11 +1416,21 @@ local function refresh_repo_async(buf)
     end)
 end
 function M.setup(options)
+  local previous_backend = opts.backend
   opts = vim.tbl_deep_extend("force", opts, options or {})
+  if opts.backend == "rust-editor-v1" then
+    if not (options and options.url) and previous_backend ~= "rust-editor-v1" then
+      opts.url = vim.env.TABCOMPLETE_PREDICTOR_URL or "http://127.0.0.1:19094"
+    end
+    opts.protocol_version = single_line_v1.WIRE_VERSION
+  end
+  opts.allowed_models = opts.allowed_models or default_allowed_models
   if opts.protocol_version ~= "compact-next-edit-v1"
       and opts.protocol_version ~= single_line_v1.WIRE_VERSION then
     error("unsupported TabComplete prediction protocol")
   end
+  local port = opts.url:match(":(%d+)%s*$") or "19093"
+  lock_path = "/tmp/tabcomplete-predictor-" .. port .. ".lock"
   if group then pcall(vim.api.nvim_del_augroup_by_id, group) end
   invalidate("setup")
   recent_edit = {}
@@ -1020,6 +1457,23 @@ function M.setup(options)
       if active then dismiss("navigation") end
       if pending then invalidate("new insert input") end
       debounce_changed()
+    end,
+  })
+  vim.api.nvim_create_autocmd("User", {
+    group = group, pattern = { "BlinkCmpMenuOpen", "BlinkCmpMenuClose" },
+    callback = function(args)
+      if args.match == "BlinkCmpMenuOpen" then
+        latest_wanted = false
+        invalidate("completion UI")
+      else
+        debounce_changed()
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    group = group, callback = function()
+      if applying or util.current_mode():find("^i") then return end
+      if active or pending then invalidate("navigation") end
     end,
   })
   vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout", "FocusLost", "InsertLeave" }, {
