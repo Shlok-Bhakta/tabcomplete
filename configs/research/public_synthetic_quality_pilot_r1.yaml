@@ -1,0 +1,147 @@
+campaign: public_synthetic_quality_pilot_r1
+plan_revision: 1
+schema: single-line-edit-v1
+suite_revision: 3
+source_branch_commit: 239e19b7f30959bf716cbe89fed3344caeaf993e
+student:
+  model_id: Qwen/Qwen2.5-Coder-0.5B
+  revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+  tokenizer_revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+  weight_sha256: aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80
+  tokenizer_sha256: c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539
+  initializer: untouched_pretrained
+context:
+  default_input_tokens: 1024
+  maximum_total_tokens: 2048
+  maximum_response_tokens_including_eos: 64
+  serializer: single-line-context-v2
+  selection_order:
+  - target_line
+  - surrounding_function
+  - recent_edits
+  - relevant_imports_types
+  - extra_context
+  decoding: greedy_until_real_eos
+data:
+  languages:
+  - python
+  - typescript
+  - rust
+  - go
+  initial_candidates: 100
+  second_stage_candidates: 1000
+  target_train: 50000
+  minimum_main_train: 20000
+  target_development: 4000
+  target_test: 2000
+  minimum_early_test: 800
+  minimum_early_source_grounded_test: 200
+  minimum_source_groups: 100
+  minimum_mechanisms: 25
+  maximum_repository_fraction: 0.02
+  maximum_template_fraction: 0.01
+  maximum_synthetic_repair_fraction: 0.1
+  target_real_source_fraction: 0.5
+  split_group_keys:
+  - repository_alias_group
+  - session_or_commit
+  - generator_family
+  - normalized_near_duplicate
+  final_tracks:
+  - new_repositories
+  - heldout_mechanisms
+  keep_replace_insert_delete_target_fraction:
+  - 0.25
+  - 0.45
+  - 0.2
+  - 0.1
+teacher:
+  requested_model: opencode-go/muse-spark-1.3-contributor
+  label_route_enabled: true
+  authorization_basis: user-reported direct provider approval on 2026-09-26
+  authorization_evidence_verified_independently: false
+  permitted_source_classes:
+  - public
+  - synthetic
+  permitted_purposes:
+  - calibration
+  - student_label
+  - automated_score
+  route: documented_open_code_go_responses_api
+  starting_concurrency: 2
+  maximum_concurrency: 4
+  protocol_path: configs/research/one_line_teacher_protocol_v3.json
+  protocol_sha256: 4f2b6245fd941c05e4e09d63683632611e5f6605b1b92fe7b7fb6ec222ea98a7
+  calibration_fixture_sha256: a8d552f75819db2a7f16ec60e30ed08f94cd969b98cb4d64216325b87cfc248e
+  calibration_manifest_sha256: 183f151eb8e7bd3a1d214856187a5d75697f376e7516d31880b81c57e0435135
+  fresh32_fixture_sha256: 7ba1b86df983fe30009a10746ba343e38963b034e5300dc77dc4aaa2df634177
+  fresh32_manifest_sha256: 66f61346ba32b618e7814b024e2b63a3a46deaab14e13c957fe6841ac8113689
+  structured_smoke_spec_path: configs/research/one_line_structured_smoke_v1.json
+  structured_smoke_spec_sha256: 3ed3ee4906b7ff4eeda82d6f07a20ac05f3add7087841c50b7051b872b3aa4ef
+  author_text_protocol_path: configs/research/one_line_author_protocol_v1.json
+  author_text_protocol_sha256: 1862934521d0530d3b887a7121f27e057d27f97be92f4365db9cf62f62787c72
+  author_indexed_protocol_path: configs/research/one_line_author_protocol_v2.json
+  author_indexed_protocol_sha256: 0ef8ad1633e899bba9982090ad396c450fa0da59c168541181c1d89aa867412e
+  author_continuation_path: configs/research/one_line_author_continuation_v1.json
+  author_continuation_sha256: 4de9a435032e7385a2ad8156d0e10d6f94df338292a577c5b85b2f19cd819e57
+  authoring_source_sha256: f1320155723d450454484999ebb3605614e251c223e1801f7e9808d1d3bde933
+  maximum_completed_calls: 25000
+  maximum_uncached_input_tokens: 60000000
+  maximum_output_tokens: 20000000
+training:
+  effective_batch_examples: 16
+  maximum_epochs: 2
+  lr_pilots:
+  - 1.0e-05
+  - 3.0e-05
+  lr_pilot_examples: 1024
+  warmup_fraction: 0.03
+  final_lr_fraction: 0.1
+  optimizer: AdamW8bit_if_supported
+  weight_decay: 0.01
+  max_gradient_norm: 1.0
+  master_precision: FP32
+  compute_precision: FP16
+  checkpoint_requirements:
+  - weights
+  - optimizer
+  - scheduler
+  - scaler
+  - cpu_rng
+  - gpu_rng
+  - shuffle_state
+  - consumed_position
+  - token_totals
+selection:
+  utility_correct_minus_lambda_incorrect: 3.0
+  keep_false_edit_guard: development_calibrated_before_main
+  final_test_reads: 1
+budget:
+  maximum_kaggle_t4x2_session_wall_hours: 24
+  maximum_nonpadding_training_input_tokens: 100000000
+  maximum_new_persistent_local_research_bytes: 12884901888
+  minimum_session_finalization_minutes: 15
+  unknown_quota_initial_session_limit_minutes: 120
+  one_gpu_allocation_at_a_time: true
+  automatic_quota_renewal_use: false
+  paid_overage: false
+deployment:
+  modify_running_editor: true
+  maximum_sanity_actions: 100
+  candidate_precision: Q4_K_M
+  experimental_auto_opt_in: true
+  automatic_quality_validated: false
+  automatic_personalization_enabled: false
+pilot:
+  data_schema: one-line-public-synthetic-functional-mix-v1
+  minimum_train_rows: 128
+  minimum_development_rows: 64
+  lr_comparison_epochs: 1
+  maximum_sequence_length: 2048
+  microbatch_examples: 2
+  initial_loss_scale: 128.0
+  loss_normalization: example_weighted_response_only
+  public_source_task: synthetic_typed_current_line_prefix_completion
+  synthetic_task: history_conditioned_functional_line_edit
+  publish_model_weights: false
+  publish_training_data: false

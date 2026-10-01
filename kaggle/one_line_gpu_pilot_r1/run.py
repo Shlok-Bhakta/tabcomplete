@@ -45,6 +45,7 @@ OPTIONAL_MODEL_FILES = {
     "special_tokens_map.json",
 }
 LICENSE_MIXED_SCHEMA = "one-line-license-mixed-pilot-v1"
+PUBLIC_SYNTHETIC_SCHEMA = "one-line-public-synthetic-functional-mix-v1"
 LICENSE_MIXED_HISTORY_SCHEMA = "one-line-license-mixed-history-pilot-v2"
 LICENSE_MIXED_SCHEMAS = {LICENSE_MIXED_SCHEMA, LICENSE_MIXED_HISTORY_SCHEMA}
 PROOF_FILE_SUFFIXES = {
@@ -139,9 +140,7 @@ def remaining_before_reserve() -> float:
     return remaining_seconds() - RESERVE_SECONDS
 
 
-def _validate_proof_inventory(
-    proof_files: dict[str, Any], files: dict[str, Any]
-) -> set[str]:
+def _validate_proof_inventory(proof_files: dict[str, Any], files: dict[str, Any]) -> set[str]:
     if not 1 <= len(proof_files) <= 32768:
         raise ValueError("mixed-license input needs its frozen proof inventory")
     total_bytes = 0
@@ -267,6 +266,10 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         file_license_status = "per_file_scope_pinned"
         if SESSION.get("dataset_license") != "LICENSE-MIXED":
             raise ValueError("history pilot must preserve per-file licenses")
+    elif data_schema == PUBLIC_SYNTHETIC_SCHEMA:
+        source_dataset = "tabcomplete/public-prefix-synthetic-functional-pilot-r1"
+        plan_schema = "one-line-public-synthetic-functional-mix-plan-v1"
+        file_license_status = "verified-public-path-scope-and-author-owned-synthetic"
     else:
         raise ValueError("unapproved bounded-pilot data schema")
     if SESSION.get("source_dataset_id", source_dataset) != source_dataset:
@@ -295,12 +298,14 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
     required_names = REQUIRED_INPUTS
     if data_schema == "one-line-constructive-pilot-v1":
         required_names = required_names | {"independent_review.json", "training-fixture.jsonl"}
-    elif data_schema in LICENSE_MIXED_SCHEMAS:
+    elif data_schema in {*LICENSE_MIXED_SCHEMAS, PUBLIC_SYNTHETIC_SCHEMA}:
         proof_files = SESSION.get("proof_files")
         if not isinstance(proof_files, dict):
             raise ValueError("mixed-license input needs its frozen proof inventory")
         proof_names = _validate_proof_inventory(proof_files, files)
-        required_names = required_names | {"training-fixture.jsonl"} | proof_names
+        required_names = required_names | proof_names
+        if data_schema in LICENSE_MIXED_SCHEMAS:
+            required_names = required_names | {"training-fixture.jsonl"}
     expected_names = required_names | OPTIONAL_MODEL_FILES
     if not required_names <= names or not names <= expected_names:
         raise ValueError("input package contains missing or unapproved files")
@@ -370,8 +375,9 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or data_plan.get("file_groups_disjoint") is not True
         or training.get("phase") != "pilot"
         or training.get("epochs") != 1
-        or training.get("peak_learning_rate") != 1e-5
-        or SESSION.get("peak_learning_rate") != 1e-5
+        or training.get("peak_learning_rate")
+        not in ((1e-5, 3e-5) if data_schema == PUBLIC_SYNTHETIC_SCHEMA else (1e-5,))
+        or SESSION.get("peak_learning_rate") != training.get("peak_learning_rate")
         or training.get("max_nonpadding_input_tokens") != 2_000_000
         or training.get("planned_nonpadding_input_tokens", 2_000_001) > 2_000_000
         or budgets.get("max_session_seconds") != SESSION["session_seconds"]
@@ -381,6 +387,32 @@ def _safe_input_manifest(path: Path) -> tuple[Path, dict[str, Any]]:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("frozen pilot plan violates the model, data, or budget contract")
+    if data_schema == PUBLIC_SYNTHETIC_SCHEMA:
+        evidence = training["implementation_fixture_evidence"]
+        evidence_name = "evidence/disposable_fixture_gpu_observation_v5.json"
+        if files[evidence_name]["sha256"] != evidence.get("sha256"):
+            raise ValueError("implementation evidence is not pinned")
+        record = load(manifest_path.parent / evidence_name)
+        if (
+            record["implementation_viability"].get("passed") is not True
+            or record.get("accepted_training") != 0
+            or record["artifact_integrity"].get("plan_sha256")
+            != evidence.get("fixture_plan_sha256")
+        ):
+            raise ValueError("implementation evidence did not pass")
+        expected = {
+            item["path"]: {"sha256": item["sha256"], "bytes": item["bytes"]}
+            for item in data_plan["proof_files"]
+        }
+        expected[evidence_name] = files[evidence_name]
+        if expected != SESSION["proof_files"]:
+            raise ValueError("source/functional plan proof inventory differs from session")
+        if (
+            budgets["prior_training_input_tokens"] + training["planned_nonpadding_input_tokens"]
+            > 100_000_000
+            or budgets["prior_session_wall_seconds"] + SESSION["session_seconds"] > 24 * 3600
+        ):
+            raise ValueError("source/functional aggregate budget exceeded")
     if data_schema in {"one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS}:
         prior_tokens = budgets.get("prior_training_input_tokens")
         prior_seconds = budgets.get("prior_session_wall_seconds")

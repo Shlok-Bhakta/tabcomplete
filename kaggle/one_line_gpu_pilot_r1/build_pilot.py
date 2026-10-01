@@ -32,6 +32,7 @@ from tinycomplete.one_line.pilot_data import (
     LICENSE_MIXED,
     LICENSE_MIXED_HISTORY,
     PUBLIC_SOURCE_TYPES,
+    PUBLIC_SYNTHETIC,
     license_mixed_artifact_root,
     policy_for_schema,
     validate_aggregate_budget,
@@ -248,7 +249,8 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
     if (
         training.get("phase") != "pilot"
         or training.get("epochs") != 1
-        or training.get("peak_learning_rate") != 1e-5
+        or training.get("peak_learning_rate")
+        not in ((1e-5, 3e-5) if policy is PUBLIC_SYNTHETIC else (1e-5,))
         or training.get("planned_nonpadding_input_tokens", MAX_TRAINING_TOKENS + 1)
         > MAX_TRAINING_TOKENS
         or training.get("max_nonpadding_input_tokens") != MAX_TRAINING_TOKENS
@@ -262,6 +264,26 @@ def _validate_plan(plan: dict[str, Any], config: dict[str, Any]) -> None:
         or budgets.get("no_automatic_renewal") is not True
     ):
         raise ValueError("pilot budget contract differs from the fixed campaign limits")
+    if policy is PUBLIC_SYNTHETIC:
+        from tinycomplete.one_line.public_synthetic_pilot import validate_implementation_evidence
+
+        evidence = training["implementation_fixture_evidence"]
+        if (
+            evidence["path"]
+            != "reports/prototype/product_r2/disposable_fixture_gpu_observation_v5.json"
+        ):
+            raise ValueError("unapproved implementation evidence path")
+        validate_implementation_evidence((ROOT / evidence["path"]).read_bytes(), evidence)
+        if (
+            config["training"]["effective_batch_examples"] != 16
+            or training.get("initial_loss_scale") != 128.0
+        ):
+            raise ValueError("source/functional pilot batch or scale mismatch")
+        validate_aggregate_budget(
+            budgets,
+            planned_tokens=training["planned_nonpadding_input_tokens"],
+            session_seconds=SESSION_SECONDS,
+        )
     if policy in (CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         fixture = training.get("disposable_fixture", {})
         mixed_license = policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY)
@@ -443,7 +465,12 @@ def _rows(
             approved_type = (
                 row.get("source_type") in PUBLIC_SOURCE_TYPES
                 if policy is LICENSE_MIXED
-                else row.get("source_type") == source_type
+                else (
+                    row.get("source_type")
+                    in {"licensed_public_prefix_completion", "author_owned_synthetic_functional"}
+                    if policy is PUBLIC_SYNTHETIC
+                    else row.get("source_type") == source_type
+                )
             )
             if not approved_type:
                 raise ValueError("pilot shard contains an unapproved source type")
@@ -542,6 +569,8 @@ def _mixed_proof_files(
         if total > 512 * 1024**2:
             raise ValueError("mixed-license proof inventory exceeds 512 MiB")
         files[name] = source
+    if manifest.get("schema") == PUBLIC_SYNTHETIC.data_schema:
+        return files
     review = manifest["independent_review_path"]
     identities = {entry["path"]: entry for entry in entries}
     if (
@@ -584,7 +613,7 @@ def validate_inputs(
     if manifest_sha != data_plan["manifest_sha256"]:
         raise ValueError("pilot data-manifest hash mismatch")
     manifest = read_json(manifest_path)
-    package_root = None
+    package_root = manifest_path.parent if policy is PUBLIC_SYNTHETIC else None
     if policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
         validate_license_mixed_manifest(manifest, policy=policy)
         if manifest.get("artifact_root", ".") != ".":
@@ -632,6 +661,11 @@ def validate_inputs(
     dev_groups = {_file_group(row) for row in dev_rows}
     if train_groups & dev_groups:
         raise ValueError("pilot train and development file groups overlap")
+    if policy is PUBLIC_SYNTHETIC:
+        from tinycomplete.one_line.public_synthetic_pilot import validate_manifest
+
+        validate_manifest(manifest, [*train_rows, *dev_rows], package_root=manifest_path.parent)
+        _mixed_proof_files(plan, manifest, manifest_path.parent)
     if policy == CONSTRUCTIVE:
         # Recompute provenance and normalized-template isolation, rather than
         # trusting only the generator's manifest boolean.
@@ -688,7 +722,7 @@ def inspect_training(
     package_root = (
         license_mixed_artifact_root(manifest, manifest_path.parent)
         if policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY)
-        else None
+        else (manifest_path.parent if policy is PUBLIC_SYNTHETIC else None)
     )
     with tempfile.TemporaryDirectory(prefix="tabcomplete-pilot-inspect-") as temporary:
         output = Path(temporary) / "inspect-only-output"
@@ -833,10 +867,13 @@ def prepare_bundle(
         raise ValueError("bundle branch differs from the frozen plan")
     if not HEX_SHA1.fullmatch(identity[1]):
         raise ValueError("bundle Git commit is invalid")
-    if (
-        git_identity is None
-        and sha256_file(ROOT / policy.repository_plan_path) != checked["plan_sha256"]
-    ):
+    repository_plan_path = policy.repository_plan_path
+    if policy is PUBLIC_SYNTHETIC:
+        suffix = "1e5" if plan["training"]["peak_learning_rate"] == 1e-5 else "3e5"
+        repository_plan_path = (
+            f"reports/research/public_synthetic_quality_pilot_r1/plan_lr{suffix}.json"
+        )
+    if git_identity is None and sha256_file(ROOT / repository_plan_path) != checked["plan_sha256"]:
         raise ValueError("committed pilot plan differs from the selected staged plan")
 
     if inspection is None:
@@ -897,10 +934,14 @@ def prepare_bundle(
     if policy is CONSTRUCTIVE:
         projected += review_path.stat().st_size
         projected += len(fixture_payload or b"")
-    elif policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
+    elif policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY, PUBLIC_SYNTHETIC):
         proof_files = _mixed_proof_files(plan, checked["data_manifest"], manifest_path.parent)
         projected += sum(path.stat().st_size for path in proof_files.values())
         projected += len(fixture_payload or b"")
+    if policy is PUBLIC_SYNTHETIC:
+        evidence = training["implementation_fixture_evidence"]
+        proof_files["evidence/disposable_fixture_gpu_observation_v5.json"] = ROOT / evidence["path"]
+        projected += (ROOT / evidence["path"]).stat().st_size
     if projected > MAX_NEW_STORAGE_BYTES:
         raise ValueError("pilot bundle exceeds the 12 GiB campaign artifact limit")
     output_parent = output.parent

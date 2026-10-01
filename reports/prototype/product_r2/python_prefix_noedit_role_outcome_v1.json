@@ -46,5 +46,13 @@
     "source_license_history_rows_verified": 4,
     "v2_scientific_bytes_preserved": true
   },
-  "status": "no_candidates_accepted"
+  "status": "no_candidates_accepted",
+  "usage": {
+    "new_unknown_usage_requests": 0,
+    "reasoning_tokens": 45278,
+    "settled_calls": 11,
+    "settled_output_tokens_including_reasoning": 45645,
+    "uncached_input_tokens": 27399,
+    "visible_output_tokens": 367
+  }
 }

@@ -33,6 +33,7 @@ from tinycomplete.one_line.pilot_data import (
     INSTINCT,
     LICENSE_MIXED,
     LICENSE_MIXED_HISTORY,
+    PUBLIC_SYNTHETIC,
     _strict_json,
     license_mixed_artifact_root,
     policy_for_schema,
@@ -287,12 +288,13 @@ def initial_loss_scale_for_run(
     disposable_fixture_plan: dict[str, Any] | None,
 ) -> float:
     """Use the v2 pilot's frozen stable scale; preserve the legacy default elsewhere."""
+    if phase == "pilot" and plan.get("data", {}).get("schema") == PUBLIC_SYNTHETIC.data_schema:
+        if plan["training"].get("initial_loss_scale") != 128.0:
+            raise ValueError("source/functional pilot requires scale128")
+        return 128.0
     if disposable_fixture_plan is not None:
         return float(disposable_fixture_plan.get("initial_loss_scale", 256.0))
-    if (
-        phase == "pilot"
-        and plan.get("data", {}).get("schema") == LICENSE_MIXED_HISTORY.data_schema
-    ):
+    if phase == "pilot" and plan.get("data", {}).get("schema") == LICENSE_MIXED_HISTORY.data_schema:
         fixture = plan.get("training", {}).get("disposable_fixture", {})
         if not isinstance(fixture, dict) or fixture.get("initial_loss_scale") != 128.0:
             raise ValueError("history pilot requires the frozen 128 initial loss scale")
@@ -560,7 +562,8 @@ def main() -> None:
             plan.get("schema") != pilot_policy.plan_schema
             or plan.get("training", {}).get("phase") != "pilot"
             or plan.get("training", {}).get("epochs") != 1
-            or plan.get("training", {}).get("peak_learning_rate") != 1e-5
+            or plan.get("training", {}).get("peak_learning_rate")
+            not in ((1e-5, 3e-5) if pilot_policy is PUBLIC_SYNTHETIC else (1e-5,))
             or plan.get("training", {}).get("max_nonpadding_input_tokens") != 2_000_000
             or plan.get("budgets", {}).get("max_session_seconds") != 7200
             or plan.get("budgets", {}).get("reserve_seconds") != 1200
@@ -589,7 +592,7 @@ def main() -> None:
                 session_seconds=plan["budgets"]["max_session_seconds"],
                 external_campaign_tokens=args.external_campaign_tokens,
             )
-        if pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY):
+        if pilot_policy in (LICENSE_MIXED, LICENSE_MIXED_HISTORY, PUBLIC_SYNTHETIC):
             validate_aggregate_budget(
                 plan["budgets"],
                 planned_tokens=plan["training"]["planned_nonpadding_input_tokens"],
@@ -618,6 +621,13 @@ def main() -> None:
             pilot_artifact_root = license_mixed_artifact_root(
                 data_manifest, args.data_manifest.parent
             )
+    if args.phase == "pilot" and pilot_policy is PUBLIC_SYNTHETIC:
+        if args.data_manifest is None:
+            raise ValueError("source/functional pilot needs its manifest")
+        data_manifest = json.loads(args.data_manifest.read_text())
+        if sha256_file(args.data_manifest) != plan["data"]["manifest_sha256"]:
+            raise ValueError("source/functional manifest hash mismatch")
+        pilot_artifact_root = args.data_manifest.parent
     source_identity = verify_artifacts(args.model, config)
     if sha256_file(args.config) != plan["config_sha256"]:
         raise ValueError("frozen configuration hash mismatch")
@@ -694,8 +704,28 @@ def main() -> None:
             ] or data_manifest.get("dev_count") != len(development):
                 raise ValueError("LICENSE-MIXED development shard differs from frozen manifest")
             validate_license_mixed_splits([*rows, *development])
+    if args.phase == "pilot" and pilot_policy is PUBLIC_SYNTHETIC:
+        from tinycomplete.one_line.public_synthetic_pilot import validate_manifest
+
+        assert data_manifest is not None
+        if args.development_data is None or pilot_artifact_root is None:
+            raise ValueError("source/functional pilot needs its development data")
+        development = load_training_rows(
+            args.development_data,
+            plan["data"]["development_sha256"],
+            phase="pilot",
+            minimum_main_train=config["data"]["minimum_main_train"],
+            pilot_schema=pilot_policy.data_schema,
+            expected_split="development",
+            package_root=pilot_artifact_root,
+        )
+        validate_manifest(data_manifest, [*rows, *development], package_root=pilot_artifact_root)
     chosen_rows = phase_rows(rows, args.phase)
-    peak_lr = peak_learning_rate(args.phase, args.selection)
+    peak_lr = (
+        plan["training"]["peak_learning_rate"]
+        if pilot_policy is PUBLIC_SYNTHETIC
+        else peak_learning_rate(args.phase, args.selection)
+    )
     effective_batch_examples = (
         disposable_fixture_plan["effective_batch_examples"]
         if disposable_fixture_plan is not None

@@ -1,0 +1,55 @@
+{
+  "cpu_gold_pass": 192,
+  "cpu_plan_sha256": "2336a4ae4ff2562f307e265053f847524d38087ef6541ddb05b0e2ae96a725f9",
+  "cpu_qualified_synthetic_states": 192,
+  "cpu_wrong_parse_compile_pass_test_fail": 192,
+  "cross_split_group_overlap": 0,
+  "dataset_manifest_sha256": "bb4298a9007bb53c4e85bf76b6e915615131f7a71fa4c8ba819c69b35a72b958",
+  "development_action_counts": {
+    "D": 16,
+    "I": 16,
+    "N": 16,
+    "R": 49
+  },
+  "development_input_tokens": 42874,
+  "development_response_eos_tokens": 1029,
+  "development_states": 97,
+  "generator_snapshot_sha256": "cc365f97938f39c5f491852fa4d216e73d3d4100fda6d0d5540e600478aab5bb",
+  "maximum_development_sequence_tokens": 553,
+  "maximum_training_sequence_tokens": 589,
+  "model_quality_claim": false,
+  "personalization_enabled": false,
+  "preflight_corrections": [
+    "Missing test filename invocation ran no tests; corrected targeted invocation passed33.",
+    "Removed an unused draft mix validator; authoritative trainer uses portable artifact rereads.",
+    "Synthetic generator snapshot is reopened by hash independently of loader validation revisions."
+  ],
+  "schema": "public-synthetic-quality-preflight-observation-v1",
+  "synthetic_families_dev": 4,
+  "synthetic_families_train": 12,
+  "tests": {
+    "analysis_bun": 38,
+    "collector_bun": 56,
+    "gateway_bun": 16,
+    "lua_fail": 0,
+    "lua_pass": 68,
+    "mypy_readme_sources": 85,
+    "mypy_training_sources": 90,
+    "pytest_pass": 958,
+    "pytest_seconds": 168.51,
+    "pytest_skip": 1,
+    "ruff": "pass",
+    "typescript_projects_pass": 3
+  },
+  "train_action_counts": {
+    "D": 48,
+    "I": 48,
+    "N": 48,
+    "R": 217
+  },
+  "train_states": 361,
+  "training_input_tokens_one_pass": 154945,
+  "training_prompt_tokens": 151801,
+  "training_response_eos_tokens": 3144,
+  "training_started": false
+}

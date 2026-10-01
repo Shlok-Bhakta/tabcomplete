@@ -77,28 +77,36 @@ LICENSE_MIXED_HISTORY = PilotDataPolicy(
     "reports/prototype/product_r2/license_mixed_history_pilot_plan_v2.json",
 )
 REVIEWED_PUBLIC_HISTORY_SOURCE = "reviewed_public_history_candidate"
+PUBLIC_SYNTHETIC = PilotDataPolicy(
+    "one-line-public-synthetic-functional-mix-v1",
+    "one-line-public-synthetic-functional-mix-plan-v1",
+    "prototype/product-r2",
+    "tabcomplete/public-prefix-synthetic-functional-pilot-r1",
+    "per-file-public-and-author-owned-synthetic",
+    "verified-public-path-scope-and-author-owned-synthetic",
+    "public_or_synthetic_functional",
+    "reports/research/public_synthetic_quality_pilot_r1/plan_lr1e5.json",
+)
 TYPED_RETURN_PREFIX_TRANSFORM = "synthetic_typed_return_prefix_v1"
 COMPLETED_LINE_FOLLOWUP_TRANSFORM = "synthetic_completed_line_followup_v1"
 PUBLIC_PREFIX_ROLE_BUNDLE_SCHEMA = "one-line-public-prefix-role-bundle-v1"
 
-PUBLIC_SOURCE_TYPES = frozenset(
-    {"synthetic_public_source_task", "muse_author_public_candidate"}
-)
+PUBLIC_SOURCE_TYPES = frozenset({"synthetic_public_source_task", "muse_author_public_candidate"})
 _SHA256 = re.compile(r"[a-f0-9]{64}\Z")
 _REVISION = re.compile(r"[a-f0-9]{40,64}\Z")
 
 
 def policy_for_schema(schema: object) -> PilotDataPolicy:
-    for policy in (INSTINCT, CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY):
+    for policy in (INSTINCT, CONSTRUCTIVE, LICENSE_MIXED, LICENSE_MIXED_HISTORY, PUBLIC_SYNTHETIC):
         if schema == policy.data_schema:
             return policy
     raise ValueError("unapproved bounded-pilot data schema")
 
 
 def _canonical_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
 
 
 def _sha256(data: bytes) -> str:
@@ -129,9 +137,7 @@ def license_mixed_row_bindings(row: Mapping[str, Any]) -> dict[str, str]:
         "action_sha256": _sha256(_canonical_bytes(asdict(action))),
         "after_source_sha256": _sha256(after_source.encode("utf-8")),
         "context_sha256": context_sha256,
-        "history_sha256": _sha256(
-            _canonical_bytes([asdict(edit) for edit in state.history])
-        ),
+        "history_sha256": _sha256(_canonical_bytes([asdict(edit) for edit in state.history])),
         "near_duplicate_sha256": near_duplicate_key(row),
     }
 
@@ -352,9 +358,7 @@ def _pinned_artifact_bytes(
     )
 
 
-def _provenance_value(
-    row: Mapping[str, Any], metadata: Mapping[str, Any], key: str
-) -> object:
+def _provenance_value(row: Mapping[str, Any], metadata: Mapping[str, Any], key: str) -> object:
     """Read a provenance field from metadata or its older flat row location."""
     nested = metadata.get(key)
     flat = row.get(key)
@@ -460,11 +464,9 @@ def validate_license_mixed_source_artifacts(
         _provenance_value(row, metadata, "license_scope_artifact_bytes"),
         label="path-scope",
     )
-    public_prefix_source = (
-        isinstance(metadata.get("transform"), Mapping)
-        and metadata["transform"].get("kind")
-        in {TYPED_RETURN_PREFIX_TRANSFORM, COMPLETED_LINE_FOLLOWUP_TRANSFORM}
-    )
+    public_prefix_source = isinstance(metadata.get("transform"), Mapping) and metadata[
+        "transform"
+    ].get("kind") in {TYPED_RETURN_PREFIX_TRANSFORM, COMPLETED_LINE_FOLLOWUP_TRANSFORM}
     if public_prefix_source:
         scope = _strict_json(scope_payload, label="typed-prefix path-scope evidence")
         if (
@@ -487,10 +489,7 @@ def validate_license_mixed_source_artifacts(
         or scope.get("parent_commit") != source_revision
         or scope.get("source_path") != source_path
         or scope.get("source_sha256") != source_sha256
-        or (
-            not public_prefix_source
-            and scope.get("source_group_id") != row.get("source_group_id")
-        )
+        or (not public_prefix_source and scope.get("source_group_id") != row.get("source_group_id"))
         or path_scope.get("sha256") != license_sha256
         or path_scope.get("license_path") != license_path
         or path_scope.get("git_blob_sha") != license_git_blob_sha
@@ -589,9 +588,7 @@ def validate_license_mixed_source_artifacts(
         if replayed != state.source:
             raise ValueError("LICENSE-MIXED source transform/history differs from model state")
     history_sha256 = row.get("history_sha256")
-    expected_history_sha256 = _sha256(
-        _canonical_bytes([asdict(edit) for edit in state.history])
-    )
+    expected_history_sha256 = _sha256(_canonical_bytes([asdict(edit) for edit in state.history]))
     if history_sha256 != expected_history_sha256:
         raise ValueError("LICENSE-MIXED synthetic history hash mismatch")
     chronology = row.get("human_chronology_observed", row.get("chronology_observed"))
@@ -779,8 +776,7 @@ def _validate_completed_line_followup_transform(
         or completion_old != first_new
         or completion_new != parent_line.content
         or cursor_col != len(parent_line.content)
-        or state_bytes
-        != b"".join(line.raw for line in parent_lines[:target_row]) + parent_line.raw
+        or state_bytes != b"".join(line.raw for line in parent_lines[:target_row]) + parent_line.raw
     ):
         raise ValueError("LICENSE-MIXED completed line is not the exact public parent prefix")
 
@@ -809,8 +805,7 @@ def _validate_completed_line_followup_transform(
         or origin_transform.get("history_origin") != "synthetic_editor_typing"
         or origin_transform.get("history_sha256") != first_history_sha256
         or origin_transform.get("source_suffix_after_cursor_in_input") is not False
-        or transform.get("origin_transform_sha256")
-        != _sha256(_canonical_bytes(origin_transform))
+        or transform.get("origin_transform_sha256") != _sha256(_canonical_bytes(origin_transform))
     ):
         raise ValueError("LICENSE-MIXED completed-line origin history is invalid")
 
@@ -819,19 +814,25 @@ def _validate_completed_line_followup_transform(
     origin_source = prefix_before_target + first_new + parent_line.terminator
     completed_source = prefix_before_target + completion_new + parent_line.terminator
     try:
-        if replay_replacement_history(
-            before_typing.decode("utf-8"),
-            (first_edit,),
-            file_id=state.file_id,
-            filetype=state.filetype,
-        ).encode("utf-8") != origin_source:
+        if (
+            replay_replacement_history(
+                before_typing.decode("utf-8"),
+                (first_edit,),
+                file_id=state.file_id,
+                filetype=state.filetype,
+            ).encode("utf-8")
+            != origin_source
+        ):
             raise ValueError("origin edit differs")
-        if replay_replacement_history(
-            before_typing.decode("utf-8"),
-            state.history,
-            file_id=state.file_id,
-            filetype=state.filetype,
-        ).encode("utf-8") != completed_source:
+        if (
+            replay_replacement_history(
+                before_typing.decode("utf-8"),
+                state.history,
+                file_id=state.file_id,
+                filetype=state.filetype,
+            ).encode("utf-8")
+            != completed_source
+        ):
             raise ValueError("completed edits differ")
         origin_state = EditState(
             file_id=state.file_id,
@@ -909,8 +910,7 @@ def validate_public_prefix_role_bundle(
         or not source_root_value
         or Path(source_root_value).is_absolute()
         or ".." in Path(source_root_value).parts
-        or manifest.get("source_package_manifest_path")
-        != source_root_value + "/manifest.json"
+        or manifest.get("source_package_manifest_path") != source_root_value + "/manifest.json"
         or manifest.get("source_package_plan_path") != source_root_value + "/plan.json"
         or manifest.get("accepted_rows_path") != "accepted_rows.jsonl"
         or any(
@@ -967,8 +967,7 @@ def validate_public_prefix_role_bundle(
         not isinstance(qualification_policy, Mapping)
         or qualification_policy.get("training_acceptance") is not False
         or qualification_policy.get("human_inferability_proven") is not False
-        or qualification_policy.get("gold")
-        != {"compile": "pass", "parse": "pass", "test": "pass"}
+        or qualification_policy.get("gold") != {"compile": "pass", "parse": "pass", "test": "pass"}
         or qualification_policy.get("behavior_breaking")
         != {"compile": "pass", "parse": "pass", "test": "fail"}
         or not isinstance(qualification_policy.get("before"), Mapping)
@@ -1069,9 +1068,7 @@ def validate_public_prefix_role_bundle(
     )
     diagnostic_records: dict[tuple[str, str], dict[str, Any]] = {}
     diagnostic_hashes: dict[tuple[str, str], str] = {}
-    for diagnostic in _strict_jsonl(
-        diagnostics_payload, label="public-prefix oracle diagnostics"
-    ):
+    for diagnostic in _strict_jsonl(diagnostics_payload, label="public-prefix oracle diagnostics"):
         key = (str(diagnostic.get("candidate_id", "")), str(diagnostic.get("variant", "")))
         if not key[0] or not key[1] or key in diagnostic_records:
             raise ValueError("public-prefix oracle diagnostic identity is duplicate or missing")
@@ -1111,9 +1108,7 @@ def validate_public_prefix_role_bundle(
         ):
             raise ValueError("public-prefix candidate disposition or identity is invalid")
         candidate_ids.add(candidate_id)
-        validate_license_mixed_row(
-            row, package_root=package_root, policy=LICENSE_MIXED_HISTORY
-        )
+        validate_license_mixed_row(row, package_root=package_root, policy=LICENSE_MIXED_HISTORY)
         bindings = license_mixed_row_bindings(row)
         source_input = indexed["source_only_inputs.jsonl"].get(candidate_id)
         answer = indexed["answers_private.jsonl"].get(candidate_id)
@@ -1194,11 +1189,9 @@ def validate_public_prefix_role_bundle(
             "sha": parent_tree.get("parent_commit"),
             "tree": {"sha": parent_tree.get("source_tree_sha")},
         }
-        if (
-            parent_tree.get("metadata_fields_verified") != ["sha", "tree.sha"]
-            or parent_tree.get("metadata_projection_sha256")
-            != _sha256(_canonical_bytes(parent_tree_projection))
-        ):
+        if parent_tree.get("metadata_fields_verified") != ["sha", "tree.sha"] or parent_tree.get(
+            "metadata_projection_sha256"
+        ) != _sha256(_canonical_bytes(parent_tree_projection)):
             raise ValueError("public-prefix source parent-tree receipt is invalid")
         transform = metadata.get("transform")
         if (
@@ -1299,8 +1292,7 @@ def validate_public_prefix_role_bundle(
                 or variant.get("parse_status") != "pass"
                 or variant.get("compile_status") != "pass"
                 or variant.get("test_status") != expected_functional
-                or diagnostic_hashes.get((candidate_id, name))
-                != variant.get("diagnostic_sha256")
+                or diagnostic_hashes.get((candidate_id, name)) != variant.get("diagnostic_sha256")
                 or diagnostic_record.get("candidate_id") != candidate_id
                 or diagnostic_record.get("variant") != name
                 or diagnostic_record.get("parse_status") != "pass"
@@ -1318,28 +1310,27 @@ def validate_public_prefix_role_bundle(
                 or set(checks) != {"parse", "compile", "test"}
                 or any(
                     not isinstance(checks[key], Mapping)
-                    or checks[key].get("status")
-                    != diagnostic_record.get(key + "_status")
+                    or checks[key].get("status") != diagnostic_record.get(key + "_status")
                     for key in ("parse", "compile", "test")
                 )
             ):
                 raise ValueError("public-prefix diagnostic checks do not bind evaluator statuses")
-        if (
-            row.get("objective_fixture_binding")
-            != {
-                "schema": "python-prefix-objective-fixture-binding-v1",
-                "path": oracle.get("fixture_artifact_path"),
-                "sha256": oracle.get("fixture_sha256"),
-                "bytes": oracle.get("fixture_artifact_bytes"),
-            }
-        ):
+        if row.get("objective_fixture_binding") != {
+            "schema": "python-prefix-objective-fixture-binding-v1",
+            "path": oracle.get("fixture_artifact_path"),
+            "sha256": oracle.get("fixture_sha256"),
+            "bytes": oracle.get("fixture_artifact_bytes"),
+        }:
             raise ValueError("public-prefix candidate fixture reference is inconsistent")
 
         if not isinstance(row.get("role_execution_proof_ref"), Mapping):
             raise ValueError("public-prefix actual role execution proof is unpinned")
         role_ref = row["role_execution_proof_ref"]
         role_decision = _verify_public_prefix_role_proof(
-            row, role_ref, package_root=package_root, tokenizer=tokenizer,
+            row,
+            role_ref,
+            package_root=package_root,
+            tokenizer=tokenizer,
             expected_plan_sha256=str(manifest["role_plan_sha256"]),
             expected_release_sha256=str(manifest["root_release_sha256"]),
         )
@@ -1352,8 +1343,7 @@ def validate_public_prefix_role_bundle(
         len(source_groups) != manifest.get("source_group_count")
         or len(source_groups) < 2
         or len(row_hashes) != len(rows)
-        or validate_license_mixed_splits(cast(list[Mapping[str, Any]], rows))["rows"]
-        != len(rows)
+        or validate_license_mixed_splits(cast(list[Mapping[str, Any]], rows))["rows"] != len(rows)
     ):
         raise ValueError("public-prefix candidate source groups or split audit is invalid")
     return {
@@ -1543,9 +1533,8 @@ def validate_license_mixed_manifest(
             raise ValueError("LICENSE-MIXED manifest count or artifact size is invalid: " + key)
     if not 128 <= manifest["train_count"] <= 1024 or manifest["dev_count"] < 64:
         raise ValueError("LICENSE-MIXED pilot is below the frozen train/development floors")
-    if (
-        manifest.get("file_groups_disjoint") is not True
-        or not isinstance(manifest.get("candidate_split_counts"), Mapping)
+    if manifest.get("file_groups_disjoint") is not True or not isinstance(
+        manifest.get("candidate_split_counts"), Mapping
     ):
         raise ValueError("LICENSE-MIXED manifest lacks split audit identity")
     artifact_root = manifest.get("artifact_root", ".")
@@ -1755,9 +1744,7 @@ def _valid_elapsed_seconds(value: Any) -> bool:
     )
 
 
-def _unique_index(
-    rows: list[dict[str, Any]], *, key: str, label: str
-) -> dict[str, dict[str, Any]]:
+def _unique_index(rows: list[dict[str, Any]], *, key: str, label: str) -> dict[str, dict[str, Any]]:
     indexed: dict[str, dict[str, Any]] = {}
     for row in rows:
         value = row.get(key)
@@ -2170,9 +2157,7 @@ def _validate_public_history_provenance_row(
     return fixture_sha256
 
 
-def _context_action_bindings(
-    row: Mapping[str, Any], tokenizer: Any
-) -> dict[str, Any]:
+def _context_action_bindings(row: Mapping[str, Any], tokenizer: Any) -> dict[str, Any]:
     try:
         state = EditState.from_mapping(row["state"])
         action = EditAction(**row["action"])
@@ -2353,11 +2338,14 @@ def _verified_oracle_record(
             or not variant["request_id"]
             or not isinstance(variant.get("functional_expected"), bool)
             or variant.get("functional_status") not in {"pass", "fail", "unknown"}
-            or any(variant.get(key) not in allowed_check_statuses for key in (
-                "parse_status",
-                "compile_status",
-                "test_status",
-            ))
+            or any(
+                variant.get(key) not in allowed_check_statuses
+                for key in (
+                    "parse_status",
+                    "compile_status",
+                    "test_status",
+                )
+            )
         ):
             raise ValueError("LICENSE-MIXED oracle variant identity or status is invalid")
         normalized[str(name)] = variant
@@ -2394,10 +2382,7 @@ def _verified_oracle_record(
                 not isinstance(check, Mapping)
                 or set(check) != {"status", "returncode", "elapsed_seconds", "stdout", "stderr"}
                 or check.get("status") != diagnostic.get(check_name + "_status")
-                or not (
-                    check.get("returncode") is None
-                    or (type(check.get("returncode")) is int)
-                )
+                or not (check.get("returncode") is None or (type(check.get("returncode")) is int))
                 or not _valid_elapsed_seconds(check.get("elapsed_seconds"))
                 or not isinstance(check.get("stdout"), str)
                 or len(check["stdout"].encode("utf-8")) > 64 * 1024
@@ -2414,9 +2399,8 @@ def _verified_oracle_record(
             "test_status",
             "working_tree_sha256",
         )
-        if (
-            variant["diagnostic_sha256"] != diagnostic_sha256
-            or any(diagnostic.get(key) != variant.get(key) for key in diagnostic_fields)
+        if variant["diagnostic_sha256"] != diagnostic_sha256 or any(
+            diagnostic.get(key) != variant.get(key) for key in diagnostic_fields
         ):
             raise ValueError("LICENSE-MIXED oracle summary differs from bound execution details")
 
@@ -2439,9 +2423,11 @@ def _verified_oracle_record(
             return "fail"
         if test_configured and test_status == "fail":
             return "fail"
-        if parse_status == "not_run" or (
-            compile_configured and compile_status == "not_run"
-        ) or (test_configured and test_status == "not_run"):
+        if (
+            parse_status == "not_run"
+            or (compile_configured and compile_status == "not_run")
+            or (test_configured and test_status == "not_run")
+        ):
             return "unknown"
         return "pass"
 
@@ -2471,8 +2457,7 @@ def _verified_oracle_record(
         raise ValueError("LICENSE-MIXED frozen control action is invalid") from None
     if (
         fixture_action != action
-        or bad["action_sha256"]
-        != _sha256(_canonical_bytes(asdict(expected_bad_action)))
+        or bad["action_sha256"] != _sha256(_canonical_bytes(asdict(expected_bad_action)))
         or bad["after_source_sha256"] != _sha256(expected_bad_after.encode("utf-8"))
         or expected_bad_after == state.source
         or bad["action_sha256"] == gold["action_sha256"]
@@ -2513,10 +2498,7 @@ def _verified_oracle_record(
             or before["functional_status"] != "fail"
             or before["parse_status"] != "pass"
             or not (
-                (
-                    before["compile_status"] == "fail"
-                    and before["test_status"] == "not_run"
-                )
+                (before["compile_status"] == "fail" and before["test_status"] == "not_run")
                 or (
                     before["compile_status"] in {"pass", "not_run"}
                     and before["test_status"] == "fail"
@@ -2534,9 +2516,7 @@ def _verified_oracle_record(
 def _runtime_sha256(fixture: Mapping[str, Any]) -> str:
     oracle = fixture.get("oracle")
     image = oracle.get("container_image") if isinstance(oracle, Mapping) else None
-    if not isinstance(image, str) or re.fullmatch(
-        r"[^\s]+@sha256:[a-f0-9]{64}", image
-    ) is None:
+    if not isinstance(image, str) or re.fullmatch(r"[^\s]+@sha256:[a-f0-9]{64}", image) is None:
         raise ValueError("LICENSE-MIXED objective fixture runtime is not digest pinned")
     descriptor = {
         "kind": "sandbox_container",
@@ -2680,9 +2660,7 @@ def validate_license_mixed_review(
     if any(not isinstance(entry, dict) for entry in review_entries):
         raise ValueError("LICENSE-MIXED independent review contains an invalid row")
     allowed_review_types = (
-        {REVIEWED_PUBLIC_HISTORY_SOURCE}
-        if policy is LICENSE_MIXED_HISTORY
-        else PUBLIC_SOURCE_TYPES
+        {REVIEWED_PUBLIC_HISTORY_SOURCE} if policy is LICENSE_MIXED_HISTORY else PUBLIC_SOURCE_TYPES
     )
     if any(entry.get("source_type") not in allowed_review_types for entry in review_entries):
         raise ValueError("LICENSE-MIXED review contains a source type outside its schema")
@@ -2696,8 +2674,7 @@ def validate_license_mixed_review(
     approved_ids = {
         entry["candidate_id"]
         for entry in review_entries
-        if entry.get("split") in {"train", "development"}
-        and entry.get("accepted_training") is True
+        if entry.get("split") in {"train", "development"} and entry.get("accepted_training") is True
     }
     row_ids = {_license_mixed_id(row) for row in rows}
     if None in row_ids or approved_ids != row_ids:
@@ -2781,19 +2758,16 @@ def validate_license_mixed_review(
                 if diagnostic_entry is None:
                     raise ValueError("LICENSE-MIXED full review lacks an oracle diagnostic")
                 diagnostic, diagnostic_sha = diagnostic_entry
-                if (
-                    diagnostic_sha != variant.get("diagnostic_sha256")
-                    or any(
-                        diagnostic.get(key) != variant.get(key)
-                        for key in (
-                            "case_id",
-                            "case_attempt_id",
-                            "request_id",
-                            "parse_status",
-                            "compile_status",
-                            "test_status",
-                            "working_tree_sha256",
-                        )
+                if diagnostic_sha != variant.get("diagnostic_sha256") or any(
+                    diagnostic.get(key) != variant.get(key)
+                    for key in (
+                        "case_id",
+                        "case_attempt_id",
+                        "request_id",
+                        "parse_status",
+                        "compile_status",
+                        "test_status",
+                        "working_tree_sha256",
                     )
                 ):
                     raise ValueError("LICENSE-MIXED full review diagnostic binding is invalid")
@@ -2941,9 +2915,7 @@ def validate_license_mixed_review(
             if record_tuple is None:
                 raise ValueError("LICENSE-MIXED fixed-history row has no objective result")
             record, result_sha256 = record_tuple
-            fixture_sha256 = _validate_public_history_provenance_row(
-                row, record, provenance
-            )
+            fixture_sha256 = _validate_public_history_provenance_row(row, record, provenance)
             fixture = provenance["fixture_by_seed"][str(row["seed_id"])]
             proof = _verified_oracle_record(
                 row,
@@ -3002,8 +2974,7 @@ def validate_license_mixed_review(
             if (
                 not role_decision.accepted
                 or role_decision.evidence.get("role_evidence_sha256") != role_sha
-                or role_decision.evidence.get("functional_status")
-                != "not_evaluated_by_role_runner"
+                or role_decision.evidence.get("functional_status") != "not_evaluated_by_role_runner"
             ):
                 raise ValueError(
                     "LICENSE-MIXED fixed-history runner proof failed portable verification"
@@ -3046,6 +3017,13 @@ def validate_license_mixed_review(
 def validate_pilot_row(
     row: Mapping[str, Any], policy: PilotDataPolicy, *, package_root: Path | None = None
 ) -> None:
+    if policy is PUBLIC_SYNTHETIC:
+        from .public_synthetic_pilot import validate_row
+
+        if package_root is None:
+            raise ValueError("source/functional pilot requires portable proofs")
+        validate_row(row, package_root=package_root)
+        return
     if policy in {LICENSE_MIXED, LICENSE_MIXED_HISTORY}:
         validate_license_mixed_row(row, package_root=package_root, policy=policy)
         return
@@ -3096,9 +3074,7 @@ def validate_license_mixed_row(
         raise ValueError("unapproved LICENSE-MIXED row policy")
     source_type = row.get("source_type")
     allowed_types = (
-        {REVIEWED_PUBLIC_HISTORY_SOURCE}
-        if policy is LICENSE_MIXED_HISTORY
-        else PUBLIC_SOURCE_TYPES
+        {REVIEWED_PUBLIC_HISTORY_SOURCE} if policy is LICENSE_MIXED_HISTORY else PUBLIC_SOURCE_TYPES
     )
     if source_type not in allowed_types:
         raise ValueError("LICENSE-MIXED pilot contains an unapproved source type")

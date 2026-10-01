@@ -197,6 +197,7 @@ def main() -> None:
     for name in ("development", "predictions", "fixtures"):
         parser.add_argument("--" + name, type=Path, required=True)
         parser.add_argument("--" + name + "-sha256", required=True)
+    parser.add_argument("--model-weight-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.output.exists():
@@ -207,10 +208,20 @@ def main() -> None:
     }
     rows = [json.loads(line) for line in artifacts["development"].splitlines()]
     fixtures = [json.loads(line) for line in artifacts["fixtures"].splitlines()]
-    predictions = json.loads(artifacts["predictions"])["observations"]
+    generated = json.loads(artifacts["predictions"])
+    identity = generated["identity"]
+    if (
+        identity.get("development_sha256") != args.development_sha256
+        or identity.get("model_weight_sha256") != args.model_weight_sha256
+        or identity.get("source_weight_sha256")
+        != "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+    ):
+        raise ValueError("prediction model or development identity mismatch")
+    predictions = generated["observations"]
     args.output.mkdir(mode=0o700, parents=True)
     result = score_predictions(rows, predictions, fixtures, work_root=args.output / "checks")
     result["input_sha256"] = {key: digest(value) for key, value in artifacts.items()}
+    result["prediction_identity"] = identity
     (args.output / "result.json").write_text(json.dumps(result, indent=2) + "\n")
 
 
