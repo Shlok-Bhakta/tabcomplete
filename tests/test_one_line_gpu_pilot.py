@@ -369,15 +369,18 @@ def test_python311_bootstrap_preserves_deadline_and_uses_isolated_uv(
     assert calls[1][1]["env"]["UV_CACHE_DIR"].startswith("/kaggle/temp/")
 
 
+@pytest.mark.parametrize(
+    "schema", ["one-line-constructive-pilot-v1", builder.PUBLIC_SYNTHETIC.data_schema]
+)
 def test_constructive_runtime_rejects_wrong_python_before_cuda_import(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema: str
 ) -> None:
     worker = _worker_module(
         tmp_path,
         {
             "session_seconds": 7200,
             "reserve_seconds": 1200,
-            "data_schema": "one-line-constructive-pilot-v1",
+            "data_schema": schema,
         },
     )
     monkeypatch.setattr(worker.sys, "version_info", (3, 12, 0))
@@ -735,3 +738,102 @@ def test_dataset_slug_is_checked_before_private_upload() -> None:
             "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry-inputs",
             "shlokbhakta/tc-oline-instinct-r1-retry",
         )
+
+
+@pytest.mark.parametrize('lr', [1e-5, 3e-5])
+def test_public_functional_worker_verifies_the_selected_pushed_plan_and_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lr: float
+) -> None:
+    import types
+
+    suffix = '1e5' if lr == 1e-5 else '3e5'
+    worker = _worker_module(tmp_path, {
+        'session_seconds': 7200, 'reserve_seconds': 1200,
+        'data_schema': builder.PUBLIC_SYNTHETIC.data_schema,
+        'branch': 'prototype/product-r2', 'commit': 'a' * 40,
+        'base_commit': 'b' * 40, 'peak_learning_rate': lr,
+        'plan_sha256': hashlib.sha256(b'correct plan').hexdigest(),
+        'config_sha256': hashlib.sha256(b'correct config').hexdigest(),
+    })
+    worker.REPO = tmp_path / 'cloned'
+
+    def clone(command, *_args, **_kwargs):
+        if command[:2] == ['git', 'clone']:
+            plan = worker.REPO / (
+                f'reports/research/public_synthetic_quality_pilot_r1/plan_lr{suffix}.json'
+            )
+            plan.parent.mkdir(parents=True)
+            plan.write_bytes(b'correct plan')
+            config = worker.REPO / 'configs/research/public_synthetic_quality_pilot_r1.yaml'
+            config.parent.mkdir(parents=True)
+            config.write_bytes(b'correct config')
+
+    monkeypatch.setattr(worker, 'stage', clone)
+    monkeypatch.setattr(worker, '_run', lambda *a, **kw: types.SimpleNamespace(
+        returncode=0, stdout='a' * 40
+    ))
+    worker._clone_frozen_commit()
+
+
+def test_public_functional_worker_reopens_portable_proofs_before_evaluation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import tinycomplete.one_line.public_synthetic_pilot as pilot
+
+    data = tmp_path / 'input'
+    data.mkdir()
+    (data / 'data_manifest.json').write_text('{"id":"portable"}')
+    (data / 'train.jsonl').write_text('{"id":"train"}\n')
+    (data / 'development.jsonl').write_text('{"id":"dev"}\n')
+    worker = _worker_module(tmp_path, {
+        'session_seconds': 7200, 'reserve_seconds': 1200,
+        'data_schema': builder.PUBLIC_SYNTHETIC.data_schema,
+    })
+    observed = []
+    monkeypatch.setattr(pilot, 'validate_manifest', lambda manifest, rows, *, package_root:
+                        observed.append((manifest, rows, package_root)))
+    worker._verify_reviewed_inputs(data)
+    assert observed == [({'id': 'portable'}, [{'id': 'train'}, {'id': 'dev'}], data)]
+
+
+def test_remote_input_inventory_checks_all_pages_and_rejects_skipped_proofs(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commands = []
+    pages = iter([
+        'Next Page Token = next-page\n' + json.dumps([{'name': 'model.safetensors', 'size': 10}]),
+        json.dumps([{'name': 'proofs/source.json', 'size': 20}]),
+    ])
+    monkeypatch.setattr(builder, '_run', lambda command, **kw:
+                        (commands.append(command), next(pages))[1])
+    expected = {'model.safetensors': {'bytes': 10}, 'proofs/source.json': {'bytes': 20}}
+    result = builder.verify_remote_inputs('owner/private-inputs', expected)
+    assert result['verified_files'] == 2
+    assert commands[1][-2:] == ['--page-token', 'next-page']
+    monkeypatch.setattr(builder, '_run', lambda *a, **kw:
+                        json.dumps([{'name': 'model.safetensors', 'size': 10}]))
+    with pytest.raises(ValueError, match='missing files'):
+        builder.verify_remote_inputs('owner/private-inputs', expected)
+
+
+def test_public_functional_main_bootstraps_python311_before_setup_or_model_load(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session, dataset = _write_worker_fixture(tmp_path)
+    session['data_schema'] = builder.PUBLIC_SYNTHETIC.data_schema
+    worker = _worker_module(tmp_path, session)
+    worker.OUT = tmp_path / 'outputs'
+    monkeypatch.delenv('TABCOMPLETE_PILOT_PYTHON311_READY', raising=False)
+    monkeypatch.setattr(worker, '_safe_input_manifest', lambda _root: (dataset, {'files': {}}))
+    monkeypatch.setattr(worker, '_verify_model', lambda _path: None)
+    calls = []
+
+    def bootstrap():
+        calls.append('python311')
+        raise RuntimeError('bounded test interruption')
+
+    monkeypatch.setattr(worker, '_prepare_python311', bootstrap)
+    monkeypatch.setattr(worker, 'stage', lambda *a, **kw: calls.append('unexpected setup'))
+    assert worker.main() == 1
+    assert calls == ['python311']
+    assert json.loads((worker.OUT / 'worker-status.json').read_text())['state'] == 'failed'

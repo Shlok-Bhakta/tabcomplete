@@ -3317,15 +3317,13 @@
     "worker_pyyaml": "6.0.2",
     "worker_transformers": "5.17.0"
   },
-  "execution_revision": 2,
-  "frozen_at": "2026-10-01T01:25:06.789199+00:00",
+  "frozen_at": "2026-10-01T00:53:24.052875+00:00",
   "kaggle": {
-    "dataset_id": "shlokbhakta/tc-public-functional-3e5-v2-inputs",
-    "kernel_id": "shlokbhakta/tc-public-functional-3e5-v2"
+    "dataset_id": "shlokbhakta/tc-public-functional-3e5-r1-inputs",
+    "kernel_id": "shlokbhakta/tc-public-functional-3e5-r1"
   },
   "plan_note": "New prospective limited source-prefix/functional supervised policy. Preserves old role-review policies and fixtures. Same ordered examples for both learning rates; no labels truncated, no teacher outputs or reserved tests enter training. No-op share13.3%train16.5%dev is reported, not resampled.",
   "plan_revision": 1,
-  "previous_plan_sha256": "fff23e714044df256adabcb84fd3ed522937a3e7f9f9c7a1cdffded5cd03941f",
   "quota_at_freeze": {
     "active_jobs": [],
     "job_statuses": [
@@ -3475,7 +3473,7 @@
         "reference": "shlokbhakta/exercise-functions-and-getting-help",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-10-01T01:24:37.585586+00:00"
+        "verified_at": "2026-10-01T00:52:25.709555+00:00"
       },
       {
         "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
@@ -3499,10 +3497,10 @@
         "reference": "shlokbhakta/notebookd2edcfa65c",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-10-01T01:24:37.585586+00:00"
+        "verified_at": "2026-10-01T00:52:25.709555+00:00"
       }
     ],
-    "observed_at": "2026-10-01T01:24:06.396938+00:00",
+    "observed_at": "2026-10-01T00:51:54.253585+00:00",
     "remaining": 41.6,
     "renewal": "2026-10-03T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -3511,7 +3509,7 @@
     "used": 3.4
   },
   "revised_at": "2026-09-29T06:55:49.777470+00:00",
-  "revision_reason": "Pre-allocation audit found missing public/synthetic worker dispatch for Python 3.11, pushed plan/config, and proof verification; upload default skipped nested proofs. No GPU allocation or comparison output was produced under execution v1. Execution v2 fixes routing, shortens administrative title, uploads directories, verifies remote file inventory before allocation. Data, model, training, prompt, decoding, fixtures, and selection criteria unchanged.",
+  "revision_reason": "Retry dataset upload stopped before creation because its frozen slug was 51 characters; Kaggle accepts 6..50. Revision 4 shortens only the private dataset slug and adds a pre-upload length check. No GPU allocation, model result, data, training, prompt, or scoring change followed revision 3.",
   "schema": "one-line-public-synthetic-functional-mix-plan-v1",
   "selection": {
     "always_no_edit_ineligible": true,
@@ -3567,9 +3565,5 @@
     "phase": "pilot",
     "planned_nonpadding_input_tokens": 154945,
     "planned_supervised_response_and_eos_tokens": 3144
-  },
-  "worker_source_sha256": {
-    "kaggle/one_line_gpu_pilot_r1/build_pilot.py": "1d4b6c7c1ec938daea5eafe61457f40bccbe77a668d7485a72744b21f43bb803",
-    "kaggle/one_line_gpu_pilot_r1/run.py": "3545e2921996e8562aa1171245f0c073f9490dce4ef459e5c5427759274d1aeb"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "schema": "public-synthetic-execution-preflight-v2",
+  "pytest": {
+    "passed": 964,
+    "skipped": 1,
+    "seconds": 167.41
+  },
+  "targeted_pytest": {
+    "passed": 36,
+    "seconds": 2.01
+  },
+  "ruff": "pass",
+  "mypy_sources": 90,
+  "gpu_allocated": false,
+  "quality_evidence": false,
+  "test_logs": "private research package, repository-pytest-worker-v2.log and worker-routing-final-targeted.log"
+}

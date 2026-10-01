@@ -183,6 +183,46 @@ def _run(args: list[str], *, timeout: int = 90) -> str:
     return result.stdout.strip()
 
 
+def verify_remote_inputs(dataset_id: str, expected: dict[str, Any]) -> dict[str, Any]:
+    """Verify the published file tree before spending a GPU allocation.
+
+    The installed CLI emits its pagination token before the JSON array.
+    Worker-side hashes remain authoritative; this checks paths and sizes.
+    """
+    observed: dict[str, int] = {}
+    token: str | None = None
+    seen_tokens: set[str] = set()
+    for _ in range(200):
+        command = ["kaggle", "datasets", "files", dataset_id,
+                   "--format", "json", "--page-size", "200"]
+        if token is not None:
+            command.extend(["--page-token", token])
+        payload = _run(command)
+        token = None
+        if payload.startswith("Next Page Token = "):
+            header, payload = payload.split("\n", 1)
+            token = header.removeprefix("Next Page Token = ").strip()
+        rows = json.loads(payload)
+        if not isinstance(rows, list):
+            raise ValueError("remote input inventory is not a file list")
+        for row in rows:
+            name, size = row.get("name"), row.get("size")
+            if not isinstance(name, str) or type(size) is not int or name in observed:
+                raise ValueError("remote input inventory has invalid or duplicate entries")
+            observed[name] = size
+        if token is None:
+            break
+        if token in seen_tokens:
+            raise ValueError("remote input inventory pagination repeated")
+        seen_tokens.add(token)
+    else:
+        raise ValueError("remote input inventory exceeded its bounded page count")
+    if any(observed.get(name) != item["bytes"] for name, item in expected.items()):
+        raise ValueError("published input tree is missing files or has mismatched sizes")
+    return {"verified_files": len(expected), "remote_files": len(observed),
+            "paths_and_sizes_verified": True, "hashes_verified_by_worker": False}
+
+
 def live_quota() -> dict[str, Any]:
     """Read the existing authenticated quota/status helper without writing a ledger."""
     scripts = str(ROOT / "scripts")
@@ -1001,7 +1041,7 @@ def prepare_bundle(
     write_json(
         dataset_dir / "dataset-metadata.json",
         {
-            "title": f"TabComplete {policy.data_schema} (Private)",
+            "title": "TabComplete bounded pilot private inputs",
             "id": dataset_id,
             "licenses": [{"name": "other"}],
             "description": (
@@ -1344,9 +1384,18 @@ def submit_bundle(
             raise ValueError("pilot dataset ID already exists; reconcile before submitting")
         if kernel_id in kernels:
             raise ValueError("pilot kernel ID already exists; reconcile before submitting")
-        _run(["kaggle", "datasets", "create", "-p", str(bundle / "dataset"), "-t"], timeout=900)
+        _run(
+            ["kaggle", "datasets", "create", "-p", str(bundle / "dataset"),
+             "-t", "--dir-mode", "zip"], timeout=900
+        )
         state = {"state": "dataset_created", "dataset_id": dataset_id}
         write_json(state_path, state)
+
+    expected_files = read_json(bundle / "dataset/input-manifest.json")["files"]
+    expected_files["input-manifest.json"] = {
+        "bytes": (bundle / "dataset/input-manifest.json").stat().st_size
+    }
+    remote_verification = verify_remote_inputs(dataset_id, expected_files)
 
     # Dataset publication is not a GPU allocation. Refresh the quota and job
     # state immediately before the only command that can start the T4 kernel.
@@ -1375,6 +1424,7 @@ def submit_bundle(
         "kernel_id": kernel_id,
         "submitted_at": datetime.now(UTC).isoformat(),
         "quota_before_submit": quota,
+        "remote_input_verification": remote_verification,
     }
     write_json(state_path, state)
     return state

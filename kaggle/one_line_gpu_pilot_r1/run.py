@@ -580,7 +580,9 @@ def _verify_model(directory: Path) -> None:
 
 def _verify_reviewed_inputs(directory: Path) -> None:
     schema = SESSION.get("data_schema")
-    if schema not in {"one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS}:
+    if schema not in {
+        "one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS, PUBLIC_SYNTHETIC_SCHEMA
+    }:
         return
     sys.path.insert(0, str(REPO / "src"))
     from tinycomplete.one_line.contract import EditAction, EditState, apply_action
@@ -604,6 +606,11 @@ def _verify_reviewed_inputs(directory: Path) -> None:
         for line in (directory / filename).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    if schema == PUBLIC_SYNTHETIC_SCHEMA:
+        from tinycomplete.one_line.public_synthetic_pilot import validate_manifest
+
+        validate_manifest(manifest, rows, package_root=directory)
+        return
     if schema in LICENSE_MIXED_SCHEMAS:
         policy = LICENSE_MIXED_HISTORY if schema == LICENSE_MIXED_HISTORY_SCHEMA else LICENSE_MIXED
         from transformers import AutoTokenizer
@@ -662,6 +669,11 @@ def _clone_frozen_commit() -> None:
         repository_plan = "reports/prototype/product_r2/license_mixed_pilot_plan.json"
     elif SESSION.get("data_schema") == LICENSE_MIXED_HISTORY_SCHEMA:
         repository_plan = "reports/prototype/product_r2/license_mixed_history_pilot_plan_v2.json"
+    elif SESSION.get("data_schema") == PUBLIC_SYNTHETIC_SCHEMA:
+        suffix = "1e5" if SESSION["peak_learning_rate"] == 1e-5 else "3e5"
+        repository_plan = (
+            f"reports/research/public_synthetic_quality_pilot_r1/plan_lr{suffix}.json"
+        )
     elif SESSION.get("fixture_only") is True:
         repository_plan = "reports/prototype/product_r2/disposable_fixture_plan_v5.json"
     if sha(REPO / repository_plan) != SESSION["plan_sha256"]:
@@ -672,7 +684,12 @@ def _clone_frozen_commit() -> None:
             relative = Path(name)
             if relative.is_absolute() or ".." in relative.parts or sha(REPO / relative) != digest:
                 raise ValueError("worker source differs from frozen fixture plan")
-    if sha(REPO / "configs/research/one_line_r1.yaml") != SESSION["config_sha256"]:
+    repository_config = (
+        "configs/research/public_synthetic_quality_pilot_r1.yaml"
+        if SESSION.get("data_schema") == PUBLIC_SYNTHETIC_SCHEMA
+        else "configs/research/one_line_r1.yaml"
+    )
+    if sha(REPO / repository_config) != SESSION["config_sha256"]:
         raise ValueError("pushed training config differs from the attached frozen config")
 
 
@@ -680,6 +697,7 @@ def _check_t4_and_logits_support() -> dict[str, str]:
     if SESSION.get("fixture_only") is True or SESSION.get("data_schema") in {
         "one-line-constructive-pilot-v1",
         *LICENSE_MIXED_SCHEMAS,
+        PUBLIC_SYNTHETIC_SCHEMA,
     }:
         if sys.version_info[:2] != (3, 11):
             raise RuntimeError("constructive pilot requires Python 3.11")
@@ -1024,7 +1042,10 @@ def main() -> int:
         if (
             SESSION.get("fixture_only") is True
             or SESSION.get("data_schema")
-            in {"one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS}
+            in {
+                "one-line-constructive-pilot-v1", *LICENSE_MIXED_SCHEMAS,
+                PUBLIC_SYNTHETIC_SCHEMA,
+            }
         ) and not resumed_setup:
             _prepare_python311()
         if not resumed_setup:
