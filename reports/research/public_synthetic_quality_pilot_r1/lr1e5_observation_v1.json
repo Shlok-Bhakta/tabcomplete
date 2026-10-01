@@ -1,0 +1,75 @@
+{
+  "schema": "public-synthetic-lr1e5-pilot-observation-v1",
+  "observed_at": "2026-10-01T02:05:54.000586+00:00",
+  "kernel_id": "shlokbhakta/tc-public-functional-1e5-v2",
+  "plan_sha256": "011db9481a07cbc43d932b65d15500c195fb2e02b8fe7cea4ecd476a8f54d2bd",
+  "source_commit": "3fca2644f3fd6b012573f6351fad39e49c557f08",
+  "worker_state": "verified_complete",
+  "worker_seconds": 577.142896978,
+  "training_seconds": 87.48890188799999,
+  "cursor": {
+    "attempted_updates": 23,
+    "completed_updates": 23,
+    "epoch": 1,
+    "next_example_index": 361,
+    "skipped_updates": 0,
+    "supervised_target_tokens": 3144,
+    "training_input_tokens": 154945
+  },
+  "source_weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+  "inference_export_sha256": "68fd4997f8fd0ce96536ff0eaffbc249e2aa0602658955fc876423ccd2030f2a",
+  "checkpoint_sha256": "599bd9ae6cebfd2563ea5ea8ee88fdf32ea62696a0bec53da144cd6c5ea334e5",
+  "postscore_sha256": "4288ba7a0315c648f65daf7f389f08d7acbc03ab717566da328a3f2a0da88fa6",
+  "counts": {
+    "public_prefix_cases": 49,
+    "public_prefix_exact": 17,
+    "cases": 97,
+    "valid": 96,
+    "terminated": 97,
+    "exact": 35,
+    "nonempty_edit": 75,
+    "edit_required_cases": 81,
+    "edit_required_exact": 26,
+    "functional_cases": 48,
+    "functional_success": 18,
+    "no_edit_cases": 16,
+    "no_edit_recalled": 9,
+    "no_edit_false_edits": 7
+  },
+  "per_action": {
+    "replace_line": {
+      "cases": 49,
+      "exact": 17
+    },
+    "keep": {
+      "cases": 16,
+      "functional_cases": 16,
+      "functional_success": 9,
+      "exact": 9
+    },
+    "insert_before": {
+      "cases": 16,
+      "functional_cases": 16,
+      "functional_success": 0,
+      "exact": 0
+    },
+    "delete_line": {
+      "cases": 16,
+      "functional_cases": 16,
+      "functional_success": 9,
+      "exact": 9
+    }
+  },
+  "calibration": {
+    "cases": 16,
+    "valid_action": 16,
+    "edit_success": 0,
+    "keep_recall": 0.0,
+    "false_positive_edits": 4
+  },
+  "selection_locked": false,
+  "candidate_promoted": false,
+  "quality_validated": false,
+  "personalization_enabled": false,
+  "interpretation": "Public exact-source continuation and author-owned synthetic functional outcomes have separate denominators. Synthetic development has four correlated algorithm families. No insertion success and 7/16 no-edit false edits remain defects; 16-case calibration edit success is zero."
+}

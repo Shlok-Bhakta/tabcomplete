@@ -1,0 +1,69 @@
+{
+  "schema": "native-precision-selection-v1",
+  "selected": "Q4_K_M",
+  "selected_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "reason": "Q4 has14/16 no-edit false changes versus Q516/16. Both remain inaccurate broader-edit models; Q5 extra precision does not repair the failure. Automatic display scope explicitly preserves typed prefix; deletion only manual preview. Raw model outcomes not rescored.",
+  "Q4": {
+    "edit_required_cases": 81,
+    "edit_required_exact": 29,
+    "edit_required_predicted_keep": 5,
+    "functional_status": "requires independent objective evaluation",
+    "functional_success": null,
+    "gold_action_breakdown": {
+      "delete_line": {
+        "cases": 16,
+        "exact": 13
+      },
+      "insert_before": {
+        "cases": 16,
+        "exact": 0
+      },
+      "keep": {
+        "cases": 16,
+        "exact": 2
+      },
+      "replace_line": {
+        "cases": 49,
+        "exact": 16
+      }
+    },
+    "no_edit_cases": 16,
+    "no_edit_false_positive_changes": 14,
+    "no_edit_invalid": 0,
+    "no_edit_recalled": 2
+  },
+  "Q5": {
+    "edit_required_cases": 81,
+    "edit_required_exact": 32,
+    "edit_required_predicted_keep": 0,
+    "functional_status": "requires independent objective evaluation",
+    "functional_success": null,
+    "gold_action_breakdown": {
+      "delete_line": {
+        "cases": 16,
+        "exact": 16
+      },
+      "insert_before": {
+        "cases": 16,
+        "exact": 0
+      },
+      "keep": {
+        "cases": 16,
+        "exact": 0
+      },
+      "replace_line": {
+        "cases": 49,
+        "exact": 16
+      }
+    },
+    "no_edit_cases": 16,
+    "no_edit_false_positive_changes": 16,
+    "no_edit_invalid": 0,
+    "no_edit_recalled": 0
+  },
+  "quality_validated": false,
+  "personalization_enabled": false,
+  "ui_policy": "prefix-preserving-completion-v1",
+  "UI_policy_is_not_model_quality": true,
+  "sealed_test_touched": false
+}

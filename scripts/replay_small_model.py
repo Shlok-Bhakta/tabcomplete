@@ -10,10 +10,13 @@ import socket
 import subprocess
 import threading
 import time
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
+
+from tinycomplete.observability.context import current_run_context
 
 
 def sha(data: bytes) -> str:
@@ -113,48 +116,44 @@ def source_states() -> list[dict]:
     return rows
 
 
-def generate(url: str, prompt: str, *, cache_prompt: bool) -> dict:
-    start = time.perf_counter()
-    pieces, tokens, times, final = [], [], {}, {}
-    with httpx.stream(
-        "POST",
-        url + "/completion",
-        timeout=120,
-        json={
-            "prompt": prompt,
-            "n_predict": 24,
-            "temperature": 0,
-            "stream": True,
-            "return_tokens": True,
-            "cache_prompt": cache_prompt,
-            "seed": 928173,
-            "id_slot": 0,
-        },
-    ) as response:
-        response.raise_for_status()
-        for line in response.iter_lines():
-            if not line.startswith("data: "):
-                continue
-            event = json.loads(line[6:])
-            if event.get("stop"):
-                final = event
-                continue
-            pieces.append(event.get("content", ""))
-            for token in event.get("tokens", []):
-                tokens.append(token)
-                if len(tokens) in (1, 8, 16):
-                    times[str(len(tokens))] = time.perf_counter() - start
+def generate(url: str, prompt: str, *, cache_prompt: bool, max_new_tokens: int = 24) -> dict:
+    # Shared provider owns SSE parsing, timing and one bounded model span.
+    from measure_r2_local import NativeProvider
+
+    provider = NativeProvider(url, "q25-coder-selected-native")
+    provider.cache = cache_prompt
+    provider.timeout_seconds = 120
+    result = provider.generate_detailed(prompt, max_new_tokens)
+    last = provider.last
     return {
-        "response": "".join(pieces),
-        "response_sha256": sha("".join(pieces).encode()),
-        "output_token_ids": tokens,
-        "token_arrival_seconds": times,
-        "completed_seconds": time.perf_counter() - start,
-        "tokens_cached": final.get("tokens_cached"),
-        "tokens_evaluated": final.get("tokens_evaluated"),
-        "stop_type": final.get("stop_type"),
-        "server_timings": final.get("timings", {}),
+        "response": result.text,
+        "response_sha256": sha(result.text.encode()),
+        "output_token_ids": last["token_ids"],
+        "token_arrival_seconds": last["token_arrival_seconds"],
+        "completed_seconds": last["total_seconds"],
+        "tokens_cached": last["tokens_cached"],
+        "tokens_evaluated": last["tokens_evaluated"],
+        "stop_type": result.finish_reason,
+        "truncated": last["truncated"],
+        "generated_tokens": result.tokens,
+        "server_timings": last["server_timings"],
     }
+
+
+def load_frozen_states(path: Path, expected_sha256: str) -> list[dict]:
+    if file_sha(path) != expected_sha256:
+        raise ValueError("editor replay state fingerprint mismatch")
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line]
+    if not rows or len({row["id"] for row in rows}) != len(rows):
+        raise ValueError("editor replay states must have unique IDs")
+    for row in rows:
+        if not isinstance(row.get("prompt"), str) or row.get("state_sha256") != sha(
+            row["prompt"].encode()
+        ):
+            raise ValueError("editor replay prompt hash mismatch")
+        if not all(key in row for key in ("operation", "file_id", "source_target")):
+            raise ValueError("editor replay state metadata is incomplete")
+    return rows
 
 
 def main() -> None:
@@ -165,7 +164,15 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--port", type=int, default=19094)
     parser.add_argument("--diagnostic-saved-idle-cache", action="store_true")
+    parser.add_argument("--states", type=Path, help="optional frozen trained-format editor states")
+    parser.add_argument("--states-sha256")
+    parser.add_argument("--max-new-tokens", type=int, default=24)
     args = parser.parse_args()
+    if (args.states is None) != (args.states_sha256 is None):
+        raise ValueError("editor replay requires both states and their fingerprint")
+    if not 1 <= args.max_new_tokens <= 96:
+        raise ValueError("editor replay output cap must be within 1..96")
+    states = load_frozen_states(args.states, args.states_sha256) if args.states else source_states()
     args.output.mkdir(parents=True, exist_ok=True)
     if (args.output / "measurements.jsonl").exists():
         raise FileExistsError(
@@ -242,7 +249,7 @@ def main() -> None:
             raise TimeoutError("model load exceeded 180 seconds")
         load_seconds = time.perf_counter() - start
         previous_ids: list[int] = []
-        for state in source_states():
+        for state in states:
             tokens_response = httpx.post(
                 url + "/tokenize",
                 timeout=30,
@@ -250,7 +257,7 @@ def main() -> None:
             )
             tokens_response.raise_for_status()
             input_ids = tokens_response.json()["tokens"]
-            if len(input_ids) + 24 > 2304:
+            if len(input_ids) + args.max_new_tokens > 2304:
                 raise ValueError("source exceeds frozen context budget")
             common = 0
             for left, right in zip(previous_ids, input_ids, strict=False):
@@ -260,9 +267,15 @@ def main() -> None:
             previous_ids = input_ids
             for repetition in range(2):
                 before = proc_memory(process.pid)
-                result = generate(
-                    url, state["prompt"], cache_prompt=True
+                run = current_run_context()
+                case_scope = (
+                    run.for_case(state["id"] + f"/rep-{repetition}").activate()
+                    if run else nullcontext()
                 )
+                with case_scope:
+                    result = generate(
+                        url, state["prompt"], cache_prompt=True, max_new_tokens=args.max_new_tokens
+                    )
                 after = proc_memory(process.pid)
                 records.append(
                     {
@@ -311,6 +324,8 @@ def main() -> None:
             "pressure_after": pressure(),
             "vmstat_delta": {key: vm_after[key] - vm_before[key] for key in vm_before},
             "requests": len(records),
+            "states_sha256": args.states_sha256,
+            "output_token_limit": args.max_new_tokens,
             "observed_at": datetime.now(UTC).isoformat(),
         }
         (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

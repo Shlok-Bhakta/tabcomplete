@@ -366,14 +366,14 @@ Every element of `events[]` carries its type in **`event_type`**
 | `session_id` | non-empty string | must equal a started session |
 | `sequence_number` | non-negative int | ordering key within the session; duplicates deduped (§1.5) |
 | `timestamp_ms` | non-negative int ms | client wall clock; informational only |
-| `event_type` | string | one of the 19 types in §5 |
+| `event_type` | string | one of the 22 types in §5 |
 | `file_id` | int or null | server-assigned `files.file_id` when known, else `null`. Legacy string file identifiers (`"repo:<root>:<rel>"`) are accepted and stored as `null`; file attribution then comes from `payload.path` / anchor `content_hash` |
 | `changedtick` | int or null | editor buffer tick when known |
 | `cursor` | `{row, col}` or null | ZERO-based cursor at event time |
 | `mode` | string or null | editor mode (`"n"`, `"i"`, …) |
 | `payload` | object | schema per `event_type`; unknown fields are preserved, never rejected (only `edit_delta` payloads are structurally validated) |
 
-## 5. Event types (19)
+## 5. Event types (22)
 
 NOMENCLATURE: types are `snake_case` on the wire. Payloads are stored
 verbatim (`payload_json`); the reference client sends the shapes below.
@@ -440,6 +440,14 @@ exact.
 18. **`prediction_partially_accepted`** — prefix/region of the proposal taken.
 19. **`prediction_rejected`** — proposal explicitly dismissed or ignored
     until superseded.
+20. **`prediction_generated`** — completed model action and response identities.
+21. **`prediction_dismissed`** — visible proposal closed with an observed reason.
+22. **`prediction_reviewed`** — optional explicit local review of the last
+    accepted or explicitly rejected proposal. The payload names the exact
+    `resolution_event_id`, `prediction_id`, and `outcome`, with
+    `review_source: "explicit_editor_confirmation"`. An unreviewed or synthetic
+    decision remains unverified. Retries retain the same event ID; conflicting
+    review events are ambiguous for preference export.
 
 ### Future types (NOT in v1 — reserved, must be rejected as unknown today)
 

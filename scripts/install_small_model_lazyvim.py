@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "tools/trajectory_collector/nvim"
 DEFAULT_RUNTIME = ROOT.parent / "tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server"
+WIRE_VERSIONS = ("compact-next-edit-v1", "single-line-edit-v1")
 
 
 def sha(path: Path) -> str:
@@ -38,7 +39,13 @@ def render_config(
     model_alias: str,
     runtime_config_hash: str,
     experimental_automatic: bool,
+    protocol_version: str = "compact-next-edit-v1",
+    precision: str = "Q4_K_M",
 ) -> str:
+    if protocol_version not in WIRE_VERSIONS:
+        raise ValueError("unsupported selected-model action protocol")
+    if precision not in {"Q4_K_M", "Q5_K_M"}:
+        raise ValueError("unsupported selected-model weight precision")
     match = re.search(
         r'(?m)^(\s*dir\s*=\s*)"[^"]*/tools/trajectory_collector/nvim"(,\s*)$', original
     )
@@ -55,8 +62,10 @@ def render_config(
     line = (
         '\n      require("tabcomplete_trajectory.predict").setup({ '
         f'model = "{model_alias}", model_revision = "{model_revision}", '
-        'precision = "Q4_K_M", adapter_identity = "full-weight", '
+        f'precision = "{precision}", adapter_identity = "full-weight", '
         f'runtime_config_hash = "{runtime_config_hash}", '
+        f'protocol_version = "{protocol_version}", '
+        f'automatic_prefix_guard = {str(protocol_version == "single-line-edit-v1").lower()}, '
         f'mode = "{mode}", experimental_auto_opt_in = '
         f"{str(experimental_automatic).lower()}, automatic_quality_validated = false, "
         "automatic_personalization_enabled = false, persist_mode = true })"
@@ -104,12 +113,17 @@ def install(
     *,
     dry_run: bool,
     experimental_automatic: bool = False,
+    expected_bytes: int = 397_807_232,
+    protocol_version: str = "compact-next-edit-v1",
+    precision: str = "Q4_K_M",
 ) -> dict:
     if owned_by_nix(config) or owned_by_nix(unit):
         raise RuntimeError("Nix/Home Manager owns this path; edit its source configuration")
     if not model.is_file() or sha(model) != expected_sha:
         raise ValueError("selected model artifact hash mismatch")
-    if model.stat().st_size != 397_807_232:
+    if type(expected_bytes) is not int or not 1 <= expected_bytes <= 2 * 1024**3:
+        raise ValueError("selected model size must be pinned within the local artifact budget")
+    if model.stat().st_size != expected_bytes:
         raise ValueError("selected model artifact size mismatch")
     if not runtime.is_file():
         raise FileNotFoundError(runtime)
@@ -122,6 +136,8 @@ def install(
         model_alias=model_alias,
         runtime_config_hash=runtime_config_hash,
         experimental_automatic=experimental_automatic,
+        protocol_version=protocol_version,
+        precision=precision,
     )
     if dry_run:
         return {
@@ -131,6 +147,9 @@ def install(
             "mode": "automatic" if experimental_automatic else "manual",
             "runtime_config_hash": runtime_config_hash,
             "dry_run": True,
+            "model_bytes": expected_bytes,
+            "protocol_version": protocol_version,
+            "precision": precision,
         }
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     backup = config.with_name(config.name + ".backup-" + stamp)
@@ -158,6 +177,10 @@ def install(
         else:
             unit.write_text(prior_unit)
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=False, capture_output=True)
+        if prior_unit is not None:
+            subprocess.run(
+                ["systemctl", "--user", "restart", unit.name], check=False, capture_output=True
+            )
         raise RuntimeError(
             "local predictor service failed to start; installer restored configuration"
         ) from None
@@ -170,6 +193,9 @@ def install(
         "mode": "automatic" if experimental_automatic else "manual",
         "runtime_config_hash": runtime_config_hash,
         "dry_run": False,
+        "model_bytes": expected_bytes,
+        "protocol_version": protocol_version,
+        "precision": precision,
     }
 
 
@@ -178,6 +204,9 @@ def main() -> None:
     parser.add_argument("--model", type=Path, required=True)
     parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
     parser.add_argument("--model-sha256", required=True)
+    parser.add_argument("--model-bytes", type=int, default=397_807_232)
+    parser.add_argument("--protocol-version", choices=WIRE_VERSIONS, default=WIRE_VERSIONS[0])
+    parser.add_argument("--precision", choices=("Q4_K_M", "Q5_K_M"), default="Q4_K_M")
     parser.add_argument("--model-alias", required=True)
     parser.add_argument("--experimental-automatic", action="store_true")
     parser.add_argument(
@@ -201,6 +230,9 @@ def main() -> None:
         args.model_alias,
         dry_run=args.dry_run,
         experimental_automatic=args.experimental_automatic,
+        expected_bytes=args.model_bytes,
+        protocol_version=args.protocol_version,
+        precision=args.precision,
     )
     print(result)
 

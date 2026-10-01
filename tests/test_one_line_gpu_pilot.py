@@ -837,3 +837,64 @@ def test_public_functional_main_bootstraps_python311_before_setup_or_model_load(
     assert worker.main() == 1
     assert calls == ['python311']
     assert json.loads((worker.OUT / 'worker-status.json').read_text())['state'] == 'failed'
+
+
+def test_dataset_processing_wait_is_bounded_and_does_not_reupload(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [0.0]
+    calls = []
+    monkeypatch.setattr(builder.time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(builder.time, 'sleep', lambda seconds: clock.__setitem__(
+        0, clock[0] + seconds
+    ))
+
+    def delayed(_dataset, _expected):
+        calls.append(clock[0])
+        if len(calls) < 3:
+            raise RuntimeError('dataset processing')
+        return {'verified_files': 4}
+
+    monkeypatch.setattr(builder, 'verify_remote_inputs', delayed)
+    assert builder.wait_for_remote_inputs('owner/private-inputs', {}) == {'verified_files': 4}
+    assert calls == [0.0, 15.0, 30.0]
+    clock[0] = 0.0
+
+    def unavailable(*_args):
+        raise builder.RemoteInputsNotReady('missing files')
+
+    monkeypatch.setattr(builder, 'verify_remote_inputs', unavailable)
+    with pytest.raises(TimeoutError, match='ten minutes'):
+        builder.wait_for_remote_inputs('owner/private-inputs', {})
+    assert clock[0] == 600.0
+
+
+def test_cli_zero_exit_creation_error_never_allocates_gpu(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import yaml
+
+    plan, config = _valid_plan()
+    data = tmp_path / 'dataset'
+    data.mkdir()
+    (data / 'plan.json').write_text(json.dumps(plan))
+    (data / 'config.yaml').write_text(yaml.safe_dump(config))
+    (data / 'input-manifest.json').write_text('{"files":{}}')
+    bundle = {'schema': 'one-line-instinct-pilot-bundle-v1', 'fixture_only': False,
+              'commit': 'c' * 40, 'dataset_id': 'owner/private-inputs',
+              'kernel_id': 'owner/private-pilot', 'plan_sha256': _sha(data / 'plan.json'),
+              'input_manifest_sha256': _sha(data / 'input-manifest.json')}
+    (tmp_path / 'bundle-manifest.json').write_text(json.dumps(bundle))
+    monkeypatch.setattr(builder, '_git_identity', lambda *a: (plan['branch'], 'c' * 40))
+    monkeypatch.setattr(builder, '_csv_refs', lambda *a: set())
+    commands = []
+    monkeypatch.setattr(builder, '_run', lambda command, **kw:
+                        (commands.append(command), 'Dataset creation error: rejected')[1])
+    quota = {'remaining': 45.0, 'renewal': plan['quota_at_freeze']['renewal'],
+             'active_jobs': [], 'job_statuses': []}
+    with pytest.raises(RuntimeError, match='did not confirm'):
+        builder.submit_bundle(tmp_path, quota_reader=lambda: quota)
+    assert len(commands) == 1
+    assert commands[0][1:3] == ['datasets', 'create']
+    assert commands[0][-2:] == ['--dir-mode', 'zip']
+    assert not (tmp_path / 'submission-state.json').exists()

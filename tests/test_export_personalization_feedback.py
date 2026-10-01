@@ -133,18 +133,32 @@ def test_same_state_opposite_decisions_are_ambiguous_candidate_pair(tmp_path: Pa
             2,
             "prediction_shown",
             1,
-            {**region, "prediction_id": "a", "action": "replace", "proposed_text": "x"},
+            {**region, "prediction_id": "a", "action": "replace", "proposed_text": "x",
+             "active_buffer": True, "focused": True},
         ),
         ("a1", 3, "prediction_accepted", 2, {"prediction_id": "a"}),
-        ("r2", 4, "prediction_requested", 3, {**base, "prediction_id": "b"}),
+        ("v1", 4, "prediction_reviewed", 3, {
+            "prediction_id": "a", "synthetic": False, "human_verified": True,
+            "review_source": "explicit_editor_confirmation",
+            "resolution_event_id": "a1", "outcome": "accepted",
+        }),
+        ("r2", 5, "prediction_requested", 4, {**base, "prediction_id": "b"}),
         (
             "d2",
-            5,
+            6,
             "prediction_shown",
-            4,
-            {**region, "prediction_id": "b", "action": "replace", "proposed_text": "y"},
+            5,
+            {**region, "prediction_id": "b", "action": "replace", "proposed_text": "y",
+             "active_buffer": True, "focused": True},
         ),
-        ("x2", 6, "prediction_rejected", 5, {"prediction_id": "b"}),
+        ("x2", 7, "prediction_dismissed", 6, {
+            "prediction_id": "b", "outcome": "rejected_explicit",
+        }),
+        ("v2", 8, "prediction_reviewed", 7, {
+            "prediction_id": "b", "synthetic": False, "human_verified": True,
+            "review_source": "explicit_editor_confirmation",
+            "resolution_event_id": "x2", "outcome": "rejected_explicit",
+        }),
     ]
     conn.executemany(
         "INSERT INTO events VALUES (?,?,?,?,?,?)",
@@ -154,14 +168,66 @@ def test_same_state_opposite_decisions_are_ambiguous_candidate_pair(tmp_path: Pa
     conn.close()
     result = extract(db)
     assert len(result["candidate_preference_pairs"]) == 1
-    expected_legacy_hash = hashlib.sha256(
-        json.dumps({"action": "replace", "text": "x"}, sort_keys=True).encode()
-    ).hexdigest()
-    assert result["evidence"][0]["proposal_sha256"] == expected_legacy_hash
     assert result["candidate_preference_pairs"][0]["ambiguity_flags"] == [
         "missing_pre_state_anchor", "replay_not_verified",
     ]
     assert result["readiness"]["defensible_preference_pairs"] == 0
+
+
+def test_legacy_request_claim_and_wrong_review_link_do_not_verify(tmp_path: Path) -> None:
+    db = tmp_path / "collector.sqlite"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+        "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+    )
+    rows = [
+        ("r", 1, "prediction_requested", {"prediction_id": "p", "synthetic": False,
+             "human_verified": True}),
+        ("s", 2, "prediction_shown", {"prediction_id": "p"}),
+        ("a", 3, "prediction_accepted", {"prediction_id": "p"}),
+        ("v", 4, "prediction_reviewed", {"prediction_id": "p", "synthetic": False,
+             "human_verified": True, "review_source": "explicit_editor_confirmation",
+             "resolution_event_id": "wrong", "outcome": "accepted"}),
+    ]
+    conn.executemany(
+        "INSERT INTO events VALUES (?,?,?,?,?,?)",
+        [(eid, "s", seq, kind, seq * 100, json.dumps(payload))
+         for eid, seq, kind, payload in rows],
+    )
+    conn.commit()
+    conn.close()
+    record = extract(db)["evidence"][0]
+    assert record["human_review_confirmed"] is False
+    assert record["review_event_id"] is None
+    assert "human_provenance_unverified" in record["ambiguity_flags"]
+
+
+def test_review_needs_visible_display_and_contiguous_outcome_link(tmp_path: Path) -> None:
+    db = tmp_path / "collector.sqlite"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+        "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+    )
+    rows = [
+        ("r", 1, "prediction_requested", {"prediction_id": "p", "synthetic": False}),
+        ("a", 2, "prediction_accepted", {"prediction_id": "p"}),
+        ("v", 4, "prediction_reviewed", {"prediction_id": "p", "synthetic": False,
+             "human_verified": True, "review_source": "explicit_editor_confirmation",
+             "resolution_event_id": "a", "outcome": "accepted"}),
+    ]
+    conn.executemany(
+        "INSERT INTO events VALUES (?,?,?,?,?,?)",
+        [(eid, "s", seq, kind, seq * 100, json.dumps(payload))
+         for eid, seq, kind, payload in rows],
+    )
+    conn.commit()
+    conn.close()
+    record = extract(db)["evidence"][0]
+    assert record["human_review_confirmed"] is False
+    assert "never_shown" in record["ambiguity_flags"]
+    assert "review_interval_sequence_gap" in record["ambiguity_flags"]
 
 
 def test_v1_actions_use_verified_blobs_and_keep_legacy_hash_semantics(tmp_path: Path) -> None:
@@ -286,7 +352,7 @@ def test_v1_actions_use_verified_blobs_and_keep_legacy_hash_semantics(tmp_path: 
     conn.close()
 
     result = extract(db)
-    assert result["schema_version"] == "personalization-feedback-evidence-v4"
+    assert result["schema_version"] == "personalization-feedback-evidence-v5"
     evidence = {row["prediction_id"]: row for row in result["evidence"]}
     for prediction_id, kind, text, start, end, start_byte, end_byte in actions:
         row = evidence[prediction_id]
@@ -389,3 +455,22 @@ def test_v1_blob_mismatch_does_not_fall_back_to_display_text(tmp_path: Path) -> 
     assert row["proposal_identity_sha256"] is None
     assert "action_blob_display_mismatch" in row["ambiguity_flags"]
     assert "accepted_action_range_mismatch" in row["ambiguity_flags"]
+
+
+def test_automatic_display_suppression_is_not_a_human_rejection(tmp_path: Path) -> None:
+    path = tmp_path / 'collector.sqlite'
+    with sqlite3.connect(path) as db:
+        db.execute('CREATE TABLE events (event_id TEXT,session_id TEXT,sequence_number INTEGER,'
+                   'event_type TEXT,timestamp_ms INTEGER,payload_json TEXT)')
+        db.executemany('INSERT INTO events VALUES (?,?,?,?,?,?)', [
+            ('request', 's', 1, 'prediction_requested', 100,
+             json.dumps({'prediction_id': 'p', 'synthetic': True})),
+            ('suppressed', 's', 2, 'heartbeat', 110,
+             json.dumps({'prediction_id': 'p',
+                         'prediction_lifecycle': 'automatic_policy_suppressed'})),
+        ])
+    result = extract(path)
+    assert result['evidence'][0]['outcome'] == 'automatic_policy_suppressed'
+    assert result['evidence'][0]['explicit_outcome'] is None
+    assert result['candidate_preference_pairs'] == []
+    assert result['readiness']['enabled'] is False

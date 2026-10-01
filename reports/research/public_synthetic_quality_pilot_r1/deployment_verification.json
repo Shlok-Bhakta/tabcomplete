@@ -1,0 +1,205 @@
+{
+  "schema": "selected-pilot-deployment-verification-v1",
+  "observed_at": "2026-10-01T03:26:21.004071+00:00",
+  "installed": {
+    "config": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+    "backup": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua.backup-20261001T025744Z",
+    "unit_backup": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service.backup-20261001T025744Z",
+    "unit": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "mode": "automatic",
+    "runtime_config_hash": "a4a9808208ce5099e67fc42c65b274e7db19947c41e833b32225e8799e64feb5",
+    "dry_run": false,
+    "model_bytes": 491399808,
+    "protocol_version": "single-line-edit-v1",
+    "precision": "Q4_K_M",
+    "health": "ok",
+    "actual_pid": 421240,
+    "actual_args": [
+      "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+      "-m",
+      "/mnt/ssd/tabcomplete-product-r2/public-functional-lr1e5-v2-selected/q25-public-functional-lr1e5-Q4_K_M.gguf",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "19093",
+      "-t",
+      "4",
+      "-tb",
+      "4",
+      "-ngl",
+      "0",
+      "-c",
+      "2304",
+      "-b",
+      "256",
+      "-ub",
+      "64",
+      "-np",
+      "1",
+      "--cache-ram",
+      "128",
+      "--ctx-checkpoints",
+      "32",
+      "--no-cache-idle-slots",
+      "--no-warmup"
+    ],
+    "experimental_auto_opt_in": true,
+    "automatic_quality_validated": false,
+    "automatic_personalization_enabled": false,
+    "display_policy": "prefix-preserving-completion-v1"
+  },
+  "lazyvim_restart": {
+    "collector_state": "unverified",
+    "protocol_version": "single-line-edit-v1",
+    "backoff_until_ms": 0,
+    "counters": {
+      "dismissed_navigation": 0,
+      "expired": 0,
+      "model_no_edit": 0,
+      "request_failed": 0,
+      "invalid_output": 0,
+      "stale_discarded": 0,
+      "automatic_policy_suppressed": 0,
+      "requested": 0,
+      "displayed": 0,
+      "accepted": 0,
+      "cancelled_unseen": 0,
+      "rejected_explicit": 0,
+      "rejected_implicit_typing": 0,
+      "typed_match": 0,
+      "typed_partial_match": 0
+    },
+    "context_policy_version": "single-line-context-v2",
+    "experimental_auto_opt_in": true,
+    "state": "automatic experimental",
+    "automatic_personalization_enabled": false,
+    "mode": "automatic",
+    "stage": "idle",
+    "input_token_budget": 1024,
+    "revision": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "automatic_state": "automatic experimental",
+    "quality": "uncalibrated",
+    "collector_spool_files": 0,
+    "automatic_quality_validated": false,
+    "automatic_display_policy": "prefix-preserving-completion-v1",
+    "model": "q25-public-functional-pilot-lr1e5",
+    "in_flight": false,
+    "proposal_active": false,
+    "acceptance_key": "<M-l>",
+    "collector_connected": false,
+    "precision": "Q4_K_M"
+  },
+  "feedback": {
+    "session_id": "67daeb5e-ef30-4d53-bd86-bcb9582c6a52",
+    "repo_id": "repo:36eeb73eb0735bc8241fe089a87135589af28ab0176cc2a149482ac1dccc5456",
+    "synthetic": true,
+    "human_feedback": false,
+    "sequence_contiguous": true,
+    "event_count": 47,
+    "event_types": {
+      "session_start": 1,
+      "repo_snapshot": 1,
+      "buffer_open": 10,
+      "edit_delta": 8,
+      "buffer_write": 6,
+      "prediction_requested": 4,
+      "prediction_generated": 3,
+      "prediction_shown": 3,
+      "prediction_accepted": 1,
+      "prediction_dismissed": 2,
+      "buffer_leave": 2,
+      "heartbeat": 1,
+      "cursor_move": 1,
+      "buffer_enter": 2,
+      "file_jump": 1,
+      "session_end": 1
+    },
+    "retry_ack": {
+      "ingested": 0,
+      "skipped_duplicate": 47,
+      "total": 47
+    },
+    "retry_event_count_unchanged": true,
+    "retry_projections_unchanged": true
+  },
+  "prediction_outcomes": [
+    {
+      "prediction_id": "28de5de9-3fe2-4893-950a-2bd9cf7dea2c",
+      "outcome": "accepted",
+      "resolved_file_id": 1199,
+      "projection_version": 3
+    },
+    {
+      "prediction_id": "4efd4272-f2af-4989-a89a-0802acca94bc",
+      "outcome": "rejected_implicit_typing",
+      "resolved_file_id": 1199,
+      "projection_version": 3
+    },
+    {
+      "prediction_id": "b282374f-7d59-49bc-9601-0d4983014dc7",
+      "outcome": "typed_match",
+      "resolved_file_id": 1199,
+      "projection_version": 3
+    },
+    {
+      "prediction_id": "ce1b6be9-d22b-491e-bf29-ba70d42a9762",
+      "outcome": "cancelled_unseen",
+      "resolved_file_id": 1199,
+      "projection_version": 3
+    }
+  ],
+  "verified_content_blobs": {
+    "4730c775c1bb05d989002131ce7a18765bc7255afa4ed66951b0bbb6cdcb6353": {
+      "hash_match": true,
+      "bytes": 1269
+    },
+    "fc82132ff9772ec1c2db9d4846e95a90489d1215c9181a0216b715419afaf0f6": {
+      "hash_match": true,
+      "bytes": 4532
+    },
+    "c1f4bc277466cdea7eafe6f315c1ebc9470b4c7753fd4305904fdaaa5eef958f": {
+      "hash_match": true,
+      "bytes": 63
+    },
+    "e9d1325338f0a72a0197296689082586e6f9d9262fa7c80ad5a793a6b76c795a": {
+      "hash_match": true,
+      "bytes": 1270
+    },
+    "3b3e588a89494d8982dcb43aa2fb313a148c2f2f021330338724b9c634dd1264": {
+      "hash_match": true,
+      "bytes": 4532
+    },
+    "76c2f3aed28e17faa03106b9a55723a345b006bc69e3969308fa1e89cfa2fa76": {
+      "hash_match": true,
+      "bytes": 1265
+    },
+    "8df58820335dfb722eb3ab9a599b79626f2a680130fbcc3d5c782acd5409d9f4": {
+      "hash_match": true,
+      "bytes": 4531
+    },
+    "e59e294ec0aa05102d1920006d4af781e990c45a5b3b91ff7d2aaab53c56c9a5": {
+      "hash_match": true,
+      "bytes": 1291
+    }
+  },
+  "replay": "# replay (READ-ONLY, db=/mnt/ssd/collector-data/collector.sqlite)\n# file: sample.py\n# session: 67daeb5e-ef30-4d53-bd86-bcb9582c6a52\n# anchors: 15  deltas replayed: 8  unanchored: 0  delta mismatches: 0\n# rebuilt bytes: 484  target bytes: 484\nREPLAY-OK: anchor + deltas byte-equal the final anchor\n",
+  "tests": {
+    "python": {
+      "passed": 983,
+      "failed": 0,
+      "skipped": 0
+    },
+    "lua": {
+      "passed": 69,
+      "failed": 0
+    },
+    "server": {
+      "passed": 59,
+      "failed": 0
+    },
+    "mypy": "89 source files passed",
+    "ruff": "passed"
+  },
+  "limitation": "Headless scripted synthetic checks, not human acceptance or visual inspection. Scratch-buffer feedback bug fixed after the first smoke; earlier raw events retained."
+}

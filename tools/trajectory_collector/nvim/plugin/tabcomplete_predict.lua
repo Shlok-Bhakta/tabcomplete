@@ -12,6 +12,10 @@ vim.api.nvim_create_user_command("TabCompleteReject", function()
   local ok, err = predict.reject()
   if not ok then vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN) end
 end, {})
+vim.api.nvim_create_user_command("TabCompleteReviewLast", function()
+  local ok, err = predict.review_last()
+  if not ok then vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN) end
+end, {})
 vim.api.nvim_create_user_command("TabCompleteMode", function(args)
   if args.args == "" then
     vim.notify("TabComplete mode: " .. predict.status().mode)

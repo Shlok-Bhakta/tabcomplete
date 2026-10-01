@@ -1,0 +1,66 @@
+{
+  "schema": "selected-pilot-artifact-references-v1",
+  "root": "/mnt/ssd/tabcomplete-product-r2/public-functional-lr1e5-v2-selected",
+  "artifacts": [
+    {
+      "path": "native-evaluation.json",
+      "bytes": 247779,
+      "sha256": "fe4268c158955ddcd34099d5895d26f87591f137f8e4dae5ed2f659d1eb9b746"
+    },
+    {
+      "path": "precision-selection.json",
+      "bytes": 1950,
+      "sha256": "2a97377d2f865879b9c247d88a9c8f94571a34933ccc19553fef126b52c68ba1"
+    },
+    {
+      "path": "checkpoint-reload-verification.json",
+      "bytes": 518,
+      "sha256": "e4cac9e3e0bf129289bac8f24f44fbcca2fc33c53763924e8100701bfb2dad74"
+    },
+    {
+      "path": "editor-replay-plan-v4.json",
+      "bytes": 1859,
+      "sha256": "d601ed22d59d72093af38a9298e0ab6a46d650a2e70a7c2035219e28903edfdd"
+    },
+    {
+      "path": "editor-replay-v4/compact_summary.json",
+      "bytes": 1618,
+      "sha256": "c25215d6659b43ea574e9d9ce394e0f2e02e607c664732c46e4a6f143031703e"
+    },
+    {
+      "path": "e2e/database-evidence-v3.json",
+      "bytes": 10875,
+      "sha256": "5825b550aeaf2e9ae7d2a42a6886fdf7d728f02e96b940ad49bfb07d9ae589a4"
+    },
+    {
+      "path": "e2e/verify_database_v3.py",
+      "bytes": 3403,
+      "sha256": "9862dc74da2ab262aea254a64d52ca88842689cf2bb4313c074551fc30d30069"
+    },
+    {
+      "path": "e2e/real-auto-v3.log",
+      "bytes": 541,
+      "sha256": "5939cfb8038cb23721a9e16448dc6d47ff579dff060695986f4179b6b77b887e"
+    },
+    {
+      "path": "e2e/replay-v3.log",
+      "bytes": 297,
+      "sha256": "ec1d50687b87b03f2f64f4e5507dd88bff5a4fbf16ace33f65dcc23169745bb5"
+    },
+    {
+      "path": "repository-pytest-final-v3.log",
+      "bytes": 1609,
+      "sha256": "a8f72ebc66274636f65ed7fbbacfbffa2cc477b5c7f2f4ffbcadb0465636e4f0"
+    },
+    {
+      "path": "lua-regression-v4.log",
+      "bytes": 2937,
+      "sha256": "a5efc58dd465bc37c1446aac76a771056bfb97759e8f4f09e38ab66fe38eaee7"
+    },
+    {
+      "path": "projection-rebuild-v3.json",
+      "bytes": 209,
+      "sha256": "dc7a25273e13d374298b8824207dcf159ebfad5982e871386411b6995e26ed23"
+    }
+  ]
+}

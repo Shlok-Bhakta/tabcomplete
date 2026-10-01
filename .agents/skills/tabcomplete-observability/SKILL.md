@@ -84,6 +84,19 @@ from those raw events. Keep explicit rejection, divergent typing, typed match,
 partial match, unseen cancellation, navigation, expiration, shadow, no-edit, and
 transport failure distinct. `synthetic=false` does not prove human review.
 Do not start automatic training or turn ambiguous later edits into rewards.
+No minimum human-label count gates an explicitly opted-in experimental mode.
+Optional `automatic_prefix_guard` limits automatic replacements to preserving
+bytes before the cursor and withholds deletion. Keep the raw action and record
+`automatic_policy_suppressed`, never a human rejection or model no-edit. Manual
+preview remains available. Report this display scope separately from raw model
+accuracy and coverage; a display filter is not an improved model.
+
+Preserve deployed schema-v3 review provenance when updating an older branch.
+`prediction_reviewed` is a separate optional explicit confirmation after a
+decision. A request's legacy `human_verified` claim cannot verify it. Reviewed
+events must link to the same displayed proposal and explicit decision, with
+contiguous collection evidence. Ordinary typing and acceptance need no review
+dialog; future training exports remain conservative and training stays off.
 
 Measure same-prompt cache repeats separately from changed editor states. Report
 debounce, queue, prompt processing, generation, complete display latency, peak
@@ -220,9 +233,12 @@ isolation, gateway bounds/Host/Origin/escaping/traversal, dashboard idempotence,
 and the disposable missing-drive guard as applicable.
 
 Use `observability_smoke.py` and `observability_verify.py` for end-to-end changes.
+The configured crabcake MCP connection is disabled by user preference. Use the
+existing `tabcomplete-observe` CLI to verify actual runs, failures, requests,
+traces and payloads; do not re-enable MCP or claim a missing training trace.
 No paid provider call, training campaign, or Kaggle quota is authorized by this
 skill. A verified deployment includes real local inference, reconciled case
-outcomes and payloads, an actual MCP tool result, CLI agreement, two-client
+outcomes and payloads, actual CLI retrieval, two-client
 tailnet access, no LAN publication, outage replay, restart persistence, actual
 external-drive mounts, native panel rendering, and healthy existing services.
 If a verification facility is unavailable, report that blocker and do not call

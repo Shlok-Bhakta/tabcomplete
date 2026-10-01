@@ -99,7 +99,20 @@ return function(ok, assert_eq, assert_true)
     assert_eq(shown_event.payload.proposed_end_byte, 17, "replacement source byte end")
     assert_eq(shown_event.payload.proposed_start.row, 1, "replacement start row")
     assert_eq(shown_event.payload.proposed_end.row, 1, "replacement end row")
+    local scratch = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_delete(scratch, { force = true })
+    assert_true(predict.status().proposal_active, "unrelated scratch deletion preserves proposal")
+    local accepted_id = shown_event.payload.prediction_id
     assert_true(predict.accept(), "explicit acceptance applied replacement")
+    local accepted_count = 0
+    for _, event in ipairs(collector.queue) do
+      if event.payload.prediction_id == accepted_id then
+        assert_true(event.event_type ~= "prediction_dismissed",
+          "acceptance validation must not record navigation dismissal")
+        if event.event_type == "prediction_accepted" then accepted_count = accepted_count + 1 end
+      end
+    end
+    assert_eq(accepted_count, 1, "acceptance records one terminal decision")
     assert_eq(vim.api.nvim_buf_get_lines(buf, 1, 2, false)[1], "new = 'λ'")
     vim.cmd("silent undo")
     assert_eq(vim.api.nvim_buf_get_lines(buf, 1, 2, false)[1], "old = 'β'",
@@ -201,8 +214,37 @@ return function(ok, assert_eq, assert_true)
       "undo and acceptance preserve EOL option")
   end)
 
+  ok("automatic-prefix-policy-preserves-unicode-and-does-not-label-suppression-rejection", function()
+    assert_true(predict.preserves_typed_prefix("    return λ", { kind = "replace_line", text = "    return λ + 1" }))
+    assert_true(not predict.preserves_typed_prefix("    return λ", { kind = "replace_line", text = "    return x" }))
+    assert_true(not predict.preserves_typed_prefix("", { kind = "delete_line" }))
+    assert_true(predict.preserves_typed_prefix("x", { kind = "insert_before", text = "# before" }))
+    local util = require("tabcomplete_trajectory.util")
+    local original_mode = util.current_mode
+    util.current_mode = function() return "i" end
+    predict.setup({ protocol_version = adapter.WIRE_VERSION, mode = "automatic",
+      experimental_auto_opt_in = true, automatic_prefix_guard = true, persist_mode = false })
+    vim.api.nvim_win_set_cursor(0, { 2, 3 })
+    set_model_action("D", "eos", 1)
+    assert_true(predict.predict())
+    assert_true(vim.wait(1000, function() return not predict.status().in_flight end))
+    assert_true(not predict.status().proposal_active, "automatic deletion must be suppressed")
+    local last = collector.queue[#collector.queue]
+    assert_eq(last.event_type, "heartbeat")
+    assert_eq(last.payload.prediction_lifecycle, "automatic_policy_suppressed")
+    assert_true(predict.status().counters.automatic_policy_suppressed > 0)
+    predict.set_mode("manual")
+    set_model_action("D", "eos", 1)
+    assert_true(predict.predict())
+    assert_true(vim.wait(1000, function() return predict.status().proposal_active end),
+      "manual deletion preview remains available")
+    predict.reject()
+    util.current_mode = original_mode
+  end)
+
   predict._request_impl = nil
   predict._tokenize_impl = nil
-  predict.setup({ protocol_version = "compact-next-edit-v1", mode = "manual", synthetic = true })
+  predict.setup({ protocol_version = "compact-next-edit-v1", mode = "manual", synthetic = true,
+    automatic_prefix_guard = false })
   vim.fn.delete(path)
 end

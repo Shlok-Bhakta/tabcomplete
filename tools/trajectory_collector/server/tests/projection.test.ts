@@ -4,6 +4,27 @@ import { migrate } from "../src/migrations";
 import { rebuildAllPredictions, rebuildPrediction } from "../src/projection";
 
 describe("prediction projection", () => {
+  test("display-policy suppression is rebuildable and is not a rejection", () => {
+    const db = openDatabase(":memory:");
+    db.prepare("INSERT INTO machines(machine_id,first_seen_at,last_seen_at) VALUES (?,?,?)")
+      .run("machine", "2026-10-01", "2026-10-01");
+    db.prepare("INSERT INTO sessions(session_id,machine_id,started_at) VALUES (?,?,?)")
+      .run("session", "machine", "2026-10-01");
+    const insert = db.prepare(`INSERT INTO events
+      (event_id,session_id,sequence_number,event_type,timestamp_ms,payload_json)
+      VALUES (?,?,?,?,?,?)`);
+    insert.run("request", "session", 1, "prediction_requested", 1,
+      JSON.stringify({ prediction_id: "p" }));
+    insert.run("suppressed", "session", 2, "heartbeat", 2,
+      JSON.stringify({ prediction_id: "p", prediction_lifecycle: "automatic_policy_suppressed" }));
+    expect(rebuildAllPredictions(db)).toBe(1);
+    const read = () => db.query<{outcome: string;shown_event_id: string | null}, []>(
+      "SELECT outcome,shown_event_id FROM prediction_projection").get();
+    expect(read()).toEqual({outcome: "automatic_policy_suppressed", shown_event_id: null});
+    expect(rebuildAllPredictions(db)).toBe(1);
+    expect(read()?.outcome).toBe("automatic_policy_suppressed");
+    db.close();
+  });
   test("rebuilds out-of-order and duplicate raw events without inventing a second outcome", () => {
     const db = openDatabase(":memory:");
     const stamp = "2026-09-25T00:00:00Z";
@@ -39,6 +60,40 @@ describe("prediction projection", () => {
     rebuildPrediction(db, "session", "p");
     expect(db.query<{outcome: string}, []>("SELECT outcome FROM prediction_projection").get()?.outcome)
       .toBe("rejected_implicit_typing");
+    db.close();
+  });
+  test("review confirmation requires the exact outcome event and survives rebuild", () => {
+    const db = openDatabase(":memory:");
+    const stamp = "2026-09-25T00:00:00Z";
+    db.prepare("INSERT INTO machines(machine_id,first_seen_at,last_seen_at) VALUES (?,?,?)")
+      .run("machine", stamp, stamp);
+    db.prepare("INSERT INTO sessions(session_id,machine_id,started_at) VALUES (?,?,?)")
+      .run("session", "machine", stamp);
+    const insert = db.prepare(`INSERT INTO events
+      (event_id,session_id,sequence_number,event_type,timestamp_ms,payload_json)
+      VALUES (?,?,?,?,?,?)`);
+    const add = (id: string, seq: number, type: string, payload: object) =>
+      insert.run(id, "session", seq, type, seq * 1000, JSON.stringify({ prediction_id: "p", ...payload }));
+    add("request", 1, "prediction_requested", { synthetic: false });
+    add("shown", 2, "prediction_shown", { active_buffer: true, focused: true });
+    add("accepted", 3, "prediction_accepted", {});
+    add("review", 4, "prediction_reviewed", {
+      synthetic: false, human_verified: true, review_source: "explicit_editor_confirmation",
+      resolution_event_id: "accepted", outcome: "accepted",
+    });
+    rebuildPrediction(db, "session", "p");
+    const read = () => db.query<{review_status: string;review_event_id: string | null}, []>(
+      "SELECT review_status,review_event_id FROM prediction_projection",
+    ).get();
+    expect(read()).toEqual({ review_status: "confirmed", review_event_id: "review" });
+    expect(rebuildAllPredictions(db)).toBe(1);
+    expect(read()).toEqual({ review_status: "confirmed", review_event_id: "review" });
+    add("review-conflict", 5, "prediction_reviewed", {
+      synthetic: false, human_verified: true, review_source: "explicit_editor_confirmation",
+      resolution_event_id: "accepted", outcome: "accepted",
+    });
+    rebuildPrediction(db, "session", "p");
+    expect(read()).toEqual({ review_status: "ambiguous", review_event_id: null });
     db.close();
   });
 });

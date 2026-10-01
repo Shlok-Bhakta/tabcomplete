@@ -33,7 +33,8 @@ on-disk spool.
   `buffer_write`, `edit_delta`, `cursor_move`, `file_jump`, `mode_change`,
   `key`, `heartbeat`, `prediction_requested`, `prediction_shown`,
   `prediction_accepted`, `prediction_partially_accepted`,
-  `prediction_rejected`.
+  `prediction_rejected`, `prediction_generated`, `prediction_dismissed`,
+  `prediction_reviewed`.
 - `edit_delta` payload: `{start_row, old_end_row, new_end_row,
   deleted_text, inserted_text, cursor_after, changedtick}` — all rows
   ZERO-based, end-exclusive, matching `nvim_buf_attach` `on_lines` indices
@@ -154,3 +155,15 @@ keys). `file`/`cursor` default to the current buffer/cursor.
   `b:tabcomplete_trajectory_optout`.
 - Run the headless test suite: from this directory,
   `nvim --headless -l tests/run.lua` (exit 0 = green).
+- Run the prediction and review state tests separately:
+  `nvim --headless -l tests/automatic_predict.lua` and
+  `nvim --headless -l tests/feedback_review.lua`. The latter is scripted and
+  sends no human feedback to the live collector.
+# Optional decision review
+
+`:TabCompleteReviewLast` prompts the editor user to confirm that they personally
+reviewed the most recent explicit acceptance or rejection. It records a
+`prediction_reviewed` event linked to that exact outcome in the existing
+collector database. Automatic suggestions and the acceptance key work without
+this extra step. Synthetic decisions and unreviewed historical events cannot
+qualify as verified human preference evidence. Automatic training remains off.

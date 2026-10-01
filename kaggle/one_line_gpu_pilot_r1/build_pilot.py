@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -183,6 +184,10 @@ def _run(args: list[str], *, timeout: int = 90) -> str:
     return result.stdout.strip()
 
 
+class RemoteInputsNotReady(ValueError):
+    """Dataset processing has not exposed all the attached inputs yet."""
+
+
 def verify_remote_inputs(dataset_id: str, expected: dict[str, Any]) -> dict[str, Any]:
     """Verify the published file tree before spending a GPU allocation.
 
@@ -218,9 +223,22 @@ def verify_remote_inputs(dataset_id: str, expected: dict[str, Any]) -> dict[str,
     else:
         raise ValueError("remote input inventory exceeded its bounded page count")
     if any(observed.get(name) != item["bytes"] for name, item in expected.items()):
-        raise ValueError("published input tree is missing files or has mismatched sizes")
+        raise RemoteInputsNotReady("published input tree is missing files or has mismatched sizes")
     return {"verified_files": len(expected), "remote_files": len(observed),
             "paths_and_sizes_verified": True, "hashes_verified_by_worker": False}
+
+
+def wait_for_remote_inputs(dataset_id: str, expected: dict[str, Any]) -> dict[str, Any]:
+    """Bound dataset processing waits before any GPU allocation."""
+    deadline = time.monotonic() + 600
+    while True:
+        try:
+            return verify_remote_inputs(dataset_id, expected)
+        except (RuntimeError, RemoteInputsNotReady):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("published inputs were unavailable after ten minutes") from None
+            time.sleep(min(15, remaining))
 
 
 def live_quota() -> dict[str, Any]:
@@ -1041,7 +1059,7 @@ def prepare_bundle(
     write_json(
         dataset_dir / "dataset-metadata.json",
         {
-            "title": "TabComplete bounded pilot private inputs",
+            "title": "TabComplete private " + hashlib.sha256(dataset_id.encode()).hexdigest()[:16],
             "id": dataset_id,
             "licenses": [{"name": "other"}],
             "description": (
@@ -1131,7 +1149,7 @@ def prepare_bundle(
         "quota_at_prepare": quota,
         "projected_input_bytes": projected,
         "submission_commands": [
-            f"kaggle datasets create -p {dataset_dir} -t",
+            f"kaggle datasets create -p {dataset_dir} -t --dir-mode zip",
             f"kaggle kernels push -p {kernel_dir} --timeout {SESSION_SECONDS}",
         ],
     }
@@ -1384,10 +1402,13 @@ def submit_bundle(
             raise ValueError("pilot dataset ID already exists; reconcile before submitting")
         if kernel_id in kernels:
             raise ValueError("pilot kernel ID already exists; reconcile before submitting")
-        _run(
+        creation = _run(
             ["kaggle", "datasets", "create", "-p", str(bundle / "dataset"),
              "-t", "--dir-mode", "zip"], timeout=900
         )
+        if ("Dataset creation error:" in creation
+                or "Your private Dataset is being created." not in creation):
+            raise RuntimeError("Kaggle did not confirm private dataset creation")
         state = {"state": "dataset_created", "dataset_id": dataset_id}
         write_json(state_path, state)
 
@@ -1395,7 +1416,7 @@ def submit_bundle(
     expected_files["input-manifest.json"] = {
         "bytes": (bundle / "dataset/input-manifest.json").stat().st_size
     }
-    remote_verification = verify_remote_inputs(dataset_id, expected_files)
+    remote_verification = wait_for_remote_inputs(dataset_id, expected_files)
 
     # Dataset publication is not a GPU allocation. Refresh the quota and job
     # state immediately before the only command that can start the T4 kernel.

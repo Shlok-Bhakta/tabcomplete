@@ -1,0 +1,120 @@
+{
+  "schema": "public-synthetic-quality-development-selection-v1",
+  "locked_at": "2026-10-01T02:14:48.592583+00:00",
+  "selection_rule": "edit-required functional successes plus public exact continuations; ties fewer no-edit false changes then lower LR",
+  "selected": "lr1e5",
+  "candidates": {
+    "lr1e5": {
+      "kernel": "shlokbhakta/tc-public-functional-1e5-v2",
+      "counts": {
+        "public_prefix_cases": 49,
+        "public_prefix_exact": 17,
+        "cases": 97,
+        "valid": 96,
+        "terminated": 97,
+        "exact": 35,
+        "nonempty_edit": 75,
+        "edit_required_cases": 81,
+        "edit_required_exact": 26,
+        "functional_cases": 48,
+        "functional_success": 18,
+        "no_edit_cases": 16,
+        "no_edit_recalled": 9,
+        "no_edit_false_edits": 7
+      },
+      "per_action": {
+        "replace_line": {
+          "cases": 49,
+          "exact": 17
+        },
+        "keep": {
+          "cases": 16,
+          "functional_cases": 16,
+          "functional_success": 9,
+          "exact": 9
+        },
+        "insert_before": {
+          "cases": 16,
+          "functional_cases": 16,
+          "functional_success": 0,
+          "exact": 0
+        },
+        "delete_line": {
+          "cases": 16,
+          "functional_cases": 16,
+          "functional_success": 9,
+          "exact": 9
+        }
+      },
+      "rank": 26,
+      "export_weight_sha256": "68fd4997f8fd0ce96536ff0eaffbc249e2aa0602658955fc876423ccd2030f2a",
+      "checkpoint_sha256": "599bd9ae6cebfd2563ea5ea8ee88fdf32ea62696a0bec53da144cd6c5ea334e5",
+      "worker_seconds": 577.142896978,
+      "postscore_sha256": "4288ba7a0315c648f65daf7f389f08d7acbc03ab717566da328a3f2a0da88fa6",
+      "training_manifest_sha256": "a44fe81586e78c0feddb9293b3ac6bec6be99951ba71ee87ff87fa8d26dba35d"
+    },
+    "lr3e5": {
+      "kernel": "shlokbhakta/tc-public-functional-3e5-v2",
+      "counts": {
+        "public_prefix_cases": 49,
+        "public_prefix_exact": 15,
+        "cases": 97,
+        "valid": 96,
+        "terminated": 97,
+        "exact": 31,
+        "nonempty_edit": 48,
+        "edit_required_cases": 81,
+        "edit_required_exact": 15,
+        "functional_cases": 48,
+        "functional_success": 16,
+        "no_edit_cases": 16,
+        "no_edit_recalled": 16,
+        "no_edit_false_edits": 0
+      },
+      "per_action": {
+        "replace_line": {
+          "cases": 49,
+          "exact": 15
+        },
+        "keep": {
+          "cases": 16,
+          "functional_cases": 16,
+          "functional_success": 16,
+          "exact": 16
+        },
+        "insert_before": {
+          "cases": 16,
+          "functional_cases": 16,
+          "functional_success": 0,
+          "exact": 0
+        },
+        "delete_line": {
+          "cases": 16,
+          "functional_cases": 16,
+          "functional_success": 0,
+          "exact": 0
+        }
+      },
+      "rank": 15,
+      "export_weight_sha256": "1df3d6de78255e112b11310e35402d030ec380b29141a9678b84db49ef2344f6",
+      "checkpoint_sha256": "de33cf8b222fcec74ec6a3bad44fa5a6b0453f7d3fed2ac6db608e9d45de2c86",
+      "worker_seconds": 509.99652140600006,
+      "postscore_sha256": "890c9f494b78730175c6fe4db09cd56fa4a76c1987f54590749a2f61c9fb9e21",
+      "training_manifest_sha256": "0acec903d6529a6c1fab78115b0b53cee3fa9b7b37f61f3aa507df7dad2b8156"
+    }
+  },
+  "paired_exact_outcomes": {
+    "A1_B0": 12,
+    "A0_B0": 54,
+    "A1_B1": 23,
+    "A0_B1": 8
+  },
+  "scope": "development only, sealed data not fetched",
+  "reason": "26 versus15 useful required edits under declared rank. A has7/16 no-edit false changes; B has0/16 but learned no insertion/deletion. Neither demonstrates general history-conditioned edits.",
+  "uncertainty": "Only49 public completion states and4 held-out synthetic algorithm families with related variants. Correlated family outcomes do not justify97 independent trials or equivalence.",
+  "automatic_quality_validated": false,
+  "deployment_authorization": "user authorized experimental automatic suggestions; explicit acceptance only, native codec/resource correctness still required",
+  "monitoring_limitation": "Quality workers omitted SDK initialization on reused-fixture route. No A/B training trace IDs exist; scientific files authoritative. Native deployment measurements will use existing SDK.",
+  "personalization_enabled": false,
+  "next": "Download only selected export, convert Q4, native same97-case evaluation plus independent16-case calibration, then deployment/replay if safe."
+}

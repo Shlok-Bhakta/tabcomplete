@@ -16,6 +16,7 @@ local opts = {
   adapter_identity = "none", runtime_config_hash = "unconfigured",
   context_policy_version = "compact-next-edit-context-v1", mode = "manual",
   protocol_version = "compact-next-edit-v1", single_line_input_tokens = 1024,
+  automatic_prefix_guard = false,
   experimental_auto_opt_in = false, automatic_quality_validated = false,
   automatic_personalization_enabled = false, debounce_ms = 250, expiry_ms = 30000,
   max_buffer_bytes = 1048576, max_prompt_tokens = 2048, target_prompt_tokens = 1024,
@@ -33,15 +34,18 @@ local last_fingerprint = nil
 local last_status = "idle"
 local last_error = nil
 local last_latency_ms = nil
+local last_decision = nil
 local consecutive_failures, backoff_until_ms = 0, 0
 local counters = { requested = 0, displayed = 0, accepted = 0, cancelled_unseen = 0,
   rejected_explicit = 0, rejected_implicit_typing = 0, typed_match = 0,
   typed_partial_match = 0, dismissed_navigation = 0, expired = 0,
-  model_no_edit = 0, request_failed = 0, invalid_output = 0, stale_discarded = 0 }
+  model_no_edit = 0, request_failed = 0, invalid_output = 0, stale_discarded = 0,
+  automatic_policy_suppressed = 0 }
 local mapping_key = nil
 local lock_path = "/tmp/tabcomplete-predictor-19093.lock"
 M._request_impl = nil -- deterministic test seam
 M._tokenize_impl = nil -- deterministic test seam
+M._confirm_impl = nil -- deterministic test seam; production uses vim.fn.confirm
 
 local function now() return util.now_ms() end
 local function utf8_boundary(line, col)
@@ -118,7 +122,9 @@ local function record_request(state)
       end_row = state.row, end_col = state.end_col },
     max_output_tokens = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96,
     temperature = 0, wire_version = opts.protocol_version,
-    human_verified = false, mode = mode, display_policy = mode,
+    human_verified = false, mode = mode,
+    display_policy = mode == "automatic" and opts.automatic_prefix_guard
+      and "prefix-preserving-completion-v1" or mode,
   })
   state.request_event_id = ev and ev.event_id
   counters.requested = counters.requested + 1
@@ -362,7 +368,7 @@ local function dismiss(reason, delta, envelope)
   elseif reason == "mode_off" or reason == "mode_changed" then outcome = "cancelled_by_mode"
   else outcome = "dismissed_navigation" end
   visible_ms = visible_ms or math.max(0, now() - state.shown_at_ms)
-  emit(state, "prediction_dismissed", { outcome = outcome,
+  local dismissed = emit(state, "prediction_dismissed", { outcome = outcome,
     outcome_source = key and "key_correlated_buffer_delta" or "editor_observation",
     shown_at_ms = state.shown_at_ms, dismissed_at_ms = now(), visible_duration_ms = visible_ms,
     low_exposure = visible_ms < 150,
@@ -377,6 +383,10 @@ local function dismiss(reason, delta, envelope)
     focused = not vim.g.tabcomplete_predictor_focus_lost })
   if outcome == "rejected_explicit" then
     emit(state, "prediction_rejected", { finish_reason = "explicit_user_reject", rejected_at_ms = now() })
+    if dismissed then
+      last_decision = { state = state, outcome = outcome, event_id = dismissed.event_id,
+        session_id = collector.session_id, synthetic = opts.synthetic, reviewed = false }
+    end
   end
   counters[outcome] = (counters[outcome] or 0) + 1
   close_preview()
@@ -401,6 +411,12 @@ local function invalidate(reason)
   end
   phase = pending and "request_running" or "idle"
 end
+function M.preserves_typed_prefix(prefix, action)
+  if action.kind == "keep" or action.kind == "insert_before" then return true end
+  if action.kind == "delete_line" then return false end
+  return action.kind == "replace_line" and type(action.text) == "string"
+    and action.text:sub(1, #prefix) == prefix
+end
 local function show(state, action)
   if opts.protocol_version == single_line_v1.WIRE_VERSION then
     if action.kind == "keep" then
@@ -413,6 +429,13 @@ local function show(state, action)
       lifecycle(state, "model_no_edit", "unchanged line replacement")
       counters.model_no_edit = counters.model_no_edit + 1
       last_status = "unchanged replacement"
+      return
+    end
+    if mode == "automatic" and opts.automatic_prefix_guard
+        and not M.preserves_typed_prefix(state.prefix_line, action) then
+      lifecycle(state, "automatic_policy_suppressed", "proposal would remove text before cursor")
+      counters.automatic_policy_suppressed = counters.automatic_policy_suppressed + 1
+      last_status = "automatic completion skipped: typed prefix would change"
       return
     end
     action.action = action.kind
@@ -801,7 +824,7 @@ function M.accept()
     accepted_tick[state.bufnr] = vim.api.nvim_buf_get_changedtick(state.bufnr)
     local delta_sequence = collector.seq
     local accepted_text = state.action.text or ""
-    emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
+    local accepted = emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
       accepted_chars = vim.fn.strchars(accepted_text),
       accepted_lines = state.action.kind == "delete_line" and 0 or 1,
       total_chars = vim.fn.strchars(accepted_text), applied_through_sequence = delta_sequence,
@@ -810,6 +833,10 @@ function M.accept()
       editable_range = state.action_range,
       proposed_start_byte = state.action_range.start_byte,
       proposed_end_byte = state.action_range.end_byte })
+    if accepted then
+      last_decision = { state = state, outcome = "accepted", event_id = accepted.event_id,
+        session_id = collector.session_id, synthetic = opts.synthetic, reviewed = false }
+    end
     counters.accepted = counters.accepted + 1
     close_preview()
     active = nil
@@ -825,10 +852,14 @@ function M.accept()
   vim.api.nvim_buf_set_text(state.bufnr, state.row, state.start_col, state.row, state.end_col, replacement)
   accepted_tick[state.bufnr] = vim.api.nvim_buf_get_changedtick(state.bufnr)
   local delta_sequence = collector.seq
-  emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
+  local accepted = emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
     accepted_chars = vim.fn.strchars(state.action.text), accepted_lines = #replacement,
     total_chars = vim.fn.strchars(state.action.text), applied_through_sequence = delta_sequence,
     visible_duration_ms = now() - state.shown_at_ms })
+  if accepted then
+    last_decision = { state = state, outcome = "accepted", event_id = accepted.event_id,
+      session_id = collector.session_id, synthetic = opts.synthetic, reviewed = false }
+  end
   applying = false
   counters.accepted = counters.accepted + 1
   close_preview()
@@ -841,6 +872,29 @@ end
 function M.reject()
   if not active then return false, "no active proposal" end
   dismiss("explicit")
+  return true
+end
+function M.review_last()
+  local decision = last_decision
+  if not decision or decision.reviewed then return false, "no unreviewed explicit decision" end
+  if decision.synthetic or opts.synthetic then
+    return false, "synthetic decisions cannot be human-reviewed"
+  end
+  if decision.session_id ~= collector.session_id then return false, "decision belongs to another session" end
+  local confirm = M._confirm_impl or vim.fn.confirm
+  local label = decision.outcome == "accepted" and "accepted" or "explicitly rejected"
+  local answer = confirm("Confirm you personally reviewed the " .. label
+    .. " TabComplete proposal " .. decision.state.prediction_id:sub(1, 8) .. "?",
+    "&Confirm\n&Cancel", 2)
+  if answer ~= 1 then return false, "review cancelled" end
+  local event = emit(decision.state, "prediction_reviewed", {
+    resolution_event_id = decision.event_id, outcome = decision.outcome,
+    review_source = "explicit_editor_confirmation", human_verified = true,
+    reviewed_at_ms = now(),
+  })
+  if not event then return false, "collector unavailable; review not recorded" end
+  decision.reviewed = true
+  last_status = "decision review recorded"
   return true
 end
 function M.set_mode(next_mode)
@@ -871,6 +925,8 @@ function M.status()
     quality = opts.automatic_quality_validated and "validated" or "uncalibrated",
     experimental_auto_opt_in = opts.experimental_auto_opt_in,
     automatic_quality_validated = opts.automatic_quality_validated,
+    automatic_display_policy = opts.automatic_prefix_guard
+      and "prefix-preserving-completion-v1" or "next-edit",
     automatic_personalization_enabled = false,
     in_flight = pending ~= nil, proposal_active = active ~= nil,
     acceptance_key = mapping_key or opts.accept_key, last_latency_ms = last_latency_ms,
@@ -968,6 +1024,12 @@ function M.setup(options)
   })
   vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout", "FocusLost", "InsertLeave" }, {
     group = group, callback = function(args)
+      if applying then return end
+      -- Scratch buffers used for exact edit validation are unrelated to the
+      -- source proposal. Their removal must not close its feedback outcome.
+      if args.event == "BufWipeout" and args.buf ~= vim.api.nvim_get_current_buf()
+          and (not active or args.buf ~= active.bufnr)
+          and (not pending or args.buf ~= pending.state.bufnr) then return end
       if args.event == "FocusLost" then vim.g.tabcomplete_predictor_focus_lost = true end
       invalidate("navigation")
       if args.event == "BufWipeout" then
