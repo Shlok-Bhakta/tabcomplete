@@ -1,0 +1,19 @@
+{
+  "locked_at": "2026-10-01T05:46:15.888866+00:00",
+  "default_alias": "q25",
+  "default_precision": "Q4_K_M",
+  "optional_alias": "sweep",
+  "automatic_quality_validated": false,
+  "experimental_auto_opt_in": true,
+  "automatic_personalization_enabled": false,
+  "context_layout": "cursor-last-v1",
+  "rationale": [
+    "Qwen has lower changed-state latency on the actual ThinkPad: 925.8 ms versus 12,458.2 ms for Sweep.",
+    "Qwen returned 24/24 valid development actions and 9/24 exact actions; Sweep returned 2/24 valid and 1/24 exact.",
+    "Qwen produced 3/6 exact replacements versus 1/6 for Sweep. Its 6/6 exact deletions are withheld from automatic display by the prefix guard.",
+    "Both have poor or unsupported insertion and no-edit behavior. These 24 related cases do not establish broad human edit quality.",
+    "Sweep remains an explicit experimental picker alternative. Only strict, complete, one-line mapped actions can display."
+  ],
+  "uncertainty": "Small correlated development sample; no human acceptance calibration, no equivalence claim, no inspected sealed data.",
+  "decision_before_deployment_confirmation": true
+}

@@ -1,0 +1,203 @@
+{
+  "plan_sha256": "de2c3de13202beeae41ce774daa643a7875a32aa7cf6bef7540965de2b31a575",
+  "setting": {
+    "id": "q25-t4-p4",
+    "alias": "q25",
+    "threads": 4,
+    "prompt_threads": 4,
+    "input_tokens": 1024,
+    "cache_type": "f16"
+  },
+  "identity": {
+    "active_slots": 1,
+    "alias": "q25",
+    "backend": "llama.cpp CPU via Rust",
+    "cache_type": "f16",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 284.107386,
+    "model_protocol": "single-line-edit-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "output_tokens": 64,
+    "prompt_threads": 4,
+    "runtime_config_hash": "85b71f2c077668b49a5edd875a8f209acf8aa2a02f5bc9183ca569c2507a7f1b",
+    "saved_contexts": 0,
+    "status": "ok",
+    "threads": 4
+  },
+  "controller_host": "crabcake",
+  "transport": "owned SSH tunnel",
+  "before": {
+    "host": "shlokthinkpad",
+    "pid": 141016,
+    "memory": "636459a3d000-7fff90239000 ---p 00000000 00:00 0                          [rollup]\nRss:              558632 kB\nPss:              554748 kB\nPss_Dirty:         76728 kB\nPss_Anon:          76728 kB\nPss_File:         478020 kB\nPss_Shmem:             0 kB\nShared_Clean:       3992 kB\nShared_Dirty:          0 kB\nPrivate_Clean:    477912 kB\nPrivate_Dirty:     76728 kB\nReferenced:       558632 kB\nAnonymous:         76728 kB\nKSM:                   0 kB\nLazyFree:              0 kB\nAnonHugePages:         0 kB\nShmemPmdMapped:        0 kB\nFilePmdMapped:         0 kB\nShared_Hugetlb:        0 kB\nPrivate_Hugetlb:       0 kB\nSwap:                  0 kB\nSwapPss:               0 kB\nLocked:                0 kB\n",
+    "status": "Name:\ttabcomplete-eng\nUmask:\t0022\nState:\tS (sleeping)\nTgid:\t141016\nNgid:\t0\nPid:\t141016\nPPid:\t3445\nTracerPid:\t0\nUid:\t1000\t1000\t1000\t1000\nGid:\t100\t100\t100\t100\nFDSize:\t128\nGroups:\t1 17 26 57 100 174 983 \nNStgid:\t141016\nNSpid:\t141016\nNSpgid:\t141016\nNSsid:\t141016\nKthread:\t0\nVmPeak:\t  943744 kB\nVmSize:\t  943744 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t  558632 kB\nVmRSS:\t  558632 kB\nRssAnon:\t   76728 kB\nRssFile:\t  481904 kB\nRssShmem:\t       0 kB\nVmData:\t  171780 kB\nVmStk:\t     136 kB\nVmExe:\t    5120 kB\nVmLib:\t    3624 kB\nVmPTE:\t    1212 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t6\nSigQ:\t0/94916\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000442\nCapInh:\t0000000800000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tff\nCpus_allowed_list:\t0-7\nMems_allowed:\t00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t4\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "pressure": {
+      "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=84\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=84\n",
+      "io": "some avg10=2.53 avg60=2.22 avg300=1.61 total=571030190\nfull avg10=2.53 avg60=2.19 avg300=1.56 total=553681432\n"
+    },
+    "vmstat": {
+      "pswpin": 0,
+      "pswpout": 0,
+      "pgmajfault": 3808
+    },
+    "frequency_khz": {
+      "/sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq": "4184894",
+      "/sys/devices/system/cpu/cpu5/cpufreq/scaling_cur_freq": "3903564",
+      "/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq": "4200144",
+      "/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq": "4052425",
+      "/sys/devices/system/cpu/cpu6/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu4/cpufreq/scaling_cur_freq": "3902285",
+      "/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq": "4018839",
+      "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq": "3949007"
+    },
+    "temperatures": {
+      "/sys/class/thermal/thermal_zone2/temp": "40050",
+      "/sys/class/thermal/thermal_zone0/temp": "20000",
+      "/sys/class/thermal/thermal_zone5/temp": "65000",
+      "/sys/class/thermal/thermal_zone3/temp": "53050",
+      "/sys/class/thermal/thermal_zone1/temp": "47000",
+      "/sys/class/thermal/thermal_zone6/temp": "58000",
+      "/sys/class/thermal/thermal_zone4/temp": "53000"
+    }
+  },
+  "after": {
+    "host": "shlokthinkpad",
+    "pid": 141016,
+    "memory": "636459a3d000-7fff90239000 ---p 00000000 00:00 0                          [rollup]\nRss:              567032 kB\nPss:              563085 kB\nPss_Dirty:         84424 kB\nPss_Anon:          84424 kB\nPss_File:         478661 kB\nPss_Shmem:             0 kB\nShared_Clean:       4056 kB\nShared_Dirty:          0 kB\nPrivate_Clean:    478552 kB\nPrivate_Dirty:     84424 kB\nReferenced:       567032 kB\nAnonymous:         84424 kB\nKSM:                   0 kB\nLazyFree:              0 kB\nAnonHugePages:         0 kB\nShmemPmdMapped:        0 kB\nFilePmdMapped:         0 kB\nShared_Hugetlb:        0 kB\nPrivate_Hugetlb:       0 kB\nSwap:                  0 kB\nSwapPss:               0 kB\nLocked:                0 kB\n",
+    "status": "Name:\ttabcomplete-eng\nUmask:\t0022\nState:\tS (sleeping)\nTgid:\t141016\nNgid:\t0\nPid:\t141016\nPPid:\t3445\nTracerPid:\t0\nUid:\t1000\t1000\t1000\t1000\nGid:\t100\t100\t100\t100\nFDSize:\t128\nGroups:\t1 17 26 57 100 174 983 \nNStgid:\t141016\nNSpid:\t141016\nNSpgid:\t141016\nNSsid:\t141016\nKthread:\t0\nVmPeak:\t  968332 kB\nVmSize:\t  968332 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t  567032 kB\nVmRSS:\t  567032 kB\nRssAnon:\t   84424 kB\nRssFile:\t  482608 kB\nRssShmem:\t       0 kB\nVmData:\t  199312 kB\nVmStk:\t     136 kB\nVmExe:\t    5120 kB\nVmLib:\t    3624 kB\nVmPTE:\t    1232 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t6\nSigQ:\t0/94916\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000442\nCapInh:\t0000000800000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tff\nCpus_allowed_list:\t0-7\nMems_allowed:\t00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t196\nnonvoluntary_ctxt_switches:\t1\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "pressure": {
+      "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=84\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=84\n",
+      "io": "some avg10=0.36 avg60=0.23 avg300=0.90 total=572367519\nfull avg10=0.36 avg60=0.23 avg300=0.86 total=554978541\n"
+    },
+    "vmstat": {
+      "pswpin": 0,
+      "pswpout": 0,
+      "pgmajfault": 3808
+    },
+    "frequency_khz": {
+      "/sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq": "3200142",
+      "/sys/devices/system/cpu/cpu5/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq": "3199901",
+      "/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq": "3199993",
+      "/sys/devices/system/cpu/cpu6/cpufreq/scaling_cur_freq": "3200143",
+      "/sys/devices/system/cpu/cpu4/cpufreq/scaling_cur_freq": "3200812",
+      "/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq": "3201025"
+    },
+    "temperatures": {
+      "/sys/class/thermal/thermal_zone2/temp": "46050",
+      "/sys/class/thermal/thermal_zone0/temp": "20000",
+      "/sys/class/thermal/thermal_zone5/temp": "70000",
+      "/sys/class/thermal/thermal_zone3/temp": "71050",
+      "/sys/class/thermal/thermal_zone1/temp": "61500",
+      "/sys/class/thermal/thermal_zone6/temp": "59000",
+      "/sys/class/thermal/thermal_zone4/temp": "71000"
+    }
+  },
+  "requests": 120,
+  "conditions": {
+    "changed_editor_state": {
+      "count": 48,
+      "median_ms": 2404.355129110627,
+      "p95_ms": 3682.818012079224,
+      "actual_eos": 48,
+      "canonical_valid": 48,
+      "cache_tokens": 8993,
+      "recomputed_tokens": 13379
+    },
+    "identical_prompt_repeat": {
+      "count": 48,
+      "median_ms": 171.94782302249223,
+      "p95_ms": 299.872281961143,
+      "actual_eos": 48,
+      "canonical_valid": 48,
+      "cache_tokens": 22324,
+      "recomputed_tokens": 48
+    }
+  },
+  "quality_claim": false,
+  "development": {
+    "count": 24,
+    "canonical_valid": 24,
+    "actual_eos": 24,
+    "exact_actions": 9,
+    "by_action": {
+      "keep": {
+        "count": 6,
+        "exact": 0
+      },
+      "replace_line": {
+        "count": 6,
+        "exact": 3
+      },
+      "insert_before": {
+        "count": 6,
+        "exact": 0
+      },
+      "delete_line": {
+        "count": 6,
+        "exact": 6
+      }
+    },
+    "no_edit_false_changes": 6,
+    "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+  },
+  "first_measured_request": {
+    "id": "512-0",
+    "operation": "initial_open",
+    "source_bucket": 512,
+    "repetition": 0,
+    "condition": "changed_editor_state",
+    "context_construction_ms": 25.101518956944346,
+    "actual_input_tokens": 430,
+    "context_policy_version": "single-line-context-v2",
+    "prompt_sha256": "e91f94f4721f02b85d2cc38580608f00def6373cedc214df3caae8798ce4a13f",
+    "raw_response": "R\t    return f_20(value)",
+    "returned_text": "R\t    return f_20(value)",
+    "token_ids": [
+      49,
+      2760,
+      470,
+      282,
+      62,
+      17,
+      15,
+      3679,
+      8
+    ],
+    "token_arrival_seconds": {
+      "1": 2.4069320099661127,
+      "8": 2.580175196984783
+    },
+    "token_arrival_definition": "client receipt of identified output token, not kernel timestamp",
+    "returned_line_seconds": 2.640814076992683,
+    "total_seconds": 2.640814076992683,
+    "server_timings": {
+      "cache_n": 0,
+      "predicted_ms": 224.71524100000002,
+      "predicted_n": 9,
+      "prompt_ms": 2385.3132819999996,
+      "prompt_n": 430,
+      "total_ms": 2612.94476
+    },
+    "tokens_cached": null,
+    "tokens_evaluated": null,
+    "stop_type": "eos",
+    "stopping_word": null,
+    "server_stop_requested": false,
+    "truncated": null,
+    "cache_requested": true,
+    "canonical_action": {
+      "kind": "replace_line",
+      "text": "    return f_20(value)"
+    },
+    "model_protocol": "single-line-edit-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "terminal_observed": true,
+    "run_id": "run-eae7d56ff172939799ec77de7b1f5042"
+  },
+  "first_measured_request_label": "first request in comparison, after compatibility smoke; not a filesystem cold-cache claim"
+}

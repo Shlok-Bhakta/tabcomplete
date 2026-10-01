@@ -1,0 +1,35 @@
+{
+  "schema": "rust-editor-native-smoke-v1",
+  "created_at": "2026-10-01T04:04:37.857971+00:00",
+  "host": "shlokthinkpad",
+  "controller": "crabcake",
+  "binary": "/nix/store/sjpb1fjgsfjjmpvjb7lwzgbyb6z7fp4y-tabcomplete-engine-0.1.0/bin/tabcomplete-engine",
+  "binary_sha256": "dc639c9873fc948d5ccc117ccc42f2ba39139c6f1cacc52aa7d90e88782526ed",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "precision": "Q4_K_M",
+  "runtime": [
+    "llama-cpp-2=0.1.157",
+    "llama-cpp-sys-2=0.1.158"
+  ],
+  "settings": {
+    "threads": 4,
+    "prompt_threads": 4,
+    "context": 2304,
+    "input": 1024,
+    "output": 64,
+    "cache": "f16",
+    "slots": 1,
+    "saved_snapshots": 0
+  },
+  "fixture_sha256": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+  "purpose": "compatibility and safety only; not a model quality claim",
+  "checks": [
+    "actual EOS",
+    "strict canonical action",
+    "token-prefix reuse",
+    "cancelled SSE releases slot",
+    "bounded HTTP conflict",
+    "repository cache reset"
+  ],
+  "deadline_seconds": 600
+}

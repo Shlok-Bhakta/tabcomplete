@@ -1,0 +1,6 @@
+{
+  "health_load_ms_meaning": "Native LlamaModel loading and new_context construction, after model SHA validation. Excludes hash read/validation, backend initialization and entire process readiness.",
+  "cold_filesystem_load": "not measured",
+  "startup_source": "tools/tabcomplete_engine/src/main.rs worker: verify_model before Instant::now()",
+  "quality_or_speed_claim": false
+}

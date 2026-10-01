@@ -1,0 +1,75 @@
+{
+  "observed_at": "2026-10-01T07:01:36.670205+00:00",
+  "python": {
+    "command": "PYTHONPATH=src:/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages UV_PROJECT_ENVIRONMENT=/home/crabcake/Projects/tabcomplete-product-r2/.venv uv run --no-sync pytest -q",
+    "passed": 826,
+    "warnings": 2,
+    "seconds": 89.59,
+    "log": "/mnt/ssd/tabcomplete-product-r2/rust-editor-repository-pytest-v4.log"
+  },
+  "rust": {
+    "passed": 9,
+    "native_nix_check_passed": 9,
+    "clippy": "passed with -D warnings"
+  },
+  "lua": {
+    "passed": 75,
+    "failed": 0,
+    "additional_suites": [
+      "automatic_predict.lua including Blink UI guard",
+      "model_picker.lua"
+    ],
+    "required_added_regressions": [
+      "same-file forced reload captures full-buffer delta and chains subsequent edits",
+      "reload dismissal is editor change, never implicit typing rejection"
+    ]
+  },
+  "server": {
+    "bun_passed": 59,
+    "expect_calls": 317,
+    "typescript": "passed"
+  },
+  "analysis": {
+    "bun_passed": 38,
+    "expect_calls": 160
+  },
+  "gateway": {
+    "bun_passed": 16,
+    "expect_calls": 36,
+    "typescript": "passed"
+  },
+  "lint": {
+    "ruff_producer": "passed",
+    "mypy_files": 83,
+    "mypy": "passed",
+    "mypy_command": "uv run --no-sync mypy src",
+    "ruff_command": "uv run --no-sync ruff check src tests scripts"
+  },
+  "scope": "Repository tests plus producer tests. Report verifier/controller and actual installed editor evidence are recorded separately. No historical test counts substituted.",
+  "report_verifier": {
+    "passed": 13,
+    "ruff": "passed",
+    "format": "passed",
+    "scope": "Disposable SQLite causal/reload/float serialization fixtures; real sessions audited separately."
+  },
+  "cache_invalidation": {
+    "command": "bash nix/tests/cache-invalidation.sh",
+    "passed": true,
+    "scope": "same-size/same-timestamp collision, install, rollback, idempotence, preserve unrelated cache"
+  },
+  "installed_editor": {
+    "passed": 8,
+    "failed": 0,
+    "nvim_version": "0.12.3",
+    "host": "shlokthinkpad",
+    "synthetic": true,
+    "visual_ui_attached": false,
+    "artifact": "feedback_verification/persistent_nvim_20261001T065007Z_09239a5f.json"
+  },
+  "nix_evaluation": {
+    "failed_assertions": 0,
+    "plugin_targets": 1,
+    "full_activation_run": false
+  },
+  "skill_validation": "passed"
+}

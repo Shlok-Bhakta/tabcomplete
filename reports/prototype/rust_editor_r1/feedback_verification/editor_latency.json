@@ -1,0 +1,55 @@
+{
+  "schema": "rust-editor-real-neovim-latency-v1",
+  "run_id": "6dc3720c-5837-4638-8dbf-ade1f29d01f3",
+  "session_id": "3b127a5a-24e9-40bf-813f-58d14a8b873e",
+  "prediction_id": "9a44ab28-d994-45a3-9b9b-35d5af935837",
+  "synthetic": true,
+  "model_alias": "q25",
+  "context_layout": "cursor-last-v1",
+  "input_event": {
+    "type": "edit_delta",
+    "sequence": 23,
+    "timestamp_ms": 1790837376018
+  },
+  "request_state_timestamp_ms": 1790837376268,
+  "request_event": {
+    "sequence": 26,
+    "timestamp_ms": 1790837376291
+  },
+  "first_token_timestamp_ms": 1790837378534,
+  "generation_completed_at_ms": 1790837378829,
+  "generated_event": {
+    "sequence": 28,
+    "timestamp_ms": 1790837378832
+  },
+  "shown_event": {
+    "sequence": 29,
+    "timestamp_ms": 1790837378832,
+    "ui_attached": false
+  },
+  "durations_ms": {
+    "last_edit_to_request_state": 250,
+    "request_state_to_request_event": 23,
+    "request_event_to_first_token": 2243,
+    "request_state_to_first_token": 2266,
+    "first_token_to_generated_event": 298,
+    "request_state_to_shown": 2564,
+    "request_event_to_shown": 2541,
+    "last_edit_to_shown": 2814,
+    "generated_to_shown": 0
+  },
+  "backend_timings_ms": {
+    "cache_n": 0,
+    "predicted_ms": 294.903047,
+    "predicted_n": 11,
+    "prompt_ms": 2232.601747,
+    "prompt_n": 391,
+    "total_ms": 2530.15668
+  },
+  "timing_limit": "No separate client context-build duration is recorded; request-state\u2192request-event includes the context endpoint round trip and request-event emission. Backend prompt_ms is model prompt processing, not client context assembly.",
+  "whole_scenario_elapsed_ms": 5046.4,
+  "whole_scenario_scope": "includes setup and post-display acceptance/undo; not input-to-display latency",
+  "display_evidence": "prediction_shown event recorded by installed plugin; no visual UI attached in headless run",
+  "timing_source": "authoritative SQLite event timestamps, requested_at_ms and first_token_at_ms",
+  "source_session_replay_mismatches": 0
+}

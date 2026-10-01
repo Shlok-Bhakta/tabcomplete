@@ -1,0 +1,16 @@
+{
+  "observed_at": "2026-10-01T06:12:56.229047+00:00",
+  "laptop_model_bytes": 1374688864,
+  "laptop_model_files": 2,
+  "resident_models": 1,
+  "weight_downloads": 0,
+  "requantizations": 0,
+  "new_training_runs": 0,
+  "gpu_allocations": 0,
+  "paid_calls": 0,
+  "cleanup": "Removed this worktree's Rust compiler target cache after native tests and installation. Existing research checkpoints and model artifacts preserved.",
+  "retained_model_locations": [
+    "/nix/store/cc0isw7nhpajcp03zb929j91czwicpgm-q25-public-functional-lr1e5-Q4_K_M.gguf",
+    "/nix/store/mdq9vd28sj7rmc1hv2wwv6fjr5by642q-sweep-next-edit-1.5b.q4_k_m.gguf"
+  ]
+}

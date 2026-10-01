@@ -1,0 +1,107 @@
+{
+  "schema": "thinkpad-rust-editor-comparison-v1",
+  "frozen_at": "2026-10-01T04:29:05.299420+00:00",
+  "inference_host": "shlokthinkpad",
+  "controller_host": "crabcake",
+  "binary": "/nix/store/an8q7s2f2glj9p162yv7dzykxpm6ysy4-tabcomplete-engine-0.1.0/bin/tabcomplete-engine",
+  "binary_sha256": "1660684562e8c8035bf862fba7c84d01f5d55073bd0af20aa39f9d0606761c51",
+  "models": {
+    "q25": {
+      "sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+      "bytes": 491399808,
+      "precision": "Q4_K_M",
+      "protocol": "single-line-edit-v1",
+      "context_policy": "single-line-context-v2",
+      "output_tokens": 64,
+      "source": "Qwen/Qwen2.5-Coder-0.5B plus existing full-weight supervised adaptation"
+    },
+    "sweep": {
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+      "bytes": 883289056,
+      "precision": "Q4_K_M",
+      "source_revision": "409016591c6c1a94f545f22328a85a3516118f34",
+      "source": "sweepai/sweep-next-edit-1.5B",
+      "license": "Apache-2.0",
+      "protocol": "sweep-full-file-v1",
+      "context_policy": "sweep-window-context-v1",
+      "output_tokens": 192,
+      "quantization_origin": "publisher Q8; not an F16-to-Q4 ablation"
+    }
+  },
+  "settings": [
+    {
+      "id": "q25-t4-p4",
+      "alias": "q25",
+      "threads": 4,
+      "prompt_threads": 4,
+      "input_tokens": 1024,
+      "cache_type": "f16"
+    },
+    {
+      "id": "q25-t2-p4",
+      "alias": "q25",
+      "threads": 2,
+      "prompt_threads": 4,
+      "input_tokens": 1024,
+      "cache_type": "f16"
+    },
+    {
+      "id": "q25-t2-p2",
+      "alias": "q25",
+      "threads": 2,
+      "prompt_threads": 2,
+      "input_tokens": 1024,
+      "cache_type": "f16"
+    },
+    {
+      "id": "sweep-t4-p4",
+      "alias": "sweep",
+      "threads": 4,
+      "prompt_threads": 4,
+      "input_tokens": 1024,
+      "cache_type": "f16"
+    }
+  ],
+  "states_file": "editor_states_v1.jsonl",
+  "states_sha256": "af4b53e4a4b4ef1e81270055549662f22755a783d337341376ca0618a18cc713",
+  "quality_states_file": "quality_states_v1.jsonl",
+  "quality_states_sha256": "601daa6370ce0582467f1e37d88871032036c5c4b39d38a1c30199008cc1dd3b",
+  "quality_source_dataset_sha256": "8b749bb7bc0ccb9c2ab3b426523e9d069664321d986867b1589ede1decb36506",
+  "source_files": {
+    "tools/tabcomplete_engine/src/main.rs": "dd9c86a49fb7ee47594ad332b7b3f606f4f519880d1b0538c2f4f7d3c83b9c9f",
+    "tools/tabcomplete_engine/src/context.rs": "3e7788589fe2a669f0a8677bf94fcf43de7b8c8761362c0be2bdae039b3e4570",
+    "tools/tabcomplete_engine/Cargo.lock": "a464c0cc39b0d8b319414a85ae11f2e2fa2fdf93e944b21e1d065847bd18c0a5",
+    "scripts/replay_small_model.py": "de238b109366774a4168bf3488d9090c3c69398eceac517f2eeb8b062eaebed7",
+    "scripts/measure_r2_local.py": "c39b2a204d78b3a42d768595e7e68bae6d194ab5e3541e8849e472464220dd02",
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua": "cb975b7df654766cd13651f2d548f013a16677f741e28bd914758e018fdc5eb0",
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/sse.lua": "5e5f9823194248e0e30d76c94c313ba0e63bb7d9df32281fb700025a7545981b"
+  },
+  "limits": {
+    "context_tokens": 2304,
+    "batch": 256,
+    "microbatch": 64,
+    "active_models": 1,
+    "active_slots": 1,
+    "saved_snapshots": 0,
+    "resident_memory_bytes": 1572864000,
+    "model_files_bytes": 1374688864,
+    "gpu_allocations": 0,
+    "training_enabled": false
+  },
+  "max_setting_seconds": 1200,
+  "max_aggregate_timed_seconds": 4800,
+  "repetitions": 2,
+  "decoding": "greedy, own tokenizer, actual EOG required; no text trimming or repair",
+  "condition": "normal desktop applications remain; no competing build/conversion/download/benchmark on inference host",
+  "latency": "completed returned canonical action; changed-state and identical-repeat separate; user debounce/UI stages measured only in editor smoke",
+  "selection_rule": "Prefer useful prefix-preserving replacement coverage on declared development examples, finite valid EOS actions, bounded target RAM; choose lower changed-state latency among correct comparable runtime settings; preserve q25 default unless Sweep demonstrates a better useful same-task tradeoff. Small correlated development sample does not establish production accuracy.",
+  "scope_notes": [
+    "24 deterministic source-state transitions, source-size bucket is not tokenizer length",
+    "all prompts constructed by resident context worker; actual prompt lengths recorded",
+    "Sweep uses a declared cropped whole-window task and only strict unchanged surrounding bytes map to a one-line action",
+    "Sweep insertion/deletion mappings unsupported; these remain failed capability cases, never repaired",
+    "24 preselected development cases with6of each action; related synthetic families are codec checks, not human-quality evidence",
+    "sealed data unchanged and not accessed",
+    "model files outsideGit; only code/reports pushed"
+  ]
+}

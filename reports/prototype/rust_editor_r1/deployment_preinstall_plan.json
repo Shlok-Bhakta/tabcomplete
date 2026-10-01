@@ -1,0 +1,18 @@
+{
+  "schema": "rust-editor-deployment-preinstall-v1",
+  "frozen_at": "2026-10-01T05:37:41.823879+00:00",
+  "binary_sha256": "93430f77799a945fc67044c57e20594d5196cb1171d1a9ed8cdcd45809b1fc44",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "layout": "cursor-last-v1",
+  "sources": {
+    "tools/tabcomplete_engine/src/main.rs": "791c0b55f83528b9297ff03c1be69c7329a3f5d6e58e3b3d034ddef4953b4414",
+    "tools/tabcomplete_engine/src/context.rs": "efadca5886193d98d482a1a1264e164ca9bf85c9090730ab21c731531c4fe0db",
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua": "e2db1fb581ff5648aee89caa6dda2f55fd9377fc24055bd656d28ac910b65007",
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/sse.lua": "5e5f9823194248e0e30d76c94c313ba0e63bb7d9df32281fb700025a7545981b",
+    "nix/home-manager.nix": "2e496b7ab7efd82126a26beaf60a73a57e293a9317da34e661a74ab9e6752d1f"
+  },
+  "fixture_sha256": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+  "output_tokens": 64,
+  "inference_host": "shlokthinkpad",
+  "quality_claim": false
+}

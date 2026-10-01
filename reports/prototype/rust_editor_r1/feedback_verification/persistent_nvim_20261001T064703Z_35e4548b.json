@@ -1,0 +1,104 @@
+{
+  "fatal_code": "loaded_plugin_module_file_unavailable",
+  "finished_at": "2026-10-01T06:47:03.162253+00:00",
+  "fixture": {
+    "commit": "d273114bd6e9dbaa06b61f83140dfc0e02558318",
+    "fixture_cursor_byte_column_before_typing": 11,
+    "id": "public-return-prefix-smoke",
+    "license": "MIT",
+    "origin_fixture_sha256": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+    "repository_kind": "disposable local Git copy",
+    "source_sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+    "starting_line_variant": "removed fixture target trailing blank; actual remote-send A-space restores it"
+  },
+  "installed_nvim_binary": "/nix/store/jhs00x12qj6hflkhgbab79gqlw61hh5x-nvim/bin/nvim",
+  "installed_plugin_spec": {
+    "expected_modules": {
+      "tabcomplete_trajectory": {
+        "path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/init.lua",
+        "sha256": "3136edf66d33c85afa4303f8185239b92d4da1efd69dd83e1a44a74ca5e7c15d"
+      },
+      "tabcomplete_trajectory.buffers": {
+        "path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/buffers.lua",
+        "sha256": "4703428d5476fd6b951695d4f4c5162e4ed95c3907d5cee9daafe65328d23be2"
+      },
+      "tabcomplete_trajectory.predict": {
+        "path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/predict.lua",
+        "sha256": "ddeb40157de13ff4edf05444ab5224b838a0c5299906fcde768637b93ccc4c3b"
+      },
+      "tabcomplete_trajectory.sse": {
+        "path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/sse.lua",
+        "sha256": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab"
+      }
+    },
+    "lua_dir": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua",
+    "plugin_dir": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source",
+    "spec_path": "/nix/store/5ddmzgwg8zq45nj5z7qrfbw1v9s43729-hm_lazyvimluapluginstabcompletetrajectory.lua",
+    "spec_sha256": "7dd5130b00be74d01bcd5977f08a0118c9ba529f3a7364e6facbe52b5900cb89"
+  },
+  "mode_override_used": false,
+  "module_source_failures_by_session": [
+    {
+      "failures": [
+        "loaded_plugin_module_file_unavailable"
+      ],
+      "session_id": "9c3144a2-09eb-4b14-b7b6-9bc6470d76f6"
+    }
+  ],
+  "module_sources_by_session": [
+    {
+      "modules": [
+        {
+          "entrypoint": "attach",
+          "expected_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/buffers.lua",
+          "expected_sha256": "4703428d5476fd6b951695d4f4c5162e4ed95c3907d5cee9daafe65328d23be2",
+          "matched": true,
+          "module": "tabcomplete_trajectory.buffers",
+          "source_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/buffers.lua",
+          "source_sha256": "4703428d5476fd6b951695d4f4c5162e4ed95c3907d5cee9daafe65328d23be2"
+        },
+        {
+          "entrypoint": "emit",
+          "expected_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/init.lua",
+          "expected_sha256": "3136edf66d33c85afa4303f8185239b92d4da1efd69dd83e1a44a74ca5e7c15d",
+          "matched": false,
+          "module": "tabcomplete_trajectory",
+          "source_path": "luaeval()",
+          "source_sha256": null
+        },
+        {
+          "entrypoint": "setup",
+          "expected_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/predict.lua",
+          "expected_sha256": "ddeb40157de13ff4edf05444ab5224b838a0c5299906fcde768637b93ccc4c3b",
+          "matched": true,
+          "module": "tabcomplete_trajectory.predict",
+          "source_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/predict.lua",
+          "source_sha256": "ddeb40157de13ff4edf05444ab5224b838a0c5299906fcde768637b93ccc4c3b"
+        },
+        {
+          "entrypoint": "finish_rust",
+          "expected_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/sse.lua",
+          "expected_sha256": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab",
+          "matched": true,
+          "module": "tabcomplete_trajectory.sse",
+          "source_path": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source/lua/tabcomplete_trajectory/sse.lua",
+          "source_sha256": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab"
+        }
+      ],
+      "session_id": "9c3144a2-09eb-4b14-b7b6-9bc6470d76f6"
+    }
+  ],
+  "nvim_exit_clean": true,
+  "nvim_wrapper_path": "/etc/profiles/per-user/shlok/bin/nvim",
+  "raw_delta_artifact": "persistent_nvim_20261001T064703Z_35e4548b_raw_deltas.jsonl",
+  "raw_delta_count": 0,
+  "result_path": "/tmp/tabcomplete-feedback-r1-20261001-audit2/reports/prototype/rust_editor_r1/feedback_verification/persistent_nvim_20261001T064703Z_35e4548b.json",
+  "run_id": "0332ec3e-7d65-4759-b449-ebfff67c3e63",
+  "scenarios": [],
+  "schema_version": 1,
+  "session_ids": [],
+  "started_at": "2026-10-01T06:47:02.792831+00:00",
+  "synthetic": true,
+  "transport": "persistent headless Neovim over a private Unix socket",
+  "typing_transport": "nvim --remote-send"
+}

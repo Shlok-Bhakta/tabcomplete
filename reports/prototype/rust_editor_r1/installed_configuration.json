@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-01T06:54:41.985110Z",
+  "host": "thinkpad",
+  "user": "shlok",
+  "installed": {
+    "standalone": "/nix/store/77vqqf5a43zf6ifm1a084v50casj431q-tabcomplete-standalone-qwen",
+    "bundle": "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0",
+    "engine": "/nix/store/bh4v75wgwf5l9rz0f6shlm74nszdslz1-tabcomplete-engine-0.1.0/bin/tabcomplete-engine",
+    "engine_sha256": "9341ac3dbf74e0ecf42d82d24bf0b5f0ee0da7327415f1dbdcb83392ae753e95",
+    "plugin_sha256": {
+      "buffers": "4703428d5476fd6b951695d4f4c5162e4ed95c3907d5cee9daafe65328d23be2",
+      "predict": "ddeb40157de13ff4edf05444ab5224b838a0c5299906fcde768637b93ccc4c3b",
+      "sse": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab"
+    },
+    "service": {
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/home/shlok/.config/systemd/user/tabcomplete-engine.service",
+      "MainPID": "244220",
+      "CPUQuotaPerSecUSec": "4s",
+      "MemoryMax": "1572864000",
+      "MemorySwapMax": "0"
+    },
+    "argv": [
+      "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine",
+      "--model",
+      "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/model.gguf",
+      "--model-sha256",
+      "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "19094",
+      "--threads",
+      "4",
+      "--prompt-threads",
+      "4",
+      "--context-size",
+      "2304",
+      "--context-layout",
+      "cursor-last-v1",
+      "--input-tokens",
+      "1024",
+      "--batch-size",
+      "256",
+      "--output-tokens",
+      "64",
+      "--protocol",
+      "single-line-edit-v1",
+      "--cache-type",
+      "f16",
+      "--model-registry",
+      "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/models.json",
+      "--state-file",
+      "/home/shlok/.local/state/tabcomplete/selected-model.json"
+    ],
+    "health": {
+      "active_slots": 1,
+      "alias": "q25",
+      "backend": "llama.cpp CPU via Rust",
+      "cache_type": "f16",
+      "context_layout": "cursor-last-v1",
+      "context_size": 2304,
+      "input_tokens": 1024,
+      "llama_cpp_2": "0.1.157",
+      "llama_cpp_sys_2": "0.1.158",
+      "load_ms": 286.950139,
+      "model_protocol": "single-line-edit-v1",
+      "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+      "output_tokens": 64,
+      "prompt_threads": 4,
+      "runtime_config_hash": "6e58a95c8f5fba5581784636cf5e042a33a14e93b7c764f681eb2ff4c10c54ba",
+      "saved_contexts": 0,
+      "status": "ok",
+      "threads": 4
+    },
+    "models": {
+      "q25": {
+        "path": "/nix/store/cc0isw7nhpajcp03zb929j91czwicpgm-q25-public-functional-lr1e5-Q4_K_M.gguf",
+        "protocol": "single-line-edit-v1",
+        "sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb"
+      },
+      "sweep": {
+        "path": "/nix/store/mdq9vd28sj7rmc1hv2wwv6fjr5by642q-sweep-next-edit-1.5b.q4_k_m.gguf",
+        "protocol": "sweep-full-file-v1",
+        "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4"
+      }
+    },
+    "unit_path": "/home/shlok/.config/systemd/user/tabcomplete-engine.service",
+    "plugin_spec_path": "/home/shlok/.config/lazyvim/lua/plugins/tabcomplete-trajectory.lua",
+    "nvim_app_name": "lazyvim",
+    "mode_state": {
+      "path": "/home/shlok/.local/state/lazyvim/tabcomplete-rust-editor-mode.json",
+      "saved": {
+        "mode": "automatic",
+        "experimental_auto_opt_in": true
+      },
+      "persist_mode": true,
+      "first_launch_mode": "automatic",
+      "experimental_auto_opt_in": true
+    },
+    "selected_model_state": {
+      "path": "/home/shlok/.local/state/tabcomplete/selected-model.json",
+      "saved": {
+        "alias": "q25"
+      }
+    }
+  },
+  "permanent_nix": {
+    "repository": "Shlok-Bhakta/tabcomplete",
+    "rev": "f96d32f7e79945aea432a64ee88775313a58a713",
+    "source_hash": "sha256-d/sQ3Ikq0LX1lZkRZsGTQxa3xX2yNzkE5ZYzxlGfZjs=",
+    "changed_files": [
+      "pkgs/tabcomplete-engine/default.nix",
+      "home/features/tabcomplete/default.nix",
+      "hosts/thinkpad/home.nix"
+    ],
+    "evaluation": {
+      "activationDerivation": "/nix/store/f9zvjhx7b4icaq4j2q26gjz9fkp3vmnw-home-manager-generation.drv",
+      "batchSize": 256,
+      "cacheHook": {
+        "after": [
+          "linkGeneration"
+        ],
+        "before": [],
+        "data": "run /nix/store/cgjr3kj3hs7ngznyws5qfg16c8scpys0-bash-interactive-5.3p9/bin/bash /nix/store/vi77ivd8cg298692mr6kpqcj7w7a1kja-invalidate-owned-spec-cache.sh \\\n  /nix/store/lzjp315js7rsxb52iswxbs5zlf7yn44g-neovim-0.12.3/bin/nvim lazyvim \\\n  /home/shlok/.config/lazyvim/lua/plugins/tabcomplete-trajectory.lua \\\n  /home/shlok/.local/state/tabcomplete-install-backups/home-manager-cache\n"
+      },
+      "contextLayout": "cursor-last-v1",
+      "contextSize": 2304,
+      "engine": "/nix/store/bh4v75wgwf5l9rz0f6shlm74nszdslz1-tabcomplete-engine-0.1.0",
+      "execStart": [
+        "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine --model /nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/model.gguf --model-sha256 4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --output-tokens 64 --protocol single-line-edit-v1 --cache-type f16 --model-registry /nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/models.json --state-file %S/tabcomplete/selected-model.json"
+      ],
+      "failedAssertions": 0,
+      "inputTokens": 1024,
+      "installedPluginTargets": [
+        "/home/shlok/.config/lazyvim/lua/plugins/tabcomplete-trajectory.lua"
+      ],
+      "package": "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0",
+      "source": "/nix/store/4klv76s00fnsk88jq10bd978xn7818gz-source"
+    },
+    "activation_performed": false
+  },
+  "rollback": {
+    "standalone_backup": "/home/shlok/.local/state/tabcomplete-install-backups/20261001T062427-232339",
+    "permanent_nix_backup": "/home/shlok/.local/state/tabcomplete-rust-editor-r1/permanent-nix-backups/20261001T065025-243557",
+    "initial_standalone_backup": "/home/shlok/.local/state/tabcomplete-install-backups/20261001T055602-220940",
+    "initial_permanent_nix_backup": "/home/shlok/.local/state/tabcomplete-rust-editor-r1/permanent-nix-backups/20261001T060317-223324",
+    "previous_standalone": "/nix/store/yrw2qi9fqmdxmj1z20mvpfcj1kpl2r0n-tabcomplete-standalone-qwen",
+    "previous_standalone_gc_root": "/home/shlok/.local/state/tabcomplete-install-backups/20261001T062427-232339/previous-standalone",
+    "previous_permanent_nix_backup": "/home/shlok/.local/state/tabcomplete-rust-editor-r1/permanent-nix-backups/20261001T062537-232741",
+    "installer_source": "/nix/store/4klv76s00fnsk88jq10bd978xn7818gz-source"
+  },
+  "preservation": {
+    "unrelated_staged_diff_unchanged": true,
+    "unrelated_unstaged_diff_unchanged": true,
+    "legacy_collector_source_unchanged": true,
+    "running_service_configuration_unchanged_during_final_pin": true
+  },
+  "verification": {
+    "native_engine_tests_passed": 9,
+    "lua_tests_passed": 75,
+    "permanent_nix_evaluation_passed": true,
+    "scientific_serving_measurements_runtime_config_hash": "5109a74b23b8a01d41bdb8e6c81be6fe54c48bd2639581c3687fc6e1cf6ba1ec",
+    "scientific_serving_measurements_bundle": "pre-collector-change",
+    "current_runtime_hash_change": "Bundle paths changed; native engine, weights, and compute settings are unchanged.",
+    "historical_collector_reload_audit": {
+      "status": "blocked",
+      "reason": "Actual editor run recorded zero reload-origin deltas.",
+      "reported_by": "parent_agent",
+      "cause": "Stale owned plugin-spec bytecode loaded the older 4nm bundle before focused cache invalidation."
+    },
+    "latest_collector_reload_audit": {
+      "status": "passed",
+      "reported_by": "parent_agent",
+      "loaded_source_guard": "Current installed plugin source and hashes verified after focused cache invalidation.",
+      "strict_main_session": "3b127a5a-24e9-40bf-813f-58d14a8b873e",
+      "restart_only_session": "c00d6eb1-3b45-45c3-9532-f9e1c0722569",
+      "replay_mismatches": 0,
+      "duplicate_new_rows": 0,
+      "authoritative_receipts": "feedback_projection_verification.json"
+    },
+    "loaded_module_sources": {
+      "engine_pid_unchanged": 232395,
+      "modules": {
+        "sse": {
+          "source": "@/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim/lua/tabcomplete_trajectory/sse.lua",
+          "sha256": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab"
+        },
+        "predict": {
+          "source": "@/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim/lua/tabcomplete_trajectory/predict.lua",
+          "sha256": "ddeb40157de13ff4edf05444ab5224b838a0c5299906fcde768637b93ccc4c3b"
+        },
+        "init": {
+          "source": "@/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim/lua/tabcomplete_trajectory/init.lua",
+          "sha256": "3136edf66d33c85afa4303f8185239b92d4da1efd69dd83e1a44a74ca5e7c15d"
+        },
+        "buffers": {
+          "source": "@/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim/lua/tabcomplete_trajectory/buffers.lua",
+          "sha256": "4703428d5476fd6b951695d4f4c5162e4ed95c3907d5cee9daafe65328d23be2"
+        }
+      },
+      "nvim_version": {
+        "minor": 12,
+        "build": null,
+        "patch": 3,
+        "api_level": 14,
+        "major": 0,
+        "api_compatible": 0,
+        "api_prerelease": false
+      },
+      "plugin": "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim",
+      "owned_spec_cache_only_invalidated": true,
+      "unrelated_cache_bytes_preserved": true,
+      "proof_scope": "Historical fresh-wrapper proof at PID232395 before the root-authorized saved-alias restart."
+    },
+    "canonical_plugin_source": "/nix/store/6mc6ymisirda0ds8f80x7fydr5ssj1p2-source",
+    "owned_spec_cache_invalidation": {
+      "cache_path": "/home/shlok/.cache/lazyvim/luac/%2fhome%2fshlok%2f.config%2flazyvim%2flua%2fplugins%2ftabcomplete-trajectory.luac",
+      "previous_header": "4,1749,1,0",
+      "backup": "/home/shlok/.local/state/tabcomplete-install-backups/20261001T062427-232339/editor-cache-fix/tabcomplete-trajectory-20261001T064437-240229.luac",
+      "unrelated_cache_bytes_preserved": true,
+      "engine_pid_unchanged": 232395,
+      "regression_command": "bash nix/tests/cache-invalidation.sh",
+      "regression_passed": true,
+      "checks": [
+        "same_size_same_mtime_collision",
+        "install_and_rollback",
+        "repeated_invalidation_idempotent",
+        "unrelated_cache_preservation",
+        "bash_syntax",
+        "home_manager_evaluation"
+      ],
+      "home_manager_activation_after": [
+        "linkGeneration"
+      ],
+      "home_manager_activation_performed": false
+    },
+    "root_authorized_service_restart": {
+      "previous_pid": 232395,
+      "active_pid": 244220,
+      "restored_saved_alias": "q25",
+      "runtime_config_hash": "6e58a95c8f5fba5581784636cf5e042a33a14e93b7c764f681eb2ff4c10c54ba",
+      "purpose": "Verify saved model alias reload after the final editor window closed.",
+      "receipt": "service_restart_verification.json"
+    }
+  }
+}

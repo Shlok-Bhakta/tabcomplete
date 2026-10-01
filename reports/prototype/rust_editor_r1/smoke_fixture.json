@@ -1,0 +1,22 @@
+{
+  "buffers": [],
+  "id": "public-return-prefix-smoke",
+  "quality_evidence": false,
+  "repository_identity": "synthetic:rust-editor-smoke",
+  "source_license": "MIT",
+  "state": {
+    "cursor_col": 11,
+    "file_id": "sample.py",
+    "filetype": "python",
+    "history": [
+      {
+        "new_text": "    return ",
+        "old_text": "    ",
+        "row": 18
+      }
+    ],
+    "relevant": [],
+    "source": "import os\n\nclass RunDir(object):\n    def __init__(self, dir, create=False):\n        self._run_dir = dir\n        self._create = create\n\n    def __enter__(self):\n        self._starting_dir = os.path.abspath(os.getcwd())\n        if self._create and not os.path.isdir(self._run_dir):\n            os.makedirs(self._run_dir)\n        os.chdir(self._run_dir)\n\n    def __exit__(self, type, value, traceback):\n        os.chdir(self._starting_dir)\n\n\ndef open_run_dir(dir, **kwds):\n    return \n",
+    "target_row": 18
+  }
+}

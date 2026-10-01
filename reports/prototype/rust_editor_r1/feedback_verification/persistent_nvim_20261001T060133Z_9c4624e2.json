@@ -1,0 +1,27 @@
+{
+  "finished_at": "2026-10-01T06:01:33.263256+00:00",
+  "fixture": {
+    "commit": "0a5803028b7e00bfa18c575b3f2e97ae091d4494",
+    "fixture_cursor_byte_column_before_typing": 11,
+    "id": "public-return-prefix-smoke",
+    "license": "MIT",
+    "origin_fixture_sha256": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+    "repository_kind": "disposable local Git copy",
+    "source_sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+    "starting_line_variant": "removed fixture target trailing blank; actual remote-send A-space restores it"
+  },
+  "installed_nvim_binary": "nvim",
+  "mode_override_used": false,
+  "nvim_exit_clean": true,
+  "raw_delta_artifact": "persistent_nvim_20261001T060133Z_9c4624e2_raw_deltas.jsonl",
+  "raw_delta_count": 0,
+  "result_path": "/tmp/tabcomplete-feedback-r1-20261001-audit1/reports/prototype/rust_editor_r1/feedback_verification/persistent_nvim_20261001T060133Z_9c4624e2.json",
+  "run_id": "522a4daa-0982-440a-bf20-3717cb2f6db5",
+  "scenarios": [],
+  "schema_version": 1,
+  "session_ids": [],
+  "started_at": "2026-10-01T06:01:32.809464+00:00",
+  "synthetic": true,
+  "transport": "persistent headless Neovim over a private Unix socket",
+  "typing_transport": "nvim --remote-send"
+}

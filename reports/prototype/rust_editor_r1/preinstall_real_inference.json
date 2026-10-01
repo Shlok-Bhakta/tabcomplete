@@ -1,0 +1,73 @@
+{
+  "identity": {
+    "active_slots": 1,
+    "alias": "q25",
+    "backend": "llama.cpp CPU via Rust",
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 296.707374,
+    "model_protocol": "single-line-edit-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "output_tokens": 64,
+    "prompt_threads": 4,
+    "runtime_config_hash": "4855b6658fd207072b652d5dec717dd2794252a8134a7ad315122f7940d6f836",
+    "saved_contexts": 0,
+    "status": "ok",
+    "threads": 4
+  },
+  "context_policy": "single-line-cursor-last-context-v1",
+  "prompt_tokens": 376,
+  "result": {
+    "raw_response": "R\t    return RunDir(dir, **kwds)",
+    "returned_text": "R\t    return RunDir(dir, **kwds)",
+    "token_ids": [
+      49,
+      2760,
+      470,
+      6452,
+      6184,
+      14161,
+      11,
+      3070,
+      28600,
+      5356,
+      8
+    ],
+    "token_arrival_seconds": {
+      "1": 2.101366625051014,
+      "8": 2.283346106065437
+    },
+    "token_arrival_definition": "client receipt of identified output token, not kernel timestamp",
+    "returned_line_seconds": 2.388758645975031,
+    "total_seconds": 2.388758645975031,
+    "server_timings": {
+      "cache_n": 0,
+      "predicted_ms": 288.16963,
+      "predicted_n": 11,
+      "prompt_ms": 2082.250084,
+      "prompt_n": 376,
+      "total_ms": 2373.393901
+    },
+    "tokens_cached": null,
+    "tokens_evaluated": null,
+    "stop_type": "eos",
+    "stopping_word": null,
+    "server_stop_requested": false,
+    "truncated": null,
+    "cache_requested": true,
+    "canonical_action": {
+      "kind": "replace_line",
+      "text": "    return RunDir(dir, **kwds)"
+    },
+    "model_protocol": "single-line-edit-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "terminal_observed": true
+  },
+  "synthetic": true,
+  "quality_evidence": false,
+  "revision_explanation": "Actual corrected-policy binary. Previous preinstall failure is preserved; no prompt-byte change."
+}

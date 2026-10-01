@@ -1,0 +1,202 @@
+{
+  "schema": "rust-editor-replay-results-v1",
+  "synthetic": true,
+  "human_feedback": false,
+  "quality_validated": false,
+  "training_enabled": false,
+  "driver_report": "persistent_nvim_20261001T065007Z_09239a5f.json",
+  "raw_delta_artifact": "persistent_nvim_20261001T065007Z_09239a5f_raw_deltas.jsonl",
+  "sessions": [
+    {
+      "session_id": "3b127a5a-24e9-40bf-813f-58d14a8b873e",
+      "detailed_report": "database-evidence-3b127a5a-24e9-40bf-813f-58d14a8b873e.json",
+      "sqlite_integrity_check": "ok",
+      "foreign_key_issues": 0,
+      "sequence_contiguous": true,
+      "events": 473,
+      "projections": 6,
+      "global_blobs": 124,
+      "session_blob_references": 10,
+      "all_global_blob_hashes_verified": true,
+      "snapshot_digests": {
+        "session_events": "b07b9f02ffe77fde3af4820564e342e6295b0bc21d825ed5482b2796aa4f2098",
+        "session_projections": "0ca2fa381ab0033f5047d1b9dea1d5dbacd7ad8a7b416aef9adc98dbe8356fd5",
+        "all_database_blobs": "41d682dd708c01d9630a7977ba87b81266eeaa03bef87bebc5690fc53d116593",
+        "global_counts": {
+          "events": 7510,
+          "projections": 107,
+          "blobs": 124
+        }
+      },
+      "replay": {
+        "anchor_count": 23,
+        "delta_count": 31,
+        "segment_count": 21,
+        "all_segments_byte_equal": true,
+        "unanchored_delta_count": 0,
+        "mismatch_count": 0,
+        "reload_origin_count": 4,
+        "reload_transitions": [
+          {
+            "event_id": "774f87d0-5c7e-4604-9fdc-c8b76b32c5ca",
+            "sequence": 79,
+            "origin": "buffer_reload",
+            "range": [
+              0,
+              19,
+              19
+            ],
+            "deleted_bytes": 481,
+            "inserted_bytes": 480,
+            "fileformat_after": "unix",
+            "eol_after": true,
+            "following_anchor": {
+              "event_id": "7c2ab37c-df07-4e89-9f1e-4577cc00dc41",
+              "sequence": 82,
+              "sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+              "bytes": 481
+            },
+            "replay_segment": {
+              "from_sequence": 27,
+              "to_sequence": 82,
+              "delta_count": 3,
+              "byte_equal": true
+            }
+          },
+          {
+            "event_id": "dd972d01-bff5-4e7d-bcc1-18d9aaf665c9",
+            "sequence": 141,
+            "origin": "buffer_reload",
+            "range": [
+              0,
+              19,
+              19
+            ],
+            "deleted_bytes": 482,
+            "inserted_bytes": 480,
+            "fileformat_after": "unix",
+            "eol_after": true,
+            "following_anchor": {
+              "event_id": "a75459de-cbe2-47ba-8559-8bce596fca84",
+              "sequence": 144,
+              "sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+              "bytes": 481
+            },
+            "replay_segment": {
+              "from_sequence": 92,
+              "to_sequence": 144,
+              "delta_count": 2,
+              "byte_equal": true
+            }
+          },
+          {
+            "event_id": "b8918fdf-3db9-4f8c-b7a4-9cb692d29586",
+            "sequence": 347,
+            "origin": "buffer_reload",
+            "range": [
+              0,
+              19,
+              19
+            ],
+            "deleted_bytes": 500,
+            "inserted_bytes": 480,
+            "fileformat_after": "unix",
+            "eol_after": true,
+            "following_anchor": {
+              "event_id": "1ebae6c9-e227-40d0-8b0c-ddac1a75b69e",
+              "sequence": 350,
+              "sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+              "bytes": 481
+            },
+            "replay_segment": {
+              "from_sequence": 154,
+              "to_sequence": 350,
+              "delta_count": 20,
+              "byte_equal": true
+            }
+          },
+          {
+            "event_id": "9317d560-5d29-4fa4-83d3-fe209be56e3c",
+            "sequence": 417,
+            "origin": "buffer_reload",
+            "range": [
+              0,
+              19,
+              19
+            ],
+            "deleted_bytes": 481,
+            "inserted_bytes": 480,
+            "fileformat_after": "unix",
+            "eol_after": true,
+            "following_anchor": {
+              "event_id": "5a4468ab-b9a8-4fcf-8db8-aa60921d3b2f",
+              "sequence": 421,
+              "sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+              "bytes": 481
+            },
+            "replay_segment": {
+              "from_sequence": 360,
+              "to_sequence": 421,
+              "delta_count": 1,
+              "byte_equal": true
+            }
+          }
+        ]
+      },
+      "duplicate_delivery": {
+        "batch_events": 473,
+        "ack": {
+          "ingested": 0,
+          "skipped_duplicate": 473,
+          "total": 473
+        },
+        "session_rows_unchanged": true,
+        "projection_rows_unchanged": true,
+        "global_counts_unchanged": true
+      }
+    },
+    {
+      "session_id": "c00d6eb1-3b45-45c3-9532-f9e1c0722569",
+      "detailed_report": "database-evidence-c00d6eb1-3b45-45c3-9532-f9e1c0722569.json",
+      "sqlite_integrity_check": "ok",
+      "foreign_key_issues": 0,
+      "sequence_contiguous": true,
+      "events": 41,
+      "projections": 1,
+      "global_blobs": 124,
+      "session_blob_references": 5,
+      "all_global_blob_hashes_verified": true,
+      "snapshot_digests": {
+        "session_events": "5b8b6d608c243dbada105122f038dab145a650135cff04747c56a5b3d57cedd5",
+        "session_projections": "3339914b804c960691b5a57bcc0143082d72b8e1abfe7252bfefed9c93a8ed16",
+        "all_database_blobs": "41d682dd708c01d9630a7977ba87b81266eeaa03bef87bebc5690fc53d116593",
+        "global_counts": {
+          "events": 7510,
+          "projections": 107,
+          "blobs": 124
+        }
+      },
+      "replay": {
+        "anchor_count": 4,
+        "delta_count": 1,
+        "segment_count": 3,
+        "all_segments_byte_equal": true,
+        "unanchored_delta_count": 0,
+        "mismatch_count": 0,
+        "reload_origin_count": 0,
+        "reload_transitions": []
+      },
+      "duplicate_delivery": {
+        "batch_events": 41,
+        "ack": {
+          "ingested": 0,
+          "skipped_duplicate": 41,
+          "total": 41
+        },
+        "session_rows_unchanged": true,
+        "projection_rows_unchanged": true,
+        "global_counts_unchanged": true
+      }
+    }
+  ]
+}

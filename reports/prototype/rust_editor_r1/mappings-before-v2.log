@@ -1,0 +1,1 @@
+{"version":{"api_compatible":0,"minor":12,"patch":3,"build":null,"major":0,"api_level":14,"api_prerelease":false},"tab":{"lhs":"<Tab>","has_callback":true,"desc":"vim.snippet.jump if active, otherwise <Tab>"},"alt_l":{"has_callback":false}}

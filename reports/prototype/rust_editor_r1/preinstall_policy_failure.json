@@ -1,0 +1,11 @@
+{
+  "observed_context_policy": "single-line-context-v2",
+  "expected_context_policy": "single-line-cursor-last-context-v1",
+  "actual_layout": "cursor-last-v1",
+  "prompt_hash": "4f68534c4f0772c29805746b2fe149f140921c7db597461dfcf83749a89b0cdc",
+  "monitor": {
+    "campaign_id": "campaign-7c5a41a5bad86152ee785cb02cfec8cb",
+    "run_id": "run-7c5a41a5bad86152ee785cb02cfec8cb"
+  },
+  "outcome": "blocked_before_installation"
+}

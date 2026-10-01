@@ -1,0 +1,147 @@
+{
+  "backend": "rust-editor-v1",
+  "finished_at": "2026-10-01T06:26:15.178785+00:00",
+  "fixture": {
+    "commit": "b9d2a0e9e2613f2cdc0c274a1f5a06b427f59c78",
+    "fixture_cursor_byte_column_before_typing": 11,
+    "id": "public-return-prefix-smoke",
+    "license": "MIT",
+    "origin_fixture_sha256": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+    "repository_kind": "disposable local Git copy",
+    "source_sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+    "starting_line_variant": "removed fixture target trailing blank; actual remote-send A-space restores it"
+  },
+  "global_mode_persistence": {
+    "first_session_id": "83b1d6e7-1251-4d25-9deb-fd74d7348a52",
+    "initial_saved_mode": {
+      "experimental_auto_opt_in": true,
+      "mode": "automatic"
+    },
+    "mode_state_file": "/home/shlok/.local/state/lazyvim/tabcomplete-rust-editor-mode.json",
+    "restored_mode": "automatic",
+    "second_session_id": "e40f50e2-2087-402d-8d28-df5df5ca3087",
+    "status": "passed",
+    "synthetic": true,
+    "written_mode": {
+      "experimental_auto_opt_in": true,
+      "mode": "automatic"
+    }
+  },
+  "initial_model_alias": null,
+  "installed_nvim_binary": "/nix/store/jhs00x12qj6hflkhgbab79gqlw61hh5x-nvim/bin/nvim",
+  "mode_override_used": false,
+  "model_protocol": null,
+  "nvim_exit_clean": true,
+  "nvim_wrapper_path": "/etc/profiles/per-user/shlok/bin/nvim",
+  "raw_delta_artifact": "persistent_nvim_20261001T062615Z_d7695f89_raw_deltas.jsonl",
+  "raw_delta_count": 28,
+  "raw_delta_sha256": "cd4362ee9a855cd8666e548e4838e27959594688a2181d31410df7fa0fb0e918",
+  "result_path": "/tmp/tabcomplete-feedback-r1-20261001-audit2/reports/prototype/rust_editor_r1/feedback_verification/persistent_nvim_20261001T062615Z_d7695f89.json",
+  "run_id": "0472eefa-085a-4624-8d2c-21419bf94cf6",
+  "scenarios": [
+    {
+      "accepted_delta": 1,
+      "context_layout": "cursor-last-v1",
+      "context_policy_version": "single-line-cursor-last-context-v1",
+      "displayed_delta": 1,
+      "elapsed_ms": 5926.6,
+      "model_alias": "q25",
+      "name": "type_pause_one_request_one_display",
+      "prediction_id": "22a1026e-747b-4cac-88aa-3cbeb235cdd4",
+      "requested_delta": 1,
+      "session_id": "3f3fbc05-ad11-4a0e-87bc-57f74b92eab4",
+      "status": "passed",
+      "undo_preserved_typed_prefix": true
+    },
+    {
+      "elapsed_ms": 2908.1,
+      "name": "divergent_typing_classification",
+      "outcome": "rejected_implicit_typing",
+      "prediction_id": "c1b38857-98a9-42ac-b1d0-6a495e4bd161",
+      "status": "passed"
+    },
+    {
+      "derived_full_input_relation": "typed_match",
+      "elapsed_ms": 2921.0,
+      "name": "typed_matching_classification",
+      "plugin_first_delta_outcome": "typed_partial_match",
+      "prediction_id": "00f90580-22e0-490b-ae78-817323343b41",
+      "raw_delta_chain_count": 19,
+      "raw_delta_final_sequence": 194,
+      "raw_delta_first_sequence": 157,
+      "status": "passed"
+    },
+    {
+      "completion_aliases": [
+        "q25",
+        "sweep"
+      ],
+      "context_layout": "sweep-window-v1",
+      "context_policy_version": "sweep-window-context-v1",
+      "elapsed_ms": 13697.2,
+      "final_alias": "q25",
+      "first_alias": "sweep",
+      "name": "model_completion_and_one_at_a_time_switch",
+      "overlapping_alias_rejected": "q25",
+      "status": "passed"
+    },
+    {
+      "cancelled_unseen": true,
+      "elapsed_ms": 1498.8,
+      "late_display_count": 0,
+      "name": "stale_response_after_file_switch",
+      "prediction_id": "1a50a20c-c8db-49d4-a868-0b00bc0739d6",
+      "status": "passed"
+    },
+    {
+      "cancelled_unseen": true,
+      "elapsed_ms": 1548.0,
+      "mode": "off",
+      "name": "off_cancels_unseen_inference",
+      "status": "passed"
+    },
+    {
+      "automatic_display_after_restart": true,
+      "automatic_request_after_restart": true,
+      "context_layout": "cursor-last-v1",
+      "context_policy_version": "single-line-cursor-last-context-v1",
+      "displayed_delta": 1,
+      "elapsed_ms": 4648.9,
+      "name": "restart_restores_persistent_automatic_mode",
+      "new_session_id": "473e35a7-f7a6-48c4-9513-bb5da4b8b560",
+      "old_session_id": "3f3fbc05-ad11-4a0e-87bc-57f74b92eab4",
+      "prediction_id": "b0b3cf19-4e00-450b-bde6-7c5bd2191da5",
+      "requested_delta": 1,
+      "restored_mode": "automatic",
+      "saved_mode": "automatic",
+      "status": "passed"
+    },
+    {
+      "elapsed_ms": 734.4,
+      "first_session_id": "83b1d6e7-1251-4d25-9deb-fd74d7348a52",
+      "initial_saved_mode": {
+        "experimental_auto_opt_in": true,
+        "mode": "automatic"
+      },
+      "mode_state_file": "/home/shlok/.local/state/lazyvim/tabcomplete-rust-editor-mode.json",
+      "name": "global_user_mode_persists_across_lazyvim_restart",
+      "restored_mode": "automatic",
+      "second_session_id": "e40f50e2-2087-402d-8d28-df5df5ca3087",
+      "status": "passed",
+      "synthetic": true,
+      "written_mode": {
+        "experimental_auto_opt_in": true,
+        "mode": "automatic"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "session_ids": [
+    "3f3fbc05-ad11-4a0e-87bc-57f74b92eab4",
+    "473e35a7-f7a6-48c4-9513-bb5da4b8b560"
+  ],
+  "started_at": "2026-10-01T06:25:40.930966+00:00",
+  "synthetic": true,
+  "transport": "persistent headless Neovim over a private Unix socket",
+  "typing_transport": "nvim --remote-send"
+}

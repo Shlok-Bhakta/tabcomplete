@@ -1,0 +1,5 @@
+Error in command line:
+E5108: Lua: [string ":lua"]:1: Cannot serialise function: type not supported
+stack traceback:
+	[C]: in function 'encode'
+	[string ":lua"]:1: in main chunk

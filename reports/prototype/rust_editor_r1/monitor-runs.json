@@ -1,0 +1,9 @@
+{
+  "query": {
+    "command": "observability.py runs --since 24h --json"
+  },
+  "rows_observed": 5,
+  "raw_sha256": "52bd9fb261301f81b39b44bbf688f072e572d61c0d13f794e09a7fa409158116",
+  "raw_retained_locally": true,
+  "publication": "aggregate only; unrelated run previews omitted"
+}

@@ -1,0 +1,17 @@
+{
+  "observed_at": "2026-10-01T06:35:50.705524+00:00",
+  "failed_editor_session": "3f3fbc05-ad11-4a0e-87bc-57f74b92eab4",
+  "symptom": "Four anchor mismatches, no reload-origin deltas; newly launched installed editor loaded old buffers.lua.",
+  "actual_loaded_source": "/nix/store/4nm54nb0k20ni5cg6q7x808nd2f8dykx-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim/lua/tabcomplete_trajectory/buffers.lua",
+  "expected_installed_bundle": "/nix/store/3nsglyzq1n6c6n9q5xr948vkg4jswygc-tabcomplete-qwen-0.1.0",
+  "cache_key": "/home/shlok/.cache/lazyvim/luac/%2fhome%2fshlok%2f.config%2flazyvim%2flua%2fplugins%2ftabcomplete-trajectory.luac",
+  "cache_header": "4,1749,1,0",
+  "both_spec_bytes": 1749,
+  "both_spec_mtime_seconds": 1,
+  "both_spec_mtime_nanoseconds": 0,
+  "reproduction": "In fresh no-config Neovim, raw loadfile returned new3nsg plugin dir; enabling vim.loader and loadfile returned old4nm dir.",
+  "loader_validation": "Installed vim.loader uses file size and mtime, not content digest. reset(path) does not delete disk bytecode.",
+  "fix": "Back up and invalidate only owned configuration cache entry on install, rollback and normal Home Manager linking; verify actual loaded module paths/hashes before editor tests.",
+  "raw_old_audit_preserved": true,
+  "scientific_serving_measurements_affected": false
+}

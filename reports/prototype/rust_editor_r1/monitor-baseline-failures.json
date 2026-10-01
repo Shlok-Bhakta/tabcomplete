@@ -1,0 +1,17 @@
+{
+  "data": [],
+  "last_event_at": null,
+  "last_ingested_at": null,
+  "page": {
+    "limit": 100,
+    "next_cursor": null
+  },
+  "queried_at": 1790829935034,
+  "schema_version": 1,
+  "state": "no_runs",
+  "publication": {
+    "artifact_previews_omitted": true,
+    "raw_sha256": "98ca4e7f6ca62adcae29e4738eee705164b527b801e3dc904f60564c4037da58",
+    "raw_retained_locally": true
+  }
+}

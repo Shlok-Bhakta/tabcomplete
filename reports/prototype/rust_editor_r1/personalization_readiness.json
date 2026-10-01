@@ -1,0 +1,26 @@
+{
+  "schema_version": "personalization-feedback-evidence-v6",
+  "observed_at": "2026-10-01T06:59:48.155212+00:00",
+  "source_event_snapshot_sha256": "de828059921dd9d36f9d92c33d6c279bfbfc1bbcb9347e86a57eb0d0afd00e67",
+  "sessions_seen": 75,
+  "readiness": {
+    "defensible_preference_pairs": 0,
+    "distinct_verified_sessions": 0,
+    "enabled": false,
+    "generic_regression_set_verified": false,
+    "held_out_temporal_session_split": false,
+    "inference_contention_cleared": false,
+    "minimum_pairs": 256,
+    "minimum_sessions": 3,
+    "ready": false,
+    "rollback_artifact_verified": false,
+    "training_memory_verified": false
+  },
+  "content_exported": false,
+  "proposals": 107,
+  "candidate_pairs": 0,
+  "historical_sequence_gap_count": 4,
+  "private_export": "/mnt/ssd/tabcomplete-product-r2/rust-editor-r1/personalization-feedback-evidence-v6.json",
+  "private_export_sha256": "20e6731e1fb99e70d74e38eede5d2277675dc52307e0fb2a49e8bd3fd8932395",
+  "human_feedback_claimed": false
+}

@@ -1,0 +1,31 @@
+{
+  "additional_imports": [
+    {
+      "file": "import-q25-t2-p2.json",
+      "bundle_sha256": "456f0920fcabb52573ac8261cc4ba3fb86ec79ccda147b136f60429dc7574466",
+      "duplicate": false,
+      "imported_spans": 260,
+      "schema_version": 1
+    },
+    {
+      "file": "import-q25-t2-p4.json",
+      "bundle_sha256": "dbdf1c447732815d5152a5cded83d2bdb236cb71018e1512be498c2e49da6ffa",
+      "duplicate": false,
+      "imported_spans": 255,
+      "schema_version": 1
+    },
+    {
+      "file": "import-sweep-continuation.json",
+      "bundle_sha256": "883051f90ac3b397527a10fe2bde2f18fae7847c64f066fae41ae0da64fbaa17",
+      "duplicate": false,
+      "imported_spans": 97,
+      "schema_version": 1
+    }
+  ],
+  "repeat_import": {
+    "bundle_sha256": "883051f90ac3b397527a10fe2bde2f18fae7847c64f066fae41ae0da64fbaa17",
+    "duplicate": true,
+    "imported_spans": 0,
+    "schema_version": 1
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "backend": "rust-editor-v1",
+  "finished_at": "2026-10-01T06:03:49.071875+00:00",
+  "fixture": {
+    "commit": "457bc356b51d94f9e20e89ca542c299338a3541a",
+    "fixture_cursor_byte_column_before_typing": 11,
+    "id": "public-return-prefix-smoke",
+    "license": "MIT",
+    "origin_fixture_sha256": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+    "repository_kind": "disposable local Git copy",
+    "source_sha256": "532ed34e5690cd58df08bd40926ac251996c99e62ce233dae6a0f7f6ac12973a",
+    "starting_line_variant": "removed fixture target trailing blank; actual remote-send A-space restores it"
+  },
+  "initial_model_alias": null,
+  "installed_nvim_binary": "nvim",
+  "mode_override_used": false,
+  "model_protocol": null,
+  "nvim_exit_clean": true,
+  "raw_delta_artifact": "persistent_nvim_20261001T060349Z_f8e9dc4d_raw_deltas.jsonl",
+  "raw_delta_count": 28,
+  "raw_delta_sha256": "b712613b85b3ffd5306615a758f8628719470176638239309040a9ca5979f74f",
+  "result_path": "/tmp/tabcomplete-feedback-r1-20261001-audit1/reports/prototype/rust_editor_r1/feedback_verification/persistent_nvim_20261001T060349Z_f8e9dc4d.json",
+  "run_id": "f91eb1be-dd40-4a6e-9df6-c5a080c7a7c3",
+  "scenarios": [
+    {
+      "accepted_delta": 1,
+      "context_layout": "cursor-last-v1",
+      "context_policy_version": "single-line-cursor-last-context-v1",
+      "displayed_delta": 1,
+      "elapsed_ms": 5077.8,
+      "model_alias": "q25",
+      "name": "type_pause_one_request_one_display",
+      "prediction_id": "27829b90-1c2d-4ecb-9763-62d691f8cf4b",
+      "requested_delta": 1,
+      "session_id": "8be34095-9a62-4eaf-a5d6-afb40c566f4e",
+      "status": "passed",
+      "undo_preserved_typed_prefix": true
+    },
+    {
+      "elapsed_ms": 2860.5,
+      "name": "divergent_typing_classification",
+      "outcome": "rejected_implicit_typing",
+      "prediction_id": "378a9dcb-2014-4578-b976-2d993594b1ad",
+      "status": "passed"
+    },
+    {
+      "code": "timeout_typed_match_classification_state_unchanged replacement",
+      "elapsed_ms": 10916.1,
+      "name": "typed_matching_classification",
+      "status": "failed"
+    },
+    {
+      "completion_aliases": [
+        "q25",
+        "sweep"
+      ],
+      "context_layout": "sweep-window-v1",
+      "context_policy_version": "sweep-window-context-v1",
+      "elapsed_ms": 12067.0,
+      "final_alias": "q25",
+      "first_alias": "sweep",
+      "name": "model_completion_and_one_at_a_time_switch",
+      "overlapping_alias_rejected": "q25",
+      "status": "passed"
+    },
+    {
+      "cancelled_unseen": true,
+      "elapsed_ms": 1480.1,
+      "late_display_count": 0,
+      "name": "stale_response_after_file_switch",
+      "prediction_id": "308f3353-2bc9-4198-a296-2d8fbcd2a65e",
+      "status": "passed"
+    },
+    {
+      "cancelled_unseen": true,
+      "elapsed_ms": 1542.6,
+      "mode": "off",
+      "name": "off_cancels_unseen_inference",
+      "status": "passed"
+    },
+    {
+      "automatic_display_after_restart": true,
+      "automatic_request_after_restart": true,
+      "context_layout": "cursor-last-v1",
+      "context_policy_version": "single-line-cursor-last-context-v1",
+      "displayed_delta": 1,
+      "elapsed_ms": 4676.7,
+      "name": "restart_restores_persistent_automatic_mode",
+      "new_session_id": "b911f5cd-13a9-4ae2-a201-0b8de83df6f1",
+      "old_session_id": "8be34095-9a62-4eaf-a5d6-afb40c566f4e",
+      "prediction_id": "d307f055-3eb8-4a05-9d4c-48cb9d06aace",
+      "requested_delta": 1,
+      "restored_mode": "automatic",
+      "saved_mode": "automatic",
+      "status": "passed"
+    }
+  ],
+  "schema_version": 1,
+  "session_ids": [
+    "8be34095-9a62-4eaf-a5d6-afb40c566f4e",
+    "b911f5cd-13a9-4ae2-a201-0b8de83df6f1"
+  ],
+  "started_at": "2026-10-01T06:03:10.084136+00:00",
+  "synthetic": true,
+  "transport": "persistent headless Neovim over a private Unix socket",
+  "typing_transport": "nvim --remote-send"
+}

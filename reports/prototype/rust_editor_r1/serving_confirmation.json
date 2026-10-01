@@ -1,0 +1,156 @@
+{
+  "plan_sha256": "03f1ad7575798dad189f43bf44a8610db7ca17ee6dea5fe2bfa485175e74a27f",
+  "setting": {
+    "id": "installed-q25-t4-p4-cursor-last",
+    "alias": "q25",
+    "threads": 4,
+    "prompt_threads": 4,
+    "input_tokens": 1024,
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1"
+  },
+  "identity": {
+    "active_slots": 1,
+    "alias": "q25",
+    "backend": "llama.cpp CPU via Rust",
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 280.57811599999997,
+    "model_protocol": "single-line-edit-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "output_tokens": 64,
+    "prompt_threads": 4,
+    "runtime_config_hash": "5109a74b23b8a01d41bdb8e6c81be6fe54c48bd2639581c3687fc6e1cf6ba1ec",
+    "saved_contexts": 0,
+    "status": "ok",
+    "threads": 4
+  },
+  "controller_host": "crabcake",
+  "transport": "owned SSH tunnel",
+  "before": {
+    "host": "shlokthinkpad",
+    "pid": 220994,
+    "memory": "5aeffab4e000-7ffd48c8e000 ---p 00000000 00:00 0                          [rollup]\nRss:              569120 kB\nPss:              565010 kB\nPss_Dirty:         86328 kB\nPss_Anon:          86328 kB\nPss_File:         478682 kB\nPss_Shmem:             0 kB\nShared_Clean:       4228 kB\nShared_Dirty:          0 kB\nPrivate_Clean:    478564 kB\nPrivate_Dirty:     86328 kB\nReferenced:       569120 kB\nAnonymous:         86328 kB\nKSM:                   0 kB\nLazyFree:              0 kB\nAnonHugePages:         0 kB\nShmemPmdMapped:        0 kB\nFilePmdMapped:         0 kB\nShared_Hugetlb:        0 kB\nPrivate_Hugetlb:       0 kB\nSwap:                  0 kB\nSwapPss:               0 kB\nLocked:                0 kB\n",
+    "status": "Name:\ttabcomplete-eng\nUmask:\t0077\nState:\tS (sleeping)\nTgid:\t220994\nNgid:\t0\nPid:\t220994\nPPid:\t3445\nTracerPid:\t0\nUid:\t1000\t1000\t1000\t1000\nGid:\t100\t100\t100\t100\nFDSize:\t128\nGroups:\t1 17 26 57 100 174 983 \nNStgid:\t220994\nNSpid:\t220994\nNSpgid:\t220994\nNSsid:\t220994\nKthread:\t0\nVmPeak:\t 1355436 kB\nVmSize:\t  962436 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t  979860 kB\nVmRSS:\t  569120 kB\nRssAnon:\t   86328 kB\nRssFile:\t  482792 kB\nRssShmem:\t       0 kB\nVmData:\t  203240 kB\nVmStk:\t     136 kB\nVmExe:\t    5128 kB\nVmLib:\t    3624 kB\nVmPTE:\t    1244 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t6\nSigQ:\t0/94916\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000442\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t1\nSeccomp:\t2\nSeccomp_filters:\t2\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tff\nCpus_allowed_list:\t0-7\nMems_allowed:\t00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t31\nnonvoluntary_ctxt_switches:\t1\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "pressure": {
+      "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=85\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=85\n",
+      "io": "some avg10=1.50 avg60=1.50 avg300=1.82 total=664022510\nfull avg10=1.39 avg60=1.44 avg300=1.79 total=644543441\n"
+    },
+    "vmstat": {
+      "pswpin": 0,
+      "pswpout": 0,
+      "pgmajfault": 3843
+    },
+    "frequency_khz": {
+      "/sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq": "3305995",
+      "/sys/devices/system/cpu/cpu5/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq": "4126056",
+      "/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq": "3902986",
+      "/sys/devices/system/cpu/cpu6/cpufreq/scaling_cur_freq": "3510353",
+      "/sys/devices/system/cpu/cpu4/cpufreq/scaling_cur_freq": "3533833",
+      "/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq": "3693435",
+      "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq": "3828444"
+    },
+    "temperatures": {
+      "/sys/class/thermal/thermal_zone2/temp": "41050",
+      "/sys/class/thermal/thermal_zone0/temp": "20000",
+      "/sys/class/thermal/thermal_zone5/temp": "71000",
+      "/sys/class/thermal/thermal_zone3/temp": "67050",
+      "/sys/class/thermal/thermal_zone1/temp": "55500",
+      "/sys/class/thermal/thermal_zone6/temp": "55000",
+      "/sys/class/thermal/thermal_zone4/temp": "67000"
+    }
+  },
+  "after": {
+    "host": "shlokthinkpad",
+    "pid": 220994,
+    "memory": "5aeffab4e000-7ffd48c8e000 ---p 00000000 00:00 0                          [rollup]\nRss:              569156 kB\nPss:              565046 kB\nPss_Dirty:         86364 kB\nPss_Anon:          86364 kB\nPss_File:         478682 kB\nPss_Shmem:             0 kB\nShared_Clean:       4228 kB\nShared_Dirty:          0 kB\nPrivate_Clean:    478564 kB\nPrivate_Dirty:     86364 kB\nReferenced:       569156 kB\nAnonymous:         86364 kB\nKSM:                   0 kB\nLazyFree:              0 kB\nAnonHugePages:         0 kB\nShmemPmdMapped:        0 kB\nFilePmdMapped:         0 kB\nShared_Hugetlb:        0 kB\nPrivate_Hugetlb:       0 kB\nSwap:                  0 kB\nSwapPss:               0 kB\nLocked:                0 kB\n",
+    "status": "Name:\ttabcomplete-eng\nUmask:\t0077\nState:\tS (sleeping)\nTgid:\t220994\nNgid:\t0\nPid:\t220994\nPPid:\t3445\nTracerPid:\t0\nUid:\t1000\t1000\t1000\t1000\nGid:\t100\t100\t100\t100\nFDSize:\t128\nGroups:\t1 17 26 57 100 174 983 \nNStgid:\t220994\nNSpid:\t220994\nNSpgid:\t220994\nNSsid:\t220994\nKthread:\t0\nVmPeak:\t 1355436 kB\nVmSize:\t  962436 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t  979860 kB\nVmRSS:\t  569156 kB\nRssAnon:\t   86364 kB\nRssFile:\t  482792 kB\nRssShmem:\t       0 kB\nVmData:\t  203240 kB\nVmStk:\t     136 kB\nVmExe:\t    5128 kB\nVmLib:\t    3624 kB\nVmPTE:\t    1244 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t6\nSigQ:\t0/94916\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000442\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t1\nSeccomp:\t2\nSeccomp_filters:\t2\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tff\nCpus_allowed_list:\t0-7\nMems_allowed:\t00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t224\nnonvoluntary_ctxt_switches:\t3\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "pressure": {
+      "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=85\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=85\n",
+      "io": "some avg10=0.01 avg60=0.20 avg300=1.12 total=665007273\nfull avg10=0.01 avg60=0.19 avg300=1.10 total=645484221\n"
+    },
+    "vmstat": {
+      "pswpin": 0,
+      "pswpout": 0,
+      "pgmajfault": 3843
+    },
+    "frequency_khz": {
+      "/sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu5/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq": "3300013",
+      "/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq": "3293773",
+      "/sys/devices/system/cpu/cpu6/cpufreq/scaling_cur_freq": "3302085",
+      "/sys/devices/system/cpu/cpu4/cpufreq/scaling_cur_freq": "400000",
+      "/sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq": "3297220",
+      "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq": "3299985"
+    },
+    "temperatures": {
+      "/sys/class/thermal/thermal_zone2/temp": "46050",
+      "/sys/class/thermal/thermal_zone0/temp": "20000",
+      "/sys/class/thermal/thermal_zone5/temp": "72000",
+      "/sys/class/thermal/thermal_zone3/temp": "71050",
+      "/sys/class/thermal/thermal_zone1/temp": "61500",
+      "/sys/class/thermal/thermal_zone6/temp": "58000",
+      "/sys/class/thermal/thermal_zone4/temp": "71000"
+    }
+  },
+  "requests": 120,
+  "conditions": {
+    "changed_editor_state": {
+      "count": 48,
+      "median_ms": 874.4100549956784,
+      "p95_ms": 2689.1895950539038,
+      "actual_eos": 48,
+      "canonical_valid": 48,
+      "cache_tokens": 12695,
+      "recomputed_tokens": 9677
+    },
+    "identical_prompt_repeat": {
+      "count": 48,
+      "median_ms": 160.4591580107808,
+      "p95_ms": 196.3104149326682,
+      "actual_eos": 48,
+      "canonical_valid": 48,
+      "cache_tokens": 22324,
+      "recomputed_tokens": 48
+    }
+  },
+  "quality_claim": false,
+  "continuation": null,
+  "memory_window": "current invocation snapshots; VmHWM includes earlier resident requests",
+  "development": {
+    "count": 24,
+    "canonical_valid": 24,
+    "actual_eos": 24,
+    "exact_actions": 9,
+    "by_action": {
+      "keep": {
+        "count": 6,
+        "exact": 0
+      },
+      "replace_line": {
+        "count": 6,
+        "exact": 3
+      },
+      "insert_before": {
+        "count": 6,
+        "exact": 0
+      },
+      "delete_line": {
+        "count": 6,
+        "exact": 6
+      }
+    },
+    "no_edit_false_changes": 6,
+    "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+  },
+  "telemetry": {
+    "enabled": false,
+    "reason": "Final controller invocation omitted TABCOMPLETE_OBSERVABILITY_ENABLED and used the wrong offline path variable. Scientific results are authoritative; prior screening traces remain available. No retrospective spans fabricated."
+  }
+}

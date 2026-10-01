@@ -1,0 +1,9 @@
+{
+  "phase": "q25-t2-p2 preflight",
+  "error_type": "httpx.ReadError",
+  "cause": "comparison invoked before restarted service finished initialization",
+  "requests_executed": 0,
+  "run_scope_started": false,
+  "deterministic_unstarted_run_id": "run-25b48ade1cfa79c916ef18ef3c3f950c",
+  "historical_outputs_preserved": true
+}

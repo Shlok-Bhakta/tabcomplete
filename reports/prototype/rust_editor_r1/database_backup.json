@@ -1,0 +1,7 @@
+{
+  "path": "/mnt/ssd/collector-data/backups/pre-rust-editor-20261001T041526Z.sqlite",
+  "integrity_check": "ok",
+  "sha256": "7dfa8a73cc1594db4f435b9672dd9f31d9759e4a6165fe69f7c2a932088d779b",
+  "method": "SQLite backup API, live WAL-consistent",
+  "schema_changed": false
+}

@@ -1,0 +1,322 @@
+[
+  {
+    "setting": "q25-t4-p4",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "context_layout": "trained-v2",
+    "runtime_config_hash": "85b71f2c077668b49a5edd875a8f209acf8aa2a02f5bc9183ca569c2507a7f1b",
+    "conditions": {
+      "changed_editor_state": {
+        "count": 48,
+        "median_ms": 2404.355129110627,
+        "p95_ms": 3682.818012079224,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 8993,
+        "recomputed_tokens": 13379
+      },
+      "identical_prompt_repeat": {
+        "count": 48,
+        "median_ms": 171.94782302249223,
+        "p95_ms": 299.872281961143,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 22324,
+        "recomputed_tokens": 48
+      }
+    },
+    "development": {
+      "count": 24,
+      "canonical_valid": 24,
+      "actual_eos": 24,
+      "exact_actions": 9,
+      "by_action": {
+        "keep": {
+          "count": 6,
+          "exact": 0
+        },
+        "replace_line": {
+          "count": 6,
+          "exact": 3
+        },
+        "insert_before": {
+          "count": 6,
+          "exact": 0
+        },
+        "delete_line": {
+          "count": 6,
+          "exact": 6
+        }
+      },
+      "no_edit_false_changes": 6,
+      "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+    },
+    "retained_memory": {
+      "Rss": "567032 kB",
+      "Pss": "563085 kB",
+      "Pss_Anon": "84424 kB",
+      "Pss_File": "478661 kB",
+      "Pss_Shmem": "0 kB",
+      "Anonymous": "84424 kB",
+      "Swap": "0 kB",
+      "SwapPss": "0 kB"
+    },
+    "quality_claim": false,
+    "layout_identity_source": "frozen plan; screening binary predates native layout health field"
+  },
+  {
+    "setting": "q25-t4-p4-cursor-last",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "context_layout": "cursor-last-v1",
+    "runtime_config_hash": "85b71f2c077668b49a5edd875a8f209acf8aa2a02f5bc9183ca569c2507a7f1b",
+    "conditions": {
+      "changed_editor_state": {
+        "count": 48,
+        "median_ms": 925.7935769855976,
+        "p95_ms": 3619.7495750384405,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 12695,
+        "recomputed_tokens": 9677
+      },
+      "identical_prompt_repeat": {
+        "count": 48,
+        "median_ms": 158.602257957682,
+        "p95_ms": 233.3011900773272,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 22324,
+        "recomputed_tokens": 48
+      }
+    },
+    "development": {
+      "count": 24,
+      "canonical_valid": 24,
+      "actual_eos": 24,
+      "exact_actions": 9,
+      "by_action": {
+        "keep": {
+          "count": 6,
+          "exact": 0
+        },
+        "replace_line": {
+          "count": 6,
+          "exact": 3
+        },
+        "insert_before": {
+          "count": 6,
+          "exact": 0
+        },
+        "delete_line": {
+          "count": 6,
+          "exact": 6
+        }
+      },
+      "no_edit_false_changes": 6,
+      "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+    },
+    "retained_memory": {
+      "Rss": "567068 kB",
+      "Pss": "563121 kB",
+      "Pss_Anon": "84460 kB",
+      "Pss_File": "478661 kB",
+      "Pss_Shmem": "0 kB",
+      "Anonymous": "84460 kB",
+      "Swap": "0 kB",
+      "SwapPss": "0 kB"
+    },
+    "quality_claim": false,
+    "layout_identity_source": "frozen plan; screening binary predates native layout health field"
+  },
+  {
+    "setting": "q25-t2-p4",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "context_layout": "trained-v2",
+    "runtime_config_hash": "aad1a7be01cfd1e5e406ad5f04f5224247d009deecd50d66d85e76a561c86514",
+    "conditions": {
+      "changed_editor_state": {
+        "count": 48,
+        "median_ms": 2489.726969972253,
+        "p95_ms": 3747.6062449859455,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 8993,
+        "recomputed_tokens": 13379
+      },
+      "identical_prompt_repeat": {
+        "count": 48,
+        "median_ms": 213.26598699670285,
+        "p95_ms": 326.42864203080535,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 22324,
+        "recomputed_tokens": 48
+      }
+    },
+    "development": {
+      "count": 24,
+      "canonical_valid": 24,
+      "actual_eos": 24,
+      "exact_actions": 9,
+      "by_action": {
+        "keep": {
+          "count": 6,
+          "exact": 0
+        },
+        "replace_line": {
+          "count": 6,
+          "exact": 3
+        },
+        "insert_before": {
+          "count": 6,
+          "exact": 0
+        },
+        "delete_line": {
+          "count": 6,
+          "exact": 6
+        }
+      },
+      "no_edit_false_changes": 6,
+      "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+    },
+    "retained_memory": {
+      "Rss": "567192 kB",
+      "Pss": "563147 kB",
+      "Pss_Anon": "84420 kB",
+      "Pss_File": "478727 kB",
+      "Pss_Shmem": "0 kB",
+      "Anonymous": "84420 kB",
+      "Swap": "0 kB",
+      "SwapPss": "0 kB"
+    },
+    "quality_claim": false,
+    "layout_identity_source": "frozen plan; screening binary predates native layout health field"
+  },
+  {
+    "setting": "q25-t2-p2-retry-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "context_layout": "trained-v2",
+    "runtime_config_hash": "13b1494a4f335da449efdea4e7ef9fc817a61e3f3d65a26a497b19de465a0aa8",
+    "conditions": {
+      "changed_editor_state": {
+        "count": 48,
+        "median_ms": 4019.429109059274,
+        "p95_ms": 5327.10211595986,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 8993,
+        "recomputed_tokens": 13379
+      },
+      "identical_prompt_repeat": {
+        "count": 48,
+        "median_ms": 203.45938706304878,
+        "p95_ms": 347.1887450432405,
+        "actual_eos": 48,
+        "canonical_valid": 48,
+        "cache_tokens": 22324,
+        "recomputed_tokens": 48
+      }
+    },
+    "development": {
+      "count": 24,
+      "canonical_valid": 24,
+      "actual_eos": 24,
+      "exact_actions": 9,
+      "by_action": {
+        "keep": {
+          "count": 6,
+          "exact": 0
+        },
+        "replace_line": {
+          "count": 6,
+          "exact": 3
+        },
+        "insert_before": {
+          "count": 6,
+          "exact": 0
+        },
+        "delete_line": {
+          "count": 6,
+          "exact": 6
+        }
+      },
+      "no_edit_false_changes": 6,
+      "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+    },
+    "retained_memory": {
+      "Rss": "567072 kB",
+      "Pss": "563058 kB",
+      "Pss_Anon": "84352 kB",
+      "Pss_File": "478706 kB",
+      "Pss_Shmem": "0 kB",
+      "Anonymous": "84352 kB",
+      "Swap": "0 kB",
+      "SwapPss": "0 kB"
+    },
+    "quality_claim": false,
+    "layout_identity_source": "frozen plan; screening binary predates native layout health field"
+  },
+  {
+    "setting": "sweep-t4-p4-continuation",
+    "model_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+    "context_layout": "sweep-window-v1",
+    "runtime_config_hash": "0acfabba12b8eac2a61dfcd9a089cd95c6b9ec9a8b7088043018c262866f4560",
+    "conditions": {
+      "changed_editor_state": {
+        "count": 48,
+        "median_ms": 12458.238231949508,
+        "p95_ms": 16212.344321073033,
+        "actual_eos": 46,
+        "canonical_valid": 28,
+        "cache_tokens": 2432,
+        "recomputed_tokens": 13018
+      },
+      "identical_prompt_repeat": {
+        "count": 48,
+        "median_ms": 5952.831657952629,
+        "p95_ms": 9185.323799028993,
+        "actual_eos": 46,
+        "canonical_valid": 28,
+        "cache_tokens": 15402,
+        "recomputed_tokens": 48
+      }
+    },
+    "development": {
+      "count": 24,
+      "canonical_valid": 2,
+      "actual_eos": 24,
+      "exact_actions": 1,
+      "by_action": {
+        "keep": {
+          "count": 6,
+          "exact": 0
+        },
+        "replace_line": {
+          "count": 6,
+          "exact": 1
+        },
+        "insert_before": {
+          "count": 6,
+          "exact": 0
+        },
+        "delete_line": {
+          "count": 6,
+          "exact": 0
+        }
+      },
+      "no_edit_false_changes": 0,
+      "scope": "24 preselected existing development states; synthetic cases are codec regressions, not human-edit quality"
+    },
+    "retained_memory": {
+      "Rss": "963568 kB",
+      "Pss": "959516 kB",
+      "Pss_Anon": "93944 kB",
+      "Pss_File": "865572 kB",
+      "Pss_Shmem": "0 kB",
+      "Anonymous": "93944 kB",
+      "Swap": "0 kB",
+      "SwapPss": "0 kB"
+    },
+    "quality_claim": false,
+    "layout_identity_source": "frozen plan; screening binary predates native layout health field"
+  }
+]

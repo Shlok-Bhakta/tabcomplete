@@ -1,0 +1,8 @@
+{
+  "paired_development_count": 24,
+  "canonical_action_differences": [],
+  "lost_correct_actions": [],
+  "gained_correct_actions": [],
+  "no_prompt_information_removed": true,
+  "scope": "declared24developmentstates;notproofgeneralequivalence"
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "rust-editor-installed-integration-v7",
+  "frozen_at": "2026-10-01T06:49:45.422712+00:00",
+  "code_commit": "f96d32f7e79945aea432a64ee88775313a58a713",
+  "standalone": "/nix/store/77vqqf5a43zf6ifm1a084v50casj431q-tabcomplete-standalone-qwen",
+  "engine_sha256": "9341ac3dbf74e0ecf42d82d24bf0b5f0ee0da7327415f1dbdcb83392ae753e95",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "source_files": {
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/buffers.lua": "4703428d5476fd6b951695d4f4c5162e4ed95c3907d5cee9daafe65328d23be2",
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua": "ddeb40157de13ff4edf05444ab5224b838a0c5299906fcde768637b93ccc4c3b",
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/sse.lua": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab",
+    "reports/prototype/rust_editor_r1/feedback_verification/drive_persistent_nvim.py": "8314b72a64b71e7b66fd52ff662a5c2113aa82d5e5037970ffae2b4b0c68727c",
+    "reports/prototype/rust_editor_r1/smoke_fixture.json": "810b289644957b92d18d6d3123f5eee53c7489cc84119f454bfd9406f2d3b532",
+    "nix/invalidate-owned-spec-cache.sh": "217d2d129a87ce25d7d15981b31a0f4f22f6b180162190c00e186b8fb2ff0ad4",
+    "nix/install-standalone.sh": "e3fec34672fabd30da33eab5045a0e2cd3c08d9e23635d04f8cfff72fd9bcd97",
+    "nix/home-manager.nix": "6bc34a095e21aed4ad49abf14a3f40e780d3b321a9c81b2b4a6f4d0cb65542d3"
+  },
+  "comparison_change": "Preserve v6 startup-only failure: driver inspected its own Lua emitter observation wrapper rather than the original init module. Gate original loaded functions before installing observation wrapper. Correct symlink canonicalization compares bundle nvim symlink with its immutable cleanSource target. Same fixture path/task/model/native/prompt/decoding/runtime and source-hash checks. No input or inference occurred in the failed preflight.",
+  "scenarios": [
+    "actual insert-mode input then pause, exactly one request/display",
+    "Alt+l acceptance with clean undo",
+    "divergent typing dismissal linked to actual delta",
+    "typed matching characters initially partial then linked exact match",
+    "model picker with single resident model and persisted alias",
+    "same-file reload full-buffer capture",
+    "file navigation and stale/cancelled response never shown",
+    "off cancels pending requests",
+    "normal installed editor restart retains automatic mode and infers again"
+  ],
+  "synthetic": true,
+  "automatic_quality_validated": false,
+  "automatic_training_enabled": false,
+  "same_fixture_path_required": true,
+  "verification": "Real persistent installed LazyVim plus authoritative existing SQLite session audit, content hashes, projection links, ordered replay and duplicate retry.",
+  "actual_runtime_config_hash": "6e58a95c8f5fba5581784636cf5e042a33a14e93b7c764f681eb2ff4c10c54ba",
+  "source_gate_required": true,
+  "cache_invalidation": "Exact owned spec cache entry backed up and removed; all other existing cache bytes verified unchanged. Native service unchanged."
+}

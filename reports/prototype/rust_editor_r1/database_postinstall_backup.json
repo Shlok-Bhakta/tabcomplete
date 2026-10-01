@@ -1,0 +1,7 @@
+{
+  "time": "2026-10-01T06:01:09.480122+00:00",
+  "backup": "/mnt/ssd/collector-data/backups/post-rust-install-20261001T060109Z.sqlite",
+  "sha256": "287ed41e0bf8517f0abf454ec9d405857a0b1fbe339f736a64365fdd45377a12",
+  "integrity_check": "ok",
+  "purpose": "Post-install rollback snapshot. Existing pre-install WAL-consistent backup preserved. No database migration or reset."
+}
