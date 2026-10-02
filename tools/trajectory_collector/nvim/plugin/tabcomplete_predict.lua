@@ -1,7 +1,7 @@
 local predict = require("tabcomplete_trajectory.predict").setup()
 
 vim.api.nvim_create_user_command("TabCompletePredict", function()
-  local ok, err = predict.predict()
+  local ok, err = predict.predict({ explicit = true })
   if not ok then vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN) end
 end, {})
 vim.api.nvim_create_user_command("TabCompleteAccept", function()

@@ -14,6 +14,7 @@ let
             enable = true;
             package = import ./default.nix { inherit pkgs modelVariant; };
             experimentalAutoOptIn = true;
+            automaticNormalMode = true;
           };
         };
       })

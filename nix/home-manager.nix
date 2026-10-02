@@ -69,6 +69,7 @@ let
     automatic_quality_validated = false;
     automatic_personalization_enabled = false;
     automatic_prefix_guard = cfg.automaticPrefixGuard;
+    automatic_normal_mode = cfg.automaticNormalMode;
     debounce_ms = 250;
     accept_key = cfg.acceptKey;
     dismiss_key = cfg.dismissKey;
@@ -145,6 +146,11 @@ in
     automaticPrefixGuard = lib.mkOption {
       type = lib.types.bool;
       default = false;
+    };
+    automaticNormalMode = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Also predict after normal-mode cursor movement, edits, and buffer entry.";
     };
     acceptKey = lib.mkOption {
       type = lib.types.str;

@@ -24,6 +24,7 @@ local opts = {
   context_policy_version = "compact-next-edit-context-v1", mode = "manual",
   protocol_version = "compact-next-edit-v1", single_line_input_tokens = 1024,
   automatic_prefix_guard = false,
+  automatic_normal_mode = false,
   experimental_auto_opt_in = false, automatic_quality_validated = false,
   automatic_personalization_enabled = false, debounce_ms = 250, expiry_ms = 30000,
   max_buffer_bytes = 1048576, max_prompt_tokens = 2048, target_prompt_tokens = 1024,
@@ -37,6 +38,7 @@ local latest_wanted = false
 local applying = false
 local recent_edit = {}
 local accepted_tick = {}
+local accepted_cursor = {}
 local last_fingerprint = nil
 local last_status = "idle"
 local last_error = nil
@@ -227,7 +229,12 @@ local function record_request(state)
       or (is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96),
     temperature = 0, wire_version = opts.protocol_version,
     human_verified = false, mode = mode,
-    display_policy = mode == "automatic" and opts.automatic_prefix_guard
+    request_kind = (state.explicit_request or mode == "manual") and "explicit" or "automatic",
+    editor_mode = state.editor_mode,
+    display_policy = state.explicit_request and "manual-preview"
+      or mode == "automatic" and state.editor_mode == "n" and opts.automatic_normal_mode
+      and "normal-mode-next-edit-v1"
+      or mode == "automatic" and opts.automatic_prefix_guard
       and "prefix-preserving-completion-v1" or mode,
   })
   state.request_event_id = ev and ev.event_id
@@ -396,26 +403,36 @@ local function still_current(state)
   if not utf8_boundary(line, state.start_col) or not utf8_boundary(line, state.end_col) then return false end
   return util.sha256hex(content_of(state.bufnr)) == state.content_hash
 end
-local function can_auto()
-  if (mode ~= "automatic" and mode ~= "shadow") or vim.g.tabcomplete_predictor_paused then return false end
-  if now() < backoff_until_ms then return false end
-  if not util.current_mode():find("^i") then return false end
-  if vim.fn.pumvisible() == 1 then return false end
+local function ui_block_reason(require_insert)
+  if vim.g.tabcomplete_predictor_paused then return "prediction paused" end
+  if now() < backoff_until_ms then return "model failure backoff active" end
+  local editor_mode = util.current_mode()
+  if require_insert and not editor_mode:find("^i") then return "waiting for insert mode" end
+  if not require_insert and editor_mode ~= "n" and not editor_mode:find("^i") then
+    return "waiting for normal or insert mode"
+  end
+  if vim.fn.pumvisible() == 1 then return "completion menu open" end
   local blink = package.loaded["blink.cmp"]
   if blink and type(blink.is_visible) == "function" then
     local ok, visible = pcall(blink.is_visible)
-    if not ok or visible then return false end
+    if not ok then return "completion menu status unavailable" end
+    if visible then return "completion menu open" end
   end
-  if vim.snippet and vim.snippet.active and vim.snippet.active() then return false end
-  if vim.g.tabcomplete_predictor_focus_lost then return false end
-  return true
+  if vim.snippet and vim.snippet.active and vim.snippet.active() then return "snippet active" end
+  if vim.g.tabcomplete_predictor_focus_lost then return "editor focus lost" end
+  return nil
+end
+local function can_auto()
+  return (mode == "automatic" or mode == "shadow")
+    and ui_block_reason(not opts.automatic_normal_mode) == nil
 end
 local function classify_delta(state, delta)
   local visible_ms = math.max(0, now() - state.shown_at_ms)
   local result = "dismissed_editor_change"
   local matched_bytes = 0
   local key = collector.last_key_event
-  local key_correlated = not (delta and delta.change_origin == "buffer_reload")
+  local key_correlated = util.current_mode():find("^i") ~= nil
+    and not (delta and delta.change_origin == "buffer_reload")
     and (opts.synthetic or (key and key.bufnr == state.bufnr
       and key.mode and key.mode:find("^i") and now() - key.timestamp_ms <= 250))
   if opts.protocol_version == single_line_v1.WIRE_VERSION then
@@ -533,10 +550,12 @@ function M.preserves_typed_prefix(prefix, action)
     and action.text:sub(1, #prefix) == prefix
 end
 local function automatic_ui_ready(state)
-  if mode ~= "automatic" or can_auto() then return true end
-  lifecycle(state, "invalidated_unseen", "automatic UI became busy or unfocused")
+  if mode ~= "automatic" then return true end
+  local reason = ui_block_reason(not state.explicit_request and not opts.automatic_normal_mode)
+  if not reason then return true end
+  lifecycle(state, "invalidated_unseen", reason)
   counters.automatic_ui_suppressed = counters.automatic_ui_suppressed + 1
-  last_status = "automatic suggestion skipped: UI busy or unfocused"
+  last_status = "suggestion skipped: " .. reason
   return false
 end
 local function diff_preview_highlights()
@@ -668,7 +687,8 @@ local function show(state, action)
       return
     end
     if not automatic_ui_ready(state) then return end
-    if mode == "automatic" and opts.automatic_prefix_guard
+    if mode == "automatic" and not state.explicit_request and state.editor_mode ~= "n"
+        and opts.automatic_prefix_guard
         and not M.preserves_typed_prefix(state.prefix_line, action) then
       lifecycle(state, "automatic_policy_suppressed", "proposal would remove text before cursor")
       counters.automatic_policy_suppressed = counters.automatic_policy_suppressed + 1
@@ -719,7 +739,7 @@ local function show(state, action)
     return
   end
   if not automatic_ui_ready(state) then return end
-  if mode == "automatic" and action.text:find("\n", 1, true) then
+  if mode == "automatic" and not state.explicit_request and action.text:find("\n", 1, true) then
     lifecycle(state, "automatic_multiline_suppressed", "manual preview required")
     last_status = "multiline action suppressed"
     return
@@ -1317,18 +1337,23 @@ local function tokenize(request)
       end)
     end)
 end
-function M.predict()
+function M.predict(options)
   if mode == "off" then return false, "mode off" end
-  if (mode == "automatic" or mode == "shadow") and not can_auto() then
-    return false, "automatic UI is busy or unfocused"
+  local explicit = options and options.explicit == true
+  if explicit or mode == "automatic" or mode == "shadow" then
+    local reason = ui_block_reason(not explicit and not opts.automatic_normal_mode)
+    if reason then last_status = reason; return false, reason end
   end
   stop_timer(debounce)
   local state, err = buffer_state()
   if not state then last_status = err; latest_wanted = false; return false, err end
-  if (mode == "automatic" or mode == "shadow") and state.fingerprint == last_fingerprint then
+  state.explicit_request = explicit or false
+  state.editor_mode = util.current_mode()
+  if not explicit and (mode == "automatic" or mode == "shadow") and state.fingerprint == last_fingerprint then
     latest_wanted = false; return false, "unchanged state already requested"
   end
   if pending then
+    if explicit then return false, "request already running; wait for it to finish" end
     latest_wanted = true
     last_status = "waiting for active request"
     schedule_retry()
@@ -1336,6 +1361,7 @@ function M.predict()
   end
   if active then dismiss("navigation") end
   if not M._request_impl and not acquire_lock(state) then
+    if explicit then return false, "model service slot occupied; try again when it is free" end
     latest_wanted = true
     last_status = "waiting for shared service slot"
     schedule_retry()
@@ -1366,6 +1392,8 @@ function M.accept()
       return false, last_status
     end
     accepted_tick[state.bufnr] = vim.api.nvim_buf_get_changedtick(state.bufnr)
+    accepted_cursor[state.bufnr] = { tick = accepted_tick[state.bufnr],
+      position = vim.api.nvim_win_get_cursor(0) }
     local delta_sequence = collector.seq
     local accepted_text = state.action.text or ""
     local accepted = emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
@@ -1395,6 +1423,8 @@ function M.accept()
   applying = true
   vim.api.nvim_buf_set_text(state.bufnr, state.row, state.start_col, state.row, state.end_col, replacement)
   accepted_tick[state.bufnr] = vim.api.nvim_buf_get_changedtick(state.bufnr)
+  accepted_cursor[state.bufnr] = { tick = accepted_tick[state.bufnr],
+    position = vim.api.nvim_win_get_cursor(0) }
   local delta_sequence = collector.seq
   local accepted = emit(state, "prediction_accepted", { accepted_at_ms = now(), shown_event_id = state.shown_event_id,
     accepted_chars = vim.fn.strchars(state.action.text), accepted_lines = #replacement,
@@ -1565,11 +1595,14 @@ function M.status()
       and opts.single_line_input_tokens or opts.max_prompt_tokens,
     revision = opts.model_revision, precision = opts.precision,
     automatic_state = mode == "automatic" and "automatic experimental" or "inactive",
+    automatic_block_reason = ui_block_reason(not opts.automatic_normal_mode),
+    automatic_normal_mode = opts.automatic_normal_mode,
     quality = opts.automatic_quality_validated and "validated" or "uncalibrated",
     experimental_auto_opt_in = opts.experimental_auto_opt_in,
     automatic_quality_validated = opts.automatic_quality_validated,
-    automatic_display_policy = opts.automatic_prefix_guard
-      and "prefix-preserving-completion-v1" or "next-edit",
+    automatic_display_policy = opts.automatic_normal_mode and opts.automatic_prefix_guard
+      and "insert-prefix-preserving-normal-next-edit-v1"
+      or opts.automatic_prefix_guard and "prefix-preserving-completion-v1" or "next-edit",
     automatic_personalization_enabled = false,
     in_flight = pending ~= nil, proposal_active = active ~= nil,
     acceptance_key = mapping_key or opts.accept_key, last_latency_ms = last_latency_ms,
@@ -1668,7 +1701,9 @@ function M.setup(options)
     if active and active.bufnr == buf then dismiss("editor_change", delta, envelope) end
     if pending and pending.state.bufnr == buf then invalidate("editor change before display") end
   end
-  vim.api.nvim_create_autocmd({ "TextChangedI", "CursorMovedI" }, {
+  local change_events = { "TextChangedI", "CursorMovedI" }
+  if opts.automatic_normal_mode then change_events[#change_events + 1] = "TextChanged" end
+  vim.api.nvim_create_autocmd(change_events, {
     group = group, callback = function()
       if applying then return end
       local buf = vim.api.nvim_get_current_buf()
@@ -1695,7 +1730,16 @@ function M.setup(options)
   vim.api.nvim_create_autocmd("CursorMoved", {
     group = group, callback = function()
       if applying or util.current_mode():find("^i") then return end
+      local buf = vim.api.nvim_get_current_buf()
+      local accepted = accepted_cursor[buf]
+      local position = vim.api.nvim_win_get_cursor(0)
+      if accepted and accepted.tick == vim.api.nvim_buf_get_changedtick(buf)
+          and accepted.position[1] == position[1] and accepted.position[2] == position[2] then
+        return
+      end
+      accepted_cursor[buf] = nil
       if active or pending then invalidate("navigation") end
+      if opts.automatic_normal_mode then debounce_changed() end
     end,
   })
   vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout", "FocusLost", "InsertLeave" }, {
@@ -1708,9 +1752,13 @@ function M.setup(options)
           and (not pending or args.buf ~= pending.state.bufnr) then return end
       if args.event == "FocusLost" then vim.g.tabcomplete_predictor_focus_lost = true end
       invalidate("navigation")
+      if args.event == "InsertLeave" and opts.automatic_normal_mode then
+        vim.schedule(debounce_changed)
+      end
       if args.event == "BufWipeout" then
         recent_edit[args.buf] = nil
         accepted_tick[args.buf] = nil
+        accepted_cursor[args.buf] = nil
       end
     end,
   })
@@ -1718,17 +1766,20 @@ function M.setup(options)
     group = group, callback = function()
       vim.g.tabcomplete_predictor_focus_lost = false
       refresh_repo_async(vim.api.nvim_get_current_buf())
+      if opts.automatic_normal_mode then debounce_changed() end
     end,
   })
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "DirChanged" }, {
     group = group, callback = function(args)
       refresh_repo_async(args.buf or vim.api.nvim_get_current_buf())
+      if opts.automatic_normal_mode and args.event == "BufEnter" then debounce_changed() end
     end,
   })
   install_mapping()
   save_mode()
   phase = "idle"
   last_status = mode == "automatic" and "automatic experimental" or mode
+  if opts.automatic_normal_mode then vim.schedule(debounce_changed) end
   return M
 end
 return M

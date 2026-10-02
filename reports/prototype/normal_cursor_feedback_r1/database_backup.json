@@ -1,0 +1,8 @@
+{
+  "path": "/mnt/ssd/collector-data/backups/pre-normal-cursor-r1-20261002T045604Z.sqlite",
+  "bytes": 5935104,
+  "sha256": "2ea521f5865756bbb4434f9725e7f1ff61f5ebb765afbf75b0d9caf9a9e19a85",
+  "integrity_check": "ok",
+  "wal_consistent": true,
+  "schema_migration_required": false
+}

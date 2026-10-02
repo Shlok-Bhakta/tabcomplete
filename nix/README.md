@@ -52,6 +52,7 @@ services.tabcomplete = {
   enable = true;
   modelVariant = "qwen"; # Change to "sweep" for the other fixed executable.
   experimentalAutoOptIn = true;
+  automaticNormalMode = true; # Also predict after a normal-mode cursor pause.
 };
 ```
 
@@ -74,6 +75,19 @@ The immutable Neovim plugin spec replaces only
 collector and configurable acceptance/dismissal mappings. Automatic display
 requires opt-in and every edit requires acceptance. The dedicated persisted
 mode file preserves later manual, shadow, or off choices.
+
+With `automaticNormalMode`, normal-mode cursor movement, buffer entry, and edits
+use the same 250 ms debounce and single-request state machine. Visual, operator
+pending, replace, terminal, and command-line modes remain excluded. Cursor movement
+closes a shown proposal as `dismissed_navigation`, never an incorrect prediction
+or negative preference label. Unseen requests are cancelled. An ordinary
+normal-mode edit is an editor-change observation, not an inferred typing rejection.
+The insert-mode prefix filter protects typed text. Normal-mode next-edit proposals
+may replace text before the cursor; preview, syntax, range, and acceptance checks
+still apply. This is a display-policy change, not an accuracy improvement.
+Explicit `:TabCompletePredict` works in normal mode without changing the persisted
+automatic mode. Completion menus, snippet ownership, focus, staleness, and output
+validation still apply. Status reports `automatic_block_reason` precisely.
 
 The Home Manager activation hook invalidates only the owned spec's bytecode
 cache after `linkGeneration`. It backs up that entry and preserves every

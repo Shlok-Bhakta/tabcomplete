@@ -98,6 +98,19 @@ bytes before the cursor and withholds deletion. Keep the raw action and record
 preview remains available. Report this display scope separately from raw model
 accuracy and coverage; a display filter is not an improved model.
 
+Optional `automatic_normal_mode` extends the debounce to normal-mode cursor pauses,
+buffer entry, and edits. Keep operator-pending, visual, command-line, terminal,
+and replace modes excluded. Explicit prediction commands must work in normal mode
+without switching the persisted mode. Report exact UI-block reasons. Navigation
+invalidation is an observation, not an incorrect prediction; exclude it and unseen
+cancellations from negative preference pairs. Normal-mode edits must not inherit
+an old insert-mode key and become false implicit typing rejections. Verify both
+the emitted raw events and same-database/export behavior.
+An opted-in normal-mode next-edit request may change bytes before the cursor;
+the insert-mode typed-prefix display filter does not apply to those requests.
+Keep normal-mode policy versioned separately and retain exact source/range/syntax
+validation and explicit acceptance. Never claim this filter change improves accuracy.
+
 Preserve deployed schema-v3 review provenance when updating an older branch.
 `prediction_reviewed` is a separate optional explicit confirmation after a
 decision. A request's legacy `human_verified` claim cannot verify it. Reviewed

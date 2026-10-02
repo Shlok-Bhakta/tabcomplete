@@ -5,8 +5,67 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from export_personalization_feedback import extract  # noqa: E402
+
+
+@pytest.mark.parametrize("neutral_outcome", [
+    "dismissed_navigation", "dismissed_editor_change", "expired",
+    "cancelled_by_mode", "rejected_implicit_typing",
+])
+def test_navigation_and_ambiguous_dismissals_are_not_negative_pairs(
+    tmp_path: Path, neutral_outcome: str,
+) -> None:
+    """Explicit same-state rejection is a control; neutral observations never join it."""
+    db = tmp_path / "collector.sqlite"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+        "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+    )
+    base = {"file": "/tmp/example.py", "context_hash": "same-context",
+            "pre_state_hash": "same-state", "synthetic": False}
+    sequence = 0
+    for prediction, text, outcome in [
+        ("accepted", "x", "accepted"),
+        ("explicit", "y", "rejected_explicit"),
+        ("neutral", "z", neutral_outcome),
+    ]:
+        rows = [
+            ("request", "prediction_requested", {**base, "prediction_id": prediction}),
+            ("shown", "prediction_shown", {
+                "prediction_id": prediction, "action": "replace", "proposed_text": text,
+                "proposed_start": {"row": 0, "col": 0},
+                "proposed_end": {"row": 0, "col": 1},
+                "active_buffer": True, "focused": True,
+            }),
+            ("decision", "prediction_accepted" if outcome == "accepted"
+             else "prediction_dismissed", {
+                 "prediction_id": prediction, "outcome": outcome,
+                 "outcome_source": "editor_observation",
+             }),
+        ]
+        if prediction != "neutral":
+            rows.append(("review", "prediction_reviewed", {
+                "prediction_id": prediction, "synthetic": False, "human_verified": True,
+                "review_source": "explicit_editor_confirmation",
+                "resolution_event_id": prediction + "-decision", "outcome": outcome,
+            }))
+        for suffix, kind, payload in rows:
+            sequence += 1
+            conn.execute("INSERT INTO events VALUES (?,?,?,?,?,?)", (
+                prediction + "-" + suffix, "s", sequence, kind, sequence, json.dumps(payload),
+            ))
+    conn.commit()
+    conn.close()
+    result = extract(db)
+    assert len(result["candidate_preference_pairs"]) == 1
+    assert result["candidate_preference_pairs"][0]["dispreferred_prediction_id"] == "explicit"
+    neutral = next(row for row in result["evidence"] if row["prediction_id"] == "neutral")
+    assert neutral["outcome"] == neutral_outcome
+    assert result["readiness"]["enabled"] is False
 
 
 def test_explicit_and_ambiguous_feedback_stay_distinct(tmp_path: Path) -> None:

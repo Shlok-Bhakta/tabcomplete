@@ -1,0 +1,111 @@
+{
+  "smoke": {
+    "navigation_prediction_id": "83377f18-663d-4cbb-9e4c-a175992f5c31",
+    "accepted_prediction_id": "0ad450a0-0ec3-46a8-989d-f3bc5e9a3a14",
+    "displayed": 2,
+    "requested": 2,
+    "accepted": 1,
+    "synthetic": true,
+    "actual_normal_mode": true,
+    "session_id": "07af538a-2194-4afd-862d-527b247a807a"
+  },
+  "scripted_synthetic": true,
+  "visual_inspection": false,
+  "event_counts": {
+    "session_start": 1,
+    "repo_snapshot": 1,
+    "buffer_open": 5,
+    "prediction_requested": 2,
+    "prediction_generated": 2,
+    "prediction_shown": 2,
+    "prediction_dismissed": 1,
+    "file_jump": 1,
+    "edit_delta": 1,
+    "prediction_accepted": 1,
+    "buffer_write": 3,
+    "cursor_move": 1,
+    "session_end": 1
+  },
+  "prediction_events": [
+    {
+      "event_id": "6e7f6742-0cf8-4e7b-87b1-8b5f43faa722",
+      "type": "prediction_requested",
+      "sequence": 5,
+      "prediction_id": "83377f18-663d-4cbb-9e4c-a175992f5c31",
+      "request_kind": "automatic",
+      "editor_mode": "n",
+      "display_policy": "normal-mode-next-edit-v1",
+      "synthetic": true,
+      "human_verified": false
+    },
+    {
+      "event_id": "a01a9439-25f6-4f25-a9bd-d300ff509b76",
+      "type": "prediction_generated",
+      "sequence": 7,
+      "prediction_id": "83377f18-663d-4cbb-9e4c-a175992f5c31",
+      "synthetic": true
+    },
+    {
+      "event_id": "b14dd0f1-5a00-417c-9adc-5b86a8fe12fe",
+      "type": "prediction_shown",
+      "sequence": 8,
+      "prediction_id": "83377f18-663d-4cbb-9e4c-a175992f5c31",
+      "display_policy": "automatic",
+      "synthetic": true
+    },
+    {
+      "event_id": "6162084d-5b68-4e2f-af97-6313dc7d3af1",
+      "type": "prediction_dismissed",
+      "sequence": 9,
+      "prediction_id": "83377f18-663d-4cbb-9e4c-a175992f5c31",
+      "outcome": "dismissed_navigation",
+      "outcome_source": "editor_observation",
+      "reason": "navigation",
+      "synthetic": true
+    },
+    {
+      "event_id": "d5081346-8f5c-4663-8975-add971e1e414",
+      "type": "prediction_requested",
+      "sequence": 12,
+      "prediction_id": "0ad450a0-0ec3-46a8-989d-f3bc5e9a3a14",
+      "request_kind": "explicit",
+      "editor_mode": "n",
+      "display_policy": "manual-preview",
+      "synthetic": true,
+      "human_verified": false
+    },
+    {
+      "event_id": "6227cf9e-5ed7-46b7-b8f2-54ef849a4445",
+      "type": "prediction_generated",
+      "sequence": 14,
+      "prediction_id": "0ad450a0-0ec3-46a8-989d-f3bc5e9a3a14",
+      "synthetic": true
+    },
+    {
+      "event_id": "ae489371-d44a-46e7-8aa8-44df08cab02b",
+      "type": "prediction_shown",
+      "sequence": 15,
+      "prediction_id": "0ad450a0-0ec3-46a8-989d-f3bc5e9a3a14",
+      "display_policy": "automatic",
+      "synthetic": true
+    },
+    {
+      "event_id": "3c58d213-525d-4681-8df8-321f256253e3",
+      "type": "prediction_accepted",
+      "sequence": 17,
+      "prediction_id": "0ad450a0-0ec3-46a8-989d-f3bc5e9a3a14",
+      "shown_event_id": "ae489371-d44a-46e7-8aa8-44df08cab02b",
+      "synthetic": true
+    }
+  ],
+  "navigation_is_negative_feedback": false,
+  "candidate_pair_count_for_navigation": 0,
+  "automatic_training_enabled": false,
+  "real_model_unchanged": true,
+  "first_attempt": {
+    "session_id": "98e81568-0b85-4bf0-b3a5-d605346b00c8",
+    "exit_code": 1,
+    "reason": "insert typing-prefix filter blocked normal-mode proposal; display policy deliberately changed and separately versioned"
+  },
+  "integrity_check": "ok"
+}
