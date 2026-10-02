@@ -1,0 +1,3 @@
+# Preserve formatting in the pinned upstream wrapper distribution.
+tools/tabcomplete_engine/vendor/llama-cpp-2/README.md whitespace=-blank-at-eol
+tools/tabcomplete_engine/vendor/llama-cpp-2/src/grammar/json.gbnf whitespace=-blank-at-eol

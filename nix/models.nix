@@ -3,7 +3,7 @@
 let
   require =
     name: sha256:
-    pkgs.requireFile {
+    (pkgs.requireFile {
       inherit name sha256;
       message = ''
         This private local GGUF is never downloaded or published by this package.
@@ -11,7 +11,10 @@ let
           nix-store --add-fixed sha256 /path/to/${name}
         The filename and SHA-256 must match this model declaration.
       '';
-    };
+    }).overrideAttrs
+      (_: {
+        allowSubstitutes = false;
+      });
 in
 {
   qwen = rec {

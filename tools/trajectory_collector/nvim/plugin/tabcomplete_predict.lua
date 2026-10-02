@@ -25,6 +25,21 @@ vim.api.nvim_create_user_command("TabCompleteMode", function(args)
   if not ok then vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN) end
 end, { nargs = "?", complete = function() return { "manual", "automatic", "shadow", "off" } end })
 vim.api.nvim_create_user_command("TabCompleteModel", function(args)
+  local function with_identity(callback)
+    local status = predict.status()
+    if status.backend ~= "rust-editor-v1" or status.model_switch_supported ~= nil then
+      callback(status)
+      return
+    end
+    local started = predict.refresh_model_identity(function(ok, result)
+      if not ok then
+        vim.notify("TabComplete: " .. tostring(result), vim.log.levels.WARN)
+        return
+      end
+      callback(predict.status())
+    end)
+    if not started then vim.notify("TabComplete: model identity unavailable", vim.log.levels.WARN) end
+  end
   local function select(alias)
     if not alias then return end
     local ok, err = predict.set_model(alias, function(switched, message)
@@ -37,11 +52,45 @@ vim.api.nvim_create_user_command("TabCompleteModel", function(args)
     if not ok then vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN) end
   end
   if args.args == "" then
-    vim.ui.select(predict.model_aliases(), { prompt = "TabComplete model" }, select)
+    with_identity(function(status)
+      if status.model_switch_supported == false then
+        vim.notify("TabComplete selected model: " .. tostring(status.selected_model)
+          .. " (declarative; choose a Nix model variant and rebuild)")
+        return
+      end
+      vim.ui.select(predict.model_aliases(), { prompt = "TabComplete model" }, select)
+    end)
   else
-    select(args.args)
+    local alias = args.args
+    with_identity(function(status)
+      if status.model_switch_supported == false then
+        local ok, err = predict.set_model(alias)
+        if not ok then vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN) end
+        return
+      end
+      select(alias)
+    end)
   end
-end, { nargs = "?", complete = function() return predict.model_aliases() end })
+end, { nargs = "?", complete = function()
+  local status = predict.status()
+  if status.backend == "rust-editor-v1" and status.model_switch_supported == nil then return {} end
+  return predict.model_aliases()
+end })
 vim.api.nvim_create_user_command("TabCompleteStatus", function()
-  vim.notify(vim.inspect(predict.status()))
+  local function report()
+    vim.notify(vim.inspect(predict.status()))
+  end
+  local status = predict.status()
+  if status.backend == "rust-editor-v1" and status.model_switch_supported == nil then
+    local started = predict.refresh_model_identity(function(ok, result)
+      if not ok then
+        vim.notify("TabComplete: " .. tostring(result), vim.log.levels.WARN)
+        return
+      end
+      report()
+    end)
+    if not started then vim.notify("TabComplete: model identity unavailable", vim.log.levels.WARN) end
+    return
+  end
+  report()
 end, {})

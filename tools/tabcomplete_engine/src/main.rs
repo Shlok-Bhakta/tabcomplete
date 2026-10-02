@@ -1,4 +1,6 @@
 mod context;
+mod embedded;
+mod syntax_guard;
 use anyhow::{Result, ensure};
 use axum::{
     Json, Router,
@@ -43,9 +45,9 @@ use tokio_stream::wrappers::ReceiverStream;
 #[derive(Parser, Clone, Serialize)]
 struct Args {
     #[arg(long)]
-    model: PathBuf,
+    model: Option<PathBuf>,
     #[arg(long)]
-    model_sha256: String,
+    model_sha256: Option<String>,
     #[arg(long, default_value = "127.0.0.1")]
     host: IpAddr,
     #[arg(long, default_value_t = 19094)]
@@ -58,13 +60,15 @@ struct Args {
     context_size: u32,
     #[arg(long, default_value_t = 256)]
     batch_size: u32,
+    #[arg(long, default_value_t = 64)]
+    microbatch_size: u32,
     #[arg(long, default_value_t = 1024)]
     input_tokens: usize,
     #[arg(long, default_value_t = 64)]
     output_tokens: usize,
     #[arg(long, default_value = "single-line-edit-v1")]
     protocol: String,
-    #[arg(long, default_value = "trained-v2")]
+    #[arg(long, default_value = "cursor-last-v1")]
     context_layout: String,
     #[arg(long, default_value = "f16")]
     cache_type: String,
@@ -78,6 +82,8 @@ struct Profile {
     path: PathBuf,
     sha256: String,
     protocol: String,
+    #[serde(skip)]
+    embedded: Option<embedded::Payload>,
 }
 #[derive(Clone)]
 struct App {
@@ -85,6 +91,7 @@ struct App {
     busy: Arc<AtomicBool>,
     identity: Arc<Mutex<Value>>,
     registry: Arc<BTreeMap<String, Profile>>,
+    embedded_mode: bool,
 }
 type Reply = oneshot::Sender<std::result::Result<Value, String>>;
 enum Job {
@@ -99,8 +106,8 @@ enum Job {
 #[derive(Deserialize)]
 struct Generate {
     prompt: String,
-    #[serde(default = "default_output")]
-    n_predict: usize,
+    #[serde(default)]
+    n_predict: Option<usize>,
     #[serde(default)]
     window: Option<context::Window>,
     #[serde(default)]
@@ -110,9 +117,6 @@ struct Generate {
 }
 fn default_cache() -> bool {
     true
-}
-fn default_output() -> usize {
-    64
 }
 struct Busy(Arc<AtomicBool>);
 impl Drop for Busy {
@@ -124,6 +128,10 @@ fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 fn verify_model(profile: &Profile) -> Result<()> {
+    if profile.embedded.is_some() {
+        // The payload was bounded and streaming-hash verified before worker startup.
+        return Ok(());
+    }
     ensure!(
         profile.sha256.len() == 64 && profile.sha256.bytes().all(|b| b.is_ascii_hexdigit()),
         "invalid weight digest"
@@ -152,6 +160,9 @@ fn verify_model(profile: &Profile) -> Result<()> {
     Ok(())
 }
 fn output_limit(args: &Args, p: &Profile) -> usize {
+    if let Some(payload) = &p.embedded {
+        return payload.output_tokens;
+    }
     if p.protocol == "sweep-full-file-v1" {
         args.output_tokens.clamp(192, 512)
     } else {
@@ -181,13 +192,23 @@ fn worker(
                 .clone();
             verify_model(&profile)?;
             let load = Instant::now();
-            let model = match LlamaModel::load_from_file(
-                &backend,
-                &profile.path,
-                &LlamaModelParams::default()
-                    .with_n_gpu_layers(0)
-                    .with_use_mmap(true),
-            ) {
+            // Retain the borrowed FILE until after model/context destruction.
+            let embedded_file = profile
+                .embedded
+                .as_ref()
+                .map(embedded::Payload::open_stream)
+                .transpose()?;
+            let model_params = LlamaModelParams::default()
+                .with_n_gpu_layers(0)
+                .with_use_mmap(true);
+            let loaded = if let Some(file) = &embedded_file {
+                // SAFETY: owned seekable FILE at the verified aligned GGUF;
+                // no other thread accesses it, and it outlives the model.
+                unsafe { LlamaModel::load_from_file_ptr(&backend, file.as_ptr(), &model_params) }
+            } else {
+                LlamaModel::load_from_file(&backend, &profile.path, &model_params)
+            };
+            let model = match loaded {
                 Ok(model) => model,
                 Err(error) => {
                     if let Some(previous) = fallback_alias.take() {
@@ -206,7 +227,7 @@ fn worker(
             let params = LlamaContextParams::default()
                 .with_n_ctx(NonZeroU32::new(args.context_size))
                 .with_n_batch(args.batch_size)
-                .with_n_ubatch(args.batch_size.min(64))
+                .with_n_ubatch(args.microbatch_size)
                 .with_n_seq_max(1)
                 .with_n_threads(args.threads)
                 .with_n_threads_batch(args.prompt_threads)
@@ -243,9 +264,12 @@ fn worker(
             runtime_args.context_layout = context_layout.into();
             let identity = json!({"status":"ok","alias":alias,"model_sha256":profile.sha256,"model_protocol":profile.protocol,
                 "context_layout":context_layout,
+                "model_embedded":app.embedded_mode,"model_switch_supported":!app.embedded_mode,
+                "model_selection":if app.embedded_mode{"declarative"}else{"research-registry"},
+                "model_storage":if app.embedded_mode{"executable-mmap"}else{"external-file-mmap"},
                 "backend":"llama.cpp CPU via Rust","llama_cpp_2":"0.1.157","llama_cpp_sys_2":"0.1.158",
                 "runtime_config_hash":digest(&serde_json::to_vec(&(&runtime_args,&profile))?),"threads":args.threads,"prompt_threads":args.prompt_threads,
-                "context_size":args.context_size,"input_tokens":args.input_tokens,"output_tokens":output_limit(&args,&profile),
+                "context_size":args.context_size,"batch_size":args.batch_size,"microbatch_size":args.microbatch_size,"input_tokens":args.input_tokens,"output_tokens":output_limit(&args,&profile),
                 "cache_type":args.cache_type,"saved_contexts":0,"active_slots":1,"load_ms":load.elapsed().as_secs_f64()*1000.});
             *app.identity.lock().unwrap() = identity.clone();
             if let Some(reply) = ready.take() {
@@ -262,6 +286,7 @@ fn worker(
             }
             let mut cached: Vec<LlamaToken> = Vec::new();
             let mut cache_repo = String::new();
+            let mut prepared_context: Option<(String, context::EditorState)> = None;
             let next = loop {
                 let Ok(job) = rx.recv() else {
                     return Ok(());
@@ -301,7 +326,13 @@ fn worker(
                             args.input_tokens,
                             |p| Ok(model.str_to_token(p, AddBos::Always)?.len()),
                         )
-                        .and_then(|p| Ok(serde_json::to_value(p)?));
+                        .and_then(|p| {
+                            prepared_context = Some((p.prompt.clone(), request.state.clone()));
+                            Ok(serde_json::to_value(p)?)
+                        });
+                        if result.is_err() {
+                            prepared_context = None;
+                        }
                         let result = result.map(|mut p| {
                             p["model_identity"] = identity.clone();
                             p["context_hash"] =
@@ -321,7 +352,10 @@ fn worker(
                         let result = (|| -> Result<()> {
                             let started = Instant::now();
                             let tokens = model.str_to_token(&request.prompt, AddBos::Always)?;
-                            let limit = request.n_predict.min(output_limit(&args, &profile));
+                            let limit = request
+                                .n_predict
+                                .unwrap_or(output_limit(&args, &profile))
+                                .min(output_limit(&args, &profile));
                             ensure!(
                                 limit > 0 && request.repository_identity.len() <= 4096,
                                 "invalid generation bounds"
@@ -360,14 +394,13 @@ fn worker(
                             let mut batch = LlamaBatch::new(args.batch_size as usize, 1);
                             let prefill = Instant::now();
                             for start in
-                                (common..tokens.len()).step_by(args.batch_size.min(64) as usize)
+                                (common..tokens.len()).step_by(args.microbatch_size as usize)
                             {
                                 if reply.is_closed() {
                                     return Ok(());
                                 }
                                 batch.clear();
-                                let end =
-                                    (start + args.batch_size.min(64) as usize).min(tokens.len());
+                                let end = (start + args.microbatch_size as usize).min(tokens.len());
                                 for (position, token) in
                                     tokens.iter().enumerate().take(end).skip(start)
                                 {
@@ -435,7 +468,7 @@ fn worker(
                                 ctx.decode(&mut batch)?;
                                 cached.push(token);
                             }
-                            let action = if eos {
+                            let mut action = if eos {
                                 let raw = std::str::from_utf8(&bytes)?;
                                 if profile.protocol == "single-line-edit-v1" {
                                     context::decode_action(raw).ok()
@@ -448,8 +481,10 @@ fn worker(
                             } else {
                                 None
                             };
+                            let action_validation =
+                                validate_action(&request.prompt, &prepared_context, &mut action);
                             let terminal = json!({"content":"","stop":true,"stop_type":if eos{"eos"}else{"limit"},"tokens_predicted":predicted,
-                                "canonical_action":action,"model_protocol":profile.protocol,"model_sha256":profile.sha256,
+                                "canonical_action":action,"action_validation":action_validation,"model_protocol":profile.protocol,"model_sha256":profile.sha256,
                                 "context_layout":context_layout,
                                 "timings":{"cache_n":common,"prompt_n":tokens.len()-common,"prompt_ms":prompt_ms,"predicted_n":predicted,
                                     "predicted_ms":generated.elapsed().as_secs_f64()*1000.,"total_ms":started.elapsed().as_secs_f64()*1000.}});
@@ -481,6 +516,28 @@ fn worker(
         }
     }
 }
+fn validate_action(
+    prompt: &str,
+    prepared: &Option<(String, context::EditorState)>,
+    action: &mut Option<Value>,
+) -> Value {
+    if let Some((prepared_prompt, state)) = prepared
+        && prepared_prompt == prompt
+        && let Some(candidate) = action
+    {
+        return match syntax_guard::check(state, candidate) {
+            Ok(()) => json!({"policy":"rust-syntax-v1","status":"passed",
+                "reason":if state.filetype == "rust" {"syntax_preserved"} else {"not_applicable"}}),
+            Err(error) => {
+                // Guard errors are stable labels, never source snippets.
+                *action = None;
+                json!({"policy":"rust-syntax-v1","status":"rejected","reason":error.to_string()})
+            }
+        };
+    }
+    json!({"policy":"rust-syntax-v1","status":"unavailable"})
+}
+
 fn persist_alias(path: Option<&PathBuf>, alias: &str) -> Result<()> {
     if let Some(path) = path {
         if let Some(parent) = path.parent() {
@@ -537,6 +594,13 @@ struct Switch {
     alias: String,
 }
 async fn switch(State(app): State<App>, Json(request): Json<Switch>) -> Response {
+    if app.embedded_mode {
+        return (
+            StatusCode::METHOD_NOT_ALLOWED,
+            Json(json!({"error":"model_selection_is_declarative"})),
+        )
+            .into_response();
+    }
     if !app.registry.contains_key(&request.alias) {
         return StatusCode::NOT_FOUND.into_response();
     }
@@ -573,7 +637,21 @@ async fn completion(State(app): State<App>, Json(request): Json<Generate>) -> Re
 }
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args = Args::parse();
+    let mut args = Args::parse();
+    let payload = if args.model.is_none() {
+        ensure!(
+            args.model_sha256.is_none()
+                && args.model_registry.is_none()
+                && args.state_file.is_none(),
+            "embedded runtime has no external model or registry"
+        );
+        let payload = embedded::Payload::inspect_executable()?;
+        args.protocol = payload.protocol.clone();
+        args.output_tokens = payload.output_tokens;
+        Some(payload)
+    } else {
+        None
+    };
     ensure!(
         args.host.is_loopback(),
         "inference must remain loopback-only"
@@ -597,10 +675,24 @@ async fn main() -> Result<()> {
         ),
         "unsupported context layout"
     );
+    ensure!(
+        (1..=args.batch_size).contains(&args.microbatch_size),
+        "invalid microbatch budget"
+    );
     let default = Profile {
-        path: args.model.clone(),
-        sha256: args.model_sha256.clone(),
+        path: args
+            .model
+            .clone()
+            .unwrap_or_else(|| "/proc/self/exe".into()),
+        sha256: if let Some(p) = &payload {
+            p.sha256.clone()
+        } else {
+            args.model_sha256
+                .clone()
+                .ok_or_else(|| anyhow::anyhow!("research model requires --model-sha256"))?
+        },
         protocol: args.protocol.clone(),
+        embedded: payload.clone(),
     };
     let mut registry: BTreeMap<String, Profile> = if let Some(path) = &args.model_registry {
         serde_json::from_slice(&std::fs::read(path)?)?
@@ -608,7 +700,13 @@ async fn main() -> Result<()> {
         BTreeMap::new()
     };
     if registry.is_empty() {
-        registry.insert("default".into(), default.clone());
+        registry.insert(
+            payload
+                .as_ref()
+                .map_or("default", |p| p.alias.as_str())
+                .into(),
+            default.clone(),
+        );
     }
     ensure!(registry.len() <= 2, "at most two registered models");
     ensure!(
@@ -637,6 +735,7 @@ async fn main() -> Result<()> {
         busy: Arc::new(AtomicBool::new(false)),
         identity: Arc::new(Mutex::new(json!({"status":"loading"}))),
         registry: Arc::new(registry),
+        embedded_mode: payload.is_some(),
     };
     let (ready_tx, ready_rx) = oneshot::channel();
     let worker_app = app.clone();
@@ -663,4 +762,40 @@ async fn main() -> Result<()> {
         })
         .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod worker_guard_tests {
+    use super::*;
+    #[test]
+    fn syntax_guard_requires_the_exact_prepared_prompt() {
+        let state = context::EditorState {
+            file_id: "synthetic.rs".into(),
+            filetype: "rust".into(),
+            source: "fn main() { let value = 1; }\n".into(),
+            target_row: 0,
+            cursor_col: 0,
+            history: vec![],
+            relevant: vec![],
+        };
+        let prepared = Some(("prepared".into(), state));
+        let invalid = json!({"kind":"replace_line","text":"fn main() { let value = ; }"});
+        let mut action = Some(invalid.clone());
+        assert_eq!(
+            validate_action("other", &prepared, &mut action)["status"],
+            "unavailable"
+        );
+        assert_eq!(action, Some(invalid));
+        assert_eq!(
+            validate_action("prepared", &prepared, &mut action)["status"],
+            "rejected"
+        );
+        assert!(action.is_none());
+        let mut action = Some(json!({"kind":"replace_line","text":"fn main() { let value = 2; }"}));
+        assert_eq!(
+            validate_action("prepared", &prepared, &mut action)["status"],
+            "passed"
+        );
+        assert!(action.is_some());
+    }
 }

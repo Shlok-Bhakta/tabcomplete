@@ -166,8 +166,16 @@ return function(ok, assert_eq, assert_true)
       model_protocol = allowed_models.sweep.model_protocol, runtime_config_hash = string.rep("b", 64),
       input_tokens = 1024, context_size = 2304, output_tokens = 192 }
     local response_layout_override
+    local force_syntax_rejection = false
+    local rejected_raw
     local switch_alias = "sweep"
     local queue_start = #collector.queue
+    local stored_prediction_blobs = {}
+    local original_store_prediction_blob = collector.store_prediction_blob
+    collector.store_prediction_blob = function(content, callback)
+      stored_prediction_blobs[util.sha256hex(content)] = content
+      return original_store_prediction_blob(content, callback)
+    end
     predict.setup({ backend = "rust-editor-v1", url = "http://127.0.0.1:19094", mode = "manual",
       synthetic = true, allowed_models = allowed_models, single_line_input_tokens = 1024 })
     assert_eq(predict.status().protocol_version, adapter.WIRE_VERSION,
@@ -262,6 +270,22 @@ return function(ok, assert_eq, assert_true)
         callback({ code = 22, stdout = "" }) -- curl reports HTTP 409 as a bounded failure.
         return { kill = function() end }
       end
+      if force_syntax_rejection then
+        local raw = 'R\t    println!(\\"{:?}\\", Message::Resize);'
+        rejected_raw = raw
+        local events = {
+          "data: " .. vim.json.encode({ content = raw, stop = false, tokens = { 17 } }),
+          "data: " .. vim.json.encode({ content = "", stop = true, stop_type = "eos",
+            tokens_predicted = 1, canonical_action = vim.NIL,
+            action_validation = { policy = "rust-syntax-v1", status = "rejected",
+              reason = "rust_syntax_regression" },
+            model_protocol = "single-line-edit-v1", model_sha256 = q25_identity.model_sha256,
+            context_layout = q25_identity.context_layout }),
+        }
+        raw_sse = table.concat(events, "\n\n") .. "\n\n"
+        callback({ code = 0, stdout = raw_sse })
+        return { kill = function() end }
+      end
       local events = {
         "data: " .. vim.json.encode({ content = "R\tbackend", stop = false, tokens = { 17 } }),
         "data: " .. vim.json.encode({ content = "", stop = false, tokens = { 18, 19 } }),
@@ -340,6 +364,46 @@ return function(ok, assert_eq, assert_true)
     assert_true(predict.set_mode("off"), "cursor-last proposal cancelled before validation failures")
     assert_true(predict.set_mode("manual"), "manual mode restored after cursor-last case")
 
+    local rejected_queue_start = #collector.queue
+    local rejected_count = predict.status().counters.invalid_output
+    force_syntax_rejection = true
+    assert_true(predict.predict(), "syntax-rejected model response request accepted")
+    assert_true(vim.wait(1000, function() return not predict.status().in_flight end),
+      "syntax-rejected response completed")
+    force_syntax_rejection = false
+    assert_eq(predict.status().counters.invalid_output, rejected_count + 1,
+      "Rust syntax rejection remains invalid output")
+    assert_true(not predict.status().proposal_active, "syntax-rejected output is never previewed")
+    local rejected_sse = raw_sse
+    local rejected_hash = util.sha256hex(rejected_sse)
+    assert_eq(stored_prediction_blobs[rejected_hash], rejected_sse,
+      "successful terminal raw SSE is retained as a bounded prediction blob")
+    local invalid_event
+    local rejected_feedback = false
+    for i = rejected_queue_start + 1, #collector.queue do
+      local event = collector.queue[i]
+      if event.event_type == "heartbeat" and event.payload.prediction_lifecycle == "invalid_output" then
+        invalid_event = event
+      end
+      if event.event_type == "prediction_rejected" then rejected_feedback = true end
+    end
+    assert_true(invalid_event ~= nil, "syntax rejection lifecycle is recorded")
+    assert_true(not rejected_feedback, "model syntax validation is not recorded as human rejection feedback")
+    assert_eq(invalid_event.payload.raw_response_hash, rejected_hash,
+      "invalid-output lifecycle links the exact raw SSE blob")
+    assert_eq(invalid_event.payload.action_validation.policy, "rust-syntax-v1")
+    assert_eq(invalid_event.payload.action_validation.status, "rejected")
+    assert_eq(invalid_event.payload.action_validation.reason, "rust_syntax_regression")
+    assert_true(rejected_raw:find('\\"', 1, true) ~= nil,
+      "raw invalid Rust code contains literal backslash quotes")
+    assert_true(rejected_sse:find(vim.json.encode(rejected_raw), 1, true) ~= nil,
+      "stored raw SSE preserves the JSON-escaped source bytes")
+    local rejected_parser = require("tabcomplete_trajectory.sse").new()
+    assert_true(require("tabcomplete_trajectory.sse").feed(rejected_parser, rejected_sse),
+      "raw syntax-rejected SSE parses without transport errors")
+    assert_eq(table.concat(rejected_parser.pieces), rejected_raw,
+      "SSE decoder preserves source backslashes exactly")
+
     local invalid_before = predict.status().counters.invalid_output
     response_layout_override = "trained-v2"
     assert_true(predict.predict(), "mismatched response layout request accepted")
@@ -394,8 +458,8 @@ return function(ok, assert_eq, assert_true)
     assert_true(predict.predict(), "Sweep backend prediction accepted")
     assert_true(vim.wait(1000, function() return predict.status().proposal_active end),
       "Sweep canonical action became a proposal")
-    assert_eq(context_attempts, 6, "Sweep context request used the backend endpoint")
-    assert_eq(completion_attempts, 4, "Sweep generation completed once")
+    assert_eq(context_attempts, 7, "Sweep context request used the backend endpoint")
+    assert_eq(completion_attempts, 5, "Sweep generation completed once")
     local sweep_id, sweep_request, sweep_generated
     for i = sweep_queue_start + 1, #collector.queue do
       local event = collector.queue[i]
@@ -460,6 +524,7 @@ return function(ok, assert_eq, assert_true)
     predict._backend_post_impl = nil
     predict._request_impl = nil
     predict._tokenize_impl = nil
+    collector.store_prediction_blob = original_store_prediction_blob
     predict.setup({ backend = "llama-cpp-legacy", protocol_version = adapter.WIRE_VERSION,
       url = "http://127.0.0.1:9", mode = "manual", synthetic = true,
       allowed_models = allowed_models, automatic_prefix_guard = false })
@@ -694,6 +759,223 @@ return function(ok, assert_eq, assert_true)
     vim.api.nvim_win_set_cursor(0, { 2, 0 })
   end)
 
+  ok("single-line-v1-diff-preview-is-byte-safe-and-accepts-exact-source", function()
+    local saved = {
+      filetype = vim.bo[buf].filetype,
+      fileformat = vim.bo[buf].fileformat,
+      eol = vim.bo[buf].eol,
+      conceallevel = vim.wo.conceallevel,
+      tabstop = vim.bo[buf].tabstop,
+      expandtab = vim.bo[buf].expandtab,
+    }
+    local namespace = vim.api.nvim_get_namespaces().TabCompletePredict
+    local function set_source(lines, row, col)
+      vim.api.nvim_set_current_buf(buf)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      vim.bo[buf].filetype = "rust"
+      vim.api.nvim_set_option_value("fileformat", "unix", { buf = buf })
+      vim.api.nvim_set_option_value("eol", true, { buf = buf })
+      vim.api.nvim_set_option_value("tabstop", 8, { buf = buf })
+      vim.api.nvim_set_option_value("expandtab", false, { buf = buf })
+      vim.wo.conceallevel = 2
+      vim.api.nvim_win_set_cursor(0, { row + 1, col })
+    end
+    local function marks()
+      return vim.api.nvim_buf_get_extmarks(buf, namespace, 0, -1, { details = true })
+    end
+    local function request(wire)
+      set_model_action(wire, "eos", 2)
+      assert_true(predict.predict(), "diff preview request accepted")
+      assert_true(vim.wait(1000, function() return predict.status().proposal_active end),
+        "diff preview became visible")
+    end
+    local function inline_mark(text)
+      for _, mark in ipairs(marks()) do
+        local details = mark[4]
+        if details.virt_text and details.virt_text[1][1] == text then return mark end
+      end
+      return nil
+    end
+    local function highlighted_mark()
+      for _, mark in ipairs(marks()) do
+        if mark[4].hl_group then return mark end
+      end
+      return nil
+    end
+    local function virtual_line_mark(text)
+      for _, mark in ipairs(marks()) do
+        local lines = mark[4].virt_lines
+        if lines and lines[1] and lines[1][1] and lines[1][1][1] == text then return mark end
+      end
+      return nil
+    end
+
+    local original = "\tprintln!();"
+    local proposed = '\tprintln!("{:?}", Message::Resize);'
+    local cursor_col = #"\tprintln!("
+    set_source({ original, "tail" }, 0, cursor_col)
+    local original_bytes = buffers.canonical_bytes(buf)
+    local changedtick = vim.api.nvim_buf_get_changedtick(buf)
+    request("R\t" .. proposed)
+    local ghost = inline_mark('"{:?}", Message::Resize')
+    assert_true(ghost ~= nil, "prefix completion displays only inserted Rust code")
+    assert_eq(ghost[2], 0)
+    assert_eq(ghost[3], cursor_col)
+    assert_eq(ghost[4].virt_text_pos, "inline")
+    assert_eq(ghost[4].virt_text[1][2], "TabCompleteDiffAdd")
+    local add_hl = vim.api.nvim_get_hl(0, { name = "TabCompleteDiffAdd" })
+    assert_true(add_hl.fg ~= nil and add_hl.bg ~= nil, "new text has explicit green foreground and background")
+    local dark = vim.o.background == "dark"
+    assert_eq(add_hl.bg, tonumber(dark and "234d2e" or "c7f6d0", 16),
+      "new text uses a green-tinted background")
+    assert_eq(buffers.canonical_bytes(buf), original_bytes, "ghost preview does not alter source bytes")
+    assert_eq(vim.api.nvim_buf_get_changedtick(buf), changedtick, "ghost preview does not change buffer tick")
+    assert_eq(vim.bo[buf].filetype, "rust")
+    assert_eq(vim.bo[buf].tabstop, 8)
+    assert_eq(vim.bo[buf].expandtab, false)
+    assert_eq(vim.wo.conceallevel, 2)
+    assert_true(predict.accept(), "quoted code completion accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], proposed,
+      "acceptance adds the literal quotes and preserves the suffix")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], original,
+      "one undo restores the exact tabbed source line")
+
+    set_source({ "anchor", "tail" }, 0, 0)
+    request("I\tnew line")
+    local inserted_line = virtual_line_mark("+ ")
+    assert_true(inserted_line ~= nil, "insert-before action renders a green virtual line above the target")
+    assert_eq(inserted_line[4].virt_lines_above, true)
+    assert_eq(inserted_line[4].virt_lines[1][2][1], "new line")
+    assert_eq(inserted_line[4].virt_lines[1][2][2], "TabCompleteDiffAdd")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "anchor",
+      "insert-before preview does not mutate the source line")
+    assert_true(predict.accept(), "insert-before line accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "new line")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "anchor")
+
+    original = "\tlet path = ;"
+    proposed = '\tlet path = String::from("C:\\\\tmp");'
+    cursor_col = #original - 1
+    set_source({ original, "tail" }, 0, cursor_col)
+    request("R\t" .. proposed)
+    ghost = inline_mark('String::from("C:\\\\tmp")')
+    assert_true(ghost ~= nil, "valid escaped Rust string remains literal in the inline preview")
+    assert_eq(buffers.canonical_bytes(buf), original .. "\ntail\n",
+      "backslash preview leaves source unchanged")
+    assert_true(predict.accept(), "escaped Rust string accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], proposed,
+      "acceptance preserves both Rust backslashes")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], original)
+
+    local old_prefix = '\tlet label = "'
+    original = old_prefix .. "café\";"
+    proposed = old_prefix .. "東京\";"
+    set_source({ original, "tail" }, 0, #old_prefix)
+    original_bytes = buffers.canonical_bytes(buf)
+    changedtick = vim.api.nvim_buf_get_changedtick(buf)
+    request("R\t" .. proposed)
+    local removed = highlighted_mark()
+    assert_true(removed ~= nil, "replaced Unicode source range has a highlight extmark")
+    assert_eq(removed[2], 0)
+    assert_eq(removed[3], #old_prefix)
+    assert_eq(removed[4].end_row, 0)
+    assert_eq(removed[4].end_col, #old_prefix + #"café")
+    local delete_hl = vim.api.nvim_get_hl(0, { name = "TabCompleteDiffDelete" })
+    assert_true(delete_hl.fg ~= nil and delete_hl.bg ~= nil,
+      "deleted text has explicit red foreground and background")
+    assert_eq(delete_hl.fg, tonumber(dark and "ffd7dc" or "8f1d2c", 16),
+      "deleted text uses a red foreground")
+    assert_eq(delete_hl.bg, tonumber(dark and "632c35" or "ffd7dc", 16),
+      "deleted text uses a red-tinted background")
+    assert_true(delete_hl.strikethrough, "deleted text uses strikethrough")
+    ghost = inline_mark("東京")
+    assert_true(ghost ~= nil, "replacement text is green at the changed range")
+    assert_eq(ghost[3], #old_prefix + #"café", "inline replacement follows the deleted UTF-8 range")
+    assert_eq(ghost[4].virt_text[1][2], "TabCompleteDiffAdd")
+    assert_eq(buffers.canonical_bytes(buf), original_bytes, "replacement preview leaves source bytes intact")
+    assert_eq(vim.api.nvim_buf_get_changedtick(buf), changedtick, "replacement preview is not a buffer edit")
+    assert_eq(vim.bo[buf].filetype, "rust")
+    assert_eq(vim.bo[buf].fileformat, "unix")
+    assert_eq(vim.bo[buf].eol, true)
+    assert_eq(vim.wo.conceallevel, 2)
+    assert_true(predict.accept(), "Unicode replacement accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], proposed,
+      "acceptance preserves Unicode and the original suffix")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], original,
+      "one undo restores Unicode source and suffix")
+
+    set_source({ "" , "tail" }, 0, 0)
+    request("R\tinserted")
+    ghost = inline_mark("inserted")
+    assert_true(ghost ~= nil, "zero-length source range renders an inline insertion")
+    assert_eq(ghost[3], 0)
+    assert_eq(buffers.canonical_bytes(buf), "\ntail\n", "empty-line preview leaves source unchanged")
+    assert_true(predict.accept(), "empty-line insertion accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "inserted")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "")
+
+    set_source({ "obsolete", "tail" }, 0, 0)
+    request("D")
+    removed = highlighted_mark()
+    assert_true(removed ~= nil, "line deletion marks the original line")
+    assert_eq(removed[3], 0)
+    assert_eq(removed[4].end_col, #"obsolete")
+    assert_true(predict.accept(), "crossed-out line deletion accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "tail")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "obsolete")
+
+    set_source({ "", "tail" }, 0, 0)
+    request("D")
+    local empty_deletion = virtual_line_mark("- [empty line]")
+    assert_true(empty_deletion ~= nil, "empty physical line deletion has a visible red marker")
+    assert_eq(empty_deletion[2], 0)
+    assert_eq(empty_deletion[4].virt_lines_above, false)
+    assert_true(predict.accept(), "empty physical line deletion accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "tail")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "")
+
+    set_source({ "erase me", "tail" }, 0, 0)
+    request("R\t")
+    removed = highlighted_mark()
+    assert_true(removed ~= nil, "empty replacement text renders only the deleted range")
+    assert_true(inline_mark("") == nil, "empty replacement does not create blank virtual text")
+    assert_true(predict.accept(), "empty replacement accepted")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "")
+    vim.cmd("silent undo")
+    assert_eq(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1], "erase me")
+
+    vim.api.nvim_set_hl(0, "TabCompleteDiffAdd", { fg = "#123456", bg = "#abcdef" })
+    vim.api.nvim_set_hl(0, "TabCompleteDiffDelete", {
+      fg = "#654321", bg = "#fedcba", strikethrough = true,
+    })
+    vim.api.nvim_exec_autocmds("ColorScheme", { pattern = "test-theme" })
+    set_source({ "theme override", "tail" }, 0, 0)
+    request("R\tcustom theme")
+    add_hl = vim.api.nvim_get_hl(0, { name = "TabCompleteDiffAdd" })
+    delete_hl = vim.api.nvim_get_hl(0, { name = "TabCompleteDiffDelete" })
+    assert_eq(add_hl.fg, tonumber("123456", 16), "user ColorScheme can override the addition group")
+    assert_eq(add_hl.bg, tonumber("abcdef", 16))
+    assert_eq(delete_hl.fg, tonumber("654321", 16), "user ColorScheme can override the deletion group")
+    assert_eq(delete_hl.bg, tonumber("fedcba", 16))
+    assert_true(predict.reject(), "theme override preview dismissed")
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "before", "old = 'β'", "after" })
+    vim.bo[buf].filetype = saved.filetype
+    vim.api.nvim_set_option_value("fileformat", saved.fileformat, { buf = buf })
+    vim.api.nvim_set_option_value("eol", saved.eol, { buf = buf })
+    vim.wo.conceallevel = saved.conceallevel
+    vim.api.nvim_set_option_value("tabstop", saved.tabstop, { buf = buf })
+    vim.api.nvim_set_option_value("expandtab", saved.expandtab, { buf = buf })
+    vim.api.nvim_win_set_cursor(0, { 2, 0 })
+  end)
+
   ok("single-line-v1-rejects-cutoff-cap-stale-and-unrepresentable-edits", function()
     set_model_action("R\tinvalid", "length", 2)
     assert_true(predict.predict())
@@ -757,6 +1039,8 @@ return function(ok, assert_eq, assert_true)
     util.current_mode = function() return "i" end
     predict.setup({ protocol_version = adapter.WIRE_VERSION, mode = "automatic",
       experimental_auto_opt_in = true, automatic_prefix_guard = true, persist_mode = false })
+    vim.api.nvim_set_current_buf(buf)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "before", "    return λ", "after" })
     vim.api.nvim_win_set_cursor(0, { 2, 3 })
     set_model_action("D", "eos", 1)
     assert_true(predict.predict())

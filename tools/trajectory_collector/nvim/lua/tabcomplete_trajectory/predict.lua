@@ -54,7 +54,9 @@ local lock_path = "/tmp/tabcomplete-predictor-19093.lock"
 M._request_impl = nil -- deterministic test seam
 M._tokenize_impl = nil -- deterministic test seam
 M._backend_post_impl = nil -- deterministic Rust backend RPC seam
+M._backend_get_impl = nil -- deterministic Rust health RPC seam
 M._confirm_impl = nil -- deterministic test seam; production uses vim.fn.confirm
+local model_identity_refresh_generation = 0
 
 local function now() return util.now_ms() end
 local function utf8_boundary(line, col)
@@ -154,6 +156,18 @@ local function validate_model_identity(identity, expected_alias)
   if type(identity) ~= "table" or identity.status ~= "ok" then
     return nil, "missing Rust model identity"
   end
+  if identity.model_embedded ~= nil and type(identity.model_embedded) ~= "boolean" then
+    return nil, "Rust embedded-model identity is invalid"
+  end
+  if identity.model_switch_supported ~= nil and type(identity.model_switch_supported) ~= "boolean" then
+    return nil, "Rust model-switch identity is invalid"
+  end
+  if identity.model_selection ~= nil and type(identity.model_selection) ~= "string" then
+    return nil, "Rust model-selection identity is invalid"
+  end
+  if identity.model_storage ~= nil and type(identity.model_storage) ~= "string" then
+    return nil, "Rust model-storage identity is invalid"
+  end
   local spec = model_spec(identity.alias)
   if not spec then return nil, "Rust model alias is not allowlisted" end
   if expected_alias and identity.alias ~= expected_alias then
@@ -219,10 +233,13 @@ local function record_request(state)
   state.request_event_id = ev and ev.event_id
   counters.requested = counters.requested + 1
 end
-local function lifecycle(state, outcome, reason)
+local function lifecycle(state, outcome, reason, extra)
   if not state then return end
-  emit(state, "heartbeat", { prediction_lifecycle = outcome, reason = reason,
-    recorded_at_ms = now() })
+  local payload = { prediction_lifecycle = outcome, reason = reason, recorded_at_ms = now() }
+  if type(extra) == "table" then
+    for key, value in pairs(extra) do payload[key] = value end
+  end
+  emit(state, "heartbeat", payload)
 end
 local function release_lock(request)
   if request and request.has_lock then
@@ -522,6 +539,120 @@ local function automatic_ui_ready(state)
   last_status = "automatic suggestion skipped: UI busy or unfocused"
   return false
 end
+local function diff_preview_highlights()
+  local dark = vim.o.background == "dark"
+  vim.api.nvim_set_hl(0, "TabCompleteDiffAdd", {
+    default = true,
+    fg = dark and "#c7f6d0" or "#174d24",
+    bg = dark and "#234d2e" or "#c7f6d0",
+  })
+  vim.api.nvim_set_hl(0, "TabCompleteDiffDelete", {
+    default = true,
+    fg = dark and "#ffd7dc" or "#8f1d2c",
+    bg = dark and "#632c35" or "#ffd7dc",
+    strikethrough = true,
+  })
+end
+local function deleted_highlights()
+  return "TabCompleteDiffDelete"
+end
+local function preview_virtual_line(bufnr, row, above, chunks)
+  vim.api.nvim_buf_set_extmark(bufnr, ns, row, 0, {
+    virt_lines = { chunks },
+    virt_lines_above = above,
+  })
+end
+local function preview_inline(bufnr, row, col, text)
+  if text == "" then return end
+  vim.api.nvim_buf_set_extmark(bufnr, ns, row, col, {
+    virt_text = { { text, "TabCompleteDiffAdd" } },
+    virt_text_pos = "inline",
+    hl_mode = "combine",
+    right_gravity = false,
+  })
+end
+local function highlight_deleted_range(bufnr, row, start_col, end_col)
+  if end_col <= start_col then return end
+  vim.api.nvim_buf_set_extmark(bufnr, ns, row, start_col, {
+    end_row = row,
+    end_col = end_col,
+    hl_group = deleted_highlights(),
+    hl_mode = "combine",
+    right_gravity = false,
+    end_right_gravity = true,
+  })
+end
+local function common_prefix_bytes(old_text, new_text)
+  local count = 0
+  local limit = math.min(#old_text, #new_text)
+  while count < limit and old_text:byte(count + 1) == new_text:byte(count + 1) do
+    count = count + 1
+  end
+  while count > 0 and (not utf8_boundary(old_text, count) or not utf8_boundary(new_text, count)) do
+    count = count - 1
+  end
+  return count
+end
+local function common_suffix_bytes(old_text, new_text, prefix_bytes)
+  local limit = math.min(#old_text - prefix_bytes, #new_text - prefix_bytes)
+  local count = 0
+  while count < limit and old_text:byte(#old_text - count) == new_text:byte(#new_text - count) do
+    count = count + 1
+  end
+  while count > 0 and (not utf8_boundary(old_text, #old_text - count)
+      or not utf8_boundary(new_text, #new_text - count)) do
+    count = count - 1
+  end
+  return count
+end
+local function prefix_completion_text(state, old_text, new_text)
+  local cursor_col = state.contract_state.cursor_col
+  if not utf8_boundary(old_text, cursor_col) then return nil end
+  local prefix = old_text:sub(1, cursor_col)
+  local suffix = old_text:sub(cursor_col + 1)
+  if #new_text < #prefix + #suffix
+      or new_text:sub(1, #prefix) ~= prefix
+      or (suffix ~= "" and new_text:sub(-#suffix) ~= suffix) then
+    return nil
+  end
+  return new_text:sub(#prefix + 1, #new_text - #suffix)
+end
+local function preview_single_line_action(state, action)
+  diff_preview_highlights()
+  local bufnr, row = state.bufnr, state.row
+  if action.kind == "insert_before" then
+    local text = action.text == "" and "[empty line]" or action.text
+    preview_virtual_line(bufnr, row, true, {
+      { "+ ", "TabCompleteDiffAdd" }, { text, "TabCompleteDiffAdd" },
+    })
+    return
+  end
+  if action.kind == "delete_line" then
+    if state.region == "" then
+      preview_virtual_line(bufnr, row, false, {
+        { "- [empty line]", deleted_highlights() },
+      })
+    else
+      highlight_deleted_range(bufnr, row, 0, #state.region)
+    end
+    return
+  end
+
+  local old_text, new_text = state.region, action.text
+  local insertion = prefix_completion_text(state, old_text, new_text)
+  if insertion ~= nil then
+    preview_inline(bufnr, row, state.contract_state.cursor_col, insertion)
+    return
+  end
+
+  local prefix = common_prefix_bytes(old_text, new_text)
+  local suffix = common_suffix_bytes(old_text, new_text, prefix)
+  local old_end = #old_text - suffix
+  local new_end = #new_text - suffix
+  local inserted = new_text:sub(prefix + 1, new_end)
+  highlight_deleted_range(bufnr, row, prefix, old_end)
+  preview_inline(bufnr, row, old_end, inserted)
+end
 local function show(state, action)
   if opts.protocol_version == single_line_v1.WIRE_VERSION then
     if action.kind == "keep" then
@@ -548,16 +679,7 @@ local function show(state, action)
     state.action = action
     state.action_range = single_line_v1.action_range(state.contract_state, action)
     state.shown_at_ms = now()
-    local label
-    if action.kind == "delete_line" then
-      label = "[delete line: " .. state.region .. "]"
-    elseif action.kind == "insert_before" then
-      label = "[insert before: " .. action.text .. "]"
-    else
-      label = "[replace line: " .. action.text .. "]"
-    end
-    vim.api.nvim_buf_set_extmark(state.bufnr, ns, state.row, 0,
-      { virt_text = { { label, "Comment" } }, virt_text_pos = "eol", hl_mode = "combine" })
+    preview_single_line_action(state, action)
     active = state
     phase = "suggestion_displayed"
     local shown = emit(state, "prediction_shown", {
@@ -697,13 +819,26 @@ local function finished(request, result)
     else
       local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
       local is_rust = opts.backend == "rust-editor-v1"
+      if is_rust and request.parser.terminal and #request.parser.raw_chunks > 0 then
+        local raw_response = table.concat(request.parser.raw_chunks)
+        if #raw_response <= request.parser.max_bytes then
+          state.raw_response_hash = util.sha256hex(raw_response)
+          collector.store_prediction_blob(raw_response, function() end)
+        end
+      end
       local action, raw_or_err
       if is_rust then action, raw_or_err = sse.finish_rust(request.parser, {
         model_identity = state.model_identity, contract_state = state.contract_state, window = state.window })
       elseif is_v1 then action, raw_or_err = sse.finish_single_line(request.parser)
       else action, raw_or_err = sse.finish(request.parser) end
       if not action then
-        lifecycle(state, "invalid_output", raw_or_err)
+        local evidence
+        if is_rust and state.raw_response_hash then
+          evidence = { raw_response_hash = state.raw_response_hash }
+          local validation = request.parser.terminal and request.parser.terminal.action_validation
+          if type(validation) == "table" then evidence.action_validation = vim.deepcopy(validation) end
+        end
+        lifecycle(state, "invalid_output", raw_or_err, evidence)
         counters.invalid_output = counters.invalid_output + 1
         last_status = raw_or_err
         consecutive_failures = consecutive_failures + 1
@@ -711,8 +846,10 @@ local function finished(request, result)
         consecutive_failures, backoff_until_ms = 0, 0
         state.responded_at_ms = now()
         local raw_response = table.concat(request.parser.raw_chunks)
-        state.raw_response_hash = util.sha256hex(raw_response)
-        collector.store_prediction_blob(raw_response, function() end)
+        if not state.raw_response_hash then
+          state.raw_response_hash = util.sha256hex(raw_response)
+          collector.store_prediction_blob(raw_response, function() end)
+        end
         if is_v1 then
           action.text = action.text or ""
           local canonical_action = vim.json.encode({ kind = action.kind, text =
@@ -983,6 +1120,36 @@ local function post_rust_json(path, body, callback)
       else
         vim.schedule(function() callback(false, { http_code = http_code }) end)
       end
+    end)
+end
+local function get_rust_json(path, callback)
+  if M._backend_get_impl then
+    local called = false
+    local function complete(ok, response)
+      if called then return end
+      called = true
+      vim.schedule(function() callback(ok == true, response) end)
+    end
+    local ok, process = pcall(M._backend_get_impl, path, complete)
+    if not ok then complete(false, { error = "backend test transport failed" }) end
+    return process
+  end
+  local base = opts.url:gsub("/+$", "")
+  return vim.system({ "curl", "-sS", "-m", "5", "-X", "GET", "-w", "\n%{http_code}",
+    base .. path }, { text = true, stderr = false, timeout = 6000 }, function(result)
+      local raw = result.stdout or ""
+      local code_text = raw:match("(%d%d%d)%s*$")
+      local http_code = code_text and tonumber(code_text) or nil
+      local response_body = code_text and raw:gsub("\n?%d%d%d%s*$", "", 1) or ""
+      if result.code ~= 0 or not http_code or http_code < 200 or http_code >= 300 then
+        vim.schedule(function() callback(false, { exit_code = result.code, http_code = http_code }) end)
+        return
+      end
+      local decoded_ok, decoded = pcall(vim.json.decode, response_body)
+      vim.schedule(function()
+        callback(decoded_ok and type(decoded) == "table", decoded_ok and decoded or
+          { http_code = http_code, error = "invalid backend JSON" })
+      end)
     end)
 end
 local function validate_editor_context(state, response)
@@ -1292,6 +1459,11 @@ end
 function M.set_model(alias, callback)
   if opts.backend ~= "rust-editor-v1" then return false, "model switching requires the Rust backend" end
   if not model_spec(alias) then return false, "model alias is not allowlisted" end
+  local selected_identity = opts.current_model_identity
+  if selected_identity and selected_identity.model_switch_supported == false then
+    return false, "model selection is declarative; choose the " .. alias
+      .. " Nix model variant and rebuild the package"
+  end
   if model_switching then return false, "model switch already in progress" end
   local previous_mode = mode
   model_switching = true
@@ -1328,7 +1500,40 @@ function M.set_model(alias, callback)
   attempt()
   return true
 end
+function M.refresh_model_identity(callback)
+  if opts.backend ~= "rust-editor-v1" then return false, "model identity requires the Rust backend" end
+  model_identity_refresh_generation = model_identity_refresh_generation + 1
+  local generation = model_identity_refresh_generation
+  get_rust_json("/health", function(ok, identity)
+    if generation ~= model_identity_refresh_generation or opts.backend ~= "rust-editor-v1" then
+      if callback then callback(false, "model identity refresh became stale") end
+      return
+    end
+    if not ok then
+      if callback then callback(false, "cannot read the installed Rust model identity") end
+      return
+    end
+    local validated, err = validate_model_identity(identity)
+    if not validated then
+      if callback then callback(false, err) end
+      return
+    end
+    opts.current_model_identity = validated
+    opts.model = validated.alias
+    opts.model_revision = validated.model_sha256
+    opts.model_protocol = validated.model_protocol
+    opts.runtime_config_hash = validated.runtime_config_hash
+    local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
+    opts.context_policy_version = expected_policy
+    if callback then callback(true, validated) end
+  end)
+  return true
+end
 function M.model_aliases()
+  local identity = opts.current_model_identity
+  if identity and identity.model_switch_supported == false then
+    return identity.alias and { identity.alias } or {}
+  end
   local aliases = {}
   for alias in pairs(opts.allowed_models or {}) do aliases[#aliases + 1] = alias end
   table.sort(aliases)
@@ -1336,14 +1541,24 @@ function M.model_aliases()
 end
 function M.status()
   local cs = collector.status()
+  local identity = opts.current_model_identity
+  local model_selection = identity and identity.model_selection or nil
+  if identity and identity.model_switch_supported == false and model_selection == nil then
+    model_selection = "declarative"
+  end
   return { mode = mode, stage = phase, state = last_status, model = opts.model,
     backend = opts.backend,
-    model_alias = opts.current_model_identity and opts.current_model_identity.alias or nil,
-    model_protocol = opts.current_model_identity and opts.current_model_identity.model_protocol
+    selected_model = identity and identity.alias or opts.model,
+    model_alias = identity and identity.alias or nil,
+    model_embedded = identity and identity.model_embedded,
+    model_switch_supported = identity and identity.model_switch_supported,
+    model_selection = model_selection,
+    model_storage = identity and identity.model_storage,
+    model_protocol = identity and identity.model_protocol
       or opts.model_protocol,
-    context_layout = opts.current_model_identity and opts.current_model_identity.context_layout or nil,
+    context_layout = identity and identity.context_layout or nil,
     protocol_version = opts.protocol_version,
-    context_policy_version = opts.current_model_identity and opts.context_policy_version
+    context_policy_version = identity and opts.context_policy_version
       or (opts.protocol_version == single_line_v1.WIRE_VERSION
         and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version),
     input_token_budget = opts.protocol_version == single_line_v1.WIRE_VERSION
@@ -1419,6 +1634,8 @@ end
 function M.setup(options)
   local previous_backend = opts.backend
   opts = vim.tbl_deep_extend("force", opts, options or {})
+  model_identity_refresh_generation = model_identity_refresh_generation + 1
+  if opts.backend ~= previous_backend then opts.current_model_identity = nil end
   if opts.backend == "rust-editor-v1" then
     if not (options and options.url) and previous_backend ~= "rust-editor-v1" then
       opts.url = vim.env.TABCOMPLETE_PREDICTOR_URL or "http://127.0.0.1:19094"
@@ -1441,6 +1658,10 @@ function M.setup(options)
     mode = "manual"
   end
   group = vim.api.nvim_create_augroup("TabCompletePredict", { clear = true })
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = group,
+    callback = diff_preview_highlights,
+  })
   buffers.on_delta = function(buf, delta, envelope)
     if applying then return end
     recent_edit[buf] = delta

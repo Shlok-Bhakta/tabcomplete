@@ -130,6 +130,24 @@ and restart behavior. HTTP 409 means the bounded worker is occupied; preserve on
 the latest editor state. Verify backend slot release after cancellation rather
 than assuming client process termination stops native decode immediately.
 
+For executable-embedded models, record the executable digest and the separate
+GGUF payload digest. Verify the native loader maps the executable itself, with no
+extracted weight file or duplicated in-memory model. Each executable serves one
+fixed model; choose the model declaratively through Home Manager. Do not offer a
+runtime picker for an executable that cannot change weights.
+
+Replacement previews must mark the actual changed bytes, preserve UTF-8
+boundaries, and leave buffer text and changedtick unchanged. Test green additions,
+red struck deletions, exact acceptance, and a separate undo boundary. Retrieve raw
+model bytes before blaming escaping on transport. Never unescape source code to
+repair an invalid proposal. Withheld syntax failures must retain their bounded raw
+response evidence without becoming human rejection labels.
+
+Respect the target configuration's activation rules. Where rebuild/switch is
+reserved for the user, update and evaluate only the focused declarative files,
+then report that activation is pending. A temporary measured inference process
+must restore the existing service and must not replace its persistent unit.
+
 On a Nix-managed editor, evaluate the module and back up its two owned files before
 narrow installation. Never activate unrelated dirty configuration changes merely
 to install this service. Test the installed LazyVim configuration with a persistent

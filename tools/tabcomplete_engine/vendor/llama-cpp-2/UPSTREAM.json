@@ -1,0 +1,11 @@
+{
+  "crate": "llama-cpp-2",
+  "version": "0.1.157",
+  "crate_sha256": "6a5e80d283163beac602b70e99ab2d596e1f1c35aa3ed3422faa0ad990869ac8",
+  "upstream_commit": "b7bab03da647f07ed373335872643ea7fd0d0af4",
+  "patch": "Expose existing llama_model_load_from_file_ptr through a documented unsafe wrapper; native code unchanged.",
+  "omitted_test_assets": [
+    "src/gguf/ggml-vocab-bert-bge.gguf",
+    "src/gguf/tests.rs"
+  ]
+}

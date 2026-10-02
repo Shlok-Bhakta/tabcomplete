@@ -1,0 +1,152 @@
+[
+  {
+    "action": {
+      "kind": "replace_line",
+      "text": "    return \"hello ✓, \" + name"
+    },
+    "after_source": "def greet(name: str):\r\n    return \"hello ✓, \" + name\n# finished ✓\r\n",
+    "name": "replace_mixed_crlf",
+    "state": {
+      "cursor_col": 12,
+      "file_id": "src/greeter.py",
+      "filetype": "python",
+      "history": [
+        {
+          "new_text": "def greet(name: str):",
+          "old_text": "def greet(name):",
+          "row": 0
+        }
+      ],
+      "relevant": [
+        "from typing import Any",
+        "unicode note: 東京"
+      ],
+      "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+      "target_row": 1
+    },
+    "state_name": "mixed_unicode_crlf",
+    "wire": "R\t    return \"hello ✓, \" + name"
+  },
+  {
+    "action": {
+      "kind": "delete_line",
+      "text": null
+    },
+    "after_source": "def greet(name: str):\r\n# finished ✓\r\n",
+    "name": "delete_mixed_line",
+    "state": {
+      "cursor_col": 12,
+      "file_id": "src/greeter.py",
+      "filetype": "python",
+      "history": [
+        {
+          "new_text": "def greet(name: str):",
+          "old_text": "def greet(name):",
+          "row": 0
+        }
+      ],
+      "relevant": [
+        "from typing import Any",
+        "unicode note: 東京"
+      ],
+      "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+      "target_row": 1
+    },
+    "state_name": "mixed_unicode_crlf",
+    "wire": "D"
+  },
+  {
+    "action": {
+      "kind": "insert_before",
+      "text": "    # café"
+    },
+    "after_source": "def greet(name: str):\r\n    # café\n    return \"hi, \" + name\n# finished ✓\r\n",
+    "name": "insert_mixed_line",
+    "state": {
+      "cursor_col": 12,
+      "file_id": "src/greeter.py",
+      "filetype": "python",
+      "history": [
+        {
+          "new_text": "def greet(name: str):",
+          "old_text": "def greet(name):",
+          "row": 0
+        }
+      ],
+      "relevant": [
+        "from typing import Any",
+        "unicode note: 東京"
+      ],
+      "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+      "target_row": 1
+    },
+    "state_name": "mixed_unicode_crlf",
+    "wire": "I\t    # café"
+  },
+  {
+    "action": {
+      "kind": "keep",
+      "text": null
+    },
+    "after_source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+    "name": "keep",
+    "state": {
+      "cursor_col": 12,
+      "file_id": "src/greeter.py",
+      "filetype": "python",
+      "history": [
+        {
+          "new_text": "def greet(name: str):",
+          "old_text": "def greet(name):",
+          "row": 0
+        }
+      ],
+      "relevant": [
+        "from typing import Any",
+        "unicode note: 東京"
+      ],
+      "source": "def greet(name: str):\r\n    return \"hi, \" + name\n# finished ✓\r\n",
+      "target_row": 1
+    },
+    "state_name": "mixed_unicode_crlf",
+    "wire": "N"
+  },
+  {
+    "action": {
+      "kind": "insert_before",
+      "text": "// tail ✓"
+    },
+    "after_source": "fn main() {\n    println!(\"✓\");\n}\n// tail ✓",
+    "name": "insert_unterminated_eof",
+    "state": {
+      "cursor_col": 0,
+      "file_id": "examples/main.rs",
+      "filetype": "rust",
+      "history": [],
+      "relevant": [],
+      "source": "fn main() {\n    println!(\"✓\");\n}",
+      "target_row": 3
+    },
+    "state_name": "eof_unterminated",
+    "wire": "I\t// tail ✓"
+  },
+  {
+    "action": {
+      "kind": "insert_before",
+      "text": "package main"
+    },
+    "after_source": "package main",
+    "name": "insert_empty_eof",
+    "state": {
+      "cursor_col": 0,
+      "file_id": "src/new.go",
+      "filetype": "go",
+      "history": [],
+      "relevant": [],
+      "source": "",
+      "target_row": 0
+    },
+    "state_name": "empty_eof",
+    "wire": "I\tpackage main"
+  }
+]

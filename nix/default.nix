@@ -1,40 +1,34 @@
 {
   pkgs,
   modelVariant ? "qwen",
-  modelFile ? null,
-  modelSha256 ? null,
 }:
 
 let
   lib = pkgs.lib;
   models = import ./models.nix { inherit pkgs; };
   selected = models.${modelVariant};
-  weights = if modelFile == null then selected.file else modelFile;
-  sha256 = if modelSha256 == null then selected.sha256 else modelSha256;
   engine = pkgs.callPackage ./package.nix { };
   plugin = lib.cleanSource ../tools/trajectory_collector/nvim;
-  installedModels = {
-    q25 =
-      models.qwen
-      // lib.optionalAttrs (modelVariant == "qwen") {
-        file = weights;
-        inherit sha256;
-      };
-    sweep =
-      models.sweep
-      // lib.optionalAttrs (modelVariant == "sweep") {
-        file = weights;
-        inherit sha256;
-      };
-  };
-  modelRegistry = pkgs.writeText "tabcomplete-models.json" (
-    builtins.toJSON (
-      lib.mapAttrs (_: model: {
-        path = toString model.file;
-        inherit (model) sha256 protocol;
-      }) installedModels
-    )
-  );
+  payloads = lib.mapAttrs (
+    variant: model:
+    pkgs.runCommand "tabcomplete-${variant}-embedded-${engine.version}"
+      {
+        nativeBuildInputs = [ pkgs.python311 ];
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+        disallowedReferences = [
+          engine
+          model.file
+        ];
+        passthru = { inherit (model) sha256 protocol outputTokens; };
+      }
+      ''
+        mkdir -p "$out/bin"
+        python3 ${./embed-model.py} --engine ${engine}/bin/tabcomplete-engine \
+          --model ${model.file} --sha256 ${model.sha256} --variant ${variant} \
+          --output "$out/bin/tabcomplete-${variant}"
+      ''
+  ) models;
   lock = builtins.fromTOML (builtins.readFile ../tools/tabcomplete_engine/Cargo.lock);
   nativeCrates = builtins.filter (
     crate:
@@ -45,68 +39,60 @@ let
   ) lock.package;
   manifest = pkgs.writeText "tabcomplete-runtime-manifest.json" (
     builtins.toJSON {
-      schema_version = 1;
+      schema_version = 2;
       model_variant = modelVariant;
-      model_sha256 = sha256;
-      installed_models = lib.mapAttrs (_: model: {
-        inherit (model) sha256 protocol;
-        bytes = if modelFile != null && model.file == weights then null else model.bytes;
-      }) installedModels;
+      model_storage = "executable-mmap";
+      model_selection = "declarative";
+      model_sha256 = selected.sha256;
       protocol = selected.protocol;
-      native_crates = map (crate: {
-        inherit (crate)
-          name
-          version
-          checksum
-          source
+      installed_models = lib.mapAttrs (_: model: {
+        inherit (model)
+          sha256
+          protocol
+          bytes
+          outputTokens
           ;
+      }) models;
+      native_crates = map (crate: {
+        inherit (crate) name version;
+        checksum = crate.checksum or null;
+        source = crate.source or "vendored-wrapper";
       }) nativeCrates;
+      wrapper_upstream = builtins.fromJSON (
+        builtins.readFile ../tools/tabcomplete_engine/vendor/llama-cpp-2/UPSTREAM.json
+      );
       cpu_target = "x86-64-v3";
       gpu_enabled = false;
-      engine = toString engine;
-      # Record build provenance without retaining source crates at runtime.
-      cargo_dependencies = builtins.unsafeDiscardStringContext (toString engine.cargoDeps);
       automatic_training = false;
+      cargo_dependencies = builtins.unsafeDiscardStringContext (toString engine.cargoDeps);
     }
   );
 in
 pkgs.runCommand "tabcomplete-${modelVariant}-${engine.version}"
   {
-    nativeBuildInputs = [ pkgs.coreutils ];
-    modelSource = weights;
-    expectedSha256 = sha256;
-    qwenSource = installedModels.q25.file;
-    qwenSha256 = installedModels.q25.sha256;
-    sweepSource = installedModels.sweep.file;
-    sweepSha256 = installedModels.sweep.sha256;
+    preferLocalBuild = true;
+    allowSubstitutes = false;
     passthru = {
-      inherit
-        engine
-        sha256
-        modelVariant
-        modelRegistry
-        ;
+      inherit engine modelVariant payloads;
+      sha256 = selected.sha256;
       protocol = selected.protocol;
       outputTokens = selected.outputTokens;
       modelName = selected.model;
-      allowedModels = lib.mapAttrs (_: model: {
-        model_sha256 = model.sha256;
-        model_protocol = model.protocol;
-        output_tokens = model.outputTokens;
-      }) installedModels;
+      allowedModels = {
+        ${if modelVariant == "qwen" then "q25" else "sweep"} = {
+          model_sha256 = selected.sha256;
+          model_protocol = selected.protocol;
+          output_tokens = selected.outputTokens;
+        };
+      };
     };
     meta = engine.meta;
   }
   ''
-    printf '%s  %s\n' "$expectedSha256" "$modelSource" | sha256sum --check --status
-    printf '%s  %s\n' "$qwenSha256" "$qwenSource" | sha256sum --check --status
-    printf '%s  %s\n' "$sweepSha256" "$sweepSource" | sha256sum --check --status
-    mkdir -p "$out/bin" "$out/share/tabcomplete/models"
-    ln -s '${engine}/bin/tabcomplete-engine' "$out/bin/tabcomplete-engine"
-    ln -s "$modelSource" "$out/share/tabcomplete/model.gguf"
-    ln -s "$qwenSource" "$out/share/tabcomplete/models/q25.gguf"
-    ln -s "$sweepSource" "$out/share/tabcomplete/models/sweep.gguf"
-    ln -s '${modelRegistry}' "$out/share/tabcomplete/models.json"
-    ln -s '${plugin}' "$out/share/tabcomplete/nvim"
-    ln -s '${manifest}' "$out/share/tabcomplete/runtime-manifest.json"
+    mkdir -p "$out/bin" "$out/share/tabcomplete"
+    ln -s ${payloads.qwen}/bin/tabcomplete-qwen "$out/bin/tabcomplete-qwen"
+    ln -s ${payloads.sweep}/bin/tabcomplete-sweep "$out/bin/tabcomplete-sweep"
+    ln -s "$out/bin/tabcomplete-${modelVariant}" "$out/bin/tabcomplete-engine"
+    ln -s ${plugin} "$out/share/tabcomplete/nvim"
+    ln -s ${manifest} "$out/share/tabcomplete/runtime-manifest.json"
   ''

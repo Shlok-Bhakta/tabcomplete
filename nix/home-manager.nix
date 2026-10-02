@@ -8,7 +8,6 @@
 let
   cfg = config.services.tabcomplete;
   package = cfg.package;
-  modelFile = "${package}/share/tabcomplete/model.gguf";
   sha256 = package.sha256;
   protocol = package.protocol;
   outputTokens = package.outputTokens;
@@ -16,10 +15,6 @@ let
     map (model: model.output_tokens) (builtins.attrValues package.allowedModels)
   );
   arguments = lib.escapeShellArgs [
-    "--model"
-    (toString modelFile)
-    "--model-sha256"
-    sha256
     "--host"
     "127.0.0.1"
     "--port"
@@ -36,16 +31,12 @@ let
     (toString cfg.inputTokens)
     "--batch-size"
     (toString cfg.batchSize)
+    "--microbatch-size"
+    (toString cfg.microbatchSize)
     "--output-tokens"
     (toString outputTokens)
-    "--protocol"
-    protocol
     "--cache-type"
     cfg.cacheType
-    "--model-registry"
-    "${package}/share/tabcomplete/models.json"
-    "--state-file"
-    "%S/tabcomplete/selected-model.json"
   ];
   predictorOptions = {
     url = "http://127.0.0.1:${toString cfg.port}";
@@ -65,6 +56,7 @@ let
           contextLayout
           inputTokens
           batchSize
+          microbatchSize
           cacheType
           threads
           promptThreads
@@ -89,8 +81,19 @@ in
     enable = lib.mkEnableOption "local CPU TabComplete inference";
     package = lib.mkOption {
       type = lib.types.package;
-      default = import ./default.nix { inherit pkgs; };
-      description = "Engine, immutable GGUF, and the matching Neovim plugin.";
+      default = import ./default.nix {
+        inherit pkgs;
+        modelVariant = cfg.modelVariant;
+      };
+      description = "Two executable-embedded models and the matching Neovim plugin.";
+    };
+    modelVariant = lib.mkOption {
+      type = lib.types.enum [
+        "qwen"
+        "sweep"
+      ];
+      default = "qwen";
+      description = "Select one fixed embedded model executable declaratively.";
     };
     port = lib.mkOption {
       type = lib.types.port;
@@ -123,6 +126,10 @@ in
     batchSize = lib.mkOption {
       type = lib.types.ints.between 64 512;
       default = 256;
+    };
+    microbatchSize = lib.mkOption {
+      type = lib.types.ints.between 1 512;
+      default = 64;
     };
     cacheType = lib.mkOption {
       type = lib.types.enum [
@@ -165,6 +172,10 @@ in
 
   config = lib.mkIf cfg.enable {
     assertions = [
+      {
+        assertion = cfg.microbatchSize <= cfg.batchSize;
+        message = "TabComplete microbatchSize must not exceed batchSize.";
+      }
       {
         assertion = cfg.inputTokens + maximumOutputTokens <= cfg.contextSize;
         message = "TabComplete contextSize must fit the input and every installed model's output budget.";
