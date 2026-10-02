@@ -1,0 +1,40 @@
+{
+  "host": "shlokthinkpad",
+  "configuration_root": "/home/shlok/nixos-config",
+  "code_revision": "53aec2f845ac6c0f2840831079d4d68e0fa7b06a",
+  "source_hash": "sha256-W2hpG4XzQjoWSYenzkH3uQ676tQu/Uz1Pexujp8QLRs=",
+  "backup": {
+    "backup": "/home/shlok/.local/state/tabcomplete-install-backups/editor-format-r2-20261002T035122Z",
+    "owned": [
+      {
+        "path": "pkgs/tabcomplete-engine/default.nix",
+        "sha256": "d2f0b6d91babdf993c5da4bcb96b7597c7a1593431955f69bd1acfe5fac9fd71"
+      },
+      {
+        "path": "home/features/tabcomplete/default.nix",
+        "sha256": "6a781490058402687cd191e77ad9997fb60f859635c9e368ff882144ca31e666"
+      }
+    ],
+    "existing_git_status_sha256": "4524f4c6d350e8330275860acdc29d9a10589cc6ed804d32507a4ac8ac250b48",
+    "unit_fragment": "/home/shlok/.config/systemd/user/tabcomplete-engine.service",
+    "unit_backup_sha256": "4808899b02de824b5d6372259777e18b9c2c314521a0b92fffab5ad0168ab252",
+    "unit_changed": false
+  },
+  "unrelated_files_digest_before": "ce74da8712e44f97abd3d0772b2413fa8e44de413dbb1474cf3c1864b6f93eab",
+  "unrelated_files_digest_after": "ce74da8712e44f97abd3d0772b2413fa8e44de413dbb1474cf3c1864b6f93eab",
+  "files": {
+    "home/features/tabcomplete/default.nix": "7774b6aa7c3d9c2d6dec1c87e2e759e9dd08adacdee678ac7cfb1c224f68a9c5",
+    "pkgs/tabcomplete-engine/default.nix": "c49e55374a163817976279c99ca5233a06f8a6806ec5ed52b75712c76d4d6265"
+  },
+  "modelVariant": "qwen",
+  "threads": 4,
+  "promptThreads": 4,
+  "microbatchSize": 64,
+  "cacheType": "f16",
+  "experimental_auto_opt_in": true,
+  "quality_validated": false,
+  "automatic_training": false,
+  "accept_key": "<M-l>",
+  "activation_performed": false,
+  "activation_reason": "Target AGENTS.md reserves nrs for the user; latest user instruction requests declarative configuration only."
+}

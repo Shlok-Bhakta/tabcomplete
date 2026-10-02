@@ -1,0 +1,27 @@
+{
+  "schema": "rust-editor-format-r2-plan-v1",
+  "frozen_at": "2026-10-02T02:49:49.228073+00:00",
+  "base_commit": "72744ed",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "host": "shlokthinkpad",
+  "backend": "existing declarative Rust llama.cpp CPU service",
+  "fixtures": {
+    "quote_states_v1.jsonl": "0e1bf918bf3c3c6498a6f21131f1122a34e480be1da54fe55115e0cdf907881e",
+    "related_development_24": "601daa6370ce0582467f1e37d88871032036c5c4b39d38a1c30199008cc1dd3b"
+  },
+  "layouts": [
+    "cursor-last-v1",
+    "cursor-last-raw-output-v1"
+  ],
+  "input_budget": 1024,
+  "output_ceiling": 64,
+  "stop": "actual EOG, never decode or unescape source to rescue output",
+  "runtime_change": false,
+  "training": false,
+  "private_source_used_for_generation": false,
+  "budget_seconds": 600,
+  "prompt_selection": "Prefer raw-output clarification only if quoted-code syntax improves without loss of more than one existing exact developmental action. No production quality or equivalence claim.",
+  "embedding": "Separate q25 and sweep executables, own GGUF at aligned internal offset, fixed model profile, native FILE* loader and mmap, no extraction.",
+  "syntax_guard": "Reject new Rust parse error fragments, preserve legitimate string/comment/raw-string backslashes. This is not compilation or semantic validation.",
+  "probe_code_sha256": "354c8ba0ca26d09b14fb42eca4b9522c15ca246d709c8d17168a9d87fb993d18"
+}

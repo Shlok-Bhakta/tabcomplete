@@ -1,0 +1,24 @@
+{
+  "schema": "rust-editor-quote-failure-v1",
+  "prediction_id": "6c8e7c1c-a19e-4d6d-bf5f-ec018aed5d60",
+  "request_id": "d616e4dd-6cda-4dd1-9f8a-25006231ad0e",
+  "generated_event_id": "e6417a1e-c0b5-4297-bcd9-4b602cb45d1c",
+  "session_id": "df56c6bd-4584-4750-bfef-7fed42dd0549",
+  "model_alias": "q25",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "runtime_config_hash": "6e58a95c8f5fba5581784636cf5e042a33a14e93b7c764f681eb2ff4c10c54ba",
+  "context_layout": "cursor-last-v1",
+  "raw_response_hash": "cba6b2288af5bdfbbc322f2f62a103c3c4cb8776662605dc74b74613e227acb4",
+  "action_blob_hash": "4cb5d94898a8c1faf90de416cae802ece10d29ad7a4cbd6e954931d6e82da291",
+  "model_wire": "R\t    println!(\\\"{:?}\\\", Message::Resize);",
+  "canonical_action": {
+    "kind": "replace_line",
+    "text": "    println!(\\\"{:?}\\\", Message::Resize);"
+  },
+  "wire_and_canonical_bytes_equal": true,
+  "transport_added_backslashes": false,
+  "diagnosis": "Model emitted context-style escaped quote bytes as raw source. Serializer-valid does not imply syntactically valid Rust. No implicit unescape is authorized by wire contract.",
+  "source_basis": "Only the quoted line supplied in the user screenshot is reproduced here; source file/context remains private.",
+  "human_review_claimed": false,
+  "synthetic": false
+}

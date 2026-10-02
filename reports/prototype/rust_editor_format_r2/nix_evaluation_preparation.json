@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "status": "evaluation_passed_build_waits_for_root_clear_and_final_source",
+  "source_staging": "/home/shlok/.cache/tabcomplete-format-r2/source-eval",
+  "nixpkgs_pin": {
+    "nar_hash": "sha256-0sOb6OIaD/K1zHxBhpmlKvkADfe0n8+l4Jj2e1Q0r3w=",
+    "revision": "e8210c649915deed7080033cdbabcc19e40bb899",
+    "source_path": "/nix/store/zny1nwmq6v9bkmjgpqrgngy7n7653mfh-source"
+  },
+  "build_command": "nix build --impure --max-jobs 1 --cores 2 --option post-build-hook \"\" --expr 'let pkgs = import /nix/store/zny1nwmq6v9bkmjgpqrgngy7n7653mfh-source { system = \"x86_64-linux\"; }; in import /home/shlok/.cache/tabcomplete-format-r2/source-eval/nix/default.nix { inherit pkgs; modelVariant = \"qwen\"; }' --out-link /home/shlok/.cache/tabcomplete-format-r2/result -L",
+  "build_scope": "native engine and both separate embedded payloads plus immutable plugin, no activation",
+  "existing_private_inputs": {
+    "qwen": {
+      "path": "/nix/store/cc0isw7nhpajcp03zb929j91czwicpgm-q25-public-functional-lr1e5-Q4_K_M.gguf",
+      "sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+      "bytes": 491399808,
+      "fixed_path_valid": true
+    },
+    "sweep": {
+      "path": "/nix/store/mdq9vd28sj7rmc1hv2wwv6fjr5by642q-sweep-next-edit-1.5b.q4_k_m.gguf",
+      "sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+      "bytes": 883289056,
+      "fixed_path_valid": true
+    }
+  },
+  "no_weight_downloads": true,
+  "private_payload_substitution": false,
+  "post_build_upload_hook_disabled_by_command": true,
+  "remote_existing_post_build_hook_configured": false,
+  "derivation_constraints": {
+    "engine": {
+      "CMAKE_BUILD_PARALLEL_LEVEL": "2",
+      "GGML_CPU_REPACK": "OFF",
+      "GGML_CUDA": "OFF",
+      "RUSTFLAGS": "-C target-cpu=x86-64-v3"
+    },
+    "qwen": {
+      "allowSubstitutes": "",
+      "preferLocalBuild": "1",
+      "disallowedReferences": "/nix/store/cg25b0w1lrjh6lmx9riqmq3f57mcbnab-tabcomplete-engine-0.1.0 /nix/store/cc0isw7nhpajcp03zb929j91czwicpgm-q25-public-functional-lr1e5-Q4_K_M.gguf"
+    },
+    "sweep": {
+      "allowSubstitutes": "",
+      "preferLocalBuild": "1",
+      "disallowedReferences": "/nix/store/cg25b0w1lrjh6lmx9riqmq3f57mcbnab-tabcomplete-engine-0.1.0 /nix/store/mdq9vd28sj7rmc1hv2wwv6fjr5by642q-sweep-next-edit-1.5b.q4_k_m.gguf"
+    }
+  },
+  "isolated_module_evaluation": {
+    "bundle_drv": "/nix/store/gkhlx89ahqz854lxm6v5y6rfqlawnmkg-tabcomplete-qwen-0.1.0.drv",
+    "engine_drv": "/nix/store/xnc1g8d70ns4vssfdxhx2sp6i92cdzsr-tabcomplete-engine-0.1.0.drv",
+    "exec_start": [
+      "/nix/store/k2992sba6hiwmx882zpxrs49vkbvmr2x-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --microbatch-size 64 --output-tokens 64 --cache-type f16"
+    ],
+    "home_generation_drv": "/nix/store/z6s7ligsngpmg977v3wkzhwvvpjz9d7q-home-manager-generation.drv",
+    "owned_cache_hook": "run /nix/store/cgjr3kj3hs7ngznyws5qfg16c8scpys0-bash-interactive-5.3p9/bin/bash /nix/store/vi77ivd8cg298692mr6kpqcj7w7a1kja-invalidate-owned-spec-cache.sh \\\n  /nix/store/lzjp315js7rsxb52iswxbs5zlf7yn44g-neovim-0.12.3/bin/nvim lazyvim \\\n  /home/shlok/.config/lazyvim/lua/plugins/tabcomplete-trajectory.lua \\\n  /home/shlok/.local/state/tabcomplete-install-backups/home-manager-cache\n",
+    "owned_plugin_spec": "local plugin = \"/nix/store/k2992sba6hiwmx882zpxrs49vkbvmr2x-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim\"\nreturn {\n  {\n    dir = plugin,\n    name = \"tabcomplete-trajectory\",\n    lazy = false,\n    priority = 1000,\n    init = function() vim.opt.runtimepath:prepend(plugin) end,\n    config = function()\n      require(\"tabcomplete_trajectory\").setup({\n        server_url = vim.env.TABCOMPLETE_COLLECTOR_URL or \"http://100.100.163.102:8787\",\n      })\n      local predictor_options = vim.json.decode(\"{\\\"accept_key\\\":\\\"<M-l>\\\",\\\"allowed_models\\\":{\\\"q25\\\":{\\\"model_protocol\\\":\\\"single-line-edit-v1\\\",\\\"model_sha256\\\":\\\"4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb\\\",\\\"output_tokens\\\":64}},\\\"automatic_personalization_enabled\\\":false,\\\"automatic_prefix_guard\\\":false,\\\"automatic_quality_validated\\\":false,\\\"backend\\\":\\\"rust-editor-v1\\\",\\\"debounce_ms\\\":250,\\\"dismiss_key\\\":\\\"<M-BS>\\\",\\\"experimental_auto_opt_in\\\":true,\\\"max_prompt_tokens\\\":1024,\\\"mode\\\":\\\"automatic\\\",\\\"model\\\":\\\"q25-public-functional-lr1e5\\\",\\\"model_revision\\\":\\\"4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb\\\",\\\"persist_mode\\\":true,\\\"protocol_version\\\":\\\"single-line-edit-v1\\\",\\\"runtime_config_hash\\\":\\\"dab007c8d288efb6e7a23071601575ed3bb53e71f3732e1095bd422521f047c0\\\",\\\"single_line_input_tokens\\\":1024,\\\"synthetic\\\":false,\\\"target_prompt_tokens\\\":1024,\\\"url\\\":\\\"http://127.0.0.1:19094\\\"}\")\n      predictor_options.mode_state_path = vim.fn.stdpath(\"state\") .. \"/tabcomplete-rust-editor-mode.json\"\n      require(\"tabcomplete_trajectory.predict\").setup(predictor_options)\n    end,\n  },\n}\n",
+    "qwen_drv": "/nix/store/jaiwqfx76ld57693v84h2ivrpwxfsy6s-tabcomplete-qwen-embedded-0.1.0.drv",
+    "service": {
+      "CPUQuota": "400%",
+      "Environment": [
+        "TABCOMPLETE_OBSERVABILITY_CAPTURE_CONTENT=0",
+        "TABCOMPLETE_AUTOMATIC_TRAINING=0"
+      ],
+      "ExecStart": [
+        "/nix/store/k2992sba6hiwmx882zpxrs49vkbvmr2x-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --microbatch-size 64 --output-tokens 64 --cache-type f16"
+      ],
+      "MemoryMax": "1500M",
+      "MemorySwapMax": "0",
+      "Nice": 10,
+      "NoNewPrivileges": true,
+      "PrivateTmp": true,
+      "ProtectHome": "read-only",
+      "ProtectSystem": "strict",
+      "Restart": "on-failure",
+      "RestartSec": 5,
+      "RestrictAddressFamilies": [
+        "AF_UNIX",
+        "AF_INET",
+        "AF_INET6"
+      ],
+      "StateDirectory": "tabcomplete",
+      "StateDirectoryMode": "0700",
+      "TimeoutStopSec": 10,
+      "UMask": "0077"
+    },
+    "sweep_drv": "/nix/store/9k7zkph2lk6jz67jz7nd1zkrmcgn0v1m-tabcomplete-sweep-embedded-0.1.0.drv"
+  },
+  "integrated_config_evaluation": {
+    "integrated_exec_start": [
+      "/nix/store/k2992sba6hiwmx882zpxrs49vkbvmr2x-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --microbatch-size 64 --output-tokens 64 --cache-type f16"
+    ],
+    "integrated_home_generation_drv": "/nix/store/682cs5cb5bsb7hrz0kr9ii3m93gd0aci-home-manager-generation.drv",
+    "owned_plugin_spec": "local plugin = \"/nix/store/k2992sba6hiwmx882zpxrs49vkbvmr2x-tabcomplete-qwen-0.1.0/share/tabcomplete/nvim\"\nreturn {\n  {\n    dir = plugin,\n    name = \"tabcomplete-trajectory\",\n    lazy = false,\n    priority = 1000,\n    init = function() vim.opt.runtimepath:prepend(plugin) end,\n    config = function()\n      require(\"tabcomplete_trajectory\").setup({\n        server_url = vim.env.TABCOMPLETE_COLLECTOR_URL or \"http://100.100.163.102:8787\",\n      })\n      local predictor_options = vim.json.decode(\"{\\\"accept_key\\\":\\\"<M-l>\\\",\\\"allowed_models\\\":{\\\"q25\\\":{\\\"model_protocol\\\":\\\"single-line-edit-v1\\\",\\\"model_sha256\\\":\\\"4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb\\\",\\\"output_tokens\\\":64}},\\\"automatic_personalization_enabled\\\":false,\\\"automatic_prefix_guard\\\":true,\\\"automatic_quality_validated\\\":false,\\\"backend\\\":\\\"rust-editor-v1\\\",\\\"debounce_ms\\\":250,\\\"dismiss_key\\\":\\\"<M-BS>\\\",\\\"experimental_auto_opt_in\\\":true,\\\"max_prompt_tokens\\\":1024,\\\"mode\\\":\\\"automatic\\\",\\\"model\\\":\\\"q25-public-functional-lr1e5\\\",\\\"model_revision\\\":\\\"4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb\\\",\\\"persist_mode\\\":true,\\\"protocol_version\\\":\\\"single-line-edit-v1\\\",\\\"runtime_config_hash\\\":\\\"dab007c8d288efb6e7a23071601575ed3bb53e71f3732e1095bd422521f047c0\\\",\\\"single_line_input_tokens\\\":1024,\\\"synthetic\\\":false,\\\"target_prompt_tokens\\\":1024,\\\"url\\\":\\\"http://127.0.0.1:19094\\\"}\")\n      predictor_options.mode_state_path = vim.fn.stdpath(\"state\") .. \"/tabcomplete-rust-editor-mode.json\"\n      require(\"tabcomplete_trajectory.predict\").setup(predictor_options)\n    end,\n  },\n}\n",
+    "replaced_old_module_for_evaluation": "/nix/store/4klv76s00fnsk88jq10bd978xn7818gz-source"
+  },
+  "permanent_helper_variant_pattern": {
+    "qwen": {
+      "allowed_models": {
+        "q25": {
+          "model_protocol": "single-line-edit-v1",
+          "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+          "output_tokens": 64
+        }
+      },
+      "exec_start": [
+        "/nix/store/qy4qz44p6k1nlbf57mgxkviakp7ycfan-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --microbatch-size 64 --output-tokens 64 --cache-type f16"
+      ],
+      "generation_drv": "/nix/store/6idh19qqxdpb7n738azhcny3p7ncab34-home-manager-generation.drv",
+      "selected_variant": "qwen"
+    },
+    "sweep": {
+      "allowed_models": {
+        "sweep": {
+          "model_protocol": "sweep-full-file-v1",
+          "model_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+          "output_tokens": 192
+        }
+      },
+      "exec_start": [
+        "/nix/store/n3flx3x6xdmrg427ai9vsn06q8nkpz1b-tabcomplete-sweep-0.1.0/bin/tabcomplete-engine --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --microbatch-size 64 --output-tokens 192 --cache-type f16"
+      ],
+      "generation_drv": "/nix/store/angr4k5lm2difkim5m7w0z94j2wp5zls-home-manager-generation.drv",
+      "selected_variant": "sweep"
+    }
+  },
+  "config_edits": false,
+  "service_mutation": false,
+  "activation": false,
+  "gc": false,
+  "nix_code_hashes": {
+    "nix/default.nix": "ee2d1fb8e08bb73aa83e2d49ea7f27e2a97310ab10132b455d7f86c492093ffb",
+    "nix/models.nix": "fb3508ec356ba191cbd7cc6e2b0a06d330f8b0f34bb1cbd8d21fb00fac34483d",
+    "nix/package.nix": "48f4c8512c8ac2c3c01897752edd3a080f6d862fb84860505345495ba5cee2d0",
+    "nix/home-manager.nix": "4752429c864250cde0399029dd4bd33cfc0cd26e624245e77788c5ac650b3b01",
+    "nix/embed-model.py": "1ca74b7ab89a254584cf8e057d5ba7812685e73bcc3c39a012c6747467e311ab"
+  }
+}

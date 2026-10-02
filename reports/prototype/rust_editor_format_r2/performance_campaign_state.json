@@ -1,0 +1,25 @@
+{
+  "completed_settings": [
+    "baseline_start",
+    "microbatch128"
+  ],
+  "deadline_epoch_seconds": 1790912655.216588,
+  "failed": false,
+  "last_completed_at_utc": "2026-10-02T03:26:47.172605+00:00",
+  "outputs": [
+    {
+      "file": "baseline_start.json",
+      "setting_id": "baseline_start",
+      "sha256": "f69bdb726bda7132ff3ad5348ce14e33beb0fa06443cfef1af80ccdd470cf01d"
+    },
+    {
+      "file": "microbatch128.json",
+      "setting_id": "microbatch128",
+      "sha256": "5be127c5d4b46fd0fd8205151863d15b6972d045bf16fdb4a91d5831c2da0e81"
+    }
+  ],
+  "plan_sha256": "1ca06880e534da0e151c587cd3d4765c2dd709c9b36c95daaf1399d7fed7a11b",
+  "schema": "rust-editor-cpu-profile-campaign-v1",
+  "started_at_utc": "2026-10-02T03:24:15.216566+00:00",
+  "started_epoch_seconds": 1790911455.2165859
+}

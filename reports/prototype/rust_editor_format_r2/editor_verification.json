@@ -1,0 +1,107 @@
+{
+  "schema": "rust-editor-format-editor-verification-v1",
+  "synthetic_sqlite_check": {
+    "synthetic": true,
+    "temporary_local_sqlite": true,
+    "session_id": "a56bdfbe-d972-4cc8-94b5-fff720a197d1",
+    "prediction_id": "25a94d61-1405-4d83-a172-8c87d4f451dd",
+    "prediction_event_count": 2,
+    "prediction_event_types": [
+      "prediction_requested",
+      "heartbeat"
+    ],
+    "lifecycle": "invalid_output",
+    "action_validation": {
+      "policy": "rust-syntax-v1",
+      "status": "rejected",
+      "reason": "rust_syntax_regression"
+    },
+    "raw_response_sha256": "0a4a6843675c8adcadd33db0a352b944b0aad4d5a9f8c696241a178d8a1ede46",
+    "raw_response_bytes": 449,
+    "blob_compression": "gzip",
+    "compressed_bytes": 326,
+    "compressed_blob_sha256": "f0069d19f501345f0266c8a144e80968bc059d9cd084262dfe018de604926db6",
+    "decompressed_sha256_matches_raw_response": true,
+    "prediction_rejected_event_count": 0,
+    "projection_outcome": "invalid_output",
+    "projection_outcome_source": "request_lifecycle",
+    "projection_review_status": "unreviewed"
+  },
+  "actual_user_failure_reference": {
+    "evidence_file": "escaping_failure.json",
+    "synthetic": false,
+    "session_id": "df56c6bd-4584-4750-bfef-7fed42dd0549",
+    "prediction_id": "6c8e7c1c-a19e-4d6d-bf5f-ec018aed5d60",
+    "raw_response_sha256": "cba6b2288af5bdfbbc322f2f62a103c3c4cb8776662605dc74b74613e227acb4",
+    "wire_and_canonical_bytes_equal": true,
+    "transport_added_backslashes": false
+  },
+  "headless_neovim": {
+    "version": "NVIM v0.12.0",
+    "full_suite_command": "nvim --headless -u NONE -l tests/run.lua",
+    "full_suite_passed": 76,
+    "full_suite_failed": 0,
+    "model_picker_command": "nvim --headless -u NONE -l tests/model_picker.lua",
+    "model_picker_result": "passed",
+    "diff_preview_scenarios": 9,
+    "acceptance_and_undo_scenarios": 8,
+    "theme_override_scenario": "passed",
+    "source_buffer_mutated_by_preview": false,
+    "tested_cases": [
+      "quoted Rust prefix completion",
+      "escaped Rust string literal",
+      "UTF-8 middle replacement preserving suffix",
+      "insert-before virtual line",
+      "zero-length source insertion",
+      "nonempty line deletion",
+      "empty physical line deletion",
+      "empty replacement text",
+      "ColorScheme highlight override"
+    ]
+  },
+  "additional_deterministic_lua_tests": {
+    "version": "NVIM v0.12.0",
+    "execution": "source-loaded from isolated cache copy; -u NONE; no model or collector network requests",
+    "passed_files": [
+      "automatic_predict.lua",
+      "feedback_review.lua",
+      "predict.lua",
+      "single_line_v1.lua",
+      "automatic_shared_slot.lua"
+    ],
+    "passed_file_count": 5,
+    "failed_file_count": 0,
+    "automatic_shared_slot_transport": "vim.system curl calls stubbed; child is a headless synthetic peer using a temporary private lock root",
+    "preview_suite_command": "nvim --headless -u NONE -l /home/crabcake/.cache/tabcomplete-format-r2/nvim/tools/trajectory_collector/nvim/tests/run.lua",
+    "preview_suite_passed": 76,
+    "preview_suite_failed": 0,
+    "model_picker_command": "nvim --headless -u NONE -l /home/crabcake/.cache/tabcomplete-format-r2/nvim/tools/trajectory_collector/nvim/tests/model_picker.lua",
+    "model_picker_result": "passed",
+    "cache_source_sha256": {
+      "lua/tabcomplete_trajectory/predict.lua": "1124a4d06c7536d8ce4be725757644d5febf72254e5e04b283f83c6aa0a8af2b",
+      "plugin/tabcomplete_predict.lua": "e3896fd981fa13bc9e0f4d14527913ee18014eb7f58a601e1ab63f7644ea3c49",
+      "tests/predict_single_line_v1.lua": "c7660e6c78fa5c93e126e4e4cf207e944c0a40567c5e8fd9f612c13e5888590b",
+      "tests/model_picker.lua": "6c96951026c79c9d2ace01ea319f93fcb1bc310eda985fd2b7484ec653004491"
+    },
+    "feedback_review_scope": "in-memory test of review event linkage; the harness marks its fixture synthetic=false to exercise the payload field, and this is not evidence of a real human review",
+    "target_neovim_0_12_3": "Subsequently passed on ThinkPad: see target_source_loaded_verification; no new generation activation."
+  },
+  "limitations": [
+    "Headless extmark and highlight checks do not claim a GUI screenshot review.",
+    "Model output in the SQLite syntax-rejection check was stubbed and labeled synthetic; no inference request was sent.",
+    "Target Neovim 0.12.3 was not available locally; source-loaded execution here used Neovim 0.12.0.",
+    "Target source-loaded headless tests passed; new declarative generation has not been activated."
+  ],
+  "target_source_loaded_verification": {
+    "host": "shlokthinkpad",
+    "neovim": "NVIM v0.12.3",
+    "plugin_source": "~/.cache/tabcomplete-format-r2/source-test/tools/trajectory_collector/nvim",
+    "unit_suite_passed": 76,
+    "unit_suite_failed": 0,
+    "model_picker_passed": true,
+    "log_sha256": "a8ae283a72f45d2bf7fc8b040a8638f7f6e6f97b383bd4aa8f2dcfb6d78399e0",
+    "source_loaded_not_activated_configuration": true,
+    "first_attempt": "staging omitted existing shared golden fixture; preserved failed log, corrected repository layout, reran full suite",
+    "visual_inspection": false
+  }
+}

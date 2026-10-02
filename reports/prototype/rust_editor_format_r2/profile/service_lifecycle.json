@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "setting": "baseline_start",
+      "pid": 291085,
+      "returncode": 0,
+      "launch_arguments": "systemd-run --user --unit=tabcomplete-format-r2-benchmark --collect --property=MemoryMax=1500M --property=MemorySwapMax=0 --property=CPUQuota=400% --property=Nice=10 /home/shlok/.cache/tabcomplete-format-r2/tabcomplete-qwen --host 127.0.0.1 --port 19095 --threads 4 --prompt-threads 4 --microbatch-size 64 --context-size 2304 --batch-size 256 --input-tokens 1024 --cache-type f16 --context-layout cursor-last-v1"
+    },
+    {
+      "setting": "microbatch128",
+      "pid": 293024,
+      "returncode": 0,
+      "launch_arguments": "systemd-run --user --unit=tabcomplete-format-r2-benchmark --collect --property=MemoryMax=1500M --property=MemorySwapMax=0 --property=CPUQuota=400% --property=Nice=10 /home/shlok/.cache/tabcomplete-format-r2/tabcomplete-qwen --host 127.0.0.1 --port 19095 --threads 4 --prompt-threads 4 --microbatch-size 128 --context-size 2304 --batch-size 256 --input-tokens 1024 --cache-type f16 --context-layout cursor-last-v1"
+    },
+    {
+      "setting": "microbatch256",
+      "pid": 294723,
+      "returncode": 2,
+      "launch_arguments": "systemd-run --user --unit=tabcomplete-format-r2-benchmark --collect --property=MemoryMax=1500M --property=MemorySwapMax=0 --property=CPUQuota=400% --property=Nice=10 /home/shlok/.cache/tabcomplete-format-r2/tabcomplete-qwen --host 127.0.0.1 --port 19095 --threads 4 --prompt-threads 4 --microbatch-size 256 --context-size 2304 --batch-size 256 --input-tokens 1024 --cache-type f16 --context-layout cursor-last-v1"
+    }
+  ],
+  "initial_service": "active",
+  "restored_service": "active",
+  "elapsed_seconds": 161.06008467602078,
+  "persistent_service_unit_changed": false
+}

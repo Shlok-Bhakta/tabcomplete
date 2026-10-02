@@ -1,0 +1,19 @@
+{
+  "state": "ok",
+  "queried_page": {
+    "limit": 10,
+    "next_cursor": "10"
+  },
+  "complete_run_listing": false,
+  "run_id": "run-bf8252a59f48be07f7c47672cb93abbf",
+  "trace_id": "0bb79dcd181d5ec14ee0e2a028190dab",
+  "request_id": "request-dda64ca2-5374-4049-9ae2-2139d3d3aa6e",
+  "case_id": "baseline_start/2048-7/1/changed_editor_state",
+  "offline_import": {
+    "bundle_sha256": "60353085e15b9b4520129c4adf7efc51d7d55ce1f95b20b5b115f54332e63924",
+    "duplicate": false,
+    "imported_spans": 1012,
+    "schema_version": 1
+  },
+  "payload_capture_enabled": false
+}

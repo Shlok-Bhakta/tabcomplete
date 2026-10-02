@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "source_pin": {
+    "commit": "53aec2f845ac6c0f2840831079d4d68e0fa7b06a",
+    "github_archive_url": "https://github.com/Shlok-Bhakta/tabcomplete/archive/53aec2f845ac6c0f2840831079d4d68e0fa7b06a.tar.gz",
+    "nix_base32": "06rd22gqwvpc7pslrz9fskmbn3mryx0wx9w794b3lhpkhldnjs2v",
+    "nar_hash": "sha256-W2hpG4XzQjoWSYenzkH3uQ676tQu/Uz1Pexujp8QLRs="
+  },
+  "public_pin_matches_staged_native_and_bundle": true,
+  "bundle": "/nix/store/cv9kmkwg0sa7k3sqv1bvj2q32slz78jz-tabcomplete-qwen-0.1.0",
+  "native_engine": "/nix/store/baqsg79p2q3nvvv59mlwkajv6x4i128i-tabcomplete-engine-0.1.0",
+  "native_build": {
+    "passed": true,
+    "release_tests_passed": 18,
+    "release_tests_failed": 0,
+    "build_log_local": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/nix-native-build.log",
+    "build_log_target": "/home/shlok/.cache/tabcomplete-format-r2/native-build.log",
+    "max_jobs": 1,
+    "cores": 2,
+    "cmake_parallel_jobs": 2,
+    "repack": "OFF",
+    "cpu_target": "x86-64-v3",
+    "gpu_enabled": false,
+    "post_build_upload_hook_enabled": false
+  },
+  "payload_disallowed_references_passed": true,
+  "runtime_closure": {
+    "paths": 11,
+    "nar_bytes": 1441657936,
+    "source_gguf_in_closure": false,
+    "unembedded_engine_in_closure": false,
+    "payload_references": {
+      "qwen": {
+        "path": "/nix/store/23ldbbrhgm79fxralabj08vpz1qy9vh7-tabcomplete-qwen-embedded-0.1.0",
+        "references": [
+          "/nix/store/57iz36553175g3178pvxjij8z5rcsd4n-glibc-2.42-61",
+          "/nix/store/chqq8mpmpyfi9kgsngya71akv5xicn03-gcc-15.2.0-lib"
+        ]
+      },
+      "sweep": {
+        "path": "/nix/store/fsbn64bv487mk7i25ciq5hcs9ri375hs-tabcomplete-sweep-embedded-0.1.0",
+        "references": [
+          "/nix/store/57iz36553175g3178pvxjij8z5rcsd4n-glibc-2.42-61",
+          "/nix/store/chqq8mpmpyfi9kgsngya71akv5xicn03-gcc-15.2.0-lib"
+        ]
+      }
+    }
+  },
+  "target_sequential_smoke": {
+    "schema_version": 1,
+    "records": [
+      {
+        "variant": "qwen",
+        "pid": 317642,
+        "executable": "/nix/store/23ldbbrhgm79fxralabj08vpz1qy9vh7-tabcomplete-qwen-embedded-0.1.0/bin/tabcomplete-qwen",
+        "bytes": 500575202,
+        "binary_sha256": "93869c9c99785aacae5a9875e504b242b2821afd4adbef13352a78fe4a3fabbb",
+        "health": {
+          "active_slots": 1,
+          "alias": "q25",
+          "backend": "llama.cpp CPU via Rust",
+          "batch_size": 256,
+          "cache_type": "f16",
+          "context_layout": "cursor-last-v1",
+          "context_size": 2304,
+          "input_tokens": 1024,
+          "llama_cpp_2": "0.1.157",
+          "llama_cpp_sys_2": "0.1.158",
+          "load_ms": 286.56101099999995,
+          "microbatch_size": 64,
+          "model_embedded": true,
+          "model_protocol": "single-line-edit-v1",
+          "model_selection": "declarative",
+          "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+          "model_storage": "executable-mmap",
+          "model_switch_supported": false,
+          "output_tokens": 64,
+          "prompt_threads": 4,
+          "runtime_config_hash": "43cfee11b0827ccf8dcb7ec69317599b255b06db45091d56873822cbf3959475",
+          "saved_contexts": 0,
+          "status": "ok",
+          "threads": 4
+        },
+        "model_mappings": [
+          {
+            "mapped_bytes": 485453824,
+            "offset": 15122432,
+            "permissions": "r--s"
+          }
+        ],
+        "memory": {
+          "VmHWM": "568028 kB",
+          "VmRSS": "568028 kB",
+          "RssAnon": "84324 kB",
+          "RssFile": "483704 kB"
+        },
+        "generation": {
+          "stop_type": "eos",
+          "tokens_predicted": 7,
+          "canonical_action": {
+            "kind": "replace_line",
+            "text": "    value = 2;"
+          },
+          "action_validation": {
+            "policy": "rust-syntax-v1",
+            "reason": "syntax_preserved",
+            "status": "passed"
+          },
+          "timings": {
+            "cache_n": 0,
+            "predicted_ms": 183.39808399999998,
+            "predicted_n": 7,
+            "prompt_ms": 758.329936,
+            "prompt_n": 147,
+            "total_ms": 943.383616
+          }
+        },
+        "external_gguf_descriptors": 0,
+        "one_process": true
+      },
+      {
+        "variant": "sweep",
+        "pid": 317706,
+        "executable": "/nix/store/fsbn64bv487mk7i25ciq5hcs9ri375hs-tabcomplete-sweep-embedded-0.1.0/bin/tabcomplete-sweep",
+        "bytes": 892464452,
+        "binary_sha256": "2d64cefc3abeb90da88b20b9c068c80378152bdd6e1e027100c516203c815bd3",
+        "health": {
+          "active_slots": 1,
+          "alias": "sweep",
+          "backend": "llama.cpp CPU via Rust",
+          "batch_size": 256,
+          "cache_type": "f16",
+          "context_layout": "sweep-window-v1",
+          "context_size": 2304,
+          "input_tokens": 1024,
+          "llama_cpp_2": "0.1.157",
+          "llama_cpp_sys_2": "0.1.158",
+          "load_ms": 135.1245,
+          "microbatch_size": 64,
+          "model_embedded": true,
+          "model_protocol": "sweep-full-file-v1",
+          "model_selection": "declarative",
+          "model_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+          "model_storage": "executable-mmap",
+          "model_switch_supported": false,
+          "output_tokens": 192,
+          "prompt_threads": 4,
+          "runtime_config_hash": "e4c28a8645b7801bc96f715774941a1a74c058412cb6a70d282941d35eee6c14",
+          "saved_contexts": 0,
+          "status": "ok",
+          "threads": 4
+        },
+        "model_mappings": [
+          {
+            "mapped_bytes": 881774592,
+            "offset": 10690560,
+            "permissions": "r--s"
+          }
+        ],
+        "memory": {
+          "VmHWM": "959776 kB",
+          "VmRSS": "959776 kB",
+          "RssAnon": "89796 kB",
+          "RssFile": "869980 kB"
+        },
+        "generation": {
+          "stop_type": "limit",
+          "tokens_predicted": 8,
+          "canonical_action": null,
+          "action_validation": {
+            "policy": "rust-syntax-v1",
+            "status": "unavailable"
+          },
+          "timings": {
+            "cache_n": 0,
+            "predicted_ms": 433.346593,
+            "predicted_n": 8,
+            "prompt_ms": 676.009643,
+            "prompt_n": 43,
+            "total_ms": 1113.8442479999999
+          }
+        },
+        "external_gguf_descriptors": 0,
+        "one_process": true
+      }
+    ],
+    "total_executable_bytes": 1393039654,
+    "production_mutated": false
+  },
+  "smoke_harness_python": "3.13.13 (standard-library orchestration); Nix payload appender uses pinned Python 3.11",
+  "smoke_workers_stopped": true,
+  "port_19194_released": true,
+  "original_service_lifecycle": "Root paused before smoke; success hands the inactive original service back to root for separate editor audit and restoration.",
+  "config_mutation": false,
+  "activation": false,
+  "private_weights_published": false,
+  "storage": {
+    "new_model_executable_bytes": 1393039654,
+    "under_2_gib": true,
+    "retained_source_gguf_bytes": 1374688864,
+    "source_inputs_and_new_executables_combined_bytes": 2767728518,
+    "old_generations_deleted": false
+  }
+}

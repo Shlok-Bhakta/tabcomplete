@@ -1,0 +1,117 @@
+{
+  "actual_failing_request_evidence": {
+    "derived_prefill_share_percent": 83.66,
+    "extracted_terminal_timings_only": {
+      "cache_tokens": 0,
+      "decode_ms": 332.521207,
+      "generated_tokens": 13,
+      "prompt_ms": 1714.517567,
+      "prompt_tokens": 321,
+      "total_ms": 2049.426716
+    },
+    "local_trajectory_request_id": "d616e4dd-6cda-4dd1-9f8a-25006231ad0e",
+    "monitor_query": "reports/prototype/rust_editor_format_r2/failing_request_monitor_query.json",
+    "monitor_query_state": "no_runs; no matching SigNoz run/trace was available from the configured query at the captured query time",
+    "prediction_id": "6c8e7c1c-a19e-4d6d-bf5f-ec018aed5d60",
+    "privacy": "Raw artifact was read locally and reduced to terminal timing scalars; prompt, source, and response were not placed in this report.",
+    "raw_artifact_sha256": "cba6b2288af5bdfbbc322f2f62a103c3c4cb8776662605dc74b74613e227acb4"
+  },
+  "bottleneck_assessment": {
+    "inference": "Prefill is the highest-value first target for this trace. Testing microbatch 128 and 256 at fixed threads isolates fewer/larger prompt decode batches; prompt_threads=8 then probes prompt parallelism. A decode_threads=2 screen isolates generation-thread count but cannot remove a prefill bottleneck.",
+    "limits": "One request does not establish a general distribution. The frozen synthetic 24-state screen is for bounded runtime comparison, not model quality or human acceptance.",
+    "observed": "One real 321-token failed request spent about 1.715 s in prompt evaluation and 0.333 s generating 13 tokens; current changed-state aggregate median is 0.874 s, with a 2.689 s p95."
+  },
+  "existing_thinkpad_performance_evidence": {
+    "changed_editor_states": {
+      "actual_eos": 48,
+      "cache_tokens": 12695,
+      "canonical_valid": 48,
+      "count": 48,
+      "median_ms": 874.410055,
+      "p95_ms": 2689.189595,
+      "recomputed_prompt_tokens": 9677
+    },
+    "comparison_caveat": "Earlier trained-layout screening had 2404 ms median / 3683 ms p95 for changed states; this is historical context, not a same-run causal estimate or quality claim.",
+    "config": "4 decode threads / 4 prompt threads / microbatch 64",
+    "identical_prompt_repeats": {
+      "actual_eos": 48,
+      "cache_tokens": 22324,
+      "canonical_valid": 48,
+      "count": 48,
+      "median_ms": 160.459158,
+      "p95_ms": 196.310415,
+      "recomputed_prompt_tokens": 48
+    },
+    "layout": "cursor-last-v1",
+    "source": "reports/prototype/rust_editor_r1/serving_confirmation.json"
+  },
+  "host": {
+    "cpu": "Intel Core i7-8650U",
+    "cpu_features": [
+      "AVX2",
+      "FMA",
+      "BMI2",
+      "F16C"
+    ],
+    "label": "ThinkPad",
+    "local_cuda_used": false,
+    "logical_threads": 8,
+    "physical_cores": 4
+  },
+  "next_step": {
+    "plan": "reports/prototype/rust_editor_format_r2/performance_plan_v1.json",
+    "runner": "scripts/profile_rust_engine.py",
+    "status": "frozen; execution belongs to parent-owned temporary launcher which pauses/restores only the owned production service and runs one model process at a time"
+  },
+  "observed_at_utc": "2026-10-02T03:25:16.110316+00:00",
+  "production_snapshot": {
+    "context_layout": "cursor-last-v1",
+    "loopback_port": 19094,
+    "microbatch_size": 64,
+    "model_alias": "q25",
+    "model_protocol": "single-line-edit-v1",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "pid_at_snapshot": 270725,
+    "prompt_threads": 4,
+    "quantization": "Q4_K_M",
+    "resource_interpretation": "Mapped file pages dominate process RSS/PSS but were not charged as cgroup file memory in the sampled memory.stat; retain RSS, PSS split, and cgroup counters in later runs.",
+    "resource_limits": {
+      "cpu_quota_percent": 400,
+      "memory_max_bytes": 1572864000,
+      "swap_max_bytes": 0
+    },
+    "runtime_config_hash": "6e58a95c8f5fba5581784636cf5e042a33a14e93b7c764f681eb2ff4c10c54ba",
+    "sampled_cgroup_memory_current_bytes": 87867392,
+    "sampled_resources_kib": {
+      "pss_anon": 84376,
+      "pss_file": 478715,
+      "rss": 567164,
+      "swap": 0
+    },
+    "service_state": "declaratively active at audit start; parent owns temporary pause/restore for the isolated screen",
+    "threads": 4
+  },
+  "profiling_availability": {
+    "available_evidence": "backend prompt/decode timings, token cache/recompute counts, process RSS/PSS, cgroup CPU/memory, PSI, VM swap/page faults, CPU frequency and thermal samples",
+    "hardware_stack_samples": "not collected; do not install tools or attach profilers during the bounded service screen",
+    "perf_event_paranoid": 2,
+    "perf_executable": "absent on ThinkPad"
+  },
+  "repack_investigation": {
+    "avx2_candidate": "The pinned llama.cpp CPU repack selector has a Q4_K path for AVX2 (Q4_K 8x8) when tensor width is divisible by 8; ThinkPad flags include AVX2.",
+    "current_build_setting": "GGML_CPU_REPACK=OFF in nix/package.nix",
+    "reason": "Pinned llama-cpp-sys build script documents OFF as preserving the original mmap-friendly weight layout rather than runtime repacking into anonymous RAM, useful when mmap-streaming a model larger than RAM.",
+    "screen_status": "Not in the six-setting frozen run. Per-setting binary hashes are recorded so a separately frozen candidate can be evaluated without conflating binary identities.",
+    "tradeoff": "Potential prefill/matmul speedup is unmeasured; repacking can increase anonymous process/cgroup memory and reduce mmap advantages. Compare only with a separate attested executable and capture RSS/PSS plus cgroup memory and swap."
+  },
+  "schema": "rust-editor-cpu-latency-audit-v1",
+  "scope": {
+    "inference_profile_executed_by_this_audit": false,
+    "new_model_or_weight_downloaded": false,
+    "production_unit_or_nix_configuration_changed": false,
+    "public_reports_contain_source_or_prompt": false,
+    "read_only_host_inspection": true,
+    "service_rebuild_or_switch_performed": false
+  },
+  "provenance_note": "Initial runner/plan freeze was violated and exact original bytes are unavailable. See performance_freeze_incident.json and preserved post-freeze plan. Preliminary outputs are excluded from selection; use performance_summary_v2.json."
+}

@@ -1,0 +1,10 @@
+{
+  "original_exact_plan_unavailable": true,
+  "old_journal_plan_sha256": "1ca06880e534da0e151c587cd3d4765c2dd709c9b36c95daaf1399d7fed7a11b",
+  "old_runner_sha256": "86df55d5b1c95bf2d722432057360ca952278c642e6817fde36dba9f816b08fe",
+  "post_freeze_plan_sha256": "b20ff9af3de5db0dbcd89e6d78dcfbb872419f4c15ee0e92910cd33262ef65e6",
+  "preliminary_results_preserved": true,
+  "preliminary_results_excluded_from_selection": true,
+  "original_deadline_preserved": 1790912655.216588,
+  "native_request_at_fingerprint_failure": false
+}

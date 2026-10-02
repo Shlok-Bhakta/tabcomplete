@@ -1,0 +1,26 @@
+{
+  "schema": "paired-quote-probe-summary-v1",
+  "layouts": {
+    "cursor-last-v1": {
+      "quoted_rust_count": 8,
+      "quoted_rust_exact": 0,
+      "rust_parse_valid": 5,
+      "existing_dev_count": 24,
+      "existing_dev_exact": 9,
+      "all_terminated": true
+    },
+    "cursor-last-raw-output-v1": {
+      "quoted_rust_count": 8,
+      "quoted_rust_exact": 0,
+      "rust_parse_valid": 4,
+      "existing_dev_count": 24,
+      "existing_dev_exact": 9,
+      "all_terminated": true
+    }
+  },
+  "selected_layout": "cursor-last-v1",
+  "hint_promoted": false,
+  "reason": "Raw-output hint did not improve Rust exact actions and reduced syntax-valid outputs. Preserve control prompt, reject parse-regressing outputs without unescaping.",
+  "quality_validated": false,
+  "automatic_training_enabled": false
+}

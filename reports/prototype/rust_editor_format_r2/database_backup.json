@@ -1,0 +1,9 @@
+{
+  "database": "/mnt/ssd/collector-data/collector.sqlite",
+  "backup": "/mnt/ssd/collector-data/backups/pre-editor-format-r2-20261002T033940Z.sqlite",
+  "sha256": "f3e0967c14b76b1c6c58cb2bb785dda0013728fef739c35ced632d0cac769b1c",
+  "bytes": 5623808,
+  "sqlite_integrity": "ok",
+  "backup_api_includes_wal_state": true,
+  "schema_migration_required": false
+}

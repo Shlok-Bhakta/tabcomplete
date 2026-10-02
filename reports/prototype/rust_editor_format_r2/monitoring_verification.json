@@ -1,0 +1,48 @@
+{
+  "run_id": "run-34e1f2a99de323a6ed43d948f143ea41",
+  "trace_id": "3ae681d9569ee891d1a94bd3a3011cf6",
+  "request_id": "request-827336cf-64ab-4ea6-b6dc-1f1fb126b305",
+  "case_id": "synthetic/sequence_interleaving/I/1/cursor-last-raw-output-v1",
+  "pages": [
+    {
+      "state": "ok",
+      "page": {
+        "limit": 100,
+        "next_cursor": "100"
+      }
+    },
+    {
+      "state": "ok",
+      "page": {
+        "limit": 100,
+        "next_cursor": null
+      }
+    }
+  ],
+  "span_rows": 139,
+  "trace_query_state": "ok",
+  "retrieved": [
+    {
+      "kind": "input",
+      "http_status": 200,
+      "sha256": "e484f41949e62d5624b6fc3f07de692741963ff07dcf4b3772c2c51e57be018b",
+      "bytes": 1560,
+      "hash_match": true,
+      "first_attempt_http_status": 404
+    },
+    {
+      "kind": "output",
+      "http_status": 200,
+      "sha256": "3f39d5c348e5b79d06e842c114e6cc571583bbf44e4b0ebfda1a01ec05745d43",
+      "bytes": 1,
+      "hash_match": true,
+      "first_attempt_http_status": 200
+    }
+  ],
+  "captured_source": "public/synthetic only",
+  "bounded_upload_recovery": {
+    "accepted": 85,
+    "failed": 0,
+    "unconfigured_cli_attempt": "missing_upload_environment; retried with existing restricted credential file"
+  }
+}

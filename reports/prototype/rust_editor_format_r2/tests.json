@@ -1,0 +1,81 @@
+{
+  "schema": "editor-format-r2-tests-v1",
+  "checks": [
+    {
+      "name": "python",
+      "passed": true,
+      "tests_passed": 826,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/pytest.log",
+      "log_sha256": "4f92ddea088c05ede799ca3b6bae775e03d3be4d05c3dbaad71db0da15100378"
+    },
+    {
+      "name": "bun_collector",
+      "passed": true,
+      "tests_passed": 59,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/bun-server-tests.log",
+      "log_sha256": "1d86730902670b8d2fc02824739e82e20449087002fd0fc4f323677d6008a25a"
+    },
+    {
+      "name": "bun_analysis",
+      "passed": true,
+      "tests_passed": 38,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/bun-analysis-tests.log",
+      "log_sha256": "8d5f357abf95c322bcc29b07d4a81e2962a32c0b5fb3f4b7bb2d1235b26dd811"
+    },
+    {
+      "name": "rust_release",
+      "passed": true,
+      "tests_passed": 18,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/release-test.log",
+      "log_sha256": "291e06c26034124fa4953d09d184eed4d6b8f6ac8ab169575ea118022d1b1f40"
+    },
+    {
+      "name": "clippy",
+      "passed": true,
+      "tests_passed": null,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/release-clippy.log",
+      "log_sha256": "c9f7cb1340620b3d4fabe383a584b17fc2bf5a518e21737a38749366e0f82d57"
+    },
+    {
+      "name": "ruff",
+      "passed": true,
+      "tests_passed": null,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/repo-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "server_typecheck",
+      "passed": true,
+      "tests_passed": null,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/bun-server-typecheck.log",
+      "log_sha256": "e0b78ca591772dc573e1f692c01aa0efd19bb440f01cc16af8ca05fa869c5f66"
+    },
+    {
+      "name": "analysis_typecheck",
+      "passed": true,
+      "tests_passed": null,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/bun-analysis-typecheck.log",
+      "log_sha256": "e0b78ca591772dc573e1f692c01aa0efd19bb440f01cc16af8ca05fa869c5f66"
+    },
+    {
+      "name": "target_neovim",
+      "passed": true,
+      "tests_passed": 76,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/thinkpad-nvim-tests-v2.log",
+      "log_sha256": "a8ae283a72f45d2bf7fc8b040a8638f7f6e6f97b383bd4aa8f2dcfb6d78399e0"
+    }
+  ],
+  "mypy": {
+    "passed": true,
+    "source_files": 84
+  },
+  "extra_lua_scripts_passed": 5,
+  "actual_nix_build": "nix_build_verification.json",
+  "actual_model_editor_smoke": "real_editor_smoke.json",
+  "replay": "replay_verification.json",
+  "universal_session_audit": {
+    "exit_code": 1,
+    "reason": "partial-then-eventual-full-match episode absent",
+    "receipt": "database_evidence.json"
+  }
+}

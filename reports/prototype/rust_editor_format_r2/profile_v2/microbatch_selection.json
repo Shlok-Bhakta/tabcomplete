@@ -1,0 +1,8 @@
+{
+  "selected_setting": "baseline_start",
+  "selected_microbatch": 64,
+  "action_parity_required": true,
+  "eligible": [
+    "baseline_start"
+  ]
+}

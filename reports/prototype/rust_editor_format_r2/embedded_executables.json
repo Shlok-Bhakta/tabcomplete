@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "source_head": "72744ed331d344df726ef8ca7743d3fa5435b1b1",
+  "working_tree_source_hashes": {
+    "tools/tabcomplete_engine/src/main.rs": "23f16951eae88ac4901389115a8d75634e6689e919cbb5dd0ee29bab24380834",
+    "tools/tabcomplete_engine/src/embedded.rs": "abddb049af553e47c9307b81b6a60a26c28cf481737f2753d595fe675984257b",
+    "tools/tabcomplete_engine/src/context.rs": "a7601625243a06f6240a4d101065bb0b18a2eb4d66671439896c66992f588f1e",
+    "tools/tabcomplete_engine/src/syntax_guard.rs": "1d46f1c937150d582a09c7e59d57347e9a2d6f111795c955b306aefe68cc89d7",
+    "tools/tabcomplete_engine/Cargo.toml": "2142ae84840914b6693fcc102b6ebe59a82b1083a0b822a4e80d08d54a8c06a8",
+    "tools/tabcomplete_engine/Cargo.lock": "0e17f75a331563cf10e8a4ab388280a143cec62d6cd82df013a55ce7eca63465",
+    "tools/tabcomplete_engine/vendor/llama-cpp-2/src/model.rs": "ce45839d958ba3382dee73507e4474509d07e5ecc83d67e7307f403449f81848",
+    "nix/default.nix": "ccd26dfbef0595d1c4a4df3f3b57c30fb77e534ee1eec9aebe16bb1000a515dd",
+    "nix/home-manager.nix": "4752429c864250cde0399029dd4bd33cfc0cd26e624245e77788c5ac650b3b01",
+    "nix/embed-model.py": "1ca74b7ab89a254584cf8e057d5ba7812685e73bcc3c39a012c6747467e311ab"
+  },
+  "storage": {
+    "new_executable_bytes": 1392687398,
+    "payload_bytes": 1374688864,
+    "new_executables_under_2_gib": true,
+    "total_research_budget_bytes": 12884901888,
+    "actual_research_directory_bytes": 1935786043,
+    "retained_old_generations_deleted": false,
+    "target_new_payloads_installed": false,
+    "retained_inputs_plus_new_executables_bytes": 2767376262,
+    "note": "Retained existing GGUF inputs and old Nix generations can keep duplicate model bytes. New target closures have not been built or installed; Nix disallowedReferences enforces no direct source-GGUF/base-engine references when built."
+  },
+  "native_loader": {
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "llama_cpp_commit": "26394b4e6749a41c3633db040e0987500a5f7013",
+    "api": "llama_model_load_from_file_ptr",
+    "file": "/proc/self/exe",
+    "extraction": false,
+    "memfd": false,
+    "transmute": false,
+    "native_source_modified": false
+  },
+  "verification": {
+    "release_tests": {
+      "passed": 18,
+      "failed": 0,
+      "log": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/release-test.log"
+    },
+    "strict_release_clippy": {
+      "passed": true,
+      "log": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/release-clippy.log"
+    },
+    "appender_regression": {
+      "passed": true,
+      "command": "python3 nix/tests/embed-model.py"
+    },
+    "nix_syntax_parse": {
+      "passed": true,
+      "files": [
+        "nix/default.nix",
+        "nix/home-manager.nix"
+      ],
+      "target_mode": "read-only processes; no config/store/build/service mutation"
+    },
+    "nix_native_build": {
+      "status": "deferred_until_final_source_and_performance_freeze"
+    },
+    "synthetic_smoke": {
+      "schema_version": 1,
+      "records": [
+        {
+          "variant": "qwen",
+          "pid": 1031945,
+          "executable": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/tabcomplete-qwen",
+          "bytes": 500399074,
+          "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+          "health": {
+            "active_slots": 1,
+            "alias": "q25",
+            "backend": "llama.cpp CPU via Rust",
+            "batch_size": 256,
+            "cache_type": "f16",
+            "context_layout": "cursor-last-v1",
+            "context_size": 2304,
+            "input_tokens": 1024,
+            "llama_cpp_2": "0.1.157",
+            "llama_cpp_sys_2": "0.1.158",
+            "load_ms": 1255.263937,
+            "microbatch_size": 64,
+            "model_embedded": true,
+            "model_protocol": "single-line-edit-v1",
+            "model_selection": "declarative",
+            "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+            "model_storage": "executable-mmap",
+            "model_switch_supported": false,
+            "output_tokens": 64,
+            "prompt_threads": 4,
+            "runtime_config_hash": "43cfee11b0827ccf8dcb7ec69317599b255b06db45091d56873822cbf3959475",
+            "saved_contexts": 0,
+            "status": "ok",
+            "threads": 4
+          },
+          "model_mappings": [
+            {
+              "mapped_bytes": 485453824,
+              "offset": 14946304,
+              "permissions": "r--s"
+            }
+          ],
+          "memory": {
+            "VmHWM": "567856 kB",
+            "VmRSS": "567856 kB",
+            "RssAnon": "84292 kB",
+            "RssFile": "483564 kB"
+          },
+          "generation": {
+            "stop_type": "eos",
+            "tokens_predicted": 7,
+            "canonical_action": {
+              "kind": "replace_line",
+              "text": "    value = 2;"
+            },
+            "action_validation": {
+              "policy": "rust-syntax-v1",
+              "reason": "syntax_preserved",
+              "status": "passed"
+            },
+            "timings": {
+              "cache_n": 0,
+              "predicted_ms": 148.113774,
+              "predicted_n": 7,
+              "prompt_ms": 1221.662176,
+              "prompt_n": 147,
+              "total_ms": 1375.000551
+            }
+          },
+          "external_gguf_descriptors": 0,
+          "one_process": true
+        },
+        {
+          "variant": "sweep",
+          "pid": 1031999,
+          "executable": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/tabcomplete-sweep",
+          "bytes": 892288324,
+          "binary_sha256": "6a7f027158d9389fc67e5ba6291cf152f05bab6ca270978a9f63c5680c6cf312",
+          "health": {
+            "active_slots": 1,
+            "alias": "sweep",
+            "backend": "llama.cpp CPU via Rust",
+            "batch_size": 256,
+            "cache_type": "f16",
+            "context_layout": "sweep-window-v1",
+            "context_size": 2304,
+            "input_tokens": 1024,
+            "llama_cpp_2": "0.1.157",
+            "llama_cpp_sys_2": "0.1.158",
+            "load_ms": 1289.973833,
+            "microbatch_size": 64,
+            "model_embedded": true,
+            "model_protocol": "sweep-full-file-v1",
+            "model_selection": "declarative",
+            "model_sha256": "936a3a1e49d867449a8e3e277cb8be4d2883c825ecd3c6b9d3d2ee6688f8bed4",
+            "model_storage": "executable-mmap",
+            "model_switch_supported": false,
+            "output_tokens": 192,
+            "prompt_threads": 4,
+            "runtime_config_hash": "e4c28a8645b7801bc96f715774941a1a74c058412cb6a70d282941d35eee6c14",
+            "saved_contexts": 0,
+            "status": "ok",
+            "threads": 4
+          },
+          "model_mappings": [
+            {
+              "mapped_bytes": 881774592,
+              "offset": 10514432,
+              "permissions": "r--s"
+            }
+          ],
+          "memory": {
+            "VmHWM": "959928 kB",
+            "VmRSS": "959928 kB",
+            "RssAnon": "89748 kB",
+            "RssFile": "870180 kB"
+          },
+          "generation": {
+            "stop_type": "limit",
+            "tokens_predicted": 8,
+            "canonical_action": null,
+            "action_validation": {
+              "policy": "rust-syntax-v1",
+              "status": "unavailable"
+            },
+            "timings": {
+              "cache_n": 0,
+              "predicted_ms": 253.01364700000002,
+              "predicted_n": 8,
+              "prompt_ms": 868.474684,
+              "prompt_n": 43,
+              "total_ms": 1130.564439
+            }
+          },
+          "external_gguf_descriptors": 0,
+          "one_process": true
+        }
+      ],
+      "total_executable_bytes": 1392687398,
+      "production_mutated": false
+    },
+    "repo_ruff": {
+      "passed": true,
+      "log": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/repo-ruff.log"
+    }
+  },
+  "production_mutated": false
+}

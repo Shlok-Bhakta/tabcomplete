@@ -1,0 +1,9 @@
+{
+  "schema": "editor-format-r2-replay-v1",
+  "session_id": "85f0fdf1-06a0-419d-8e31-9f5e9a50d2ad",
+  "exit_code": 0,
+  "output": "# replay (READ-ONLY, db=/mnt/ssd/collector-data/collector.sqlite)\n# file: sample.py\n# session: 85f0fdf1-06a0-419d-8e31-9f5e9a50d2ad\n# anchors: 15  deltas replayed: 8  unanchored: 0  delta mismatches: 0\n# rebuilt bytes: 484  target bytes: 484\nREPLAY-OK: anchor + deltas byte-equal the final anchor\n",
+  "synthetic": true,
+  "command": "bun tools/trajectory_collector/analysis/replay.ts --file sample.py --repo repo:fa0517c8e09bb34e02751a2a325aaca25b53e24d9a5db4ab4e5f86e926f71219 --session 85f0fdf1-06a0-419d-8e31-9f5e9a50d2ad --db /mnt/ssd/collector-data/collector.sqlite",
+  "identity_resolution": "Read-only lookup resolved file_id 1437 to the exact repository and relative path after absolute path and ambiguous relative-path preflights failed. Those failed invocations made no database changes."
+}

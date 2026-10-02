@@ -1,0 +1,20 @@
+{
+  "active_slots": 1,
+  "alias": "q25",
+  "backend": "llama.cpp CPU via Rust",
+  "cache_type": "f16",
+  "context_layout": "cursor-last-v1",
+  "context_size": 2304,
+  "input_tokens": 1024,
+  "llama_cpp_2": "0.1.157",
+  "llama_cpp_sys_2": "0.1.158",
+  "load_ms": 285.152468,
+  "model_protocol": "single-line-edit-v1",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "output_tokens": 64,
+  "prompt_threads": 4,
+  "runtime_config_hash": "6e58a95c8f5fba5581784636cf5e042a33a14e93b7c764f681eb2ff4c10c54ba",
+  "saved_contexts": 0,
+  "status": "ok",
+  "threads": 4
+}

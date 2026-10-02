@@ -1,0 +1,185 @@
+{
+  "backend": "single embedded Qwen Rust/llama.cpp CPU process over the owned SSH tunnel",
+  "baseline_binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+  "baseline_runtime_contract": {
+    "active_slots": 1,
+    "alias": "q25",
+    "batch_size": 256,
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "model_protocol": "single-line-edit-v1",
+    "model_storage": "executable-mmap",
+    "output_tokens": 64,
+    "quantization": "Q4_K_M",
+    "saved_contexts": 0,
+    "service_cpu_quota_percent": 400,
+    "service_memory_max_bytes": 1572864000,
+    "service_swap_max_bytes": 0
+  },
+  "binary_identity_source": "attested embedded Qwen executable on ThinkPad; process executable basename/size verified per setting",
+  "campaign_id": "thinkpad-rust-editor-cpu-latency-r2",
+  "campaign_seconds": 1200,
+  "campaign_state_file": "reports/prototype/rust_editor_format_r2/performance_campaign_state.json",
+  "changed_requests_per_setting": 48,
+  "cpu_label": "Intel Core i7-8650U, 4 physical cores / 8 logical threads, AVX2",
+  "endpoint_mapping": {
+    "local_url": "http://127.0.0.1:19197",
+    "thinkpad_loopback_port": 19095
+  },
+  "engine_source_sha256": {
+    "nix/package.nix": "48f4c8512c8ac2c3c01897752edd3a080f6d862fb84860505345495ba5cee2d0",
+    "tools/tabcomplete_engine/Cargo.lock": "0e17f75a331563cf10e8a4ab388280a143cec62d6cd82df013a55ce7eca63465",
+    "tools/tabcomplete_engine/Cargo.toml": "2142ae84840914b6693fcc102b6ebe59a82b1083a0b822a4e80d08d54a8c06a8",
+    "tools/tabcomplete_engine/src/context.rs": "a7601625243a06f6240a4d101065bb0b18a2eb4d66671439896c66992f588f1e",
+    "tools/tabcomplete_engine/src/main.rs": "23f16951eae88ac4901389115a8d75634e6689e919cbb5dd0ee29bab24380834",
+    "tools/tabcomplete_engine/src/syntax_guard.rs": "1d46f1c937150d582a09c7e59d57347e9a2d6f111795c955b306aefe68cc89d7",
+    "tools/tabcomplete_engine/vendor/llama-cpp-2/src/model.rs": "ce45839d958ba3382dee73507e4474509d07e5ecc83d67e7307f403449f81848"
+  },
+  "expected_remote_hostname": "shlokthinkpad",
+  "frozen_at_utc": "2026-10-02T03:26:56.471138+00:00",
+  "host_cpu_features": [
+    "AVX2",
+    "FMA",
+    "BMI2",
+    "F16C"
+  ],
+  "host_label": "ThinkPad",
+  "identical_prompt_repeats_per_setting": 24,
+  "limits": {
+    "concurrency": 1,
+    "max_campaign_wall_seconds": 1200,
+    "max_settings": 6,
+    "parallel_models": false,
+    "production_configuration_changed": false,
+    "rebuild_or_switch": false
+  },
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "native_provider_sha256": "c39b2a204d78b3a42d768595e7e68bae6d194ab5e3541e8849e472464220dd02",
+  "primary_metrics": [
+    "context_construction_ms",
+    "client_completion_ms",
+    "end_to_end_ms",
+    "prompt_ms",
+    "decode_ms",
+    "first_observed_token_ms",
+    "cache_tokens",
+    "recomputed_prompt_tokens",
+    "generated_tokens",
+    "RSS/PSS/PSS_Anon/PSS_File",
+    "VmHWM",
+    "swap",
+    "cgroup memory/cpu counters",
+    "pressure stall information",
+    "CPU frequency and thermal samples"
+  ],
+  "privacy": {
+    "action_content_written": false,
+    "content_written": false,
+    "only_action_and_token_id_digests": true,
+    "only_synthetic_fixtures": true,
+    "responses_written": false,
+    "source_or_prompt_in_reports": false
+  },
+  "repack_note": "GGML_CPU_REPACK=OFF remains the frozen baseline. A separate repack candidate must have its own per-setting executable hash and storage/memory review; it is not included in this six-setting screen.",
+  "repeat_selection": "first 12 frozen states, repeated immediately after each changed-state request in each repetition",
+  "runner_sha256": "2a9c13459e7d56886a4a17dce4649ca660f9bd0f0507df13563a01659d95c8b8",
+  "schema": "rust-editor-cpu-profile-plan-v1",
+  "selection_rule": "Compare microbatch 128 and 256 on changed-state end-to-end median, then p95. Preserve the same action digests and EOS/valid-action counts as baseline. Pick one winner for both thread screens. Mark settings unsafe if swap/OOM occurs or sampled cgroup memory approaches 90% of its configured maximum. Compare baseline start/end; if median or p95 drifts by more than 15%, mark the screen thermally or temporally confounded.",
+  "setting_sequence": "Sequential only; baseline start, microbatch 128, microbatch 256, prompt threads 8 at selected microbatch, decode threads 2 at selected microbatch, baseline end. One process and one model at a time.",
+  "settings": [
+    {
+      "allowed_microbatch_sizes": [
+        64
+      ],
+      "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+      "executable_basename": "tabcomplete-qwen",
+      "executable_bytes": 500399074,
+      "id": "baseline_start",
+      "microbatch_size": 64,
+      "prompt_threads": 4,
+      "threads": 4
+    },
+    {
+      "allowed_microbatch_sizes": [
+        128
+      ],
+      "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+      "executable_basename": "tabcomplete-qwen",
+      "executable_bytes": 500399074,
+      "id": "microbatch128",
+      "microbatch_size": 128,
+      "prompt_threads": 4,
+      "threads": 4
+    },
+    {
+      "allowed_microbatch_sizes": [
+        256
+      ],
+      "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+      "executable_basename": "tabcomplete-qwen",
+      "executable_bytes": 500399074,
+      "id": "microbatch256",
+      "microbatch_size": 256,
+      "prompt_threads": 4,
+      "threads": 4
+    },
+    {
+      "allowed_microbatch_sizes": [
+        128,
+        256
+      ],
+      "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+      "executable_basename": "tabcomplete-qwen",
+      "executable_bytes": 500399074,
+      "id": "prompt_threads8_best",
+      "microbatch_size": null,
+      "prompt_threads": 8,
+      "threads": 4
+    },
+    {
+      "allowed_microbatch_sizes": [
+        128,
+        256
+      ],
+      "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+      "executable_basename": "tabcomplete-qwen",
+      "executable_bytes": 500399074,
+      "id": "decode_threads2_best",
+      "microbatch_size": null,
+      "prompt_threads": 4,
+      "threads": 2
+    },
+    {
+      "allowed_microbatch_sizes": [
+        64
+      ],
+      "binary_sha256": "a158b1f7de3ed3ea0f3ecaebc105a7f27d2335a1bd2011fb2fdfc1ea0f490ecc",
+      "executable_basename": "tabcomplete-qwen",
+      "executable_bytes": 500399074,
+      "id": "baseline_end",
+      "microbatch_size": 64,
+      "prompt_threads": 4,
+      "threads": 4
+    }
+  ],
+  "source_commit": "72744ed331d344df726ef8ca7743d3fa5435b1b1",
+  "state_repetitions": 2,
+  "states_are_synthetic": true,
+  "states_count": 24,
+  "states_file": "reports/prototype/rust_editor_r1/editor_states_v1.jsonl",
+  "states_sha256": "af4b53e4a4b4ef1e81270055549662f22755a783d337341376ca0618a18cc713",
+  "timing_definitions": {
+    "client_completion_ms": "client-measured SSE /completion round trip through terminal event",
+    "context_construction_ms": "HTTP round trip for /v1/editor/context",
+    "decode_ms": "llama.cpp server predicted_ms; per-token loop only as timed by backend",
+    "end_to_end_ms": "context_construction_ms + client_completion_ms",
+    "first_observed_token_ms": "client receipt of first identified output token ID; null when unavailable; not a kernel timestamp",
+    "p95": "nearest-rank p95 over raw requests within the condition, not average of per-run p95s",
+    "prompt_ms": "llama.cpp server prefill timing",
+    "same_prompt_reuse": "proven from terminal backend cache_n and prompt_n, never inferred from cache_prompt request flag"
+  }
+}

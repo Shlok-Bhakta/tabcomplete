@@ -1,0 +1,51 @@
+{
+  "completed_settings": [
+    "baseline_start",
+    "microbatch128",
+    "microbatch256",
+    "prompt_threads8_best",
+    "decode_threads2_best",
+    "repack_best"
+  ],
+  "deadline_epoch_seconds": 1790912655.216588,
+  "failed": false,
+  "last_completed_at_utc": "2026-10-02T03:42:55.968283+00:00",
+  "outputs": [
+    {
+      "file": "baseline_start.json",
+      "setting_id": "baseline_start",
+      "sha256": "d4b26a1c3d0451f5d8f649d1130a1c3bc147a2c02909118e2fe60d610fb7e5bd"
+    },
+    {
+      "file": "microbatch128.json",
+      "setting_id": "microbatch128",
+      "sha256": "68b487ed4626732e82daa579bc9e56670a55e3897c7d47a3db9be9a0f80b4750"
+    },
+    {
+      "file": "microbatch256.json",
+      "setting_id": "microbatch256",
+      "sha256": "445bd03754237be6d5367619e64dd8713e26386e8fcbb8597a72ad19df348c40"
+    },
+    {
+      "file": "prompt_threads8_best.json",
+      "setting_id": "prompt_threads8_best",
+      "sha256": "2c1772b2af1cbdbf3c77b32ba22fc5d0d0309d8c1234c53250d48547231ea2ef"
+    },
+    {
+      "file": "decode_threads2_best.json",
+      "setting_id": "decode_threads2_best",
+      "sha256": "a488316d466ca56aee54a36e06942b810ca11c757ee8f92da063bdae122c1556"
+    },
+    {
+      "file": "repack_best.json",
+      "setting_id": "repack_best",
+      "sha256": "95f91d1a84b7b60f61133af6fa076c8f78d7ed5fd78e5010d32e39b493adc40e"
+    }
+  ],
+  "plan_sha256": "c5fa1feca7baa9eeaa4739fb07478e0c7a7429a1716ff6493486911e6ac11583",
+  "revision_parent_plan_sha256": "1ca06880e534da0e151c587cd3d4765c2dd709c9b36c95daaf1399d7fed7a11b",
+  "schema": "rust-editor-cpu-profile-campaign-v1",
+  "selected_microbatch_size": 64,
+  "started_at_utc": "2026-10-02T03:24:15.216566+00:00",
+  "started_epoch_seconds": 1790911455.2165859
+}
