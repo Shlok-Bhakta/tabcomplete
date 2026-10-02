@@ -1,0 +1,27 @@
+{
+  "package": "/nix/store/7g3irjpacq1pb80q63zpmaqrmnyrfx6q-tabcomplete-qwen-0.1.0",
+  "payloads": [
+    {
+      "variant": "qwen",
+      "executable": "/nix/store/23ldbbrhgm79fxralabj08vpz1qy9vh7-tabcomplete-qwen-embedded-0.1.0/bin/tabcomplete-qwen",
+      "bytes": 500575202,
+      "sha256": "93869c9c99785aacae5a9875e504b242b2821afd4adbef13352a78fe4a3fabbb"
+    },
+    {
+      "variant": "sweep",
+      "executable": "/nix/store/fsbn64bv487mk7i25ciq5hcs9ri375hs-tabcomplete-sweep-embedded-0.1.0/bin/tabcomplete-sweep",
+      "bytes": 892464452,
+      "sha256": "2d64cefc3abeb90da88b20b9c068c80378152bdd6e1e027100c516203c815bd3"
+    }
+  ],
+  "payloads_reused_from_previous_generation": true,
+  "plugin": "/nix/store/5fvsivzl74av4s04zs8gxrqxppzazcly-source",
+  "plugin_hashes": {
+    "lua/tabcomplete_trajectory/predict.lua": "b1cbf075f2619e1759b795560a1addd6e320479eb899893831169dc7c8befb51",
+    "plugin/tabcomplete_predict.lua": "f87497cfa9affcbb5f8af1c4929f33a8661225cfd4fbb2fdf67ce807e12b3dba"
+  },
+  "activation_performed": false,
+  "running_service": "active",
+  "weights_downloaded": false,
+  "weights_changed": false
+}

@@ -1,0 +1,23 @@
+{
+  "backup": "/home/shlok/.local/state/tabcomplete-install-backups/normal-cursor-r1-20261002T045752Z",
+  "owned": [
+    {
+      "path": "pkgs/tabcomplete-engine/default.nix",
+      "sha256": "c49e55374a163817976279c99ca5233a06f8a6806ec5ed52b75712c76d4d6265"
+    },
+    {
+      "path": "home/features/tabcomplete/default.nix",
+      "sha256": "7774b6aa7c3d9c2d6dec1c87e2e759e9dd08adacdee678ac7cfb1c224f68a9c5"
+    }
+  ],
+  "unrelated_digest_before": "4d3dea29957aedeffb3426064b8234abab1077371e9a9652ebb75cfdbd85b8d5",
+  "unit_sha256": "13a53d4ac9faef4538d84d72755ad281fb8e686505a7cf52bc3ea7ac1a30eb3b",
+  "unrelated_digest_after": "4d3dea29957aedeffb3426064b8234abab1077371e9a9652ebb75cfdbd85b8d5",
+  "code_revision": "653fcbe8b2a8fe8f8f11c0e4b56be0b7b99b7494",
+  "source_hash": "sha256-mZXjxNCIynly4nCNhiGvTwV4IwjaUdC+09TsTIy4/fI=",
+  "automaticNormalMode": true,
+  "activation_performed": false,
+  "unit_changed": false,
+  "source_filter": "remove root reports directory in fetchFromGitHub postFetch",
+  "unfiltered_archive_hash": "sha256-xlpfFU9KZPHKk49BHev+T1rUsUcqZ9CaXe6BDID2bkY="
+}

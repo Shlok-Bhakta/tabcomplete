@@ -1,0 +1,46 @@
+{
+  "code_revision": "653fcbe8b2a8fe8f8f11c0e4b56be0b7b99b7494",
+  "payloads_reused": true,
+  "files": [
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/HANDOFF.md",
+      "bytes": 2480,
+      "sha256": "634f37e2d08b284bf8a5853193f332be8a8c43f41987a047c213099243dd9317"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/build_verification.json",
+      "bytes": 1128,
+      "sha256": "d64cc2217baf4e60977e8bb474ad83b1c7c071ad946c401de7a896240dcfd28c"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/configuration_evaluation.json",
+      "bytes": 662,
+      "sha256": "38b648390484e12f8262172f02fc3c5fddcb2b39150bb8cea0f35f426fe52e64"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/database_backup.json",
+      "bytes": 284,
+      "sha256": "b9fdd435456804a41d1dde295858fc607769afbc6e795ff45e9c1e605c95b277"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/database_verification.json",
+      "bytes": 3463,
+      "sha256": "2cb26cec0f1c36ccb1b7f5e610faa335846b0cca190e3ec97c178516bcdcc9ce"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/installed_configuration.json",
+      "bytes": 1088,
+      "sha256": "248e3f9811c08018df560ef0414eb35ba10ec75cab5d634e568011ac7acb1fa9"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1/tests.json",
+      "bytes": 2971,
+      "sha256": "bd448dc765411a5d448237728bda4b15c96ad17ecef14531e3e374e5935629d3"
+    },
+    {
+      "path": "reports/prototype/normal_cursor_feedback_r1.md",
+      "bytes": 6269,
+      "sha256": "87b78b03f7ec6d217ea284f1ce8034c26438e0fa34be1d5d16634363d30349bd"
+    }
+  ]
+}

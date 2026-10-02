@@ -1,0 +1,89 @@
+{
+  "schema": "normal-cursor-feedback-tests-v1",
+  "checks": [
+    {
+      "name": "python",
+      "passed": true,
+      "passed_tests": 831,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-pytest.log",
+      "log_sha256": "588807a4cb843bc46a1476bd6102026deca4963a7951ad804d2e285a8f5bcbd1"
+    },
+    {
+      "name": "nvim_local",
+      "passed": true,
+      "passed_tests": 76,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-nvim-final.log",
+      "log_sha256": "9df903b88655a74bc312e1410eec7de6d7bef1bf17115620685e93e651e3ab7b"
+    },
+    {
+      "name": "nvim_target",
+      "passed": true,
+      "passed_tests": 76,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-target-tests-final.log",
+      "log_sha256": "8880abccde03bf1b4983c065fc88bd301cb39a77b11fc07c837d7c6b663e7864"
+    },
+    {
+      "name": "bun_collector",
+      "passed": true,
+      "passed_tests": 59,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-bun-server.log",
+      "log_sha256": "feb7d3ab0c33f729b074ad3ccb577c1bf2d488052d105b80b29cbc0410e00f13"
+    },
+    {
+      "name": "bun_analysis",
+      "passed": true,
+      "passed_tests": 38,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-bun-analysis.log",
+      "log_sha256": "8efbec35205c87ac1dcbbc8ea36e3e62db049d68d76997a8dd68425a5daf488a"
+    },
+    {
+      "name": "actual_normal_model_smoke",
+      "passed": true,
+      "passed_tests": null,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-target-real-v2.log",
+      "log_sha256": "532e434de1c9d3d1e8602ac75fbc230d8e4e4373abc1a8fcd317caf871a7bc98"
+    },
+    {
+      "name": "nix_build",
+      "passed": true,
+      "passed_tests": null,
+      "log_path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/normal-cursor-nix-build-v2.log",
+      "log_sha256": "2404964255085bd4207b5d00f9e1727c1abfb360d4b2d6ab7ba449c6294d03c2"
+    }
+  ],
+  "ruff": "passed",
+  "mypy": {
+    "passed": true,
+    "source_files": 83
+  },
+  "typescript": {
+    "collector": "passed",
+    "analysis": "passed"
+  },
+  "standalone_scripts": [
+    "predict_explicit.lua",
+    "automatic_normal.lua",
+    "automatic_predict.lua",
+    "automatic_shared_slot.lua"
+  ],
+  "built_plugin_tests": [
+    "predict_explicit.lua",
+    "automatic_normal.lua"
+  ],
+  "replay": {
+    "passed": true,
+    "anchors": 8,
+    "deltas": 1,
+    "final_bytes": 501,
+    "mismatches": 0,
+    "unanchored": 0
+  },
+  "initial_failures_preserved": [
+    "Explicit command reproduced UI-busy bug before fix.",
+    "Initial real normal-mode smoke hit typing-prefix filter.",
+    "Unfiltered fixed-output source fetch rejected store-path references.",
+    "One shell preparation command failed quoting before executing on remote."
+  ],
+  "model_quality_claim": false,
+  "activation_performed": false
+}

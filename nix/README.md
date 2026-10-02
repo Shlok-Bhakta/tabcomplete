@@ -45,7 +45,23 @@ or append other data to a completed embedded executable.
 Pin the public source with `pkgs.fetchFromGitHub` using the final tested
 commit and unpacked source hash. Import that source's `nix/home-manager.nix`
 only from the ThinkPad home configuration. The module's default package
-uses the same source and `services.tabcomplete.modelVariant`:
+uses the same source and `services.tabcomplete.modelVariant`.
+
+When pinning an archive containing research receipts, filter its root `reports`
+directory during `fetchFromGitHub.postFetch`, then hash that filtered source.
+Receipts can contain actual store paths and make an unfiltered fixed-output
+source fail Nix's reference checks. This removes reports only from the fetched
+runtime build source. The committed scientific results remain in Git. For example:
+
+```nix
+postFetch = ''
+  rm -rf "$out/reports"
+'';
+```
+
+The hash must describe the filtered output, rather than the original archive.
+
+Enable the editor modes through the Home Manager options:
 
 ```nix
 services.tabcomplete = {

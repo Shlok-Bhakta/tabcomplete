@@ -75,9 +75,29 @@ and analysis Bun suites passed 59 and 38 tests; both TypeScript checks passed.
 Ruff passed. Mypy checked 83 source files with no errors. Native Rust and weights
 were not changed by this iteration.
 
-The target configuration will enable `automaticNormalMode=true` declaratively.
+The target configuration now enables `automaticNormalMode=true` declaratively.
 The target's AGENTS.md reserves `nrs` for the user. This work does not activate
 a generation or imperatively overwrite the installed plugin. Apply the updated
 configuration with the usual `nrs`, then restart Neovim. The existing service and
 current editor sessions remain running until that activation/restart. Backup,
 build/evaluation, and final source-pin receipts live in the accompanying directory.
+
+The tested code pin is `653fcbe8b2a8fe8f8f11c0e4b56be0b7b99b7494`. Its filtered
+runtime source has NAR hash `sha256-mZXjxNCIynly4nCNhiGvTwV4IwjaUdC+09TsTIy4/fI=`.
+The initial unfiltered fetch failed fixed-output reference checks because reports
+contained actual Nix store paths. The installed source fetch removes only root
+`reports` during `postFetch`, with the hash recomputed for that filtered tree.
+The committed reports remain authoritative and preserved. The corrected actual
+Nix package build passes, and full Home Manager evaluation has zero failed
+assertions with normal mode enabled. Built-plugin explicit and normal-mode tests
+also pass. Both executable payload store paths and hashes are exactly reused
+from the previous generation; no extra model payload copies or weights were made.
+
+Only the two previously owned Nix files changed, with unrelated-file hashes
+unchanged. The active service unit is unchanged and its service remains active.
+Configuration backup is
+`/home/shlok/.local/state/tabcomplete-install-backups/normal-cursor-r1-20261002T045752Z`.
+Restore its two owned files and perform the user's usual activation to roll back.
+No database restore is required. A consistent database backup is recorded in
+`database_backup.json`. The new editor generation still requires user activation
+and Neovim restart; this report does not claim it is active in existing sessions.
