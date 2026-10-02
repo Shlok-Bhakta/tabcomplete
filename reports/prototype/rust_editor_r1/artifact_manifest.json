@@ -42,9 +42,14 @@
       "sha256": "217d2d129a87ce25d7d15981b31a0f4f22f6b180162190c00e186b8fb2ff0ad4"
     },
     {
+      "path": "reports/prototype/rust_editor_r1.md",
+      "bytes": 18187,
+      "sha256": "9256e1034b1de90fc8b3e2d272ea8fbb4606eac2ee4bd8463d5b38ec61687400"
+    },
+    {
       "path": "reports/prototype/rust_editor_r1/HANDOFF.md",
-      "bytes": 5063,
-      "sha256": "2955213e0b47df35eb464f05a1f3955817e1e8cfd6a5c08ad3301e83be1ed622"
+      "bytes": 5769,
+      "sha256": "c4a42598371895d98ec820c62ec6ad32b93fa986bbd99f67d24474dc1379f008"
     },
     {
       "path": "reports/prototype/rust_editor_r1/ROLLBACK.md",
@@ -70,6 +75,16 @@
       "path": "reports/prototype/rust_editor_r1/database_postinstall_backup.json",
       "bytes": 379,
       "sha256": "ef77062b36fa2fb4340736a28373ff3ff310e6aaa926c823cebb07a53080ab8c"
+    },
+    {
+      "path": "reports/prototype/rust_editor_r1/declarative_reconciliation.json",
+      "bytes": 971,
+      "sha256": "2ac7336a21c3968f23b8fc1a73b1999872aa1fa7b744ed0c21f2c1e0c521abda"
+    },
+    {
+      "path": "reports/prototype/rust_editor_r1/declarative_reconciliation_evaluation.json",
+      "bytes": 995,
+      "sha256": "7f890b735b63aba38b4a2d971495269aafa8147c5e9b281e61cfa4efcc582437"
     },
     {
       "path": "reports/prototype/rust_editor_r1/deployment_preinstall_plan.json",
@@ -402,11 +417,6 @@
       "sha256": "47f114f60c3bc3467fc5f289e2e3cdc34178a889b0a4b3d25cd1d9221f06c5cd"
     },
     {
-      "path": "reports/prototype/rust_editor_r1.md",
-      "bytes": 17310,
-      "sha256": "ee2ca103f02b33b1832b2115ce77432e629525db4d0660790027d4134e9e7fa4"
-    },
-    {
       "path": "scripts/export_personalization_feedback.py",
       "bytes": 39829,
       "sha256": "7fd04d1d6eeb80b9cda0c6d4c17242068ad0b5bc6d2fa36b93ad660b4f2cddf9"
@@ -446,5 +456,7 @@
       "bytes": 8084,
       "sha256": "a21b44938c5dded83e9b66bee72a95b4f1a428750b37f53c27dd5a7822b2c4ab"
     }
-  ]
+  ],
+  "updated_at": "2026-10-02T02:30:26.870476+00:00",
+  "deployment_status": "Declarative configuration only; standalone overrides removed after user correction. Awaiting user activation."
 }

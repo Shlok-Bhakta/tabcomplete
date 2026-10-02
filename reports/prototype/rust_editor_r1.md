@@ -1,5 +1,9 @@
 # Rust editor prototype on ThinkPad
 
+## Current deployment status after user correction
+
+On 2026-10-02 the user requested declarative configuration only. The temporary standalone service was stopped and its direct unit link removed. The original Home Manager plugin link was restored, with scoped bytecode cache invalidation. The three focused Nix configuration files remain in `/home/shlok/nixos-config`, with experimental automatic suggestions and the prefix guard enabled. Evaluation passes with zero failed assertions. No NixOS rebuild or Home Manager activation was run; activation is left to the user's normal `nrs` workflow. Models, database, and unrelated staged/unstaged changes are preserved. See `declarative_reconciliation.json` and `declarative_reconciliation_evaluation.json`. The running-installation measurements below describe the earlier verified installation, not the current inactive service.
+
 This iteration moves local inference and bounded context construction into one Rust service. It reuses the trajectory collector, its SQLite database, and the Neovim plugin. Suggestions remain experimental. Applying an edit requires explicit acceptance, and automatic personalization is disabled.
 
 ## What the measurements establish

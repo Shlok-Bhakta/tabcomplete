@@ -1,5 +1,9 @@
 # Rust editor handoff
 
+## Current activation status
+
+The user requested declarative configuration only on 2026-10-02. The standalone service is now inactive and its direct unit link is removed. The original Home Manager plugin link is restored. The pinned package, feature module, and ThinkPad import remain in `/home/shlok/nixos-config`, with automatic opt-in and prefix guard enabled. Nix evaluation passes. No rebuild or Home Manager activation was run; the user's normal `nrs` activates the declarative configuration. Preserve unrelated dirty work. The serving evidence below is historical verification, not a claim that the corrected configuration is currently active. See both `declarative_reconciliation*.json` receipts.
+
 ## Serving product
 
 The ThinkPad runs one CPU-only Rust engine with llama.cpp bindings. Qwen Q4 is the default; Sweep Q4 is an optional picker. Automatic experimental display requires explicit acceptance to edit. Personalization training is disabled.

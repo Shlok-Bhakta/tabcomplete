@@ -1,0 +1,21 @@
+{
+  "observed_at": "2026-10-02T02:28:21.083392+00:00",
+  "host": "shlokthinkpad",
+  "imperative_unit_removed": true,
+  "original_home_manager_plugin_link_restored": "/nix/store/69hxrcpxpqmv2ivksdvkgr3zp2b2n5nf-home-manager-files/.config/lazyvim/lua/plugins/tabcomplete-trajectory.lua",
+  "service_active": "inactive",
+  "declarative_feature_enabled": true,
+  "experimental_auto_opt_in": true,
+  "automatic_prefix_guard": true,
+  "nixos_rebuild_switch_run": false,
+  "home_manager_activation_run": false,
+  "unrelated_staged_and_unstaged_changes_preserved": true,
+  "database_and_models_preserved": true,
+  "backup": "/home/shlok/.local/state/tabcomplete-declarative-reconciliation/20261002T022744Z",
+  "configuration_files": [
+    "pkgs/tabcomplete-engine/default.nix",
+    "home/features/tabcomplete/default.nix",
+    "hosts/thinkpad/home.nix"
+  ],
+  "cleanup_note": "systemctl disable removed the linked unit itself; restoration continued after verifying it absent."
+}
