@@ -1,0 +1,24 @@
+--- a/pkgs/tabcomplete-engine/default.nix
++++ b/pkgs/tabcomplete-engine/default.nix
+@@ -4,8 +4,8 @@
+   source = pkgs.fetchFromGitHub {
+     owner = "Shlok-Bhakta";
+     repo = "tabcomplete";
+-    rev = "653fcbe8b2a8fe8f8f11c0e4b56be0b7b99b7494";
+-    hash = "sha256-mZXjxNCIynly4nCNhiGvTwV4IwjaUdC+09TsTIy4/fI=";
++    rev = "c24773fd68a3c20b0136dc64ff276bf2b2856103";
++    hash = "sha256-7QZsKJoE9k+Jy1i0bh3kdCFu/jqzmdoLk972CEAFT+M=";
+     # Runtime source excludes receipts containing machine-specific store paths.
+     postFetch = ''
+       rm -rf "$out/reports"
+--- a/home/features/tabcomplete/default.nix
++++ b/home/features/tabcomplete/default.nix
+@@ -18,6 +18,8 @@
+     experimentalAutoOptIn = true;
+     automaticPrefixGuard = true;
+     automaticNormalMode = true;
++    predictKey = "<M-p>";
++    syntaxValidation = false;
+     contextLayout = "cursor-last-v1";
+     threads = 4;
+     promptThreads = 4;

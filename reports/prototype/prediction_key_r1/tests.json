@@ -1,0 +1,71 @@
+{
+  "python_passed": 831,
+  "lua_passed": 76,
+  "rust_passed": 19,
+  "bun_collector_passed": 59,
+  "bun_analysis_passed": 38,
+  "standalone_mapping_test": "passed",
+  "automatic_normal_test": "passed",
+  "ruff": "passed",
+  "mypy_source_files": 84,
+  "typescript": "both passed",
+  "clippy": "passed for application; preexisting vendored warnings remain",
+  "logs": {
+    "python": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-python.log",
+      "sha256": "94276461e7ca0ba8b73f08bf644ad9e01180c5321bcab928a7eb745a31536eab"
+    },
+    "lua": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-lua.log",
+      "sha256": "a3b3c80e4aa2376d8e08b5dc25e6ed7a5638d4c8cb74c25ad0f9686d390ecc69"
+    },
+    "binding": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-binding.log",
+      "sha256": "3ac84622cc4549e4352276c7077a49e5ca9bf76606601a575d58303a773325e3"
+    },
+    "rust": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-rust.log",
+      "sha256": "46551b0e7d6169ae133798d87f0c73a0ae3caef35a6dc0e6125c308bf08bc310"
+    },
+    "clippy": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-clippy.log",
+      "sha256": "0adc77bc77e23f505c3ca5373756d9c929ff47fd5ec91c8230198edb862355ec"
+    },
+    "ruff": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "mypy": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-mypy.log",
+      "sha256": "cdcde8d69d03945e0501eefa5a7c22b53b83168ca0b0cf4c89851576f832614b"
+    },
+    "bun-server": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-bun-server.log",
+      "sha256": "4c2eb3974758bf12d541bb66429f618001ae1a0715b78dc647a846cb9b28d9a6"
+    },
+    "bun-analysis": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-bun-analysis.log",
+      "sha256": "1d1e956cffda81de3a7b2273e406f3a025807eb21f7f1d8f3e2865d42cbef341"
+    },
+    "bun-server-types": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-bun-server-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    "bun-analysis-types": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-bun-analysis-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    "auto-normal": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-auto-normal.log",
+      "sha256": "40b5007cbdfaab0ebed7c6a01bd92304fd5df77561c6e1409b1ad1a4f0afa010"
+    },
+    "real-repo": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-real-repo.log",
+      "sha256": "0abece56ca14bfb859907fefa177e94b782809af34f6db36da965ff3121b6536"
+    },
+    "replay": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-replay.log",
+      "sha256": "a06809c78c43d7fa096598d61bae5ec904e5ba4822da5c9617cea8dc9a2bc2ad"
+    }
+  }
+}

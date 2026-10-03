@@ -1,0 +1,59 @@
+{
+  "schema": "prediction-key-verification-v1",
+  "code_revision": "c24773fd68a3c20b0136dc64ff276bf2b2856103",
+  "host": "crabcake",
+  "backend": "llama.cpp CPU via Rust",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "precision": "Q4_K_M",
+  "model_storage": "external-file-mmap for temporary diagnostic only",
+  "syntax_validation": false,
+  "session_id": "b17e39f3-864c-4dbf-b2bb-dd4a0fbcdafd",
+  "synthetic": true,
+  "human_verified": false,
+  "event_counts": {
+    "buffer_open": 5,
+    "buffer_write": 3,
+    "cursor_move": 1,
+    "edit_delta": 1,
+    "file_jump": 1,
+    "prediction_accepted": 1,
+    "prediction_dismissed": 1,
+    "prediction_generated": 2,
+    "prediction_requested": 2,
+    "prediction_shown": 2,
+    "repo_snapshot": 1,
+    "session_end": 1,
+    "session_start": 1
+  },
+  "projection": [
+    {
+      "prediction_id": "1a9f7f7d-ba71-4627-8d3b-0ac42c356348",
+      "request_event_id": "c7a122b2-9072-4c06-a888-75d0e33c8399",
+      "shown_event_id": "9a186ff1-8cef-450b-a827-e2a8074d11b6",
+      "last_outcome_event_id": "d88a46e6-900d-4322-b4b2-6e972548ec92",
+      "outcome": "dismissed_navigation",
+      "updated_through_sequence": 9
+    },
+    {
+      "prediction_id": "23c59eb9-4cb0-4440-a669-eb1586366722",
+      "request_event_id": "d08e5b74-2fa5-44fa-ba83-7900596c5ce6",
+      "shown_event_id": "a1b422bc-4a4a-4ea7-8306-10a6bc555c6a",
+      "last_outcome_event_id": "b25085c2-0d5c-47ad-8789-6618f52bd331",
+      "outcome": "accepted",
+      "updated_through_sequence": 17
+    }
+  ],
+  "replay": {
+    "anchors": 8,
+    "deltas": 1,
+    "mismatches": 0,
+    "unanchored": 0,
+    "final_bytes": 505
+  },
+  "negative_pairs": 0,
+  "automatic_training": false,
+  "target_updated": false,
+  "target_blocker": "ThinkPad SSH timed out; Tailscale Online=false after initial successful inspection",
+  "source_pin_hash": "sha256-7QZsKJoE9k+Jy1i0bh3kdCFu/jqzmdoLk972CEAFT+M=",
+  "source_hash_control": "Matched previous filtered-source hash using NAR serialization before computing new pin"
+}
