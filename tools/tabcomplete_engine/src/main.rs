@@ -72,6 +72,8 @@ struct Args {
     context_layout: String,
     #[arg(long, default_value = "f16")]
     cache_type: String,
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    syntax_validation: bool,
     #[arg(long)]
     model_registry: Option<PathBuf>,
     #[arg(long)]
@@ -270,7 +272,8 @@ fn worker(
                 "backend":"llama.cpp CPU via Rust","llama_cpp_2":"0.1.157","llama_cpp_sys_2":"0.1.158",
                 "runtime_config_hash":digest(&serde_json::to_vec(&(&runtime_args,&profile))?),"threads":args.threads,"prompt_threads":args.prompt_threads,
                 "context_size":args.context_size,"batch_size":args.batch_size,"microbatch_size":args.microbatch_size,"input_tokens":args.input_tokens,"output_tokens":output_limit(&args,&profile),
-                "cache_type":args.cache_type,"saved_contexts":0,"active_slots":1,"load_ms":load.elapsed().as_secs_f64()*1000.});
+                "cache_type":args.cache_type,"syntax_validation":args.syntax_validation,
+                "saved_contexts":0,"active_slots":1,"load_ms":load.elapsed().as_secs_f64()*1000.});
             *app.identity.lock().unwrap() = identity.clone();
             if let Some(reply) = ready.take() {
                 let _ = reply.send(true);
@@ -481,8 +484,12 @@ fn worker(
                             } else {
                                 None
                             };
-                            let action_validation =
-                                validate_action(&request.prompt, &prepared_context, &mut action);
+                            let action_validation = validate_action(
+                                args.syntax_validation,
+                                &request.prompt,
+                                &prepared_context,
+                                &mut action,
+                            );
                             let terminal = json!({"content":"","stop":true,"stop_type":if eos{"eos"}else{"limit"},"tokens_predicted":predicted,
                                 "canonical_action":action,"action_validation":action_validation,"model_protocol":profile.protocol,"model_sha256":profile.sha256,
                                 "context_layout":context_layout,
@@ -517,10 +524,14 @@ fn worker(
     }
 }
 fn validate_action(
+    enabled: bool,
     prompt: &str,
     prepared: &Option<(String, context::EditorState)>,
     action: &mut Option<Value>,
 ) -> Value {
+    if !enabled {
+        return json!({"policy":"rust-syntax-v1","status":"disabled"});
+    }
     if let Some((prepared_prompt, state)) = prepared
         && prepared_prompt == prompt
         && let Some(candidate) = action
@@ -782,20 +793,43 @@ mod worker_guard_tests {
         let invalid = json!({"kind":"replace_line","text":"fn main() { let value = ; }"});
         let mut action = Some(invalid.clone());
         assert_eq!(
-            validate_action("other", &prepared, &mut action)["status"],
+            validate_action(true, "other", &prepared, &mut action)["status"],
             "unavailable"
         );
         assert_eq!(action, Some(invalid));
         assert_eq!(
-            validate_action("prepared", &prepared, &mut action)["status"],
+            validate_action(true, "prepared", &prepared, &mut action)["status"],
             "rejected"
         );
         assert!(action.is_none());
         let mut action = Some(json!({"kind":"replace_line","text":"fn main() { let value = 2; }"}));
         assert_eq!(
-            validate_action("prepared", &prepared, &mut action)["status"],
+            validate_action(true, "prepared", &prepared, &mut action)["status"],
             "passed"
         );
         assert!(action.is_some());
+    }
+
+    #[test]
+    fn experimental_syntax_opt_out_preserves_proposal() {
+        let invalid = json!({"kind":"replace_line","text":"fn main() { let value = ; }"});
+        let mut action = Some(invalid.clone());
+        assert_eq!(
+            validate_action(false, "prompt", &None, &mut action)["status"],
+            "disabled"
+        );
+        assert_eq!(action, Some(invalid));
+        let mut action = None;
+        validate_action(false, "prompt", &None, &mut action);
+        assert!(
+            action.is_none(),
+            "disabling syntax checks must not invent a decoded action"
+        );
+        assert!(Args::try_parse_from(["engine"]).unwrap().syntax_validation);
+        assert!(
+            !Args::try_parse_from(["engine", "--syntax-validation", "false"])
+                .unwrap()
+                .syntax_validation
+        );
     }
 }

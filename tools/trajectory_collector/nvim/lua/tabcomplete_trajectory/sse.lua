@@ -135,7 +135,14 @@ function M.finish_rust(parser, expected)
     return nil, "Rust terminal token count disagrees with sampled token IDs"
   end
   local canonical = terminal.canonical_action
-  if type(canonical) ~= "table" then return nil, "missing Rust canonical action" end
+  if type(canonical) ~= "table" then
+    local validation = terminal.action_validation
+    if type(validation) == "table" and validation.status == "rejected"
+        and validation.reason == "rust_syntax_regression" then
+      return nil, "prediction withheld: model introduced a Rust syntax error"
+    end
+    return nil, "missing Rust canonical action"
+  end
   if canonical.text == nil then return nil, "Rust canonical action omitted its text field" end
   for key in pairs(canonical) do
     if key ~= "kind" and key ~= "text" then return nil, "unexpected Rust canonical action field" end

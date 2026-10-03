@@ -111,6 +111,15 @@ the insert-mode typed-prefix display filter does not apply to those requests.
 Keep normal-mode policy versioned separately and retain exact source/range/syntax
 validation and explicit acceptance. Never claim this filter change improves accuracy.
 
+The experimental installation may explicitly disable syntax filtering using
+`services.tabcomplete.syntaxValidation = false`. Record this in runtime identity
+and terminal action validation. Syntax checking is independent of wire decoding,
+termination, UTF-8 boundaries, exact ranges, staleness, and explicit acceptance.
+An incomplete source file must not become a hidden permission gate for testing.
+Alt+p requests an explicit prediction in normal and insert mode; preserve occupied
+mappings and report the actual key in status. Explicit requests report start and
+completion, including no change or withheld output. Automatic requests stay quiet.
+
 Preserve deployed schema-v3 review provenance when updating an older branch.
 `prediction_reviewed` is a separate optional explicit confirmation after a
 decision. A request's legacy `human_verified` claim cannot verify it. Reviewed

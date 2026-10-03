@@ -37,6 +37,8 @@ let
     (toString outputTokens)
     "--cache-type"
     cfg.cacheType
+    "--syntax-validation"
+    (if cfg.syntaxValidation then "true" else "false")
   ];
   predictorOptions = {
     url = "http://127.0.0.1:${toString cfg.port}";
@@ -60,6 +62,7 @@ let
           cacheType
           threads
           promptThreads
+          syntaxValidation
           ;
         inherit outputTokens;
       }
@@ -72,6 +75,7 @@ let
     automatic_normal_mode = cfg.automaticNormalMode;
     debounce_ms = 250;
     accept_key = cfg.acceptKey;
+    predict_key = cfg.predictKey;
     dismiss_key = cfg.dismissKey;
     synthetic = false;
     persist_mode = true;
@@ -139,6 +143,11 @@ in
       ];
       default = "f16";
     };
+    syntaxValidation = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Withhold newly introduced Rust syntax errors; disable for experimental raw proposal testing.";
+    };
     experimentalAutoOptIn = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -155,6 +164,11 @@ in
     acceptKey = lib.mkOption {
       type = lib.types.str;
       default = "<M-l>";
+    };
+    predictKey = lib.mkOption {
+      type = lib.types.str;
+      default = "<M-p>";
+      description = "Request a prediction in insert or normal mode, preserving occupied mappings.";
     };
     dismissKey = lib.mkOption {
       type = lib.types.str;

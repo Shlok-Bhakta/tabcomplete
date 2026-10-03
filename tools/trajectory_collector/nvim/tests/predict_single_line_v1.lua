@@ -374,6 +374,7 @@ return function(ok, assert_eq, assert_true)
     assert_eq(predict.status().counters.invalid_output, rejected_count + 1,
       "Rust syntax rejection remains invalid output")
     assert_true(not predict.status().proposal_active, "syntax-rejected output is never previewed")
+    assert_eq(predict.status().state, "prediction withheld: model introduced a Rust syntax error")
     local rejected_sse = raw_sse
     local rejected_hash = util.sha256hex(rejected_sse)
     assert_eq(stored_prediction_blobs[rejected_hash], rejected_sse,

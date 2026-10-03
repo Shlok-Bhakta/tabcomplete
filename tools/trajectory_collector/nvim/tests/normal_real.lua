@@ -53,7 +53,9 @@ for _, event in ipairs(collector.queue) do
 end
 assert(dismissed and dismissed.payload.outcome == "dismissed_navigation")
 vim.api.nvim_win_set_cursor(0, { 19, 10 })
-vim.cmd("TabCompletePredict")
+local prediction_mapping = vim.fn.maparg("<M-p>", "n", false, true)
+assert(type(prediction_mapping.callback) == "function")
+prediction_mapping.callback()
 local second = shown_after(first.event_id)
 assert(predict.status().mode == "automatic")
 local mapping = vim.fn.maparg("<M-l>", "n", false, true)

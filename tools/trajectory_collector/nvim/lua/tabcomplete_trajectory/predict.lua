@@ -29,7 +29,7 @@ local opts = {
   automatic_personalization_enabled = false, debounce_ms = 250, expiry_ms = 30000,
   max_buffer_bytes = 1048576, max_prompt_tokens = 2048, target_prompt_tokens = 1024,
   max_response_bytes = 262144, synthetic = false, persist_mode = false,
-  accept_key = "<M-l>", dismiss_key = "<M-BS>",
+  accept_key = "<M-l>", dismiss_key = "<M-BS>", predict_key = "<M-p>",
 }
 local mode = "manual"
 local phase = "idle"
@@ -52,6 +52,8 @@ local counters = { requested = 0, displayed = 0, accepted = 0, cancelled_unseen 
   model_no_edit = 0, request_failed = 0, invalid_output = 0, stale_discarded = 0,
   automatic_policy_suppressed = 0, automatic_ui_suppressed = 0 }
 local mapping_key = nil
+local prediction_key = nil
+local prediction_callback = nil
 local lock_path = "/tmp/tabcomplete-predictor-19093.lock"
 M._request_impl = nil -- deterministic test seam
 M._tokenize_impl = nil -- deterministic test seam
@@ -214,6 +216,7 @@ local function record_request(state)
     model_alias = rust and identity.alias or nil,
     model_protocol = rust and identity.model_protocol or nil,
     context_layout = rust and identity.context_layout or nil,
+    syntax_validation = rust and identity.syntax_validation,
     precision = opts.precision,
     adapter_identity = opts.adapter_identity,
     runtime_config_hash = rust and identity.runtime_config_hash or opts.runtime_config_hash,
@@ -884,6 +887,7 @@ local function finished(request, result)
             model_sha256 = is_rust and state.model_identity.model_sha256 or nil,
             model_protocol = is_rust and state.model_identity.model_protocol or nil,
             context_layout = is_rust and state.model_identity.context_layout or nil,
+            action_validation = is_rust and request.parser.terminal.action_validation or nil,
             runtime_config_hash = is_rust and state.model_identity.runtime_config_hash or nil,
             wire_version = single_line_v1.WIRE_VERSION,
             prompt_tokens = state.prompt_tokens,
@@ -925,6 +929,15 @@ local function finished(request, result)
     end
     if consecutive_failures >= 3 then
       backoff_until_ms = now() + math.min(60000, 1000 * (2 ^ math.min(6, consecutive_failures - 3)))
+    end
+    if state.explicit_request and mode ~= "off" then
+      local message = last_status
+      if message == "proposal shown" then
+        message = "preview ready; accept with " .. tostring(mapping_key or opts.accept_key)
+      elseif message == "model_no_edit" or message == "unchanged replacement" then
+        message = "model returned no change"
+      end
+      vim.notify("TabComplete: " .. tostring(message), vim.log.levels.INFO)
     end
     if latest_wanted and (mode == "automatic" or mode == "shadow") then schedule_retry() end
   end)
@@ -1378,6 +1391,15 @@ function M.predict(options)
   tokenize(request)
   return true
 end
+function M.predict_explicit()
+  local ok, err = M.predict({ explicit = true })
+  if ok then
+    vim.notify("TabComplete: requesting prediction", vim.log.levels.INFO)
+  else
+    vim.notify("TabComplete: " .. tostring(err), vim.log.levels.WARN)
+  end
+  return ok, err
+end
 function M.accept()
   if not active or not active.action then return false, "no active proposal" end
   local state = active
@@ -1587,6 +1609,7 @@ function M.status()
     model_protocol = identity and identity.model_protocol
       or opts.model_protocol,
     context_layout = identity and identity.context_layout or nil,
+    syntax_validation = identity and identity.syntax_validation,
     protocol_version = opts.protocol_version,
     context_policy_version = identity and opts.context_policy_version
       or (opts.protocol_version == single_line_v1.WIRE_VERSION
@@ -1605,7 +1628,9 @@ function M.status()
       or opts.automatic_prefix_guard and "prefix-preserving-completion-v1" or "next-edit",
     automatic_personalization_enabled = false,
     in_flight = pending ~= nil, proposal_active = active ~= nil,
-    acceptance_key = mapping_key or opts.accept_key, last_latency_ms = last_latency_ms,
+    acceptance_key = mapping_key or opts.accept_key,
+    prediction_key = prediction_key or "command only; preferred keys occupied",
+    last_latency_ms = last_latency_ms,
     last_error = last_error, collector_connected = cs.last_ok_ms ~= nil,
     backoff_until_ms = backoff_until_ms,
     collector_state = cs.last_ok_ms and "connected" or (cs.spool_files > 0 and "spooling" or "unverified"),
@@ -1623,17 +1648,36 @@ local function debounce_changed()
   end)
 end
 local function install_mapping()
-  if mapping_key then return end
-  local key = opts.accept_key
-  if vim.fn.maparg(key, "i") ~= "" or vim.fn.maparg(key, "n") ~= "" then
-    key = "<M-;>"
+  if not mapping_key then
+    local key = opts.accept_key
+    if vim.fn.maparg(key, "i") ~= "" or vim.fn.maparg(key, "n") ~= "" then key = "<M-;>" end
+    if vim.fn.maparg(key, "i") == "" and vim.fn.maparg(key, "n") == "" then
+      vim.keymap.set({ "i", "n" }, key, function() M.accept() end,
+        { desc = "Accept TabComplete proposal", silent = true })
+      mapping_key = key
+    else
+      mapping_key = "command only; preferred keys occupied"
+    end
   end
-  if vim.fn.maparg(key, "i") == "" and vim.fn.maparg(key, "n") == "" then
-    vim.keymap.set({ "i", "n" }, key, function() M.accept() end,
-      { desc = "Accept TabComplete proposal", silent = true })
-    mapping_key = key
-  else
-    mapping_key = "command only; preferred keys occupied"
+  -- setup() can run before the user's options arrive. Remove only our own
+  -- prediction mapping when the configured key changes, preserving user maps.
+  if prediction_key and prediction_key ~= opts.predict_key then
+    for _, editor_mode in ipairs({ "i", "n" }) do
+      local map = vim.fn.maparg(prediction_key, editor_mode, false, true)
+      if map.callback == prediction_callback then vim.keymap.del(editor_mode, prediction_key) end
+    end
+    prediction_key = nil
+  end
+  if not prediction_key then
+    for _, key in ipairs({ opts.predict_key, "<M-P>" }) do
+      if vim.fn.maparg(key, "i") == "" and vim.fn.maparg(key, "n") == "" then
+        prediction_callback = function() M.predict_explicit() end
+        vim.keymap.set({ "i", "n" }, key, prediction_callback,
+          { desc = "Request TabComplete prediction", silent = true })
+        prediction_key = key
+        break
+      end
+    end
   end
   if vim.fn.maparg(opts.dismiss_key, "i") == "" then
     vim.keymap.set("i", opts.dismiss_key, function() M.reject() end,
