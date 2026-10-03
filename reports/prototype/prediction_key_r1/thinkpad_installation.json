@@ -1,0 +1,95 @@
+{
+  "package": "/nix/store/sn2q9gnhsv9lsg55s7dn1v5y3v2la9d7-tabcomplete-qwen-0.1.0",
+  "plugin": "/nix/store/7fa9ylqqw5pbv9qw22rjg5q1c5li4byw-source",
+  "selected_binary": "/nix/store/zzabqp1pkizd7y4bcpz045vy1ah1acir-tabcomplete-qwen-embedded-0.1.0/bin/tabcomplete-qwen",
+  "binary_sha256": "80e17c659f4099a68603766c855f116ace5b906bc95df3633c4c8fc0f87d5fbb",
+  "binary_bytes": 500579298,
+  "embedded_model": {
+    "alias": "q25",
+    "batch_size": 256,
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "length": 491399808,
+    "microbatch_size": 64,
+    "offset": 9179136,
+    "output_tokens": 64,
+    "protocol": "single-line-edit-v1",
+    "sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "threads": 4,
+    "version": 1
+  },
+  "embedded_payload_hash_verified": true,
+  "owned_config_hashes": {
+    "pkgs/tabcomplete-engine/default.nix": "57e641171ef352e240bba6d05a1d3dfa27b15d67d0525d6f432f78b20c306fbc",
+    "home/features/tabcomplete/default.nix": "c9b36dbf4be5b9e540d8af050eae4d48bb71e1e27fd987826abf4059d8163147"
+  },
+  "unrelated_before": "335681b8d2ab19c2276f84db450e66fe5115079cea093b86bd82ef10844f7026",
+  "unrelated_after": "335681b8d2ab19c2276f84db450e66fe5115079cea093b86bd82ef10844f7026",
+  "unrelated_preserved": true,
+  "active_unit_sha256": "fdd84ce734d1ffe2daea0090a2fb472ffc720c0aa97d3d78e20dba545bafaf63",
+  "active_unit_preserved": true,
+  "active_health": {
+    "active_slots": 1,
+    "alias": "q25",
+    "backend": "llama.cpp CPU via Rust",
+    "batch_size": 256,
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 286.155031,
+    "microbatch_size": 64,
+    "model_embedded": true,
+    "model_protocol": "single-line-edit-v1",
+    "model_selection": "declarative",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "model_storage": "executable-mmap",
+    "model_switch_supported": false,
+    "output_tokens": 64,
+    "prompt_threads": 4,
+    "runtime_config_hash": "01aa2d37f859aeb034d38e61ce3f924492c040edc51be83b5610500bee8de849",
+    "saved_contexts": 0,
+    "status": "ok",
+    "threads": 4
+  },
+  "activation_performed": false,
+  "declarative_config_applied": true,
+  "build_passed": true,
+  "evaluation_assertions_passed": 124,
+  "desired_configuration": {
+    "predictKey": "<M-p>",
+    "syntaxValidation": false,
+    "mode": "automatic",
+    "automaticNormalMode": true,
+    "execStart": [
+      "/nix/store/sn2q9gnhsv9lsg55s7dn1v5y3v2la9d7-tabcomplete-qwen-0.1.0/bin/tabcomplete-engine --host 127.0.0.1 --port 19094 --threads 4 --prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 --input-tokens 1024 --batch-size 256 --microbatch-size 64 --output-tokens 64 --cache-type f16 --syntax-validation false"
+    ]
+  },
+  "activation_pending": "User must run nrs as required by target AGENTS.md; restart service and Neovim afterward",
+  "logs": {
+    "target-lua": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-target-lua.log",
+      "sha256": "ffae04b1f10c82abb96b5b9d972ac376b1763a44a6cf851f2929ba32f46cab5d"
+    },
+    "target-real": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-target-real.log",
+      "sha256": "8f2515e589fdee1a726c4d0be9bb2f1344705e302da4bfc56fcb3ca6f29259ee"
+    },
+    "target-replay": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-target-replay.log",
+      "sha256": "0d2267a294d814b901c1648baf8dfb014ed93e7d204eb3e20298bdb34593d89a"
+    },
+    "target-built-checks": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-target-built-checks.log",
+      "sha256": "75eaadd57835ad5e8030a88b26865d1afa822fed9925ca199c40616417ad57ea"
+    },
+    "target-final-checks": {
+      "path": "/mnt/ssd/tabcomplete-product-r2/rust-editor-format-r2/prediction-key-target-final-checks.log",
+      "sha256": "23f1a75c0157194e1380ac1ab1b684b8e26bc85bcea26f513b9462e5e9ac82d1"
+    }
+  }
+}

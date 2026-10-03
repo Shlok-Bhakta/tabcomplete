@@ -1,5 +1,9 @@
 # Explicit prediction and experimental syntax opt-out
 
+Latest status: the ThinkPad reconnected. Its declarative patch is applied,
+formatted, built, and verified. Activation is reserved for the user. See
+[ThinkPad installation](prediction_key_r1/thinkpad_installation.json).
+
 Code pin `c24773fd68a3c20b0136dc64ff276bf2b2856103` on
 `prototype/rust-editor-format-r2`.
 
@@ -73,3 +77,42 @@ unit uses the new arguments. Do not claim the old running service has changed.
 
 Rollback restores those two backed-up Nix files through normal user activation.
 No database restore is needed. Automatic training remains disabled.
+
+## ThinkPad reconnection
+
+After Wi-Fi returned, SSH succeeded. The two owned Nix files and active service
+unit were backed up, the existing SQLite database received a consistent backup,
+and the patch was applied and formatted with nixfmt. Unrelated working files
+remained byte-identical. Model payload hashing verifies the unchanged Qwen GGUF.
+
+The actual Home Manager configuration passes all 124 assertions. Nix built the
+new native engine and both embedded executable wrappers using the existing
+local model files. The selected package is
+`/nix/store/sn2q9gnhsv9lsg55s7dn1v5y3v2la9d7-tabcomplete-qwen-0.1.0`. The selected
+executable is 500,579,298 bytes, SHA-256
+`80e17c659f4099a68603766c855f116ace5b906bc95df3633c4c8fc0f87d5fbb`. Its embedded
+model digest remains `4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb`.
+The built plugin passes the new prediction mapping tests; the full source Lua
+suite passes 76 tests on the ThinkPad. The Nix native check passes 19 Rust tests.
+
+A real selected-model headless smoke on the ThinkPad displayed two proposals,
+requested one with Alt+p, and accepted one with Alt+l. It uses the new plugin
+against the existing active engine; the new engine's syntax opt-out is not yet
+active. All decisions are scripted synthetic. Session
+`c1ab1d20-2db5-49c3-804e-911993e2fcf2` stores exact linked request/display/action
+payloads in the existing collector. Eight anchors plus one delta reconstruct
+505 bytes exactly, with no mismatches or gaps. Navigation stays neutral and no
+rejection event is fabricated. Payload hashes match. SigNoz's request query
+returns no_runs; collector evidence remains authoritative for this smoke.
+
+The active unit and user plugin symlink were preserved. User activation remains
+required: run nrs, reload the user systemd manager and restart tabcomplete-engine,
+then restart Neovim. The expected service arguments contain
+`--syntax-validation false`. Do not describe that flag as active before checking
+the running health endpoint after activation.
+
+A preparation script initially substituted its fixture marker inside an
+environment variable name; it failed before executing and was corrected. A
+read-only artifact verifier initially assumed the wrong footer size, then used
+the format's actual magic length and passed. The fixtures and model were
+unchanged.

@@ -1,0 +1,7 @@
+{
+  "path": "/mnt/ssd/collector-data/backups/pre-prediction-key-r1-20261003T034924Z.sqlite",
+  "sha256": "96d8dc653ed1dd807479e66e71852202a11bb51fd6bb4ee34b4b68f09f5b5fcb",
+  "bytes": 7630848,
+  "consistent_sqlite_backup": true,
+  "migration_needed": false
+}

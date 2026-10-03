@@ -1,0 +1,18 @@
+{
+  "backup": "/home/shlok/.local/state/tabcomplete-install-backups/prediction-key-r1-20261003T034924Z",
+  "owned_files": {
+    "pkgs/tabcomplete-engine/default.nix": {
+      "before_sha256": "d227850f5bcf4d72f65baf6263f70f96a6a55b44dec067a1f072e5bbdb2c3f79",
+      "after_sha256": "c4c1529ccd3835d96119efd274799c8ae3beb4e7b76fd4c585d4a638fac278bf"
+    },
+    "home/features/tabcomplete/default.nix": {
+      "before_sha256": "dd65398bca920508912baa741cd06a2cc25dcb5f57e365839eed6abb67b1155e",
+      "after_sha256": "7afb8e1fad84be626011ba5b5a521c59d670afea7db29f22412af9eb998e2d41"
+    }
+  },
+  "unrelated_before": "335681b8d2ab19c2276f84db450e66fe5115079cea093b86bd82ef10844f7026",
+  "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+  "activation_performed": false,
+  "active_unit_sha256": "fdd84ce734d1ffe2daea0090a2fb472ffc720c0aa97d3d78e20dba545bafaf63",
+  "unrelated_after": "335681b8d2ab19c2276f84db450e66fe5115079cea093b86bd82ef10844f7026"
+}

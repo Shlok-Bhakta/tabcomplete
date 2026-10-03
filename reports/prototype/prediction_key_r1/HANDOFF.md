@@ -13,7 +13,7 @@ Source hash `sha256-7QZsKJoE9k+Jy1i0bh3kdCFu/jqzmdoLk972CEAFT+M=` excludes repor
 through the existing postFetch hook. Control serialization exactly reproduced
 the previous known filtered-source hash.
 
-ThinkPad was accessible at initial inspection, then went offline on Tailscale.
+Historical first attempt: ThinkPad was accessible at initial inspection, then went offline on Tailscale.
 Bounded SSH retries timed out. No remote configuration, service, or activation
 was changed. Do not call Alt+p or syntax opt-out installed there yet. On reconnect,
 back up owned files/unit, check and apply the prepared patch to ~/nixos-config,
@@ -32,3 +32,22 @@ local diagnostic service was stopped after verification.
 Tests: 831 Python, 76 Lua, 19 Rust, 59 collector, 38 analysis; new mapping script,
 normal automatic script, Ruff, mypy84, both TS checks, application Clippy.
 Target build/activation and visual inspection remain pending, not passing claims.
+
+## Reconnected and ready for activation
+
+The user connected Wi-Fi. We backed up and patched the two owned Nix files,
+formatted them, verified unrelated files unchanged, and built the package above.
+All 124 Home Manager assertions pass. Built plugin mapping test and full Lua76
+pass on target, and Nix's Rust19 check passes. Exact embedded Qwen hash verified.
+See thinkpad_installation.json and thinkpad_verification.json. The selected new
+binary digest is 80e17c659f4099a68603766c855f116ace5b906bc95df3633c4c8fc0f87d5fbb.
+
+Target actual-model smoke session c1ab1d20-2db5-49c3-804e-911993e2fcf2: two
+requests/displays, one explicit Alt+p, one Alt+l acceptance, neutral navigation.
+Old active engine plus new plugin, synthetic decisions, exact SQLite replay.
+
+Activation has NOT occurred. The target AGENTS.md requires the user to run nrs.
+Afterward reload/restart the user tabcomplete-engine service and restart Neovim;
+verify health syntax_validation=false, actual running binary and arguments,
+and loaded plugin path before calling this active. Current old unit and plugin
+symlink were preserved. No additional weight download or training.
