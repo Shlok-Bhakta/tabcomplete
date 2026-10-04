@@ -12,6 +12,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from evaluate_q25_fim_native import (
+    CONTEXT_LAYOUT,
+    CONTEXT_POLICY_VERSION,
     EOS_TOKEN_ID,
     FIM_ACTION_POLICY,
     FIM_TOKEN_IDS,
@@ -63,9 +65,32 @@ class TinyTokenizer:
     def get_vocab(self):
         return self.vocab
 
+    def encode(self, text, add_special_tokens=False):
+        return [ord(char) for char in text]
+
+    def __call__(self, text, add_special_tokens=False, return_offsets_mapping=False):
+        return {
+            "input_ids": self.encode(text, add_special_tokens=add_special_tokens),
+            "offset_mapping": [(index, index + 1) for index in range(len(text))],
+        }
+
     def decode(self, token_ids, **kwargs):
         inverse = {value: key for key, value in self.vocab.items()}
         return "".join(inverse[token_id] for token_id in token_ids)
+
+
+class OffsetTokenizer:
+    """Small character tokenizer for deterministic context-crop tests."""
+
+    def encode(self, text, add_special_tokens=False):
+        return [ord(char) for char in text]
+
+    def __call__(self, text, add_special_tokens=False, return_offsets_mapping=False):
+        value = {
+            "input_ids": self.encode(text, add_special_tokens=add_special_tokens),
+            "offset_mapping": [(index, index + 1) for index in range(len(text))],
+        }
+        return value
 
 
 def _health_and_binding():
@@ -96,7 +121,7 @@ def _health_and_binding():
     contract_sha = profile_tokenizer["tokenizer_contract_sha256"]
     health = {
         "model_sha256": "a" * 64,
-        "context_layout": "q25-fim-psm-v1",
+        "context_layout": CONTEXT_LAYOUT,
         "tokenizer_sha256": TOKENIZER_SHA,
         "tokenizer_id": TOKENIZER_ID,
         "tokenizer_revision": TOKENIZER_REVISION,
@@ -293,7 +318,7 @@ def test_expected_context_uses_psm_cursor_to_line_end_and_exact_line_endings():
     case = {
         "state": {"source": "α = old\r\nnext()\r\n", "target_row": 0, "cursor_col": 5}
     }
-    expected = expected_context(case)
+    expected = expected_context(case, OffsetTokenizer())
     assert expected["prompt"] == "<|fim_prefix|>α = <|fim_suffix|>next()\r\n<|fim_middle|>"
     assert expected["line_ending"] == "CRLF"
     assert expected["model_hole_range"] == {
@@ -305,13 +330,61 @@ def test_expected_context_uses_psm_cursor_to_line_end_and_exact_line_endings():
     assert expected["apply_range"]["end_byte"] == len("α = old".encode())
 
 
+def test_expected_context_matches_frozen_640_256_training_crop_and_digest():
+    from evaluate_q25_fim_native import context_digest
+
+    tokenizer = OffsetTokenizer()
+    source = "p" * 700 + "old\n" + "s" * 300 + "\n"
+    case = {
+        "prompt": (
+            "<|fim_prefix|>" + "p" * 640 + "<|fim_suffix|>" + "s" * 256 + "<|fim_middle|>"
+        ),
+        "state": {"source": source, "target_row": 0, "cursor_col": 700},
+    }
+    expected = expected_context(case, tokenizer)
+    assert expected["prefix_range"] == {
+        "start_byte": 60,
+        "end_byte": 700,
+        "end_exclusive": True,
+    }
+    assert expected["prefix_token_count"] == 640
+    assert expected["suffix_range"] == {
+        "start_byte": len(("p" * 700 + "old\n").encode()),
+        "end_byte": len(("p" * 700 + "old\n" + "s" * 256).encode()),
+        "end_exclusive": True,
+    }
+    assert expected["suffix_token_count"] == 256
+    assert expected["prompt"] == case["prompt"]
+
+    request_id = "request-123"
+    contract = "b" * 64
+    canonical = (
+        "q25-fim-context-v2\n"
+        + request_id
+        + "\n"
+        + hashlib.sha256(source.encode()).hexdigest()
+        + "\n0\n700\n"
+        + hashlib.sha256(case["prompt"].encode()).hexdigest()
+        + "\n60\n700\n640\n704\n960\n256\n"
+        + CONTEXT_POLICY_VERSION
+        + "\n"
+        + CONTEXT_LAYOUT
+        + "\n"
+        + contract
+        + "\n"
+    )
+    assert context_digest(request_id, case, contract, tokenizer) == hashlib.sha256(
+        canonical.encode()
+    ).hexdigest()
+
+
 def test_tokenizer_check_precedes_one_shot_context_preparation():
     from evaluate_q25_fim_native import context_digest
 
     health = {"model_sha256": "a" * 64, "tokenizer_contract_sha256": "b" * 64}
     case = {
         "prompt": "<|fim_prefix|>x = <|fim_suffix|><|fim_middle|>",
-        "prompt_token_ids": [1, 2, 3],
+        "prompt_token_ids": [1, 2, 3, 4, 5, 6, 7],
         "repository": "c" * 64,
         "state": {"source": "x = old\n", "target_row": 0, "cursor_col": 4},
     }
@@ -332,7 +405,7 @@ def test_tokenizer_check_precedes_one_shot_context_preparation():
             calls.append(url.rsplit("/", 1)[-1])
             if url.endswith("/tokenize"):
                 return Response({"tokens": case["prompt_token_ids"]})
-            context = expected_context(case)
+            context = expected_context(case, OffsetTokenizer())
             request_id = json["request_id"]
             return Response(
                 {
@@ -341,12 +414,14 @@ def test_tokenizer_check_precedes_one_shot_context_preparation():
                     "request_id": request_id,
                     "completion_mode": MODE,
                     "model_protocol": PROTOCOL,
-                    "context_policy_version": "q25-fim-psm-cursor-to-line-end-v1",
-                    "context_layout": "q25-fim-psm-v1",
+                    "context_policy_version": CONTEXT_POLICY_VERSION,
+                    "context_layout": CONTEXT_LAYOUT,
                     "tokenizer_sha256": TOKENIZER_SHA,
                     "tokenizer_contract_sha256": health["tokenizer_contract_sha256"],
                     "prompt_tokens": len(case["prompt_token_ids"]),
-                    "context_hash": context_digest(request_id, case, "b" * 64),
+                    "context_hash": context_digest(
+                        request_id, case, "b" * 64, OffsetTokenizer()
+                    ),
                     "model_identity": {
                         "model_sha256": health["model_sha256"],
                         "model_protocol": PROTOCOL,
@@ -356,7 +431,9 @@ def test_tokenizer_check_precedes_one_shot_context_preparation():
                 }
             )
 
-    prepared = prepare_request(Client(), "http://127.0.0.1:19104", case, "request-1", health)
+    prepared = prepare_request(
+        Client(), "http://127.0.0.1:19104", case, "request-1", health, OffsetTokenizer()
+    )
     assert calls == ["tokenize", "context"]
     assert prepared["prompt"] == case["prompt"]
 
@@ -436,7 +513,7 @@ def _valid_result_row():
         "case_id": "fim-development-4096",
         "repository": "f" * 64,
         "context_sha256": hashlib.sha256(b"prompt").hexdigest(),
-        "prompt": "prompt",
+        "prompt": "<|fim_prefix|><|fim_suffix|><|fim_middle|>",
         "prompt_token_ids": [44],
         "target": "λ\n",
         "state": {"source": source, "target_row": 0, "cursor_col": 0},
@@ -444,7 +521,9 @@ def _valid_result_row():
     request_id = "request-current"
     binding = {
         "request_id": request_id,
-        "context_hash": context_digest(request_id, case, health["tokenizer_contract_sha256"]),
+        "context_hash": context_digest(
+            request_id, case, health["tokenizer_contract_sha256"], OffsetTokenizer()
+        ),
         "completion_mode": MODE,
     }
     terminal = _terminal(health, binding)
@@ -521,3 +600,23 @@ def test_bound_non_eos_terminal_is_a_quality_outcome_not_a_pipeline_error():
     scored = score_terminal(case, terminal, "λ", tokenizer)
     assert not scored["terminated"]
     assert scored["quality_error_code"] == "fim_terminal_not_eos"
+
+
+def test_bound_out_of_vocabulary_token_is_recorded_without_unpinned_decode():
+    tokenizer = TinyTokenizer()
+    health, binding = _health_and_binding()
+    case = {"target": "λ\n", "state": {"source": "x\n", "target_row": 0, "cursor_col": 0}}
+    terminal = _terminal(health, binding, body_ids=[999_999])
+    terminal["canonical_action"] = None
+    terminal["action_validation"] = {
+        "policy": FIM_ACTION_POLICY,
+        "status": "invalid",
+        "code": "fim_token_id_outside_vocabulary",
+    }
+
+    scored = score_terminal(case, terminal, "opaque-unmapped-token\n", tokenizer)
+    assert scored["decoded"] is None
+    assert scored["quality_error_code"] == "fim_token_id_outside_vocabulary"
+    assert scored["terminated"] is False
+    assert scored["canonical_action"] is None
+    assert scored["evidence"]["unknown_token_ids"] == [999_999]

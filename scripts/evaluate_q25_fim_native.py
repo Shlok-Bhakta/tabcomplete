@@ -15,7 +15,12 @@ from urllib.parse import urlsplit
 import httpx
 from evaluate_q25_fim import decoded_completion, development_case
 from measure_r2_local import NativeProvider
-from prepare_q25_fim import _load_pinned_inputs
+from prepare_q25_fim import (
+    _load_pinned_inputs,
+    _token_ids,
+    _truncate_prefix,
+    _truncate_suffix,
+)
 
 from tinycomplete.observability.context import RunContext
 from tinycomplete.observability.runs import run_scope
@@ -42,6 +47,10 @@ FIM_TOKEN_SPELLINGS = {
     151660: "<|fim_middle|>",
 }
 FIM_ACTION_POLICY = "q25-fim-completion-v1"
+CONTEXT_POLICY_VERSION = "q25-fim-psm-cursor-to-line-end-bounded640-256-v2"
+CONTEXT_LAYOUT = "q25-fim-psm-bounded-v2"
+PREFIX_CONTEXT_TOKEN_LIMIT = 640
+SUFFIX_CONTEXT_TOKEN_LIMIT = 256
 FIM_QUALITY_CODES = frozenset(
     {
         "fim_missing_eos",
@@ -437,8 +446,8 @@ def validate_native_tokenizer_identity(
     }
 
 
-def expected_context(case: dict) -> dict:
-    """Rebuild PSM context and byte ranges from the untouched source bytes."""
+def expected_context(case: dict, tokenizer) -> dict:
+    """Rebuild the bounded PSM context and byte ranges from original source."""
     state = case.get("state")
     if not isinstance(state, dict) or not isinstance(state.get("source"), str):
         raise ValueError("native case source state is invalid")
@@ -486,16 +495,25 @@ def expected_context(case: dict) -> dict:
     if cursor_byte > content_end:
         raise ValueError("native case cursor exceeds its physical line")
     try:
-        prefix = raw[:cursor_byte].decode("utf-8")
+        full_prefix = raw[:cursor_byte].decode("utf-8")
         raw[cursor_byte:content_end].decode("utf-8")
-        raw[line_end:].decode("utf-8")
+        full_suffix = raw[line_end:].decode("utf-8")
     except UnicodeError:
         raise ValueError("native case cursor splits UTF-8") from None
+    try:
+        prefix = _truncate_prefix(tokenizer, full_prefix, PREFIX_CONTEXT_TOKEN_LIMIT)
+        suffix = _truncate_suffix(tokenizer, full_suffix, SUFFIX_CONTEXT_TOKEN_LIMIT)
+        prefix_token_count = len(_token_ids(tokenizer, prefix))
+        suffix_token_count = len(_token_ids(tokenizer, suffix))
+    except Exception:
+        raise ValueError("native bounded context cannot be reproduced") from None
+    prefix_start = cursor_byte - len(prefix.encode("utf-8"))
+    suffix_end = line_end + len(suffix.encode("utf-8"))
     prompt = (
         "<|fim_prefix|>"
         + prefix
         + "<|fim_suffix|>"
-        + raw[line_end:].decode("utf-8")
+        + suffix
         + "<|fim_middle|>"
     )
     return {
@@ -508,6 +526,18 @@ def expected_context(case: dict) -> dict:
             "end_byte": line_end,
             "end_exclusive": True,
         },
+        "prefix_range": {
+            "start_byte": prefix_start,
+            "end_byte": cursor_byte,
+            "end_exclusive": True,
+        },
+        "prefix_token_count": prefix_token_count,
+        "suffix_range": {
+            "start_byte": line_end,
+            "end_byte": suffix_end,
+            "end_exclusive": True,
+        },
+        "suffix_token_count": suffix_token_count,
         "apply_range": {
             "start_byte": line_start,
             "end_byte": content_end,
@@ -516,14 +546,27 @@ def expected_context(case: dict) -> dict:
     }
 
 
-def context_digest(request_id: str, case: dict, tokenizer_contract_sha256: str) -> str:
+def context_digest(
+    request_id: str, case: dict, tokenizer_contract_sha256: str, tokenizer
+) -> str:
     state = case["state"]
     source = state["source"].encode("utf-8")
-    prompt = case["prompt"].encode("utf-8")
+    expected = expected_context(case, tokenizer)
+    if case.get("prompt") != expected["prompt"]:
+        raise ValueError("native case prompt differs from its bounded source context")
+    prompt = expected["prompt"].encode("utf-8")
     canonical = (
-        f"q25-fim-context-v1\n{request_id}\n{hashlib.sha256(source).hexdigest()}\n"
+        f"q25-fim-context-v2\n{request_id}\n{hashlib.sha256(source).hexdigest()}\n"
         f"{state['target_row']}\n{state['cursor_col']}\n"
-        f"{hashlib.sha256(prompt).hexdigest()}\n{tokenizer_contract_sha256.lower()}\n"
+        f"{hashlib.sha256(prompt).hexdigest()}\n"
+        f"{expected['prefix_range']['start_byte']}\n"
+        f"{expected['prefix_range']['end_byte']}\n"
+        f"{expected['prefix_token_count']}\n"
+        f"{expected['suffix_range']['start_byte']}\n"
+        f"{expected['suffix_range']['end_byte']}\n"
+        f"{expected['suffix_token_count']}\n"
+        f"{CONTEXT_POLICY_VERSION}\n{CONTEXT_LAYOUT}\n"
+        f"{tokenizer_contract_sha256.lower()}\n"
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -599,7 +642,7 @@ def prepare(args: argparse.Namespace) -> dict:
             "source_completion_mode": row["mode"],
         }
         if (
-            expected_context(case)["prompt"] != case["prompt"]
+            expected_context(case, tokenizer)["prompt"] != case["prompt"]
             or hashlib.sha256(case["prompt"].encode("utf-8")).hexdigest()
             != case["context_sha256"]
         ):
@@ -802,8 +845,59 @@ def score_terminal(case: dict, terminal: dict, raw_text: str, tokenizer) -> dict
         raise ValueError("native terminal exceeds the EOS-inclusive output cap")
     vocab = tokenizer.get_vocab()
     known_ids = set(vocab.values())
-    if any(token_id not in known_ids for token_id in body_ids):
-        raise ValueError("native terminal contains a token outside the pinned vocabulary")
+    unknown_ids = [token_id for token_id in body_ids if token_id not in known_ids]
+    control_ids = (
+        set(getattr(tokenizer, "all_special_ids", []))
+        | set(getattr(tokenizer, "added_tokens_decoder", {}))
+        | {
+            vocab[spelling]
+            for spelling in FIM_TOKEN_SPELLINGS.values()
+            if spelling in vocab
+        }
+    )
+    validation = terminal.get("action_validation")
+    action = terminal.get("canonical_action")
+    if unknown_ids:
+        first_failure = next(
+            (
+                "fim_token_id_outside_vocabulary"
+                if token_id not in known_ids
+                else "fim_control_token_in_body"
+                for token_id in body_ids
+                if token_id not in known_ids or token_id in control_ids
+            ),
+            None,
+        )
+        if (
+            stop_type != "eos"
+            or not isinstance(validation, dict)
+            or validation.get("policy") != FIM_ACTION_POLICY
+            or validation.get("status") != "invalid"
+            or validation.get("code") != "fim_token_id_outside_vocabulary"
+            or first_failure != "fim_token_id_outside_vocabulary"
+            or action is not None
+        ):
+            raise ValueError("unknown native token lacks matching bound codec evidence")
+        unexpected = [token_id for token_id in body_ids if token_id in control_ids]
+        evidence = {
+            "output_token_ids": all_ids,
+            "ended_by_eos": True,
+            "unexpected_special_token_ids": unexpected,
+            "unexpected_control_token_ids": unexpected,
+            "unknown_token_ids": unknown_ids,
+            "reached_token_ceiling": len(all_ids) >= 96,
+            "truncated": False,
+        }
+        return {
+            "decoded": None,
+            "decode_reason": "invalid_control_or_vocabulary",
+            "evidence": evidence,
+            "all_ids": all_ids,
+            "terminal_id": terminal_id,
+            "terminated": False,
+            "quality_error_code": "fim_token_id_outside_vocabulary",
+            "canonical_action": None,
+        }
     if stop_type == "control" and terminal_id not in known_ids:
         raise ValueError("native terminal control token is outside the pinned vocabulary")
     decoded, decode_reason, evidence = decoded_completion(
@@ -816,8 +910,6 @@ def score_terminal(case: dict, terminal: dict, raw_text: str, tokenizer) -> dict
     evidence["reached_token_ceiling"] = len(all_ids) >= 96
     evidence["truncated"] = stop_type == "limit"
 
-    validation = terminal.get("action_validation")
-    action = terminal.get("canonical_action")
     if not isinstance(validation, dict) or validation.get("policy") != FIM_ACTION_POLICY:
         raise ValueError("native terminal lacks the FIM codec validation result")
     if validation.get("status") == "not_applicable":
@@ -904,7 +996,7 @@ def validate_result_row(row: dict, case: dict, tokenizer, health: dict, process:
     binding = {
         "request_id": row["request_id"],
         "context_hash": context_digest(
-            row["request_id"], case, health["tokenizer_contract_sha256"]
+            row["request_id"], case, health["tokenizer_contract_sha256"], tokenizer
         ),
         "completion_mode": MODE,
     }
@@ -951,7 +1043,9 @@ def validate_result_row(row: dict, case: dict, tokenizer, health: dict, process:
     validate_timing_record(row, len(case["prompt_token_ids"]), len(terminal["sampled_token_ids"]))
 
 
-def prepare_request(client, url: str, case: dict, request_id: str, health: dict) -> dict:
+def prepare_request(
+    client, url: str, case: dict, request_id: str, health: dict, tokenizer
+) -> dict:
     # Tokenize invalidates the backend's one-shot prepared context. Check the
     # fixed prompt first, then prepare and immediately submit generation.
     token_response = client.post(
@@ -967,7 +1061,7 @@ def prepare_request(client, url: str, case: dict, request_id: str, health: dict)
     )
     response.raise_for_status()
     prepared = response.json()
-    expected = expected_context(case)
+    expected = expected_context(case, tokenizer)
     identity = prepared.get("model_identity")
     if (
         any(prepared.get(key) != value for key, value in expected.items())
@@ -975,20 +1069,22 @@ def prepare_request(client, url: str, case: dict, request_id: str, health: dict)
         or prepared.get("request_id") != request_id
         or prepared.get("completion_mode") != MODE
         or prepared.get("model_protocol") != PROTOCOL
-        or prepared.get("context_policy_version") != "q25-fim-psm-cursor-to-line-end-v1"
-        or prepared.get("context_layout") != "q25-fim-psm-v1"
+        or prepared.get("context_policy_version") != CONTEXT_POLICY_VERSION
+        or prepared.get("context_layout") != CONTEXT_LAYOUT
         or prepared.get("tokenizer_sha256") != TOKENIZER_SHA
         or prepared.get("tokenizer_contract_sha256") != health["tokenizer_contract_sha256"]
         or not isinstance(prepared.get("prompt_tokens"), int)
         or isinstance(prepared.get("prompt_tokens"), bool)
-        or prepared["prompt_tokens"] <= 0
+        or prepared["prompt_tokens"] != len(case["prompt_token_ids"])
+        or prepared["prompt_tokens"]
+        != expected["prefix_token_count"] + expected["suffix_token_count"] + 3
         or not isinstance(identity, dict)
         or identity.get("model_sha256") != health["model_sha256"]
         or identity.get("model_protocol") != PROTOCOL
         or identity.get("tokenizer_sha256") != TOKENIZER_SHA
         or identity.get("tokenizer_contract_sha256") != health["tokenizer_contract_sha256"]
         or prepared.get("context_hash")
-        != context_digest(request_id, case, health["tokenizer_contract_sha256"])
+        != context_digest(request_id, case, health["tokenizer_contract_sha256"], tokenizer)
     ):
         raise ValueError("native context differs from the frozen training prompt")
     return prepared
@@ -1049,7 +1145,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             or not isinstance(case.get("target"), str)
             or not isinstance(case.get("prompt_token_ids"), list)
             or any(not _is_nonnegative_integer(token_id) for token_id in case["prompt_token_ids"])
-            or expected_context(case)["prompt"] != case.get("prompt")
+            or expected_context(case, tokenizer)["prompt"] != case.get("prompt")
             or hashlib.sha256(case["prompt"].encode("utf-8")).hexdigest()
             != case["context_sha256"]
             or tokenizer.encode(case["prompt"], add_special_tokens=False)
@@ -1120,7 +1216,9 @@ def evaluate(args: argparse.Namespace) -> dict:
                 with context.activate(), operation(
                     "eval.case", attributes={"tabcomplete.case_kind": "synthetic_fim"}
                 ):
-                    prepared = prepare_request(client, args.url, case, request_id, health)
+                    prepared = prepare_request(
+                        client, args.url, case, request_id, health, tokenizer
+                    )
                     binding = {
                         "request_id": request_id,
                         "context_hash": prepared["context_hash"],

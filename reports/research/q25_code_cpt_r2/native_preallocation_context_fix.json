@@ -1,0 +1,13 @@
+{
+  "cases": 240,
+  "cases_sha256": "57cef82cc1a8cc5d4ddfdc25201b7e54f7f33ec6d2860acf14166bb5537127bc",
+  "evaluator_sha256": "568722b85922185e09bcecab110e41c32264fa25a463bdc6a2beb9df810f18e0",
+  "fix": "Reproduce original training crop of prefix640/suffix256, verify exact byte ranges and complete context-v2 request digest",
+  "fixtures_changed": false,
+  "focused_tests_passed": 32,
+  "issue": "Evaluator retained full-file context-v1 reconstruction after bounded-v2 Rust route integration",
+  "native_quality_outputs_before_fix": 0,
+  "observed_old_prompt_mismatches": 83,
+  "schema": "q25-fim-native-preallocation-context-fix-v1",
+  "test_log_sha256": "05b891ad8908b64c84757377b23c982de795317d5b19c0e856ed8aed37e3c8bc"
+}
