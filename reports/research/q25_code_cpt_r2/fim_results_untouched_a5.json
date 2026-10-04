@@ -2,9 +2,8 @@
   "arm": "untouched_q25_to_fim",
   "caveats": [
     "Synthetic source completion, not observed next-edit intent or human acceptance.",
-    "FIM line suite accepts newline termination; native editor route requires explicit EOS.",
-    "Generic causal functional replay and source syntax diagnostics remain pending.",
-    "Second matched arm must complete before selection."
+    "Line suite permits newline; native serving requires observed EOS.",
+    "Selected direct FIM by primary development point estimate; inconclusive paired difference does not establish equivalence."
   ],
   "checkpoint_receipt": {
     "arm": "untouched_q25_to_fim",

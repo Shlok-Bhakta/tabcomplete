@@ -1,0 +1,30 @@
+{
+  "arm": "completed_cpt_q25_to_fim",
+  "attempt": 1,
+  "checkpoint_path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/output-completed_cpt_q25_to_fim-1/q25_fim_r2/training/resume-step-000256.pt",
+  "checkpoint_sha256": "d8f9b28e6f2663c7ec5243ae659d415ad2540d9130ae9af8265c3f5de965d70e",
+  "checkpoint_verified": true,
+  "commit": "99bcfd3f6baab8c8ff59086b238e816ba3927969",
+  "cursor": {
+    "attempted_updates": 256,
+    "completed_updates": 256,
+    "epoch": 1,
+    "next_example_index": 4096,
+    "skipped_updates": 0,
+    "supervised_target_tokens": 34405,
+    "training_input_tokens": 1776908
+  },
+  "discarded_logged_tail_tokens": 0,
+  "fingerprint": "4143b870711b3e079014e7761fac81d796beb6849cf91a3b346110f6b1d38ce8",
+  "input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
+  "observed_at": "2026-10-04T07:16:34.961046+00:00",
+  "other_phase_processed_tokens_at_submission": 9649420,
+  "own_discarded_tokens_for_resume": 0,
+  "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "processed_arm_input_tokens_conservative": 1776908,
+  "reference": "shlokbhakta/tc-q25-fim-r2-1-a1",
+  "status": "shlokbhakta/tc-q25-fim-r2-1-a1 has status \"KernelWorkerStatus.COMPLETE\"",
+  "training_status": "complete",
+  "truncated_last_update_record": false,
+  "unlogged_inflight_input_token_reservation": 0
+}

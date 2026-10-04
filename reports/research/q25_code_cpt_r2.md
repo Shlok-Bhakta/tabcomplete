@@ -7,11 +7,12 @@ The completed raw-code pass reduced same-tokenizer development NLL and improved
 some syntax scores. Functional success stayed at 10/200. It has not established
 better practical completion quality.
 
-The first matched completion arm has now finished. Supervised FIM training on
-the untouched base raised exact, EOS-terminated synthetic development completion
-from 47/240 to 130/240. The arm initialized from the completed code-pretraining
-checkpoint is running. That comparison will determine whether the extra source
-pass helped completion. No new candidate has replaced the working editor model.
+Both matched completion arms finished. Supervised FIM training on the untouched
+base raised exact, EOS-terminated synthetic development completion from 47/240
+to 130/240. Starting from the completed code-pretraining checkpoint scored
+127/240 after the same training. The paired difference is inconclusive; the extra
+source pass has not demonstrated a final completion gain. The direct FIM model
+is selected for native Q4 verification. The working editor model is preserved.
 
 The [frozen plan](q25_code_cpt_r2/plan.json) binds the source pool, model and
 tokenizer hashes, fixture hashes, split policy, decoding, runtime choices,
@@ -79,7 +80,7 @@ exception or consume a renewed allocation.
 | Path | Completed training | Development completion | General code regression |
 | --- | --- | --- | --- |
 | Untouched Qwen → FIM | 4,096 states; 1,776,908 input tokens | Exact+EOS 47/240 → 130/240 | Causal functional 11/200 after FIM; raw line exact 16/180 |
-| Qwen → raw-code CPT → FIM | Running | Pending | Pending |
+| Qwen → raw-code CPT → FIM | 4,096 states; 1,776,908 input tokens | Exact+EOS 71/240 → 127/240 | Raw line exact 17/180; causal functional 15/200 after FIM |
 
 The final training plan must bind the actual completed CPT artifact and runtime
 before either FIM allocation. Existing tests and CPU data checks are not evidence
@@ -344,3 +345,44 @@ The revised implementation passed 1,011 Python tests with two dependency warning
 ### FIM attempt 4 diagnostic failure
 
 Attempt 4 stopped after 105.938 worker seconds, before attention execution or training. The new smoke process called CUDA peak-memory reset before initializing the allocator. This is a diagnostic initialization bug, not evidence that the efficient backend is unsupported. The repaired call order leaves the frozen r4 comparison unchanged. The actual job query returned `no_runs` because generation telemetry had not started. Its zero-work receipt preserves all failed-session accounting.
+
+## Matched completion results and conversion selection
+
+Both arms completed one pass, 256 updates, with no skips or replay. They saw the
+same 4,096 training states, 1,776,908 input tokens and 34,405 supervised target/EOS
+tokens each. Across 119 held-out repository groups, the CPT arm had three gains
+and six losses relative to direct FIM. Its exact+EOS difference was -1.25
+percentage points, with repository-bootstrap 95% interval -3.78 to +1.25 points.
+This is not evidence of equivalence. The direct FIM checkpoint is selected for
+native Q4 verification by the registered primary development point estimate.
+Both resumable research checkpoints remain intact.
+
+The CPT-initialized completion worker took 2,266.275 seconds including setup,
+training, evaluation and saving. Its full checkpoint SHA is
+`d8f9b28e6f2663c7ec5243ae659d415ad2540d9130ae9af8265c3f5de965d70e`.
+It reached EOS in all 240 development cases, including one empty output.
+FIM line exact scored 86/180, using the separate newline/EOS scoring rule.
+Whole-source parser regressions fell from 68/238 before FIM to 10/238 after it.
+These diagnostics remain distinct from functional behavior and editing intent.
+
+Campaign processed training input now totals 11,426,328 tokens. The observed
+local artifact total after collection was 11,450,064,045 bytes of the
+12,884,901,888-byte cap. Selected conversion will attach the completed private
+Kaggle output to a CPU-only worker, count every attached file and temporary
+conversion against its own cap, and retrieve only Q4 plus compact manifests.
+The immutable selection and paired evidence are in `fim_conversion/selection.json`
+and `fim_quality_comparison.json`. Native quality and target-device measurements
+remain pending; HF FP16 versus native Q4 changes both precision and runtime.
+
+The second offline bundle imported 4,079 spans. A fully paginated query retrieved
+714 unique training spans across eight pages, split into two 357-span attempts.
+The isolated workers generated the same run ID from their identical output path.
+Historical records remain distinguishable by run attempt, trace/span identities
+and arm-specific scientific files. Do not attribute that combined query to one
+arm or treat imports as duplicate training work.
+
+The matched raw causal functional replay scored 11/200 for direct FIM and 15/200
+for CPT→FIM. CPT had 6 gains and 2 losses; the unadjusted exact paired
+McNemar p-value was 0.2890625. This secondary result does not establish general
+superiority or override the primary completion selection. Both used the same
+current evaluator, runtime and unchanged source fixtures.

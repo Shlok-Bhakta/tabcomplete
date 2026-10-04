@@ -1,0 +1,11 @@
+{
+  "artifact_bytes": 11450064045,
+  "automatic_personalization_enabled": false,
+  "cap_bytes": 12884901888,
+  "observed_at": "2026-10-04T07:19:24.965262+00:00",
+  "remaining_bytes": 1434837843,
+  "selected_arm": "untouched_q25_to_fim",
+  "training_input_tokens": 11426328,
+  "training_response_tokens_fim": 68810,
+  "training_updates_fim": 512
+}

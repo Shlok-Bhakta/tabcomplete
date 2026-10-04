@@ -1,0 +1,68 @@
+{
+  "model": {
+    "architecture": "Qwen2ForCausalLM",
+    "logical_parameter_count": 494032768,
+    "model_type": "qwen2",
+    "rope_parameters": {
+      "rope_theta": 1000000.0,
+      "rope_type": "default"
+    }
+  },
+  "paired_quality_report_sha256": "cbc4ad5e94274180fafd64cbd71b856a8e8cbae3ded65e7ad03a6481422ee998",
+  "schema": "q25-fim-conversion-selection-v1",
+  "selected_arm": "untouched_q25_to_fim",
+  "source_export": {
+    "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+    "directory": "q25_fim_r2/training/inference-f16",
+    "files": {
+      "chat_template.jinja": {
+        "bytes": 2427,
+        "sha256": "44d5f08f3f72b837eaad09f13a54c1f9f4eb58d75240334548b7fd52a5437fa5"
+      },
+      "config.json": {
+        "bytes": 1284,
+        "sha256": "32f65bf9489178e70fff5ba7da6138c7df5092b14740e9f90c7dfa927b9e8802"
+      },
+      "generation_config.json": {
+        "bytes": 139,
+        "sha256": "689c1e2b6769259cc773777319bae6f2bd6020ea1aa432b437578da46c994e8a"
+      },
+      "model.safetensors": {
+        "bytes": 1260367152,
+        "sha256": "2f464bbc82f4106a02221d031ee3360c6116494cfb0965441063c4d138fdbada"
+      },
+      "tokenizer.json": {
+        "bytes": 11421892,
+        "sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8"
+      },
+      "tokenizer_config.json": {
+        "bytes": 694,
+        "sha256": "31f3ca2a2b90487393bdc778c41bfc6dab379646865aeef19068e726804126f1"
+      }
+    },
+    "fingerprint": "4a92442a82f133b659b4ef6b5024c9dd293422e12e84993de332ab5dad433d0d",
+    "training_cursor": {
+      "attempted_updates": 256,
+      "completed_updates": 256,
+      "epoch": 1,
+      "next_example_index": 4096,
+      "skipped_updates": 0,
+      "supervised_target_tokens": 34405,
+      "training_input_tokens": 1776908
+    }
+  },
+  "source_kernel_reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+  "status": "selected_complete",
+  "tokenizer": {
+    "eos_token_id": 151643,
+    "fim_marker_ids": {
+      "fim_middle": 151660,
+      "fim_prefix": 151659,
+      "fim_suffix": 151661
+    },
+    "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+    "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+  },
+  "training_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780"
+}

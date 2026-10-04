@@ -1,0 +1,67 @@
+{
+  "fully_paginated": true,
+  "identity_limitation": "Both isolated workers chose the same run ID from the identical output path. Historical spans remain distinct by trace/span and run_attempt_id; this combined run query is not one arm. Scientific arm-specific files are authoritative.",
+  "observed_at": "2026-10-04T07:21:05.062570+00:00",
+  "offline_import": {
+    "bundle_sha256": "80ef1848e213ece34e003d8c2f5489f8213c8e97366883c0f1b5bb4a00ed20fb",
+    "duplicate": false,
+    "imported_spans": 4079,
+    "schema_version": 1
+  },
+  "pages": [
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-1.json",
+      "rows": 100,
+      "sha256": "881b5a047da8a5fe3dc97a3be3cd27449264876e20b57c70553a098c02e0a072"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-2.json",
+      "rows": 100,
+      "sha256": "a00a32a6692be87651540e1c7fcc2501af5a20537118dfc546ed21260cd20df0"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-3.json",
+      "rows": 100,
+      "sha256": "3f9cbaaa3caecc2340524c498f4c2d59b898424f85f07bf61d08f79cc4f80a39"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-4.json",
+      "rows": 100,
+      "sha256": "cd629eebc5c46363bb9a17e37f775ada5d6e2c6ba4e0c1a2c76b5ad0cbbf49fd"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-5.json",
+      "rows": 100,
+      "sha256": "a3f03098ed3ce995b86a710b310e8ea298d3a2b2f545205d32cb73a655630f6e"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-6.json",
+      "rows": 100,
+      "sha256": "5bfba4442613c46bed3059e8b0a227195b672961dde4a74df5f641cb04902855"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-7.json",
+      "rows": 100,
+      "sha256": "82c3b8d2f992b1ecada287342c55ffd237eacf1ebc2638722533290418c647e6"
+    },
+    {
+      "file": "monitoring-run-completed-cpt-a1-page-8.json",
+      "rows": 14,
+      "sha256": "cb595576682587ee0a99bc060c2b7fc0ef8006c5bee7e209fb9cce1af56d634c"
+    }
+  ],
+  "repeat_import": {
+    "bundle_sha256": "80ef1848e213ece34e003d8c2f5489f8213c8e97366883c0f1b5bb4a00ed20fb",
+    "duplicate": true,
+    "imported_spans": 0,
+    "schema_version": 1
+  },
+  "run_attempt_counts": {
+    "attempt-1528e3f5-6876-4ddf-ab24-1600e8e732ec": 357,
+    "attempt-e64096cc-be78-4d36-b896-2e0bc83003db": 357
+  },
+  "run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+  "schema": "q25-fim-monitoring-verification-v2",
+  "second_arm_training_attempt_id": "attempt-e64096cc-be78-4d36-b896-2e0bc83003db",
+  "unique_spans": 714
+}

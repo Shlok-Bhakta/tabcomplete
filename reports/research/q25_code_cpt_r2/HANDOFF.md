@@ -326,3 +326,33 @@ The shared debug Cargo cache was removed after its owner confirmed tests finishe
 Only owned temporary build artifacts were removed; all research checkpoints remain.
 A smaller release-only native build cache is now under the campaign artifact root
 and therefore counted by its cap.
+
+## Both FIM arms complete; direct FIM selected for Q4 verification
+
+Second kernel `shlokbhakta/tc-q25-fim-r2-1-a1` completed; verified receipt
+`fim-verified-completed_cpt_q25_to_fim-1.json` binds the full 4,096-state cursor.
+Direct FIM scored 130/240 versus CPT→FIM 127/240 exact+EOS. Three CPT gains and
+six losses yield -1.25pp with repo-bootstrap CI [-3.78,+1.25]pp; no gain or
+equivalence established. Selected conversion input is untouched arm a5 only.
+`fim_conversion/selection.json` and `fim_quality_comparison.json` are root's
+manual immutable evidence. Don't rerun either completed arm or overwrite stable.
+
+CPU-only conversion controller is being finished by campaign audit agent. Its
+source must be committed/pushed before allocation, with pinned CPU worker,
+selected kernel-source attachment, immutable config dataset, 3h deadline and
+30min finalization reserve. Count all attached optimizer states in worker disk
+budget; local collection keeps only Q4+compact manifests, never FP16 weights.
+Root artifact total11.45GB leaves1.435GB under12GiB cap, enough for selectedQ4
+and compact release build, not another unquantized export or debugcache.
+
+Native evaluator request order must tokenize first, prepare FIM context last,
+then immediately complete; `/tokenize` invalidates one-shot prepared binding.
+Trainer audit agent is fixing strict resume evidence, raw tokenizer identity,
+source digest and actual PID/listening-port attestation in root evaluator/tests.
+Data audit agent is completing bounded640/256 context route, retained NFC guard,
+Lua source-range verification and bound malformed-output terminal evidence.
+Merge and independently test those before freezing selected native evaluation.
+Actual Q4 quality, latency, collector/Neovim smoke and installer remain pending.
+ThinkPad known SSH alias still unreachable at latest check; no activation claimed.
+Automatic personalization stays disabled. Continue through conversion and local
+verified preview; do not stop after the matched pilot.

@@ -1,0 +1,59 @@
+{
+  "allowlisted_arguments": [
+    "-m",
+    "/mnt/ssd/tabcomplete-product-r2/public-functional-lr1e5-v2-selected/q25-public-functional-lr1e5-Q4_K_M.gguf",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "19093",
+    "-t",
+    "4",
+    "-tb",
+    "4",
+    "-ngl",
+    "0",
+    "-c",
+    "2304",
+    "-b",
+    "256",
+    "-ub",
+    "64",
+    "-np",
+    "1",
+    "--cache-ram",
+    "128",
+    "--ctx-checkpoints",
+    "32",
+    "--no-cache-idle-slots",
+    "--no-warmup"
+  ],
+  "binary_path": "/home/crabcake/Projects/tabcomplete/outputs/tools/llama.cpp/build/bin/llama-server",
+  "binary_sha256": "064d67d7cc3d2a3fbbed39e6f1b1e779b481a01c23f55902ac1e5599ced1180c",
+  "health": {
+    "status": "ok"
+  },
+  "host": "crabcake",
+  "inference_pid": 423167,
+  "model": {
+    "bytes": 491399808,
+    "path": "/mnt/ssd/tabcomplete-product-r2/public-functional-lr1e5-v2-selected/q25-public-functional-lr1e5-Q4_K_M.gguf",
+    "precision": "Q4_K_M",
+    "sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb"
+  },
+  "observed_at": "2026-10-04T07:23:20.081188+00:00",
+  "policy": "Do not run selected candidate concurrently with this resident model; restore owned baseline service after evaluation.",
+  "process_memory": {
+    "Anonymous_bytes": 6725632,
+    "Pss_Anon_bytes": 6725632,
+    "Pss_File_bytes": 446464,
+    "Pss_bytes": 7172096,
+    "Rss_bytes": 9875456,
+    "Swap_bytes": 123473920,
+    "VmHWM_bytes": 627511296,
+    "VmRSS_bytes": 9875456,
+    "VmSwap_bytes": 123473920
+  },
+  "schema": "q25-fim-local-baseline-inventory-v1",
+  "service_backup": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/prior-predictor.service",
+  "service_sha256": "a4a9808208ce5099e67fc42c65b274e7db19947c41e833b32225e8799e64feb5"
+}
