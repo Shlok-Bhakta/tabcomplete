@@ -4348,3 +4348,144 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
             call[call.index("--file-pattern") + 1] for call in calls if "--file-pattern" in call
         ]
         assert output_patterns == [r"q25_fim_conversion_r1/conversion\.json$"]
+
+
+def test_conversion_revision3_preserves_previous_paths_and_allows_one_cpu_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection, report, artifacts, _training, _sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    old = campaign.freeze_fim_conversion(selection)
+    old_bytes = campaign.CONVERSION_PLAN.read_bytes()
+    with campaign._conversion_revision_scope(3):
+        plan = campaign.freeze_fim_conversion(selection)
+        kernel = campaign.build_fim_conversion_kernel(plan, "f" * 40)
+        metadata = json.loads((kernel / "kernel-metadata.json").read_text())
+        assert plan["plan_revision"] == 3
+        assert plan["source"] == old["source"]
+        assert kernel == artifacts / "fim/conversion-kernel-r3"
+        assert metadata["id"] == campaign.CONVERSION_REFERENCE_R3
+        assert metadata["enable_gpu"] is False
+        assert campaign.CONVERSION_JOB_FILE == report / "fim-conversion-job-r3.json"
+        with pytest.raises(ValueError, match="revision 3"):
+            campaign._conversion_reference(2)
+    assert campaign.CONVERSION_PLAN.read_bytes() == old_bytes
+    assert not (artifacts / "fim/conversion-kernel-r2").exists()
+
+
+def _seed_cpu_failure_settlement(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    selection, report, artifacts, _training, _sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    with campaign._conversion_revision_scope(2):
+        plan = campaign.freeze_fim_conversion(selection)
+    job_path = report / "fim-conversion-job-r2.json"
+    watch_path = report / "fim-conversion-watch-r2.json"
+    manifest_path = artifacts / "failed-cpu/conversion.json"
+    job = {
+        "reference": campaign.CONVERSION_REFERENCE_R2,
+        "attempt": 1,
+        "plan_revision": 2,
+        "enable_gpu": False,
+        "plan_sha256": campaign.digest(report / "fim_conversion_r2_plan.json"),
+        "submitted_at": "2026-10-04T09:00:00+00:00",
+        "conservative_reserved_session_seconds": 10800,
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+    }
+    campaign.save(job_path, job)
+    campaign.save(
+        watch_path,
+        {
+            "reference": job["reference"],
+            "plan_sha256": job["plan_sha256"],
+            "observed_at": "2026-10-04T09:03:00+00:00",
+            "status": 'has status "KernelWorkerStatus.ERROR"',
+        },
+    )
+    campaign.save(
+        manifest_path,
+        {
+            "schema": "q25-fim-q4-conversion-run-v1",
+            "status": "failed",
+            "elapsed_seconds": 13.0,
+            "conversion": {"gpu_enabled": False},
+            "selection_sha256": plan["selection_sha256"],
+            "training_plan_sha256": plan["training_plan_sha256"],
+            "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
+            "source_kernel_reference": job["source_kernel_reference"],
+        },
+    )
+    receipt = {
+        "schema": "q25-fim-cpu-conversion-failure-v1",
+        "reference": job["reference"],
+        "observed_at": "2026-10-04T09:04:00+00:00",
+        "session_settlement": {
+            "job_sha256": campaign.digest(job_path),
+            "watch_sha256": campaign.digest(watch_path),
+            "manifest_sha256": campaign.digest(manifest_path),
+            "manifest_relative_path": "failed-cpu/conversion.json",
+            "terminal_observation_margin_seconds": 60,
+            "settled_session_seconds": 240,
+        },
+    }
+    campaign.save(report / "fim-conversion-failed-r2-1.json", receipt)
+    return job_path, job, report, artifacts, receipt
+
+
+def test_cpu_failure_settlement_uses_terminal_interval_and_preserves_reservation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path, job, report, _artifacts, _receipt = _seed_cpu_failure_settlement(tmp_path, monkeypatch)
+    original = path.read_bytes()
+    assert campaign._validated_cpu_failure_settlement(path, job) == 240
+    for other in report.glob("fim-job-*.json"):
+        other.unlink()
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "aggregate_reserved_session_seconds": 11040,
+                "conservative_account_gpu_hours": 40,
+                "minimum_reserved_future_fim_session_seconds": 0,
+            }
+        },
+    )
+    campaign.check_shared_allocation_budget(10800, phase="conversion")
+    with pytest.raises(RuntimeError, match="reservation exhausted"):
+        campaign.check_shared_allocation_budget(10801, phase="conversion")
+    assert path.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    "corruption", ["watch", "manifest", "path", "bound", "structure", "gpu", "duration"]
+)
+def test_cpu_failure_settlement_rejects_unbound_or_unsafe_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corruption: str
+) -> None:
+    path, job, report, artifacts, receipt = _seed_cpu_failure_settlement(tmp_path, monkeypatch)
+    if corruption in {"path", "bound"}:
+        key = "manifest_relative_path" if corruption == "path" else "settled_session_seconds"
+        receipt["session_settlement"][key] = "../outside.json" if corruption == "path" else 239
+    elif corruption == "structure":
+        receipt["session_settlement"] = []
+    elif corruption == "gpu":
+        job["enable_gpu"] = True
+    elif corruption == "watch":
+        watch_path = report / "fim-conversion-watch-r2.json"
+        watch = json.loads(watch_path.read_text())
+        watch["status"] = "KernelWorkerStatus.RUNNING"
+        campaign.save(watch_path, watch)
+        receipt["session_settlement"]["watch_sha256"] = campaign.digest(watch_path)
+    else:
+        manifest_path = artifacts / "failed-cpu/conversion.json"
+        manifest = json.loads(manifest_path.read_text())
+        if corruption == "duration":
+            manifest["elapsed_seconds"] = 241
+        else:
+            manifest["selection_sha256"] = "b" * 64
+        campaign.save(manifest_path, manifest)
+        receipt["session_settlement"]["manifest_sha256"] = campaign.digest(manifest_path)
+    campaign.save(report / "fim-conversion-failed-r2-1.json", receipt)
+    with pytest.raises(ValueError):
+        campaign._validated_cpu_failure_settlement(path, job)

@@ -1,0 +1,23 @@
+{
+  "actual_exception_text_unobserved": true,
+  "additional_training_input_tokens": 0,
+  "conversion_completed": false,
+  "failing_operation_observed": "bootstrap_uv_after_successful_pip_install_before_version_probe",
+  "gpu_enabled": false,
+  "monitor_query": "shlokbhakta/tc-q25-fim-q4-conversion-r2",
+  "monitor_result": "no_runs",
+  "observed_at": "2026-10-04T09:41:45.072846+00:00",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r2",
+  "schema": "q25-fim-cpu-conversion-failure-v1",
+  "session_settlement": {
+    "job_sha256": "28866f860140ed90ea16a88c8c42326cc7a4a233f6ead3af0008888a88f99cf9",
+    "manifest_relative_path": "fim/conversion-failure-r2/q25_fim_conversion_r2/conversion.json",
+    "manifest_sha256": "8a3495bd9f6a573fdbb7ed229dd478a3e3903cc70b730f0e44cf277a799286bd",
+    "original_reserved_session_seconds": 10800,
+    "settled_session_seconds": 333,
+    "terminal_observation_margin_seconds": 60,
+    "watch_sha256": "06fe3fcdf96ef2606cc3ac82b2e90a9ba9f1b006cb8576031a987756825f0682"
+  },
+  "source_verified": true,
+  "worker_elapsed_seconds": 13.169519693999973
+}
