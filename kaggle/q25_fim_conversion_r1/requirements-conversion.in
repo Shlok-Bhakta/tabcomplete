@@ -1,0 +1,9 @@
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.11.0+cpu
+numpy==2.4.6
+transformers==5.17.0
+PyYAML==6.0.3
+requests==2.34.2
+tqdm==4.70.1
