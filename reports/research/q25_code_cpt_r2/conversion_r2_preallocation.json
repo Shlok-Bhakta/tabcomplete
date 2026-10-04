@@ -1,0 +1,18 @@
+{
+  "schema": "q25-fim-conversion-r2-preallocation-v1",
+  "observed_at": "2026-10-04T09:21:13.621081+00:00",
+  "changed_plan_fields": [
+    "plan_revision",
+    "source_code"
+  ],
+  "weights_selection_training_and_fixtures_unchanged": true,
+  "old_failure_receipts_preserved": true,
+  "new_allocation_reference": "shlokbhakta/tc-q25-fim-q4-conversion-r2",
+  "gpu_enabled": false,
+  "automatic_retry": false,
+  "old_cpu_reservations_counted": true,
+  "actual_source_manifest_provenance_audited_independently": true,
+  "source_test_log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-conversion-r2-root-final.log",
+  "plan_sha256": "f054dc32736ad4fe9feaedcadd1dbdafb659520c4b1810060b8a39dd694b4f0a",
+  "config_dataset_reused": "shlokbhakta/tabcomplete-q25-fim-conversion-r1-inputs"
+}

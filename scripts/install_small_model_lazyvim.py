@@ -369,7 +369,7 @@ def render_native_fim_config(
         f'model = "{FIM_ALIAS}"',
         f'model_revision = "{spec["model_sha256"]}"',
         'precision = "Q4_K_M"',
-        'adapter_identity = "embedded-q25-fim"',
+        'adapter_identity = "full-weight"',
     ]
     if runtime_config_hash is not None:
         options.append(f'runtime_config_hash = "{runtime_config_hash}"')
