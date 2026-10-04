@@ -2133,6 +2133,26 @@ def _conversion_file_record(path: Path) -> dict[str, Any]:
     return {"bytes": path.stat().st_size, "sha256": digest(path)}
 
 
+def _resolve_original_model_json(name: str, expected_sha256: str) -> Path:
+    candidate = MODEL / name
+    if candidate.is_symlink():
+        blob_root = MODEL.parent.parent / "blobs"
+        if blob_root.is_symlink() or not blob_root.is_dir():
+            raise ValueError("pinned Hugging Face snapshot has no regular blob directory")
+        allowed_root = blob_root.resolve(strict=True)
+    else:
+        allowed_root = MODEL.resolve(strict=True)
+    resolved = candidate.resolve(strict=True)
+    if (
+        not resolved.is_file()
+        or resolved.is_symlink()
+        or not resolved.is_relative_to(allowed_root)
+        or digest(resolved) != expected_sha256
+    ):
+        raise ValueError("pinned original model JSON is outside its snapshot or has changed")
+    return resolved
+
+
 def _conversion_tree_records(root: Path, prefixes: tuple[str, ...]) -> dict[str, dict[str, Any]]:
     records: dict[str, dict[str, Any]] = {}
     for prefix in prefixes:
@@ -2506,12 +2526,19 @@ def freeze_fim_conversion(selection_path: Path = CONVERSION_SELECTION) -> dict[s
 
 def _load_conversion_plan() -> dict[str, Any]:
     plan = json.loads(CONVERSION_PLAN.read_text())
+    execution = plan.get("execution", {})
     if (
         plan.get("schema") != "q25-fim-q4-conversion-plan-v1"
         or plan.get("plan_revision") != 1
-        or plan.get("execution", {}).get("enable_gpu") is not False
-        or plan.get("execution", {}).get("paid_compute") is not False
-        or plan.get("execution", {}).get("automatic_renewal_use") is not False
+        or not isinstance(execution, dict)
+        or execution.get("session_seconds") != CONVERSION_SESSION_SECONDS
+        or execution.get("finalization_reserve_seconds") != CONVERSION_FINALIZATION_RESERVE_SECONDS
+        or execution.get("enable_gpu") is not False
+        or execution.get("enable_internet") is not True
+        or execution.get("paid_compute") is not False
+        or execution.get("automatic_renewal_use") is not False
+        or execution.get("artifact_bytes_cap") != CONVERSION_ARTIFACT_CAP_BYTES
+        or execution.get("minimum_free_bytes") != CONVERSION_MINIMUM_FREE_BYTES
     ):
         raise ValueError("frozen CPU conversion plan is invalid")
     return plan
@@ -2530,8 +2557,12 @@ def build_fim_conversion_bundle(plan: dict[str, Any] | None = None) -> Path:
     sources = {
         "selection.json": selection_path,
         "training_plan.json": training_plan_path,
-        "original_config.json": MODEL / "config.json",
-        "original_tokenizer.json": MODEL / "tokenizer.json",
+        "original_config.json": _resolve_original_model_json(
+            "config.json", plan["original_q25_config_sha256"]
+        ),
+        "original_tokenizer.json": _resolve_original_model_json(
+            "tokenizer.json", plan["original_q25_tokenizer_sha256"]
+        ),
     }
     allowed = set(sources) | {"input-manifest.json", "dataset-metadata.json"}
     output = CONVERSION_INPUT_BUNDLE
@@ -2555,7 +2586,14 @@ def build_fim_conversion_bundle(plan: dict[str, Any] | None = None) -> Path:
                 raise ValueError("immutable conversion input differs from its frozen source")
         else:
             shutil.copy2(source, target)
-        file_records[name] = _conversion_file_record(target)
+        record = _conversion_file_record(target)
+        expected_source_hash = {
+            "original_config.json": plan["original_q25_config_sha256"],
+            "original_tokenizer.json": plan["original_q25_tokenizer_sha256"],
+        }.get(name)
+        if expected_source_hash is not None and record["sha256"] != expected_source_hash:
+            raise ValueError("staged original Qwen JSON differs from its frozen hash")
+        file_records[name] = record
     manifest_value = {
         "schema": "q25-fim-conversion-input-manifest-v1",
         "files": file_records,
@@ -2990,6 +3028,10 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         raise ValueError("conversion worker result manifest is missing or ambiguous")
     result_path = manifests[0]
     result = json.loads(result_path.read_text())
+    source_code = plan.get("source_code", {})
+    runtime = result.get("runtime")
+    storage = result.get("storage")
+    final_storage = storage.get("final") if isinstance(storage, dict) else None
     if (
         result.get("schema") != "q25-fim-q4-conversion-run-v1"
         or result.get("status") != "complete"
@@ -3000,7 +3042,24 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         or result.get("source_fingerprint") != plan["source"]["fingerprint"]
         or result.get("source_kernel_reference") != plan["source"]["kernel_reference"]
         or result.get("training_cursor") != plan["source"]["training_cursor"]
+        or not isinstance(runtime, dict)
+        or runtime.get("worker_source_sha256") != source_code.get("conversion_worker.py")
+        or runtime.get("contract_source_sha256")
+        != source_code.get("src/tinycomplete/code_cpt/q25_fim_conversion.py")
+        or runtime.get("requirements_lock_sha256")
+        != source_code.get("kaggle/q25_fim_conversion_r1/requirements-conversion.lock")
+        or result.get("conversion", {}).get("format") != "Q4_K_M"
         or result.get("conversion", {}).get("gpu_enabled") is not False
+        or not isinstance(storage, dict)
+        or storage.get("artifact_cap_bytes") != CONVERSION_ARTIFACT_CAP_BYTES
+        or storage.get("minimum_free_bytes") != CONVERSION_MINIMUM_FREE_BYTES
+        or not isinstance(final_storage, dict)
+        or final_storage.get("max_artifact_bytes") != CONVERSION_ARTIFACT_CAP_BYTES
+        or final_storage.get("minimum_free_bytes") != CONVERSION_MINIMUM_FREE_BYTES
+        or not isinstance(final_storage.get("current_accounted_bytes"), int)
+        or isinstance(final_storage.get("current_accounted_bytes"), bool)
+        or final_storage.get("current_accounted_bytes", -1) < 0
+        or final_storage["current_accounted_bytes"] > CONVERSION_ARTIFACT_CAP_BYTES
     ):
         raise ValueError("conversion result manifest is incomplete or bound to another input")
     q4 = result.get("q4_export")

@@ -3098,6 +3098,33 @@ def test_conversion_freeze_binds_manual_arm_quality_receipt_and_cpu_only_plan(
     assert plan["execution"]["finalization_reserve_seconds"] == 1_800
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("session_seconds", 10_799),
+        ("finalization_reserve_seconds", 1_799),
+        ("enable_gpu", True),
+        ("artifact_bytes_cap", 1),
+        ("minimum_free_bytes", 1),
+    ],
+)
+def test_conversion_loader_rejects_plan_with_changed_runtime_bounds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: Any,
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    plan["execution"][field] = value
+    campaign.save(campaign.CONVERSION_PLAN, plan)
+
+    with pytest.raises(ValueError, match="frozen CPU conversion plan"):
+        campaign._load_conversion_plan()
+
+
 @pytest.mark.parametrize("tamper", ["quality_report", "cursor", "fingerprint"])
 def test_conversion_freeze_rejects_mismatched_manual_selection_provenance(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str
@@ -3155,6 +3182,62 @@ def test_conversion_input_bundle_contains_only_config_and_selection_not_weights(
     }
     assert not list(bundle.glob("*.safetensors"))
     assert not list(bundle.glob("*.gguf"))
+
+
+def _symlink_hf_model_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    escape_blob_root: bool,
+) -> None:
+    original_model = campaign.MODEL
+    model_cache = tmp_path / "hf-cache/models--Qwen--Qwen2.5-Coder-0.5B"
+    blob_root = model_cache / "blobs"
+    snapshot = model_cache / "snapshots/revision"
+    blob_root.mkdir(parents=True)
+    snapshot.mkdir(parents=True)
+    outside = tmp_path / "outside-hf-cache"
+    outside.mkdir()
+    for name in ("config.json", "tokenizer.json"):
+        content = (original_model / name).read_bytes()
+        target_root = outside if escape_blob_root else blob_root
+        target = target_root / f"blob-{name}"
+        target.write_bytes(content)
+        (snapshot / name).symlink_to(target)
+    monkeypatch.setattr(campaign, "MODEL", snapshot)
+
+
+def test_conversion_bundle_resolves_hf_snapshot_symlinks_only_inside_blob_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    _symlink_hf_model_snapshot(tmp_path, monkeypatch, escape_blob_root=False)
+    campaign.freeze_fim_conversion(selection_path)
+
+    bundle = campaign.build_fim_conversion_bundle()
+
+    for name, digest_field in (
+        ("original_config.json", "original_q25_config_sha256"),
+        ("original_tokenizer.json", "original_q25_tokenizer_sha256"),
+    ):
+        staged = bundle / name
+        assert staged.is_file() and not staged.is_symlink()
+        assert campaign.digest(staged) == campaign._load_conversion_plan()[digest_field]
+
+
+def test_conversion_bundle_rejects_snapshot_symlink_outside_blob_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    _symlink_hf_model_snapshot(tmp_path, monkeypatch, escape_blob_root=True)
+    campaign.freeze_fim_conversion(selection_path)
+
+    with pytest.raises(ValueError, match="outside its snapshot"):
+        campaign.build_fim_conversion_bundle()
 
 
 def test_conversion_bundle_fails_closed_on_storage_cap_or_headroom(
@@ -3274,8 +3357,9 @@ def test_conversion_cli_has_separate_non_gpu_action_path(
     assert json.loads(capsys.readouterr().out) == {"conversion_bundle": "/private/config-bundle"}
 
 
+@pytest.mark.parametrize("tamper", [None, "worker_hash", "storage_cap"])
 def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str | None
 ) -> None:
     selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
         tmp_path, monkeypatch
@@ -3305,9 +3389,31 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
         "source_fingerprint": plan["source"]["fingerprint"],
         "source_kernel_reference": plan["source"]["kernel_reference"],
         "training_cursor": plan["source"]["training_cursor"],
-        "conversion": {"gpu_enabled": False},
+        "runtime": {
+            "worker_source_sha256": plan["source_code"]["conversion_worker.py"],
+            "contract_source_sha256": plan["source_code"][
+                "src/tinycomplete/code_cpt/q25_fim_conversion.py"
+            ],
+            "requirements_lock_sha256": plan["source_code"][
+                "kaggle/q25_fim_conversion_r1/requirements-conversion.lock"
+            ],
+        },
+        "storage": {
+            "artifact_cap_bytes": campaign.CONVERSION_ARTIFACT_CAP_BYTES,
+            "minimum_free_bytes": campaign.CONVERSION_MINIMUM_FREE_BYTES,
+            "final": {
+                "current_accounted_bytes": 100,
+                "max_artifact_bytes": campaign.CONVERSION_ARTIFACT_CAP_BYTES,
+                "minimum_free_bytes": campaign.CONVERSION_MINIMUM_FREE_BYTES,
+            },
+        },
+        "conversion": {"format": "Q4_K_M", "gpu_enabled": False},
         "q4_export": {"file": q4_name, "bytes": len(q4_bytes), "sha256": q4_sha},
     }
+    if tamper == "worker_hash":
+        result["runtime"]["worker_source_sha256"] = "f" * 64
+    elif tamper == "storage_cap":
+        result["storage"]["artifact_cap_bytes"] += 1
     calls: list[tuple[str, ...]] = []
 
     def fake_cli(*args: str, timeout: int = 120) -> str:
@@ -3330,14 +3436,21 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
         campaign.shutil, "disk_usage", lambda _path: SimpleNamespace(free=64 * 1024**3)
     )
 
-    receipt = campaign.collect_fim_conversion(plan)
-
-    output_patterns = [
-        call[call.index("--file-pattern") + 1] for call in calls if "--file-pattern" in call
-    ]
-    assert output_patterns == [
-        r"q25_fim_conversion_r1/conversion\.json$",
-        campaign.re.escape(q4_name) + "$",
-    ]
-    assert receipt["q4_file"] == q4_name
-    assert receipt["source_weight_or_checkpoint_retrieval"] is False
+    if tamper is None:
+        receipt = campaign.collect_fim_conversion(plan)
+        output_patterns = [
+            call[call.index("--file-pattern") + 1] for call in calls if "--file-pattern" in call
+        ]
+        assert output_patterns == [
+            r"q25_fim_conversion_r1/conversion\.json$",
+            campaign.re.escape(q4_name) + "$",
+        ]
+        assert receipt["q4_file"] == q4_name
+        assert receipt["source_weight_or_checkpoint_retrieval"] is False
+    else:
+        with pytest.raises(ValueError, match="another input"):
+            campaign.collect_fim_conversion(plan)
+        output_patterns = [
+            call[call.index("--file-pattern") + 1] for call in calls if "--file-pattern" in call
+        ]
+        assert output_patterns == [r"q25_fim_conversion_r1/conversion\.json$"]
