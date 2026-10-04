@@ -57,6 +57,25 @@ def file_sha(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _fim_recording_hashes(canonical_action: object, token_ids: list[int], response: str) -> dict:
+    action_sha256 = (
+        sha(
+            json.dumps(
+                canonical_action,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        )
+        if canonical_action is not None
+        else None
+    )
+    return {
+        "canonical_action_sha256": action_sha256,
+        "output_token_ids_sha256": sha(json.dumps(token_ids, separators=(",", ":")).encode()),
+        "response_sha256": sha(response.encode("utf-8")),
+    }
+
+
 def proc_memory(pid: int) -> dict[str, int]:
     result = {}
     for source in (f"/proc/{pid}/smaps_rollup", f"/proc/{pid}/status"):
@@ -386,6 +405,7 @@ def build_fim_latency_states(cases: list[dict], tokenizer) -> list[dict]:
         )
         if base_b is None:
             raise ValueError("FIM replay A/B transition needs distinct public repositories")
+        matching_state = _mutate_fim_state(base_a, "matching_prefix_suffix_change", tokenizer)
         transitions = [
             ("fresh_open", base_a),
             (
@@ -398,16 +418,11 @@ def build_fim_latency_states(cases: list[dict], tokenizer) -> list[dict]:
             ),
             ("earlier_edit", _mutate_fim_state(base_a, "earlier_edit", tokenizer)),
             ("divergent_typing", _mutate_fim_state(base_a, "divergent_typing", tokenizer)),
-            (
-                "matching_prefix_suffix_change",
-                _mutate_fim_state(base_a, "matching_prefix_suffix_change", tokenizer),
-            ),
+            ("matching_prefix_suffix_change", matching_state),
             ("switch_A_to_B", base_b),
-            ("return_B_to_A", None),
+            ("return_B_to_A", matching_state),
         ]
-        # A → B → A is explicit: the return state reproduces the preceding A
-        # prompt exactly after a different repository/file has occupied the slot.
-        transitions[-1] = ("return_B_to_A", transitions[5][1])
+        # A → B → A returns to the same A prompt after the repository switch.
         from tinycomplete.data.fim import format_psm
 
         for index, (operation, source_row) in enumerate(transitions):
@@ -895,9 +910,6 @@ def replay_fim_native(args) -> dict:
         score_terminal,
         validate_terminal,
     )
-    from evaluate_q25_fim_native import (
-        sha as native_sha,
-    )
     from measure_r2_local import NativeProvider
     from profile_rust_engine import cgroup_summary
 
@@ -1067,6 +1079,9 @@ def replay_fim_native(args) -> dict:
                         request_context = (run or RunContext.new()).for_case(
                             f"{row['id']}/{repetition}/{condition}"
                         )
+                        request_id = request_context.request_id
+                        if request_id is None:
+                            raise ValueError("FIM replay request context has no request ID")
                         with (
                             request_context.activate(),
                             operation(
@@ -1090,7 +1105,7 @@ def replay_fim_native(args) -> dict:
                                 context_client,
                                 args.fim_url,
                                 case,
-                                request_context.request_id,
+                                request_id,
                                 runtime["health"],
                                 tokenizer,
                             )
@@ -1107,7 +1122,7 @@ def replay_fim_native(args) -> dict:
                             ):
                                 raise ValueError("served FIM context violates its frozen budget")
                             binding = {
-                                "request_id": request_context.request_id,
+                                "request_id": request_id,
                                 "context_hash": prepared["context_hash"],
                                 "completion_mode": "remaining_logical_line_after_utf8_cursor",
                             }
@@ -1143,13 +1158,25 @@ def replay_fim_native(args) -> dict:
                             prompt_n = timing.get("prompt_n")
                             predicted_n = timing.get("predicted_n")
                             if (
-                                not all(
-                                    isinstance(value, int)
-                                    and not isinstance(value, bool)
-                                    and value >= 0
-                                    for value in (cache_n, prompt_n, predicted_n)
-                                )
-                                or cache_n + prompt_n != prepared["prompt_tokens"]
+                                not isinstance(cache_n, int)
+                                or isinstance(cache_n, bool)
+                                or cache_n < 0
+                            ):
+                                raise ValueError("native FIM cache count is invalid")
+                            if (
+                                not isinstance(prompt_n, int)
+                                or isinstance(prompt_n, bool)
+                                or prompt_n < 0
+                            ):
+                                raise ValueError("native FIM prompt count is invalid")
+                            if (
+                                not isinstance(predicted_n, int)
+                                or isinstance(predicted_n, bool)
+                                or predicted_n < 0
+                            ):
+                                raise ValueError("native FIM generated-token count is invalid")
+                            if (
+                                cache_n + prompt_n != prepared["prompt_tokens"]
                                 or predicted_n != len(token_ids)
                                 or result.tokens != predicted_n
                                 or (not cached and cache_n != 0)
@@ -1199,6 +1226,9 @@ def replay_fim_native(args) -> dict:
                                 raise ValueError(
                                     "sampled FIM service exceeded the 1.5 GiB RSS limit"
                                 )
+                            recording_hashes = _fim_recording_hashes(
+                                scored["canonical_action"], token_ids, result.text
+                            )
                             row_result = {
                                 "state_id": row["id"],
                                 "operation": row["operation"],
@@ -1222,21 +1252,7 @@ def replay_fim_native(args) -> dict:
                                 "terminal_token_id": terminal.get("terminal_token_id"),
                                 "quality_error_code": scored["quality_error_code"],
                                 "terminated": scored["terminated"],
-                                "canonical_action_sha256": (
-                                    native_sha(
-                                        json.dumps(
-                                            scored["canonical_action"],
-                                            sort_keys=True,
-                                            separators=(",", ":"),
-                                        ).encode("utf-8")
-                                    )
-                                    if scored["canonical_action"] is not None
-                                    else None
-                                ),
-                                "output_token_ids_sha256": native_sha(
-                                    json.dumps(token_ids, separators=(",", ":")).encode()
-                                ),
-                                "response_sha256": native_sha(result.text.encode("utf-8")),
+                                **recording_hashes,
                                 "context_construction_ms": round(context_ms, 3),
                                 "client_completion_ms": round(completion_ms, 3),
                                 "first_observed_token_ms": (
@@ -1249,7 +1265,7 @@ def replay_fim_native(args) -> dict:
                                 "memory_after": memory,
                                 "process_memory_before": process_memory_before,
                                 "process_memory_after": process_memory,
-                                "request_id": request_context.request_id,
+                                "request_id": request_id,
                             }
                         with measurements_path.open("a", encoding="utf-8") as handle:
                             handle.write(json.dumps(row_result, sort_keys=True) + "\n")
@@ -1261,9 +1277,8 @@ def replay_fim_native(args) -> dict:
         raise ValueError("FIM latency replay produced no 500 ms process samples")
     if any(sample.get("pid") != args.pid for sample in resource_samples):
         raise ValueError("FIM resource samples include a different process")
-    if _rss_from_sampler_rows(resource_samples) is not None and (
-        _rss_from_sampler_rows(resource_samples) > FIM_REPLAY_RSS_LIMIT_BYTES
-    ):
+    sampled_rss = _rss_from_sampler_rows(resource_samples)
+    if sampled_rss is not None and sampled_rss > FIM_REPLAY_RSS_LIMIT_BYTES:
         raise ValueError("sampled FIM service exceeded the 1.5 GiB RSS limit")
     _write_jsonl_atomic(args.output / "resource-samples.jsonl", resource_samples)
     after_vmstat = counters()
@@ -1747,8 +1762,11 @@ print(json.dumps(result))
                         raise TimeoutError("frozen inference deadline reached")
                     provider.timeout_seconds = min(90, remaining)
                     case_id = f"{state['id']}/{repetition}/{condition}"
-                    context = run.for_case(case_id) if run else nullcontext()
-                    with context.activate() if run else context:
+                    if run is not None:
+                        case_context = run.for_case(case_id)
+                        with case_context.activate():
+                            provider.generate_detailed(prepared["prompt"], health["output_tokens"])
+                    else:
                         provider.generate_detailed(prepared["prompt"], health["output_tokens"])
                     result = {
                         "id": state["id"],

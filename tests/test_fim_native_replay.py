@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -7,7 +9,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from replay_small_model import build_fim_latency_states, fim_replay_schedule
+from replay_small_model import (
+    _fim_recording_hashes,
+    build_fim_latency_states,
+    fim_replay_schedule,
+)
 
 
 class FIMCharTokenizer:
@@ -162,3 +168,23 @@ def test_replay_schedule_separates_fresh_pass_and_pairs_each_cached_repeat(laten
         previous_changed_prompt = changed[1]["prompt_sha256"]
         if index + 2 < len(cached):
             assert repeat[1]["id"] != cached[index + 2][1]["id"]
+
+
+def test_recording_hashes_use_bytes_and_never_return_generated_content():
+    action = {"kind": "replace_line", "text": "value = λ\n"}
+    token_ids = [102, 330, 151643]
+    response = "value = λ\n"
+
+    recorded = _fim_recording_hashes(action, token_ids, response)
+
+    assert recorded == {
+        "canonical_action_sha256": hashlib.sha256(
+            json.dumps(action, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+        "output_token_ids_sha256": hashlib.sha256(
+            json.dumps(token_ids, separators=(",", ":")).encode()
+        ).hexdigest(),
+        "response_sha256": hashlib.sha256(response.encode("utf-8")).hexdigest(),
+    }
+    assert response not in recorded.values()
+    assert _fim_recording_hashes(None, token_ids, response)["canonical_action_sha256"] is None
