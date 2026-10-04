@@ -386,3 +386,21 @@ for CPT→FIM. CPT had 6 gains and 2 losses; the unadjusted exact paired
 McNemar p-value was 0.2890625. This secondary result does not establish general
 superiority or override the primary completion selection. Both used the same
 current evaluator, runtime and unchanged source fixtures.
+
+## Selected completion export dependency correction
+
+The three-hour CPU-only conversion revision4 freezes the same selected direct
+FIM checkpoint and tokenizer. Its plan SHA is
+`896e563a0bd107e15fa0800e85639f68ff565667cedaa86c6ebe540e53519c06`.
+Only revision and worker dependency/source hashes differ from revision3.
+The previous converter imported SentencePiece before its absent-model-file BPE
+fallback. Pinning SentencePiece0.2.2 fixes that dependency path without replacing
+the tokenizer or upstream converter. An actual local vocabulary-only run passed
+with 151,936 tokens, zero tensors, and correct EOS/FIM IDs and token types.
+The temporary preflight output was cleaned without recording its output hash;
+this limited preflight receipt does not establish full weight conversion.
+
+Updated source passed 1,212 Python tests with two dependency warnings in 91.79s,
+Ruff and mypy across 92 source files. Actual native Q4 quality, latency and editor
+feedback remain pending. ThinkPad's approved SSH alias still timed out at the
+latest retry. No new laptop activation or benchmark is claimed.

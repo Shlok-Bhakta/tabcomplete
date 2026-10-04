@@ -4,8 +4,10 @@
   "completed_cpt_input_tokens": 7872512,
   "completed_cpt_updates": 481,
   "completed_fim_input_tokens": 3553816,
+  "conversion_source_commit": "1c1928393a2a122ab7fa36df720c40789205e599",
   "current_conversion_ref": "shlokbhakta/tc-q25-fim-q4-conversion-r4",
   "current_conversion_revision": 4,
+  "current_conversion_status": "submitted CPU-only; observer running",
   "current_fim_attempt": 5,
   "current_fim_input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
   "current_fim_kernel": "shlokbhakta/tc-q25-fim-r2-0-a5",
@@ -14,8 +16,8 @@
   "first_three_fim_attempts": "verified no_training_executed; zero training tokens",
   "first_two_fim_attempts": "verified no_training_executed; zero training tokens",
   "last_authenticated_quota": {
-    "observed_at": "2026-10-04T04:23:00.027759+00:00",
-    "remaining": 42.67,
+    "observed_at": "2026-10-04T10:28:09.627929+00:00",
+    "remaining": 41.08,
     "renewal": "2026-10-10T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
     "units": "Kaggle account GPU-hours"
@@ -37,7 +39,7 @@
     "Verify real synthetic Neovim proposals and exact existing SQLite replay",
     "Install bounded experimental automatic desktop provider; retry ThinkPad declarative delivery"
   ],
-  "observed_at": "2026-10-04T10:27:57.767697+00:00",
+  "observed_at": "2026-10-04T10:29:19.614368+00:00",
   "personalization_enabled": false,
   "schema": "q25-cpt-current-state-v1",
   "selected_arm": "untouched_q25_to_fim",

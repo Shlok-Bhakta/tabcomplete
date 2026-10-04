@@ -23,8 +23,9 @@ source config dataset and all quality fixtures. Explicit --conversion-revision4
 gets one CPU attempt, no automatic retry or renewed quota use. R2/R3 failure
 charges333/561s are validated; original10800s reservations remain preserved.
 Source verification now Python1212, Ruff, mypy92 pass. Rust/Lua/server sources
-unchanged from prior verification receipt. Submit only after source/plan commit
-and push; runner refreshes authenticated quota/active jobs before allocation.
+unchanged from prior verification receipt. Submitted at 2026-10-04T10:28:53.173494+00:00 using source 1c1928393a2a122ab7fa36df720c40789205e599.
+Observer is running with no automatic retry. Fresh authenticated quota was
+41.08 GPU-hours, renewal2026-10-10T00:00:00, no active jobs before submission.
 
 Generic native ELF SHA d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074.
 Collect only Q4+compact manifests. Prepare identity-bound profile and embed actual
