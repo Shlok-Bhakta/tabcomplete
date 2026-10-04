@@ -289,55 +289,119 @@ fn verify_fim_tokenizer(
     model: &LlamaModel,
     profile: &fim_v1::ServingProfile,
 ) -> Result<fim_v1::TokenContract> {
-    fim_v1::validate_serving_profile(profile)?;
+    fim_v1::validate_serving_profile(profile)
+        .map_err(|_| fim_tokenizer_failure(FimTokenizerFailureTag::ServingProfileInvalid))?;
     let tokenizer = &profile.tokenizer;
-    ensure!(
-        tokenizer
-            .tokenizer_vocab_ids
-            .last()
-            .is_some_and(|id| *id < model.n_vocab()),
-        "tokenizer vocabulary exceeds the selected model"
-    );
-    ensure!(
-        model.token_eos().0 == tokenizer.eos_id,
-        "FIM EOS token mismatch"
-    );
+    if !tokenizer
+        .tokenizer_vocab_ids
+        .last()
+        .is_some_and(|id| *id < model.n_vocab())
+    {
+        return Err(fim_tokenizer_failure(
+            FimTokenizerFailureTag::VocabularyRangeMismatch,
+        ));
+    }
+    if model.token_eos().0 != tokenizer.eos_id {
+        return Err(fim_tokenizer_failure(FimTokenizerFailureTag::EosMismatch));
+    }
     for (spelling, expected) in [
         (fim_v1::FIM_PREFIX, tokenizer.fim_prefix_id),
         (fim_v1::FIM_SUFFIX, tokenizer.fim_suffix_id),
         (fim_v1::FIM_MIDDLE, tokenizer.fim_middle_id),
     ] {
-        let encoded = model.str_to_token(spelling, AddBos::Never)?;
-        ensure!(
-            encoded.len() == 1 && encoded[0].0 == expected,
-            "FIM marker tokenization mismatch"
-        );
+        let encoded = model
+            .str_to_token(spelling, AddBos::Never)
+            .map_err(|_| fim_tokenizer_failure(FimTokenizerFailureTag::MarkerTokenizationFailed))?;
+        if encoded.len() != 1 || encoded[0].0 != expected {
+            return Err(fim_tokenizer_failure(
+                FimTokenizerFailureTag::MarkerIdMismatch,
+            ));
+        }
     }
     let mut actual = Vec::new();
     for id in 0..model.n_vocab() {
         let token = LlamaToken(id);
         let attributes = model.token_attr(token);
         let known = tokenizer.tokenizer_vocab_ids.binary_search(&id).is_ok();
-        ensure!(
-            if known {
-                !attributes.intersects(LlamaTokenAttr::Unknown | LlamaTokenAttr::Unused)
-            } else {
-                attributes.intersects(LlamaTokenAttr::Unknown | LlamaTokenAttr::Unused)
-            },
-            "tokenizer vocabulary IDs disagree with the selected model"
-        );
+        let attributes_match = if known {
+            !attributes.intersects(LlamaTokenAttr::Unknown | LlamaTokenAttr::Unused)
+        } else {
+            attributes.intersects(LlamaTokenAttr::Unknown | LlamaTokenAttr::Unused)
+        };
+        if !attributes_match {
+            return Err(fim_tokenizer_failure(
+                FimTokenizerFailureTag::VocabularyAttributesMismatch,
+            ));
+        }
         if attributes.intersects(LlamaTokenAttr::Control | LlamaTokenAttr::UserDefined) {
             actual.push(fim_v1::SpecialToken {
                 id,
-                spelling: special_token_piece(model, token)?,
+                spelling: special_token_piece(model, token).map_err(|_| {
+                    fim_tokenizer_failure(FimTokenizerFailureTag::SpecialTokenDecodeFailed)
+                })?,
             });
         }
     }
-    ensure!(
-        actual == tokenizer.special_tokens,
-        "FIM control-token inventory mismatch"
-    );
+    if actual != tokenizer.special_tokens {
+        return Err(fim_tokenizer_failure(
+            FimTokenizerFailureTag::SpecialTokenInventoryMismatch,
+        ));
+    }
     fim_v1::TokenContract::from_profile(tokenizer)
+        .map_err(|_| fim_tokenizer_failure(FimTokenizerFailureTag::TokenContractInvalid))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FimTokenizerFailureTag {
+    ServingProfileInvalid,
+    VocabularyRangeMismatch,
+    EosMismatch,
+    MarkerTokenizationFailed,
+    MarkerIdMismatch,
+    VocabularyAttributesMismatch,
+    SpecialTokenDecodeFailed,
+    SpecialTokenInventoryMismatch,
+    TokenContractInvalid,
+}
+
+impl FimTokenizerFailureTag {
+    fn code(self) -> &'static str {
+        match self {
+            Self::ServingProfileInvalid => "fim_serving_profile_invalid",
+            Self::VocabularyRangeMismatch => "fim_tokenizer_vocab_range_mismatch",
+            Self::EosMismatch => "fim_eos_id_mismatch",
+            Self::MarkerTokenizationFailed => "fim_marker_tokenization_failed",
+            Self::MarkerIdMismatch => "fim_marker_token_id_mismatch",
+            Self::VocabularyAttributesMismatch => "fim_tokenizer_vocab_attributes_mismatch",
+            Self::SpecialTokenDecodeFailed => "fim_special_token_decode_failed",
+            Self::SpecialTokenInventoryMismatch => "fim_special_token_inventory_mismatch",
+            Self::TokenContractInvalid => "fim_token_contract_invalid",
+        }
+    }
+}
+
+#[derive(Debug)]
+struct FimTokenizerVerificationFailure(FimTokenizerFailureTag);
+
+impl std::fmt::Display for FimTokenizerVerificationFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("FIM tokenizer verification failed")
+    }
+}
+
+impl std::error::Error for FimTokenizerVerificationFailure {}
+
+fn fim_tokenizer_failure(tag: FimTokenizerFailureTag) -> anyhow::Error {
+    anyhow::Error::new(FimTokenizerVerificationFailure(tag))
+}
+
+fn worker_failure_code(stage: WorkerFailureStage, error: &anyhow::Error) -> &'static str {
+    if stage == WorkerFailureStage::FimTokenizerVerify {
+        if let Some(failure) = error.downcast_ref::<FimTokenizerVerificationFailure>() {
+            return failure.0.code();
+        }
+    }
+    stage.code()
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1000,15 +1064,21 @@ fn worker(
         }
     })();
     if outcome.is_err() {
+        let failure_code = outcome
+            .as_ref()
+            .err()
+            .map_or(failure_stage.code(), |error| {
+                worker_failure_code(failure_stage, error)
+            });
         eprintln!(
             "tabcomplete_model_worker_failure stage={} code={}",
             failure_stage.stage(),
-            failure_stage.code()
+            failure_code
         );
         *app.identity.lock().unwrap() = json!({
             "status":"failed",
             "failure_stage":failure_stage.stage(),
-            "failure_code":failure_stage.code()
+            "failure_code":failure_code
         });
         app.busy.store(false, Ordering::Release);
         if let Some(reply) = ready.take() {
@@ -1341,6 +1411,64 @@ mod worker_guard_tests {
         }
         assert_ne!(cases[0].2, cases[1].2);
         assert_ne!(cases[1].2, cases[2].2);
+    }
+
+    #[test]
+    fn fim_tokenizer_failure_codes_are_typed_static_and_allowlisted() {
+        let cases = [
+            (
+                FimTokenizerFailureTag::ServingProfileInvalid,
+                "fim_serving_profile_invalid",
+            ),
+            (
+                FimTokenizerFailureTag::VocabularyRangeMismatch,
+                "fim_tokenizer_vocab_range_mismatch",
+            ),
+            (FimTokenizerFailureTag::EosMismatch, "fim_eos_id_mismatch"),
+            (
+                FimTokenizerFailureTag::MarkerTokenizationFailed,
+                "fim_marker_tokenization_failed",
+            ),
+            (
+                FimTokenizerFailureTag::MarkerIdMismatch,
+                "fim_marker_token_id_mismatch",
+            ),
+            (
+                FimTokenizerFailureTag::VocabularyAttributesMismatch,
+                "fim_tokenizer_vocab_attributes_mismatch",
+            ),
+            (
+                FimTokenizerFailureTag::SpecialTokenDecodeFailed,
+                "fim_special_token_decode_failed",
+            ),
+            (
+                FimTokenizerFailureTag::SpecialTokenInventoryMismatch,
+                "fim_special_token_inventory_mismatch",
+            ),
+            (
+                FimTokenizerFailureTag::TokenContractInvalid,
+                "fim_token_contract_invalid",
+            ),
+        ];
+        for &(tag, expected_code) in &cases {
+            assert_eq!(tag.code(), expected_code);
+            let error = fim_tokenizer_failure(tag);
+            assert_eq!(error.to_string(), "FIM tokenizer verification failed");
+            assert_eq!(
+                worker_failure_code(WorkerFailureStage::FimTokenizerVerify, &error),
+                expected_code
+            );
+            assert_eq!(
+                worker_failure_code(WorkerFailureStage::ModelLoad, &error),
+                "gguf_model_load_failed"
+            );
+        }
+
+        let untyped_error = anyhow::anyhow!("arbitrary diagnostic details");
+        assert_eq!(
+            worker_failure_code(WorkerFailureStage::FimTokenizerVerify, &untyped_error),
+            "fim_tokenizer_contract_failed"
+        );
     }
 
     fn synthetic_fim_profile() -> fim_v1::ServingProfile {
