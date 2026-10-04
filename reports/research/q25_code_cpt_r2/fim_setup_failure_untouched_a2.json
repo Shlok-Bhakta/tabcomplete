@@ -1,0 +1,77 @@
+{
+  "bootstrap_uv_actual": "uv 0.12.9 (x86_64-unknown-linux-gnu)",
+  "bootstrap_uv_expected": "0.12.3",
+  "commit": "00c0a6585a87e7113e70266c825be7a65164e0eb",
+  "diagnosis": "The Python uv module found a host binary instead of the verified target installation. Runtime setup did not reach Python/model loading.",
+  "elapsed_worker_seconds": 16.264129232000016,
+  "failure_reason": "uv_bootstrap_version_mismatch",
+  "fix": {
+    "cpu_integration": {
+      "actual_wheel": true,
+      "direct_binary_version": "0.12.3",
+      "host_uv_shadow_version": "0.12.9",
+      "managed_python_version": "3.11.15",
+      "raw_fixture_logs_retained": false,
+      "runtime_fixture_approximate_bytes": 272000000,
+      "temporary_fixture_removed": true,
+      "verified_stages": [
+        "pip --target bootstrap install",
+        "native uv identity and version",
+        "managed Python install",
+        "venv with downloads disabled",
+        "interpreter ownership and exact version",
+        "packaging 24.1 hash-locked install and import"
+      ]
+    },
+    "independent_audit": "A second agent verified the wheel/native binary hashes, exact Python/venv CLI success and lock-install supported flags.",
+    "model_or_fixture_or_package_change": false,
+    "native_binary_bytes": 56004256,
+    "native_binary_sha256": "729d27dbea534ee540a2d3ef43a62fa1a10af7fcbb6d57a70d5859509f624578",
+    "scope": "All uv operations invoke the verified owned uv-site/bin/uv executable directly, without Python module lookup. Setup PYTHONPATH is removed.",
+    "wheel_sha256": "1482d1462b1aecd18ee33627363fe1c63d6a194f12d40d37efc446d9e0d800a1"
+  },
+  "kernel": "shlokbhakta/tc-q25-fim-r2-0-a2",
+  "monitoring": {
+    "limitation": "No training run ID before setup.",
+    "query": "scripts/observability.py run tc-q25-fim-r2-0-a2 --json",
+    "records": 0,
+    "state": "no_runs"
+  },
+  "next_action": "Invoke the exact pinned wheel native binary from its owned install path and test the actual bootstrap on CPU before attempt 3.",
+  "nvidia_distributions": 15,
+  "nvidia_library_bytes_reused": 4353932793,
+  "nvidia_reuse_verified": true,
+  "observed_at": "2026-10-04T04:12:18.723350+00:00",
+  "plan_sha256": "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8",
+  "quality_outputs_generated": false,
+  "raw_artifacts": {
+    "monitoring-untouched-a2.json": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/monitoring-untouched-a2.json",
+      "sha256": "24f75e92f39b64be6786505c22882465a47207cd81861709a9465e5c5991f801"
+    },
+    "runtime_inventory.json": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/output-untouched_q25_to_fim-2/q25_fim_r2/runtime_inventory.json",
+      "sha256": "98db40ab25885bb09a8cf5faf79a9a2d24b250b0363f7e4f3b1fa3e50e52a306"
+    },
+    "verify-uv-bootstrap.log": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/output-untouched_q25_to_fim-2/q25_fim_r2/logs/verify-uv-bootstrap.log",
+      "sha256": "8a6073241783e4d7a989dafb486c003cd97b56da9bf165d812a72bfb9aa00bf7"
+    },
+    "worker-status.json": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/output-untouched_q25_to_fim-2/q25_fim_r2/worker-status.json",
+      "sha256": "6365bfb5665b7026a5994781c0cae184979cfca7db536b4d436ca6f442a18674"
+    }
+  },
+  "schema": "q25-fim-setup-failure-v1",
+  "stable_editor_changed": false,
+  "training_input_tokens": 0,
+  "training_started": false,
+  "worker_storage": {
+    "cap_bytes": 12884901888,
+    "combined_bytes": 1136206524,
+    "free_bytes": 20940337152,
+    "mounted_bytes": 1013426476,
+    "runtime_setup_bytes": 122773460,
+    "worker_output_bytes": 6588
+  }
+}

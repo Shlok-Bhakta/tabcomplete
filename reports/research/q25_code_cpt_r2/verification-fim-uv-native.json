@@ -1,0 +1,49 @@
+{
+  "checks": {
+    "collector_tests": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/collector-tests-cpt-results.log",
+      "outcome": "59 pass",
+      "sha256": "203f1379f01ee1e520ca3669ea119b60ee0a13645871d5dc20b4449c958670ba"
+    },
+    "collector_types": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/collector-types-cpt-results.log",
+      "outcome": "passed",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    "gateway_tests": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/gateway-tests-cpt-results.log",
+      "outcome": "16 pass",
+      "sha256": "426b8dc06285e18d8f5dcaa63ea791ae16ad6cacc9d1399e7862c42cc2e00fa4"
+    },
+    "gateway_types": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/gateway-types-cpt-results.log",
+      "outcome": "passed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mypy": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/mypy-fim-uv-native.log",
+      "outcome": "no issues in 90 source files",
+      "sha256": "1e57876c9bde57f440154ff58c659f0b7b10acf95acfc51fcf295252715b8727"
+    },
+    "pytest": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/full-pytest-fim-uv-native.log",
+      "outcome": "995 passed, 2 warnings in 89.15s",
+      "sha256": "b085ac01765801e3e7cfb0f7903d35e149304828e8e85d55e7b1f9890fef5c29"
+    },
+    "ruff": {
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/ruff-fim-uv-native.log",
+      "outcome": "passed",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  },
+  "environment": {
+    "local_cuda": false,
+    "python": "3.11.15",
+    "torch_cpu_source": "/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages",
+    "uv_environment": "/home/crabcake/Projects/tabcomplete-product-r2/.venv"
+  },
+  "observed_at": "2026-10-04T04:22:43.786950+00:00",
+  "plan_sha256": "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8",
+  "schema": "q25-fim-implementation-verification-v1",
+  "scope": "CPU gates after explicit native uv bootstrap fix; no FIM quality outputs"
+}

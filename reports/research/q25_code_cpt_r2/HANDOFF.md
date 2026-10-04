@@ -147,7 +147,7 @@ FIM failure can retry with immediate allocation lineage and its unchanged
 initializer or older verified checkpoint. An unknown post-start state cannot
 claim zero work. Upload staging rejects all unlisted files before copying.
 
-## Current completion allocation state
+## Completion allocation history
 
 Attempt 1 of the untouched arm failed before training after 12.176 worker
 seconds: all 15 NVIDIA versions matched, but NVSHMEM failed the strict file
@@ -167,3 +167,10 @@ for temporary F16 and Q4 artifacts even when tmpfs holds the intermediate.
 If local cap headroom is insufficient, use an owned CPU-only research conversion
 job attached to the selected training output, then retrieve only its Q4 artifact.
 Do not quantize/deploy until actual paired completion results support selection.
+
+Attempt 2 then passed the CUDA inventory but stopped at pinned uv verification:
+`python -m uv` found Kaggle host uv 0.12.9, not the verified wheel 0.12.3.
+Its zero-work receipt is `fim-verified-untouched_q25_to_fim-2.json`; no FIM
+training occurred. Fix/test explicit native uv invocation before attempt 3.
+Use attempt 3 with `--resume-source shlokbhakta/tc-q25-fim-r2-0-a2`, not the
+older attempt. The inherited checkpoint source remains null.

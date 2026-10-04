@@ -5,6 +5,7 @@ import importlib.util
 import itertools
 import json
 import platform
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -316,6 +317,52 @@ def test_runtime_lock_verifies_report_sources_and_requirements_hashes() -> None:
     mismatched["configuration"]["runtime_lock"]["requirements_lock_sha256"] = _sha(b"wrong")
     with pytest.raises(module.WorkerError, match="runtime_requirements_lock_identity_invalid"):
         module.verify_runtime_lock_files(ROOT, mismatched)
+
+
+def test_uv_command_uses_owned_installed_binary_despite_host_shadow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load_worker()
+    uv_site = tmp_path / "uv-site"
+    owned_binary = uv_site / "bin" / "uv"
+    owned_binary.parent.mkdir(parents=True)
+    owned_payload = b"#!/bin/sh\nprintf '%s\\n' 'uv 0.12.3 (x86_64-unknown-linux-gnu)'\n"
+    owned_binary.write_bytes(owned_payload)
+    owned_binary.chmod(0o755)
+    monkeypatch.setattr(module, "UV_BINARY_SHA256", _sha(owned_payload))
+
+    host_bin = tmp_path / "host-bin"
+    host_bin.mkdir()
+    host_uv = host_bin / "uv"
+    host_uv.write_text(
+        "#!/bin/sh\nprintf '%s\\n' 'uv 0.12.9 (x86_64-unknown-linux-gnu)'\n",
+        encoding="utf-8",
+    )
+    host_uv.chmod(0o755)
+
+    resolved = module.verified_installed_uv_binary(uv_site)
+    result = subprocess.run(
+        [str(resolved), "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={"PATH": str(host_bin)},
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "uv 0.12.3 (x86_64-unknown-linux-gnu)"
+    assert resolved == owned_binary
+
+
+def test_uv_binary_identity_rejects_unpinned_target_executable(tmp_path: Path) -> None:
+    module = _load_worker()
+    uv_site = tmp_path / "uv-site"
+    binary = uv_site / "bin" / "uv"
+    binary.parent.mkdir(parents=True)
+    binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    binary.chmod(0o755)
+
+    with pytest.raises(module.WorkerError, match="uv_bootstrap_binary_identity_invalid"):
+        module.verified_installed_uv_binary(uv_site)
 
 
 def test_hashed_lock_filter_removes_exactly_verified_nvidia_packages(tmp_path: Path) -> None:

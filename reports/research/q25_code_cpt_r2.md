@@ -264,3 +264,18 @@ and Python ABI exclusions. This setup-only fix changes no training data,
 weights, prompt, decoding or runtime package selection. The corrected worker
 passed 993 Python tests, Ruff and mypy; the last 992-test run remains historical.
 The retry uses the same frozen plan and records a new pinned worker commit.
+
+Attempt 2 verified all 15 NVIDIA libraries, including NVSHMEM. It then stopped
+after 16.264 worker seconds because `python -m uv` selected host uv 0.12.9,
+although the verified uv 0.12.3 wheel had installed successfully under the owned
+bootstrap path. No training or quality outputs occurred. The CPU fix must invoke
+the exact pinned native binary and test that real invocation before retrying.
+See `q25_code_cpt_r2/fim_setup_failure_untouched_a2.json`. The authenticated
+pre-submission observation was 42.68 GPU-hours at 2026-10-04 04:07:20 UTC.
+
+The corrected bootstrap invokes the hash-verified `uv-site/bin/uv` directly.
+Two independent CPU checks verified the exact wheel/native binary and managed
+Python/venv commands. A complete test chain installed a hash-locked small package
+while a newer host uv shadowed PATH. Its temporary files were removed; the
+compact receipt records the checks and this raw-log limitation. No model, data,
+package version or decoding change accompanies the bootstrap fix.

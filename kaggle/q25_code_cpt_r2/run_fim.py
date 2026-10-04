@@ -35,6 +35,7 @@ UV_WHEEL_URL = (
 UV_WHEEL_FILENAME = "uv-0.12.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
 UV_WHEEL_SHA256 = "1482d1462b1aecd18ee33627363fe1c63d6a194f12d40d37efc446d9e0d800a1"
 UV_WHEEL_BYTES = 22_346_263
+UV_BINARY_SHA256 = "729d27dbea534ee540a2d3ef43a62fa1a10af7fcbb6d57a70d5859509f624578"
 EXPECTED_RUNTIME = {
     "python": "3.11.15",
     "torch": "2.11.0+cu128",
@@ -90,6 +91,25 @@ def sha256_file(path: Path) -> str:
     except OSError:
         raise WorkerError("file_read_failed") from None
     return digest.hexdigest()
+
+
+def verified_installed_uv_binary(uv_site: Path) -> Path:
+    binary = uv_site / "bin" / "uv"
+    try:
+        resolved_root = uv_site.resolve(strict=True)
+        resolved_binary = binary.resolve(strict=True)
+        resolved_binary.relative_to(resolved_root)
+    except (OSError, ValueError):
+        raise WorkerError("uv_bootstrap_binary_path_invalid") from None
+    if (
+        uv_site.is_symlink()
+        or binary.is_symlink()
+        or not resolved_binary.is_file()
+        or not os.access(resolved_binary, os.X_OK)
+        or sha256_file(resolved_binary) != UV_BINARY_SHA256
+    ):
+        raise WorkerError("uv_bootstrap_binary_identity_invalid")
+    return resolved_binary
 
 
 def canonical_sha256(value: Any) -> str:
@@ -1180,10 +1200,9 @@ class Worker:
         if self._runtime_artifact_bytes() < _runtime_regular_bytes(REPO):
             raise WorkerError("repository_storage_inventory_invalid")
 
-    def _setup_environment(self, uv_site: Path) -> dict[str, str]:
-        return {
+    def _setup_environment(self) -> dict[str, str]:
+        environment = {
             **os.environ,
-            "PYTHONPATH": str(uv_site),
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONNOUSERSITE": "1",
             "TMPDIR": str(RUNTIME_ROOT / "tmp"),
@@ -1191,6 +1210,8 @@ class Worker:
             "UV_NO_PROGRESS": "1",
             "UV_PYTHON_INSTALL_DIR": str(RUNTIME_ROOT / "managed-python"),
         }
+        environment.pop("PYTHONPATH", None)
+        return environment
 
     def _download_uv_wheel(self, destination: Path, plan: dict[str, Any]) -> None:
         setup_limit = int(plan["configuration"]["budget"]["runtime_setup_reserve_seconds"])
@@ -1287,16 +1308,18 @@ class Worker:
                 ],
                 "setup-uv-bootstrap",
                 plan=plan,
-                env=self._setup_environment(uv_site),
+                env=self._setup_environment(),
                 timeout_seconds=180,
             )
             != 0
         ):
             raise WorkerError("uv_bootstrap_install_failed")
-        uv_env = self._setup_environment(uv_site)
+        uv_env = self._setup_environment()
+        uv_binary = verified_installed_uv_binary(uv_site)
+        uv = [str(uv_binary)]
         if (
             self._setup_stage(
-                [sys.executable, "-m", "uv", "--version"],
+                uv + ["--version"],
                 "verify-uv-bootstrap",
                 plan=plan,
                 env=uv_env,
@@ -1314,7 +1337,6 @@ class Worker:
         if uv_version_output != "uv 0.12.3 (x86_64-unknown-linux-gnu)":
             raise WorkerError("uv_bootstrap_version_mismatch")
 
-        uv = [sys.executable, "-m", "uv"]
         if (
             self._setup_stage(
                 uv
