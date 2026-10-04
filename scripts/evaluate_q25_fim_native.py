@@ -746,7 +746,7 @@ def freeze(args: argparse.Namespace) -> dict:
 def validate_terminal(terminal: dict, health: dict, binding: dict) -> bool:
     profile = health.get("fim_profile")
     profile_tokenizer = profile.get("tokenizer") if isinstance(profile, dict) else None
-    if not isinstance(profile_tokenizer, dict):
+    if not isinstance(profile, dict) or not isinstance(profile_tokenizer, dict):
         return False
     expected = {
         **binding,
@@ -1213,6 +1213,8 @@ def evaluate(args: argparse.Namespace) -> dict:
                     else RunContext.new().for_case(case["case_id"])
                 )
                 request_id = context.request_id
+                if not isinstance(request_id, str) or not request_id:
+                    raise ValueError("native evaluation request lacks its correlation identity")
                 with context.activate(), operation(
                     "eval.case", attributes={"tabcomplete.case_kind": "synthetic_fim"}
                 ):
