@@ -6,6 +6,7 @@ M.WIRE_VERSION = "q25-fim-line-completion-v1"
 M.CONTEXT_POLICY_VERSION = "q25-fim-psm-cursor-to-line-end-v1"
 M.CONTEXT_LAYOUT = "q25-fim-psm-v1"
 M.MAX_OUTPUT_TOKENS = 96
+M.COMPLETION_MODE = "remaining_logical_line_after_utf8_cursor"
 
 M.EOS_TOKEN_ID = 151643
 M.FIM_PREFIX_TOKEN_ID = 151659
@@ -18,6 +19,7 @@ M.FIM_SUFFIX = "<|fim_suffix|>"
 M.FIM_MIDDLE = "<|fim_middle|>"
 
 local single_line_v1 = require("tabcomplete_trajectory.single_line_v1")
+local util = require("tabcomplete_trajectory.util")
 
 local function integer(value, minimum)
   return type(value) == "number" and value % 1 == 0 and value >= minimum
@@ -56,6 +58,13 @@ local function valid_utf8(text)
   return true
 end
 
+local function is_ascii(text)
+  for index = 1, #text do
+    if text:byte(index) > 0x7f then return false end
+  end
+  return true
+end
+
 local function is_boundary(text, column)
   if column == 0 or column == #text then return true end
   local byte = text:byte(column + 1)
@@ -63,6 +72,12 @@ local function is_boundary(text, column)
 end
 
 local function validate_token_contract(contract)
+  if type(contract) == "table" and contract._validated == true
+      and type(contract._by_id) == "table" and type(contract._by_spelling) == "table"
+      and type(contract._known_vocab_ids) == "table" then
+    return { by_id = contract._by_id, by_spelling = contract._by_spelling,
+      known_ids = contract._known_vocab_ids }
+  end
   if type(contract) ~= "table" or contract.eos_id ~= M.EOS_TOKEN_ID
       or contract.fim_prefix_id ~= M.FIM_PREFIX_TOKEN_ID
       or contract.fim_suffix_id ~= M.FIM_SUFFIX_TOKEN_ID
@@ -73,12 +88,25 @@ local function validate_token_contract(contract)
   if type(contract.special_tokens) ~= "table" then
     return nil, "missing complete tokenizer special-token inventory"
   end
+  if type(contract.tokenizer_id) ~= "string" or contract.tokenizer_id == ""
+      or contract.tokenizer_id:find("[\r\n\t]")
+      or type(contract.tokenizer_revision) ~= "string" or contract.tokenizer_revision == ""
+      or contract.tokenizer_revision:find("[\r\n\t]")
+      or type(contract.tokenizer_contract_sha256) ~= "string"
+      or not is_sha256(contract.tokenizer_contract_sha256)
+      or not integer(contract.tokenizer_vocab_size, 1)
+      or type(contract.tokenizer_vocab_ids_sha256) ~= "string"
+      or not is_sha256(contract.tokenizer_vocab_ids_sha256)
+      or contract.completion_mode ~= M.COMPLETION_MODE then
+    return nil, "incomplete frozen FIM tokenizer identity"
+  end
   local by_id, by_spelling = {}, {}
   local count = 0
   for key, token in pairs(contract.special_tokens) do
     if not integer(key, 1) or type(token) ~= "table"
         or not integer(token.id, 0) or type(token.spelling) ~= "string"
-        or token.spelling == "" or not valid_utf8(token.spelling) then
+        or token.spelling == "" or not valid_utf8(token.spelling)
+        or token.spelling:find("[\r\n\t]") or not is_ascii(token.spelling) then
       return nil, "invalid tokenizer special-token inventory"
     end
     if by_id[token.id] or by_spelling[token.spelling] then
@@ -103,7 +131,96 @@ local function validate_token_contract(contract)
       return nil, "required FIM/EOS token missing from special-token inventory"
     end
   end
-  return { by_id = by_id, by_spelling = by_spelling }
+  if type(contract.tokenizer_vocab_ids) ~= "table" then
+    return nil, "missing complete tokenizer vocabulary ID set"
+  end
+  local known_ids, ids, previous = {}, {}, -1
+  for index, id in ipairs(contract.tokenizer_vocab_ids) do
+    if not integer(index, 1) or not integer(id, 0) or id <= previous then
+      return nil, "invalid tokenizer vocabulary ID set"
+    end
+    previous = id
+    known_ids[id] = true
+    ids[#ids + 1] = tostring(id) .. "\n"
+  end
+  if #ids ~= contract.tokenizer_vocab_size
+      or util.sha256hex(table.concat(ids)):lower() ~= contract.tokenizer_vocab_ids_sha256:lower() then
+    return nil, "tokenizer vocabulary ID digest mismatch"
+  end
+  for _, id in ipairs({ M.EOS_TOKEN_ID, M.FIM_PREFIX_TOKEN_ID,
+    M.FIM_SUFFIX_TOKEN_ID, M.FIM_MIDDLE_TOKEN_ID }) do
+    if not known_ids[id] then return nil, "FIM marker is outside the tokenizer vocabulary" end
+  end
+  local sorted = vim.deepcopy(contract.special_tokens)
+  table.sort(sorted, function(left, right) return left.id < right.id end)
+  local canonical = table.concat({ "q25-fim-tokenizer-contract-v1", contract.tokenizer_id,
+    contract.tokenizer_revision, contract.tokenizer_sha256:lower(), tostring(contract.eos_id),
+    tostring(contract.fim_prefix_id), tostring(contract.fim_suffix_id),
+    tostring(contract.fim_middle_id), contract.completion_mode,
+    tostring(contract.tokenizer_vocab_size), contract.tokenizer_vocab_ids_sha256:lower(), "" }, "\n")
+  local lines = { canonical }
+  for _, token in ipairs(sorted) do
+    lines[#lines + 1] = tostring(token.id) .. "\t" .. token.spelling .. "\n"
+  end
+  if util.sha256hex(table.concat(lines)):lower() ~= contract.tokenizer_contract_sha256:lower() then
+    return nil, "FIM tokenizer contract digest mismatch"
+  end
+  return { by_id = by_id, by_spelling = by_spelling, known_ids = known_ids }
+end
+
+function M.tokenizer_vocab_ids_sha256(ids)
+  if type(ids) ~= "table" then error("invalid FIM tokenizer vocabulary IDs") end
+  local lines, previous = {}, -1
+  for index, id in ipairs(ids) do
+    if not integer(index, 1) or not integer(id, 0) or id <= previous then
+      error("invalid FIM tokenizer vocabulary IDs")
+    end
+    previous = id
+    lines[#lines + 1] = tostring(id) .. "\n"
+  end
+  return util.sha256hex(table.concat(lines))
+end
+
+function M.tokenizer_contract_sha256(config)
+  if type(config) ~= "table" or type(config.special_tokens) ~= "table"
+      or type(config.tokenizer_id) ~= "string" or type(config.tokenizer_revision) ~= "string"
+      or type(config.tokenizer_sha256) ~= "string"
+      or not integer(config.tokenizer_vocab_size, 1)
+      or type(config.tokenizer_vocab_ids_sha256) ~= "string"
+      or not is_sha256(config.tokenizer_vocab_ids_sha256) then
+    error("invalid FIM tokenizer profile")
+  end
+  if config.eos_id ~= M.EOS_TOKEN_ID or config.fim_prefix_id ~= M.FIM_PREFIX_TOKEN_ID
+      or config.fim_suffix_id ~= M.FIM_SUFFIX_TOKEN_ID or config.fim_middle_id ~= M.FIM_MIDDLE_TOKEN_ID
+      or config.completion_mode ~= M.COMPLETION_MODE
+      or not is_sha256(config.tokenizer_sha256)
+      or not is_sha256(config.tokenizer_vocab_ids_sha256) then
+    error("incomplete frozen FIM tokenizer profile")
+  end
+  local sorted = vim.deepcopy(config.special_tokens)
+  table.sort(sorted, function(left, right) return left.id < right.id end)
+  local lines = { table.concat({ "q25-fim-tokenizer-contract-v1", config.tokenizer_id,
+    config.tokenizer_revision, config.tokenizer_sha256:lower(), tostring(config.eos_id),
+    tostring(config.fim_prefix_id), tostring(config.fim_suffix_id),
+    tostring(config.fim_middle_id), config.completion_mode or M.COMPLETION_MODE,
+    tostring(config.tokenizer_vocab_size), config.tokenizer_vocab_ids_sha256:lower(), "" }, "\n") }
+  for _, token in ipairs(sorted) do
+    lines[#lines + 1] = tostring(token.id) .. "\t" .. token.spelling .. "\n"
+  end
+  return util.sha256hex(table.concat(lines))
+end
+
+function M.context_digest(request_id, source, target_row, cursor_col, prompt, tokenizer_contract_sha256)
+  if type(request_id) ~= "string" or request_id == ""
+      or request_id:find("[^%w%-]") or type(source) ~= "string"
+      or not integer(target_row, 0) or not integer(cursor_col, 0)
+      or type(prompt) ~= "string" or not is_sha256(tokenizer_contract_sha256) then
+    error("invalid FIM request context identity")
+  end
+  local canonical = table.concat({ "q25-fim-context-v1", request_id,
+    util.sha256hex(source), tostring(target_row), tostring(cursor_col),
+    util.sha256hex(prompt), tokenizer_contract_sha256:lower(), "" }, "\n")
+  return util.sha256hex(canonical)
 end
 
 function M.new_token_contract(config)
@@ -115,9 +232,17 @@ function M.new_token_contract(config)
     fim_suffix_id = config.fim_suffix_id,
     fim_middle_id = config.fim_middle_id,
     tokenizer_sha256 = config.tokenizer_sha256:lower(),
+    tokenizer_contract_sha256 = config.tokenizer_contract_sha256:lower(),
+    tokenizer_vocab_size = config.tokenizer_vocab_size,
+    tokenizer_vocab_ids_sha256 = config.tokenizer_vocab_ids_sha256:lower(),
+    tokenizer_id = config.tokenizer_id,
+    tokenizer_revision = config.tokenizer_revision,
+    completion_mode = config.completion_mode,
     special_tokens = vim.deepcopy(config.special_tokens),
     _by_id = inventory.by_id,
     _by_spelling = inventory.by_spelling,
+    _known_vocab_ids = inventory.known_ids,
+    _validated = true,
   }
 end
 
@@ -180,6 +305,7 @@ function M.prepare(source, target_row, cursor_col, contract)
     context_policy_version = M.CONTEXT_POLICY_VERSION,
     context_layout = M.CONTEXT_LAYOUT,
     tokenizer_sha256 = contract.tokenizer_sha256,
+    tokenizer_contract_sha256 = contract.tokenizer_contract_sha256,
     source = source,
     target_row = target_row,
     cursor_col = cursor_col,
@@ -197,7 +323,7 @@ local function valid_sampled_ids(ids, predicted, contract)
   local count, max_index = 0, 0
   for index, id in pairs(ids) do
     if not integer(index, 1) or not integer(id, 0)
-        or contract.by_id[id] then return nil end
+        or contract.by_id[id] or not contract.known_ids[id] then return nil end
     count = count + 1
     max_index = math.max(max_index, index)
   end
@@ -220,8 +346,19 @@ function M.decode_completion(prepared, response, contract, expected_identity)
       or not is_sha256(expected_identity.model_sha256)
       or not is_sha256(expected_identity.tokenizer_sha256)
       or expected_identity.tokenizer_sha256:lower() ~= contract.tokenizer_sha256
+      or not is_sha256(expected_identity.tokenizer_contract_sha256)
+      or expected_identity.tokenizer_contract_sha256:lower() ~= contract.tokenizer_contract_sha256
+      or expected_identity.tokenizer_vocab_size ~= contract.tokenizer_vocab_size
+      or expected_identity.tokenizer_vocab_ids_sha256 ~= contract.tokenizer_vocab_ids_sha256
+      or prepared.tokenizer_contract_sha256 ~= contract.tokenizer_contract_sha256
       or prepared.tokenizer_sha256 ~= contract.tokenizer_sha256 then
     return nil, "FIM model identity is not frozen"
+  end
+  local fim_profile = expected_identity.fim_profile
+  if type(fim_profile) ~= "table" or not is_sha256(fim_profile.artifact_manifest_sha256)
+      or type(fim_profile.tokenizer) ~= "table"
+      or fim_profile.tokenizer.tokenizer_contract_sha256 ~= contract.tokenizer_contract_sha256 then
+    return nil, "FIM model artifact identity is not frozen"
   end
   if response.model_protocol ~= expected_identity.model_protocol
       or response.model_sha256 ~= expected_identity.model_sha256 then

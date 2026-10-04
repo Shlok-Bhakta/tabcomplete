@@ -4,7 +4,8 @@ local M = {}
 function M.new(max_bytes)
   return { buffer = "", pieces = {}, raw_chunks = {}, bytes = 0, max_bytes = max_bytes or 262144,
     terminal = nil, error = nil, first_token = false, first_text = false,
-    first_token_source = nil, model_tokens = 0, has_token_ids = false, events = 0 }
+    first_token_source = nil, model_tokens = 0, has_token_ids = false,
+    sampled_token_ids = {}, events = 0 }
 end
 
 function M.feed(parser, chunk)
@@ -56,6 +57,9 @@ function M.feed(parser, chunk)
             parser.error = "invalid SSE token ids"; return false, parser.error
           end
           parser.model_tokens = parser.model_tokens + count
+          for index = 1, #event.tokens do
+            parser.sampled_token_ids[#parser.sampled_token_ids + 1] = event.tokens[index]
+          end
           if count > 0 and not parser.first_token then
             parser.first_token = true
             parser.first_token_source = "sampled_token_ids"
@@ -162,7 +166,39 @@ function M.finish_rust(parser, expected)
   else
     return nil, "unsupported Rust canonical action"
   end
-  if identity.model_protocol == "single-line-edit-v1" then
+  if identity.model_protocol == "q25-fim-line-completion-v1" then
+    local fim = require("tabcomplete_trajectory.fim_v1")
+    if type(expected.fim_prepared) ~= "table"
+        or type(expected.fim_token_contract) ~= "table"
+        or type(expected.request_id) ~= "string"
+        or type(expected.context_hash) ~= "string"
+        or expected.completion_mode ~= fim.COMPLETION_MODE
+        or terminal.request_id ~= expected.request_id
+        or terminal.context_hash ~= expected.context_hash
+        or terminal.completion_mode ~= fim.COMPLETION_MODE
+        or terminal.tokenizer_sha256 ~= identity.tokenizer_sha256
+        or terminal.tokenizer_contract_sha256 ~= identity.tokenizer_contract_sha256
+        or type(terminal.sampled_token_ids) ~= "table"
+        or not vim.deep_equal(terminal.sampled_token_ids, parser.sampled_token_ids)
+        or terminal.tokens_predicted ~= #parser.sampled_token_ids
+        or (#parser.sampled_token_ids > 0 and not parser.has_token_ids) then
+      return nil, "Rust FIM terminal context or sampled-token identity mismatch"
+    end
+    local decoded, err = fim.decode_completion(expected.fim_prepared, {
+      model_protocol = terminal.model_protocol,
+      model_sha256 = terminal.model_sha256,
+      stop_type = terminal.stop_type,
+      terminal_token_id = terminal.terminal_token_id,
+      raw_text = table.concat(parser.pieces),
+      sampled_token_ids = terminal.sampled_token_ids,
+      tokens_predicted = terminal.tokens_predicted,
+    }, expected.fim_token_contract, identity)
+    if not decoded then return nil, err end
+    if decoded.action.kind ~= action.kind or decoded.action.text ~= action.text then
+      return nil, "Rust FIM canonical action disagrees with the PSM completion"
+    end
+    action = decoded.action
+  elseif identity.model_protocol == "single-line-edit-v1" then
     local raw_action, err = require("tabcomplete_trajectory.single_line_v1").decode_action(
       table.concat(parser.pieces), "eos", predicted)
     if not raw_action then return nil, err end

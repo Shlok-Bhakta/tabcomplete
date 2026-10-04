@@ -24,6 +24,7 @@ use llama_cpp_2::{
     model::{AddBos, LlamaModel, params::LlamaModelParams},
     sampling::LlamaSampler,
     token::LlamaToken,
+    token_type::LlamaTokenAttr,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -88,6 +89,8 @@ struct Profile {
     path: PathBuf,
     sha256: String,
     protocol: String,
+    #[serde(default)]
+    fim_profile: Option<fim_v1::ServingProfile>,
     #[serde(skip)]
     embedded: Option<embedded::Payload>,
 }
@@ -120,6 +123,12 @@ struct Generate {
     repository_identity: String,
     #[serde(default = "default_cache")]
     cache_prompt: bool,
+    #[serde(default)]
+    request_id: Option<String>,
+    #[serde(default)]
+    context_hash: Option<String>,
+    #[serde(default)]
+    completion_mode: Option<String>,
 }
 fn default_cache() -> bool {
     true
@@ -136,6 +145,10 @@ fn digest(bytes: &[u8]) -> String {
 fn verify_model(profile: &Profile) -> Result<()> {
     if profile.embedded.is_some() {
         // The payload was bounded and streaming-hash verified before worker startup.
+        ensure!(
+            profile.protocol != fim_v1::WIRE_VERSION && profile.fim_profile.is_none(),
+            "embedded models cannot use the research FIM profile"
+        );
         return Ok(());
     }
     ensure!(
@@ -159,10 +172,23 @@ fn verify_model(profile: &Profile) -> Result<()> {
     ensure!(
         matches!(
             profile.protocol.as_str(),
-            "single-line-edit-v1" | "sweep-full-file-v1"
+            "single-line-edit-v1" | "sweep-full-file-v1" | fim_v1::WIRE_VERSION
         ),
         "unsupported protocol"
     );
+    if profile.protocol == fim_v1::WIRE_VERSION {
+        fim_v1::validate_serving_profile(
+            profile
+                .fim_profile
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("FIM profile identity is required"))?,
+        )?;
+    } else {
+        ensure!(
+            profile.fim_profile.is_none(),
+            "unexpected FIM profile identity"
+        );
+    }
     Ok(())
 }
 fn output_limit(args: &Args, p: &Profile) -> usize {
@@ -171,9 +197,104 @@ fn output_limit(args: &Args, p: &Profile) -> usize {
     }
     if p.protocol == "sweep-full-file-v1" {
         args.output_tokens.clamp(192, 512)
+    } else if p.protocol == fim_v1::WIRE_VERSION {
+        fim_v1::OUTPUT_TOKEN_CAP
     } else {
         args.output_tokens.min(64)
     }
+}
+
+struct FimContextBinding {
+    prepared: fim_v1::Prepared,
+    request_id: String,
+    context_hash: String,
+    completion_mode: String,
+}
+
+fn token_piece(model: &LlamaModel, token: LlamaToken, special: bool) -> Result<Vec<u8>> {
+    Ok(
+        match model.token_to_piece_bytes(token, 256, special, None) {
+            Err(llama_cpp_2::TokenToStringError::InsufficientBufferSpace(size))
+                if size.unsigned_abs() <= 4096 =>
+            {
+                model.token_to_piece_bytes(token, size.unsigned_abs() as usize, special, None)?
+            }
+            result => result?,
+        },
+    )
+}
+
+fn special_token_piece(model: &LlamaModel, token: LlamaToken) -> Result<String> {
+    let bytes = token_piece(model, token, true)?;
+    Ok(std::str::from_utf8(&bytes)?.to_owned())
+}
+
+fn verify_prompt_round_trip(model: &LlamaModel, prompt: &str) -> Result<Vec<LlamaToken>> {
+    let tokens = model.str_to_token(prompt, AddBos::Never)?;
+    let mut decoded = Vec::with_capacity(prompt.len());
+    for token in &tokens {
+        decoded.extend(token_piece(model, *token, true)?);
+    }
+    ensure!(
+        decoded == prompt.as_bytes(),
+        "FIM prompt does not round-trip through the selected native tokenizer"
+    );
+    Ok(tokens)
+}
+
+fn verify_fim_tokenizer(
+    model: &LlamaModel,
+    profile: &fim_v1::ServingProfile,
+) -> Result<fim_v1::TokenContract> {
+    fim_v1::validate_serving_profile(profile)?;
+    let tokenizer = &profile.tokenizer;
+    ensure!(
+        tokenizer
+            .tokenizer_vocab_ids
+            .last()
+            .is_some_and(|id| *id < model.n_vocab()),
+        "tokenizer vocabulary exceeds the selected model"
+    );
+    ensure!(
+        model.token_eos().0 == tokenizer.eos_id,
+        "FIM EOS token mismatch"
+    );
+    for (spelling, expected) in [
+        (fim_v1::FIM_PREFIX, tokenizer.fim_prefix_id),
+        (fim_v1::FIM_SUFFIX, tokenizer.fim_suffix_id),
+        (fim_v1::FIM_MIDDLE, tokenizer.fim_middle_id),
+    ] {
+        let encoded = model.str_to_token(spelling, AddBos::Never)?;
+        ensure!(
+            encoded.len() == 1 && encoded[0].0 == expected,
+            "FIM marker tokenization mismatch"
+        );
+    }
+    let mut actual = Vec::new();
+    for id in 0..model.n_vocab() {
+        let token = LlamaToken(id);
+        let attributes = model.token_attr(token);
+        let known = tokenizer.tokenizer_vocab_ids.binary_search(&id).is_ok();
+        ensure!(
+            if known {
+                !attributes.intersects(LlamaTokenAttr::Unknown | LlamaTokenAttr::Unused)
+            } else {
+                attributes.intersects(LlamaTokenAttr::Unknown | LlamaTokenAttr::Unused)
+            },
+            "tokenizer vocabulary IDs disagree with the selected model"
+        );
+        if attributes.intersects(LlamaTokenAttr::Control | LlamaTokenAttr::UserDefined) {
+            actual.push(fim_v1::SpecialToken {
+                id,
+                spelling: special_token_piece(model, token)?,
+            });
+        }
+    }
+    ensure!(
+        actual == tokenizer.special_tokens,
+        "FIM control-token inventory mismatch"
+    );
+    fim_v1::TokenContract::from_profile(tokenizer)
 }
 fn worker(
     args: Args,
@@ -225,6 +346,17 @@ fn worker(
                     return Err(error.into());
                 }
             };
+            let fim_contract = if profile.protocol == fim_v1::WIRE_VERSION {
+                Some(verify_fim_tokenizer(
+                    &model,
+                    profile
+                        .fim_profile
+                        .as_ref()
+                        .ok_or_else(|| anyhow::anyhow!("FIM profile identity is required"))?,
+                )?)
+            } else {
+                None
+            };
             let cache_type = match args.cache_type.as_str() {
                 "f16" => KvCacheType::F16,
                 "q8" => KvCacheType::Q8_0,
@@ -264,11 +396,17 @@ fn worker(
                 switch_failed = true;
                 continue;
             }
-            let context_layout =
-                context::effective_layout(&profile.protocol, &args.context_layout)?;
+            let context_layout = if profile.protocol == fim_v1::WIRE_VERSION {
+                fim_v1::CONTEXT_LAYOUT
+            } else {
+                context::effective_layout(&profile.protocol, &args.context_layout)?
+            };
             let mut runtime_args = args.clone();
             runtime_args.context_layout = context_layout.into();
-            let identity = json!({"status":"ok","alias":alias,"model_sha256":profile.sha256,"model_protocol":profile.protocol,
+            if profile.protocol == fim_v1::WIRE_VERSION {
+                runtime_args.output_tokens = fim_v1::OUTPUT_TOKEN_CAP;
+            }
+            let mut identity = json!({"status":"ok","alias":alias,"model_sha256":profile.sha256,"model_protocol":profile.protocol,
                 "context_layout":context_layout,
                 "model_embedded":app.embedded_mode,"model_switch_supported":!app.embedded_mode,
                 "model_selection":if app.embedded_mode{"declarative"}else{"research-registry"},
@@ -278,6 +416,19 @@ fn worker(
                 "context_size":args.context_size,"batch_size":args.batch_size,"microbatch_size":args.microbatch_size,"input_tokens":args.input_tokens,"output_tokens":output_limit(&args,&profile),
                 "cache_type":args.cache_type,"syntax_validation":args.syntax_validation,
                 "saved_contexts":0,"active_slots":1,"load_ms":load.elapsed().as_secs_f64()*1000.});
+            if let Some(fim_profile) = &profile.fim_profile {
+                identity["fim_profile"] = json!(fim_profile);
+                identity["completion_mode"] = json!(fim_v1::COMPLETION_MODE);
+                identity["tokenizer_id"] = json!(fim_profile.tokenizer.tokenizer_id);
+                identity["tokenizer_revision"] = json!(fim_profile.tokenizer.tokenizer_revision);
+                identity["tokenizer_sha256"] = json!(fim_profile.tokenizer.tokenizer_sha256);
+                identity["tokenizer_contract_sha256"] =
+                    json!(fim_profile.tokenizer.tokenizer_contract_sha256);
+                identity["tokenizer_vocab_size"] =
+                    json!(fim_profile.tokenizer.tokenizer_vocab_size);
+                identity["tokenizer_vocab_ids_sha256"] =
+                    json!(fim_profile.tokenizer.tokenizer_vocab_ids_sha256);
+            }
             *app.identity.lock().unwrap() = identity.clone();
             if let Some(reply) = ready.take() {
                 let _ = reply.send(true);
@@ -294,6 +445,7 @@ fn worker(
             let mut cached: Vec<LlamaToken> = Vec::new();
             let mut cache_repo = String::new();
             let mut prepared_context: Option<(String, context::EditorState)> = None;
+            let mut prepared_fim: Option<FimContextBinding> = None;
             let next = loop {
                 let Ok(job) = rx.recv() else {
                     return Ok(());
@@ -323,42 +475,118 @@ fn worker(
                 let _busy = Busy(app.busy.clone());
                 match job {
                     Job::Context(request, reply) => {
+                        prepared_fim = None;
                         if reply.is_closed() {
                             continue;
                         }
-                        let result = context::prepare_layout(
-                            &request,
-                            &profile.protocol,
-                            &args.context_layout,
-                            args.input_tokens,
-                            |p| Ok(model.str_to_token(p, AddBos::Always)?.len()),
-                        )
-                        .and_then(|p| {
-                            prepared_context = Some((p.prompt.clone(), request.state.clone()));
-                            Ok(serde_json::to_value(p)?)
-                        });
+                        let result = if let Some(token_contract) = &fim_contract {
+                            let request_id = request
+                                .request_id
+                                .as_deref()
+                                .ok_or_else(|| anyhow::anyhow!("missing FIM request identity"));
+                            let completion_mode = request
+                                .completion_mode
+                                .as_deref()
+                                .ok_or_else(|| anyhow::anyhow!("missing FIM completion mode"));
+                            request_id
+                                .and_then(|request_id| {
+                                    context::validate_editor_state(&request.state)?;
+                                    ensure!(
+                                        completion_mode? == fim_v1::COMPLETION_MODE,
+                                        "FIM completion mode mismatch"
+                                    );
+                                    Ok(request_id)
+                                })
+                                .and_then(|request_id| {
+                                    let prepared = fim_v1::prepare(
+                                        &request.state.source,
+                                        request.state.target_row,
+                                        request.state.cursor_col,
+                                        token_contract,
+                                    )?;
+                                    let prompt_tokens =
+                                        verify_prompt_round_trip(&model, &prepared.prompt)?.len();
+                                    ensure!(
+                                        prompt_tokens > 0
+                                            && prompt_tokens <= args.input_tokens
+                                            && prompt_tokens + fim_v1::OUTPUT_TOKEN_CAP
+                                                <= args.context_size as usize,
+                                        "FIM prompt exceeds the configured token budget"
+                                    );
+                                    let context_hash = fim_v1::context_digest(
+                                        request_id,
+                                        &request.state.source,
+                                        request.state.target_row,
+                                        request.state.cursor_col,
+                                        &prepared.prompt,
+                                        &prepared.tokenizer_contract_sha256,
+                                    )?;
+                                    let mut value = serde_json::to_value(&prepared)?;
+                                    value["prompt_tokens"] = json!(prompt_tokens);
+                                    value["request_id"] = json!(request_id);
+                                    value["completion_mode"] = json!(fim_v1::COMPLETION_MODE);
+                                    value["context_hash"] = json!(context_hash);
+                                    value["window"] = Value::Null;
+                                    value["selected_buffers"] = json!([]);
+                                    prepared_context =
+                                        Some((prepared.prompt.clone(), request.state.clone()));
+                                    prepared_fim = Some(FimContextBinding {
+                                        prepared,
+                                        request_id: request_id.to_owned(),
+                                        context_hash,
+                                        completion_mode: fim_v1::COMPLETION_MODE.into(),
+                                    });
+                                    Ok(value)
+                                })
+                        } else {
+                            context::prepare_layout(
+                                &request,
+                                &profile.protocol,
+                                &args.context_layout,
+                                args.input_tokens,
+                                |p| Ok(model.str_to_token(p, AddBos::Always)?.len()),
+                            )
+                            .and_then(|p| {
+                                prepared_context = Some((p.prompt.clone(), request.state.clone()));
+                                Ok(serde_json::to_value(p)?)
+                            })
+                        };
                         if result.is_err() {
                             prepared_context = None;
+                            prepared_fim = None;
                         }
                         let result = result.map(|mut p| {
                             p["model_identity"] = identity.clone();
-                            p["context_hash"] =
-                                json!(digest(p["prompt"].as_str().unwrap().as_bytes()));
+                            if fim_contract.is_none() {
+                                p["context_hash"] =
+                                    json!(digest(p["prompt"].as_str().unwrap().as_bytes()));
+                            }
                             p
                         });
                         let _ = reply
                             .send(result.map_err(|_| "editor context outside contract".into()));
                     }
                     Job::Tokenize(prompt, special, reply) => {
+                        prepared_fim = None;
                         let result=model.str_to_token(&prompt,if special{AddBos::Always}else{AddBos::Never})
                             .map(|tokens|json!({"tokens":tokens.iter().map(|t|t.0).collect::<Vec<_>>()}))
                             .map_err(|_|"tokenization failed".into());
                         let _ = reply.send(result);
                     }
                     Job::Generate(request, reply) => {
+                        let fim_binding = if profile.protocol == fim_v1::WIRE_VERSION {
+                            prepared_fim.take()
+                        } else {
+                            None
+                        };
                         let result = (|| -> Result<()> {
                             let started = Instant::now();
-                            let tokens = model.str_to_token(&request.prompt, AddBos::Always)?;
+                            let is_fim = profile.protocol == fim_v1::WIRE_VERSION;
+                            let tokens = if is_fim {
+                                verify_prompt_round_trip(&model, &request.prompt)?
+                            } else {
+                                model.str_to_token(&request.prompt, AddBos::Always)?
+                            };
                             let limit = request
                                 .n_predict
                                 .unwrap_or(output_limit(&args, &profile))
@@ -367,6 +595,26 @@ fn worker(
                                 limit > 0 && request.repository_identity.len() <= 4096,
                                 "invalid generation bounds"
                             );
+                            if is_fim {
+                                let binding = fim_binding.as_ref().ok_or_else(|| {
+                                    anyhow::anyhow!("FIM generation has no prepared context")
+                                })?;
+                                ensure!(
+                                    request.request_id.as_deref()
+                                        == Some(binding.request_id.as_str())
+                                        && request.context_hash.as_deref()
+                                            == Some(binding.context_hash.as_str())
+                                        && request.completion_mode.as_deref()
+                                            == Some(binding.completion_mode.as_str())
+                                        && request.prompt == binding.prepared.prompt,
+                                    "FIM request does not match its prepared context"
+                                );
+                                ensure!(
+                                    request.n_predict == Some(fim_v1::OUTPUT_TOKEN_CAP)
+                                        && limit == fim_v1::OUTPUT_TOKEN_CAP,
+                                    "FIM output cap mismatch"
+                                );
+                            }
                             if profile.protocol == "sweep-full-file-v1" {
                                 context::validate_window(
                                     request
@@ -428,6 +676,8 @@ fn worker(
                             let mut sent = 0;
                             let mut predicted = 0;
                             let mut eos = false;
+                            let mut terminal_token_id = None;
+                            let mut sampled_token_ids = Vec::new();
                             for _ in 0..limit {
                                 if reply.is_closed() {
                                     return Ok(());
@@ -435,10 +685,14 @@ fn worker(
                                 let token = sampler.sample(&ctx, -1);
                                 if model.is_eog_token(token) {
                                     eos = true;
+                                    terminal_token_id = Some(token.0);
                                     break;
                                 }
                                 sampler.accept(token);
                                 predicted += 1;
+                                if is_fim {
+                                    sampled_token_ids.push(token.0);
+                                }
                                 let piece = match model
                                     .token_to_piece_bytes(token, 128, false, None)
                                 {
@@ -475,7 +729,25 @@ fn worker(
                                 ctx.decode(&mut batch)?;
                                 cached.push(token);
                             }
-                            let mut action = if eos {
+                            let mut action = if eos && is_fim {
+                                let binding = fim_binding.as_ref().ok_or_else(|| {
+                                    anyhow::anyhow!("FIM generation lost its prepared context")
+                                })?;
+                                let raw = std::str::from_utf8(&bytes)?;
+                                let token_contract = fim_contract.as_ref().ok_or_else(|| {
+                                    anyhow::anyhow!("FIM tokenizer contract unavailable")
+                                })?;
+                                let decoded = fim_v1::decode_completion(
+                                    &binding.prepared,
+                                    &profile.protocol,
+                                    output_limit(&args, &profile),
+                                    raw,
+                                    &sampled_token_ids,
+                                    terminal_token_id,
+                                    token_contract,
+                                )?;
+                                Some(serde_json::to_value(decoded.action)?)
+                            } else if eos {
                                 let raw = std::str::from_utf8(&bytes)?;
                                 if profile.protocol == "single-line-edit-v1" {
                                     context::decode_action(raw).ok()
@@ -494,11 +766,23 @@ fn worker(
                                 &prepared_context,
                                 &mut action,
                             );
-                            let terminal = json!({"content":"","stop":true,"stop_type":if eos{"eos"}else{"limit"},"tokens_predicted":predicted,
+                            let mut terminal = json!({"content":"","stop":true,"stop_type":if eos{"eos"}else{"limit"},"tokens_predicted":predicted,
                                 "canonical_action":action,"action_validation":action_validation,"model_protocol":profile.protocol,"model_sha256":profile.sha256,
                                 "context_layout":context_layout,
                                 "timings":{"cache_n":common,"prompt_n":tokens.len()-common,"prompt_ms":prompt_ms,"predicted_n":predicted,
                                     "predicted_ms":generated.elapsed().as_secs_f64()*1000.,"total_ms":started.elapsed().as_secs_f64()*1000.}});
+                            if let Some(binding) = &fim_binding {
+                                terminal["terminal_token_id"] =
+                                    terminal_token_id.map_or(Value::Null, |id| json!(id));
+                                terminal["sampled_token_ids"] = json!(sampled_token_ids);
+                                terminal["request_id"] = json!(binding.request_id);
+                                terminal["context_hash"] = json!(binding.context_hash);
+                                terminal["completion_mode"] = json!(binding.completion_mode);
+                                terminal["tokenizer_sha256"] =
+                                    json!(binding.prepared.tokenizer_sha256);
+                                terminal["tokenizer_contract_sha256"] =
+                                    json!(binding.prepared.tokenizer_contract_sha256);
+                            }
                             let _ = reply.blocking_send(Ok(Event::default().json_data(terminal)?));
                             Ok(())
                         })();
@@ -604,6 +888,27 @@ async fn slots(State(app): State<App>) -> Json<Value> {
 async fn models(State(app): State<App>) -> Json<Value> {
     Json(json!({"current":app.identity.lock().unwrap().clone(),"models":&*app.registry}))
 }
+async fn fim_tokenizer(State(app): State<App>) -> Response {
+    let identity = app.identity.lock().unwrap().clone();
+    if identity["status"] != "ok" || identity["model_protocol"] != fim_v1::WIRE_VERSION {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let Some(profile) = identity["alias"]
+        .as_str()
+        .and_then(|alias| app.registry.get(alias))
+        .and_then(|profile| profile.fim_profile.as_ref())
+    else {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    };
+    Json(json!({
+        "alias":identity["alias"],
+        "model_sha256":identity["model_sha256"],
+        "artifact_manifest_sha256":profile.artifact_manifest_sha256,
+        "tokenizer":profile.tokenizer,
+        "tokenizer_vocab_ids":profile.tokenizer.tokenizer_vocab_ids,
+    }))
+    .into_response()
+}
 #[derive(Deserialize)]
 struct Switch {
     alias: String,
@@ -707,6 +1012,7 @@ async fn main() -> Result<()> {
                 .ok_or_else(|| anyhow::anyhow!("research model requires --model-sha256"))?
         },
         protocol: args.protocol.clone(),
+        fim_profile: None,
         embedded: payload.clone(),
     };
     let mut registry: BTreeMap<String, Profile> = if let Some(path) = &args.model_registry {
@@ -767,6 +1073,7 @@ async fn main() -> Result<()> {
         .route("/completion", post(completion))
         .route("/v1/editor/context", post(editor_context))
         .route("/v1/models", get(models))
+        .route("/v1/fim-tokenizer", get(fim_tokenizer))
         .route("/v1/model", post(switch))
         .layer(DefaultBodyLimit::max(2 * 1024 * 1024))
         .with_state(app);

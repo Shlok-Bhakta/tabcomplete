@@ -5,7 +5,8 @@
 //! before a server profile can safely expose it.
 
 use anyhow::{Result, ensure};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const WIRE_VERSION: &str = "q25-fim-line-completion-v1";
@@ -22,16 +23,225 @@ pub const FIM_PREFIX: &str = "<|fim_prefix|>";
 pub const FIM_SUFFIX: &str = "<|fim_suffix|>";
 pub const FIM_MIDDLE: &str = "<|fim_middle|>";
 pub const EOS_SPELLING: &str = "<|endoftext|>";
+pub const COMPLETION_MODE: &str = "remaining_logical_line_after_utf8_cursor";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// Frozen identity supplied by a selected research-model profile. The digest
+/// covers these tokenizer fields and the complete control/user-defined token
+/// inventory using `tokenizer_contract_bytes` below.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct TokenizerProfile {
+    pub tokenizer_id: String,
+    pub tokenizer_revision: String,
+    pub tokenizer_sha256: String,
+    pub tokenizer_contract_sha256: String,
+    pub tokenizer_vocab_size: usize,
+    pub tokenizer_vocab_ids_sha256: String,
+    #[serde(default, skip_serializing)]
+    pub tokenizer_vocab_ids: Vec<i32>,
+    pub eos_id: i32,
+    pub fim_prefix_id: i32,
+    pub fim_suffix_id: i32,
+    pub fim_middle_id: i32,
+    pub completion_mode: String,
+    pub special_tokens: Vec<SpecialToken>,
+}
+
+/// Immutable identity of the selected model artifact and its matching FIM
+/// tokenizer. The model-file digest is also checked directly at startup.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ServingProfile {
+    pub artifact_manifest_sha256: String,
+    pub tokenizer: TokenizerProfile,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct SpecialToken {
     pub id: i32,
     pub spelling: String,
 }
 
+fn valid_sha256(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+/// Text representation used by both Rust and Lua to bind every tokenizer
+/// identity field and inventory entry without relying on JSON key ordering.
+pub fn tokenizer_contract_bytes(profile: &TokenizerProfile) -> Result<Vec<u8>> {
+    ensure!(
+        !profile.tokenizer_id.is_empty()
+            && !profile.tokenizer_revision.is_empty()
+            && !profile.tokenizer_id.contains(['\n', '\r', '\t'])
+            && !profile.tokenizer_revision.contains(['\n', '\r', '\t']),
+        "invalid tokenizer identity fields"
+    );
+    ensure!(
+        valid_sha256(&profile.tokenizer_sha256),
+        "invalid tokenizer digest"
+    );
+    ensure!(
+        profile.tokenizer_vocab_size > 0
+            && profile.tokenizer_vocab_size == profile.tokenizer_vocab_ids.len()
+            && valid_sha256(&profile.tokenizer_vocab_ids_sha256),
+        "invalid tokenizer vocabulary identity"
+    );
+    ensure!(
+        profile
+            .tokenizer_vocab_ids
+            .windows(2)
+            .all(|pair| pair[0] >= 0 && pair[0] < pair[1]),
+        "tokenizer vocabulary IDs must be sorted and unique"
+    );
+    ensure!(
+        profile
+            .tokenizer_vocab_ids
+            .last()
+            .is_some_and(|id| *id >= 0),
+        "tokenizer vocabulary ID set is empty"
+    );
+    let vocab_bytes = profile
+        .tokenizer_vocab_ids
+        .iter()
+        .map(|id| format!("{id}\n"))
+        .collect::<String>();
+    ensure!(
+        format!("{:x}", sha2::Sha256::digest(vocab_bytes.as_bytes()))
+            == profile.tokenizer_vocab_ids_sha256.to_ascii_lowercase(),
+        "tokenizer vocabulary ID digest mismatch"
+    );
+    ensure!(
+        [
+            profile.eos_id,
+            profile.fim_prefix_id,
+            profile.fim_suffix_id,
+            profile.fim_middle_id
+        ]
+        .iter()
+        .all(|id| profile.tokenizer_vocab_ids.binary_search(id).is_ok()),
+        "FIM markers are missing from the tokenizer vocabulary"
+    );
+    ensure!(
+        profile.eos_id == EOS_TOKEN_ID
+            && profile.fim_prefix_id == FIM_PREFIX_TOKEN_ID
+            && profile.fim_suffix_id == FIM_SUFFIX_TOKEN_ID
+            && profile.fim_middle_id == FIM_MIDDLE_TOKEN_ID,
+        "FIM marker identity mismatch"
+    );
+    ensure!(
+        profile.completion_mode == COMPLETION_MODE,
+        "unsupported FIM completion mode"
+    );
+    let mut inventory = profile.special_tokens.clone();
+    inventory.sort_by_key(|token| token.id);
+    let mut ids = BTreeSet::new();
+    let mut spellings = BTreeSet::new();
+    for token in &inventory {
+        ensure!(token.id >= 0, "negative special-token id");
+        ensure!(
+            !token.spelling.is_empty()
+                && token.spelling.is_ascii()
+                && !token.spelling.contains(['\n', '\r', '\t']),
+            "invalid special-token spelling"
+        );
+        ensure!(ids.insert(token.id), "duplicate special-token id");
+        ensure!(
+            spellings.insert(token.spelling.as_str()),
+            "duplicate special-token spelling"
+        );
+    }
+    for (id, spelling) in [
+        (EOS_TOKEN_ID, EOS_SPELLING),
+        (FIM_PREFIX_TOKEN_ID, FIM_PREFIX),
+        (FIM_SUFFIX_TOKEN_ID, FIM_SUFFIX),
+        (FIM_MIDDLE_TOKEN_ID, FIM_MIDDLE),
+    ] {
+        ensure!(
+            inventory
+                .iter()
+                .any(|token| token.id == id && token.spelling == spelling),
+            "required FIM/EOS token missing from inventory"
+        );
+    }
+
+    let mut bytes = format!(
+        "q25-fim-tokenizer-contract-v1\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+        profile.tokenizer_id,
+        profile.tokenizer_revision,
+        profile.tokenizer_sha256.to_ascii_lowercase(),
+        profile.eos_id,
+        profile.fim_prefix_id,
+        profile.fim_suffix_id,
+        profile.fim_middle_id,
+        profile.completion_mode,
+        profile.tokenizer_vocab_size,
+        profile.tokenizer_vocab_ids_sha256.to_ascii_lowercase(),
+    )
+    .into_bytes();
+    for token in inventory {
+        bytes.extend_from_slice(token.id.to_string().as_bytes());
+        bytes.push(b'\t');
+        bytes.extend_from_slice(token.spelling.as_bytes());
+        bytes.push(b'\n');
+    }
+    Ok(bytes)
+}
+
+pub fn validate_serving_profile(profile: &ServingProfile) -> Result<()> {
+    ensure!(
+        valid_sha256(&profile.artifact_manifest_sha256),
+        "invalid model artifact manifest digest"
+    );
+    let bytes = tokenizer_contract_bytes(&profile.tokenizer)?;
+    ensure!(
+        valid_sha256(&profile.tokenizer.tokenizer_contract_sha256)
+            && format!("{:x}", sha2::Sha256::digest(bytes))
+                == profile
+                    .tokenizer
+                    .tokenizer_contract_sha256
+                    .to_ascii_lowercase(),
+        "FIM tokenizer contract digest mismatch"
+    );
+    Ok(())
+}
+
+pub fn context_digest(
+    request_id: &str,
+    source: &str,
+    target_row: usize,
+    cursor_col: usize,
+    prompt: &str,
+    tokenizer_contract_sha256: &str,
+) -> Result<String> {
+    ensure!(
+        !request_id.is_empty()
+            && request_id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-'),
+        "invalid request identity"
+    );
+    ensure!(
+        valid_sha256(tokenizer_contract_sha256),
+        "invalid tokenizer contract digest"
+    );
+    let canonical = format!(
+        "q25-fim-context-v1\n{}\n{:x}\n{}\n{}\n{:x}\n{}\n",
+        request_id,
+        sha2::Sha256::digest(source.as_bytes()),
+        target_row,
+        cursor_col,
+        sha2::Sha256::digest(prompt.as_bytes()),
+        tokenizer_contract_sha256.to_ascii_lowercase(),
+    );
+    Ok(format!("{:x}", sha2::Sha256::digest(canonical.as_bytes())))
+}
+
 #[derive(Clone, Debug)]
 pub struct TokenContract {
     tokenizer_sha256: String,
+    tokenizer_contract_sha256: String,
+    known_vocab_ids: BTreeSet<i32>,
     special_by_id: BTreeMap<i32, String>,
     special_spellings: BTreeSet<String>,
 }
@@ -100,11 +310,31 @@ impl TokenContract {
                 "required FIM/EOS token missing from special-token inventory"
             );
         }
+        let known_vocab_ids = special_by_id
+            .keys()
+            .next_back()
+            .map_or_else(BTreeSet::new, |maximum| (0..=*maximum).collect());
         Ok(Self {
             tokenizer_sha256: tokenizer_sha256.to_ascii_lowercase(),
+            tokenizer_contract_sha256: String::new(),
+            known_vocab_ids,
             special_by_id,
             special_spellings,
         })
+    }
+
+    pub fn from_profile(profile: &TokenizerProfile) -> Result<Self> {
+        let mut contract = Self::new(
+            &profile.tokenizer_sha256,
+            &[profile.fim_prefix_id],
+            &[profile.fim_suffix_id],
+            &[profile.fim_middle_id],
+            profile.eos_id,
+            &profile.special_tokens,
+        )?;
+        contract.tokenizer_contract_sha256 = profile.tokenizer_contract_sha256.to_ascii_lowercase();
+        contract.known_vocab_ids = profile.tokenizer_vocab_ids.iter().copied().collect();
+        Ok(contract)
     }
 
     fn reject_special_spellings(&self, text: &str, where_: &str) -> Result<()> {
@@ -166,6 +396,7 @@ pub struct Prepared {
     pub context_policy_version: String,
     pub context_layout: String,
     pub tokenizer_sha256: String,
+    pub tokenizer_contract_sha256: String,
     pub target_row: usize,
     pub cursor_col: usize,
     /// Cursor through the physical line ending, matching the model hole.
@@ -301,6 +532,7 @@ pub fn prepare(
         context_policy_version: CONTEXT_POLICY_VERSION.into(),
         context_layout: CONTEXT_LAYOUT.into(),
         tokenizer_sha256: tokens.tokenizer_sha256.clone(),
+        tokenizer_contract_sha256: tokens.tokenizer_contract_sha256.clone(),
         target_row,
         cursor_col,
         model_hole_range: ByteRange::new(cursor_byte, line_end),
@@ -347,6 +579,10 @@ pub fn decode_completion(
     );
     for id in content_token_ids {
         ensure!(*id >= 0, "negative generated token id");
+        ensure!(
+            tokens.known_vocab_ids.contains(id),
+            "generated token ID is outside the selected tokenizer vocabulary"
+        );
         ensure!(
             !tokens.special_by_id.contains_key(id),
             "generated added-special token is forbidden"
@@ -431,6 +667,148 @@ mod tests {
             ],
         )
         .unwrap()
+    }
+
+    fn serving_profile() -> ServingProfile {
+        let tokenizer_vocab_ids = vec![17, 151_643, 151_644, 151_645, 151_659, 151_660, 151_661];
+        let tokenizer_vocab_ids_sha256 = format!(
+            "{:x}",
+            sha2::Sha256::digest(
+                tokenizer_vocab_ids
+                    .iter()
+                    .map(|id| format!("{id}\n"))
+                    .collect::<String>()
+                    .as_bytes()
+            )
+        );
+        let mut tokenizer = TokenizerProfile {
+            tokenizer_id: "synthetic/fim-fixture".into(),
+            tokenizer_revision: "synthetic-revision".into(),
+            tokenizer_sha256: TEST_TOKENIZER_SHA256.into(),
+            tokenizer_contract_sha256: String::new(),
+            tokenizer_vocab_size: tokenizer_vocab_ids.len(),
+            tokenizer_vocab_ids_sha256,
+            tokenizer_vocab_ids,
+            eos_id: EOS_TOKEN_ID,
+            fim_prefix_id: FIM_PREFIX_TOKEN_ID,
+            fim_suffix_id: FIM_SUFFIX_TOKEN_ID,
+            fim_middle_id: FIM_MIDDLE_TOKEN_ID,
+            completion_mode: COMPLETION_MODE.into(),
+            special_tokens: vec![
+                SpecialToken {
+                    id: EOS_TOKEN_ID,
+                    spelling: EOS_SPELLING.into(),
+                },
+                SpecialToken {
+                    id: 151_644,
+                    spelling: "<|im_start|>".into(),
+                },
+                SpecialToken {
+                    id: 151_645,
+                    spelling: "<|im_end|>".into(),
+                },
+                SpecialToken {
+                    id: FIM_PREFIX_TOKEN_ID,
+                    spelling: FIM_PREFIX.into(),
+                },
+                SpecialToken {
+                    id: FIM_MIDDLE_TOKEN_ID,
+                    spelling: FIM_MIDDLE.into(),
+                },
+                SpecialToken {
+                    id: FIM_SUFFIX_TOKEN_ID,
+                    spelling: FIM_SUFFIX.into(),
+                },
+            ],
+        };
+        tokenizer.tokenizer_contract_sha256 = format!(
+            "{:x}",
+            sha2::Sha256::digest(tokenizer_contract_bytes(&tokenizer).unwrap())
+        );
+        ServingProfile {
+            artifact_manifest_sha256: "b".repeat(64),
+            tokenizer,
+        }
+    }
+
+    #[test]
+    fn serving_profile_binds_tokenizer_and_known_vocabulary_ids() {
+        let profile = serving_profile();
+        assert!(validate_serving_profile(&profile).is_ok());
+        let mut bad_vocab = profile.clone();
+        bad_vocab.tokenizer.tokenizer_vocab_ids[0] = 18;
+        assert!(validate_serving_profile(&bad_vocab).is_err());
+        let mut bad_markers = profile;
+        bad_markers.tokenizer.fim_prefix_id += 1;
+        assert!(validate_serving_profile(&bad_markers).is_err());
+    }
+
+    #[test]
+    fn context_digest_binds_request_source_cursor_prompt_and_tokenizer() {
+        let baseline = context_digest(
+            "12345678-1234-1234-1234-123456789abc",
+            "x=1\n",
+            0,
+            2,
+            "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
+            &"c".repeat(64),
+        )
+        .unwrap();
+        for (request, source, row, col, prompt, tokenizer) in [
+            (
+                "22345678-1234-1234-1234-123456789abc",
+                "x=1\n",
+                0,
+                2,
+                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
+                "c".repeat(64),
+            ),
+            (
+                "12345678-1234-1234-1234-123456789abc",
+                "y=1\n",
+                0,
+                2,
+                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
+                "c".repeat(64),
+            ),
+            (
+                "12345678-1234-1234-1234-123456789abc",
+                "x=1\n",
+                1,
+                2,
+                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
+                "c".repeat(64),
+            ),
+            (
+                "12345678-1234-1234-1234-123456789abc",
+                "x=1\n",
+                0,
+                3,
+                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
+                "c".repeat(64),
+            ),
+            (
+                "12345678-1234-1234-1234-123456789abc",
+                "x=1\n",
+                0,
+                2,
+                "<|fim_prefix|>x1<|fim_suffix|><|fim_middle|>",
+                "c".repeat(64),
+            ),
+            (
+                "12345678-1234-1234-1234-123456789abc",
+                "x=1\n",
+                0,
+                2,
+                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
+                "d".repeat(64),
+            ),
+        ] {
+            assert_ne!(
+                context_digest(request, source, row, col, prompt, &tokenizer).unwrap(),
+                baseline
+            );
+        }
     }
 
     #[test]

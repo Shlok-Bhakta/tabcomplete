@@ -7,6 +7,7 @@ local buffers = require("tabcomplete_trajectory.buffers")
 local repository = require("tabcomplete_trajectory.repository")
 local sse = require("tabcomplete_trajectory.sse")
 local single_line_v1 = require("tabcomplete_trajectory.single_line_v1")
+local fim_v1 = require("tabcomplete_trajectory.fim_v1")
 
 local ns = vim.api.nvim_create_namespace("TabCompletePredict")
 local allowed_modes = { manual = true, automatic = true, shadow = true, off = true }
@@ -61,6 +62,7 @@ M._backend_post_impl = nil -- deterministic Rust backend RPC seam
 M._backend_get_impl = nil -- deterministic Rust health RPC seam
 M._confirm_impl = nil -- deterministic test seam; production uses vim.fn.confirm
 local model_identity_refresh_generation = 0
+local fim_tokenizer_cache = {}
 
 local function now() return util.now_ms() end
 local function utf8_boundary(line, col)
@@ -125,6 +127,12 @@ end
 local function is_integer(value)
   return type(value) == "number" and value % 1 == 0
 end
+local function is_fim_protocol()
+  return opts.protocol_version == fim_v1.WIRE_VERSION
+end
+local function is_contract_protocol()
+  return opts.protocol_version == single_line_v1.WIRE_VERSION or is_fim_protocol()
+end
 local function model_spec(alias)
   local configured = opts.allowed_models and opts.allowed_models[alias]
   if type(configured) ~= "table" then return nil end
@@ -136,14 +144,19 @@ local function model_spec(alias)
     }
   elseif alias == "sweep" then
     layouts = { ["sweep-window-v1"] = "sweep-window-context-v1" }
+  elseif (configured.model_protocol or configured.protocol) == fim_v1.WIRE_VERSION then
+    layouts = { [fim_v1.CONTEXT_LAYOUT] = fim_v1.CONTEXT_POLICY_VERSION }
   else
     layouts = {}
   end
+  local protocol = configured.model_protocol or configured.protocol
+  if is_fim_protocol() ~= (protocol == fim_v1.WIRE_VERSION) then return nil end
   return {
     model_sha256 = configured.model_sha256 or configured.sha256,
-    model_protocol = configured.model_protocol or configured.protocol,
+    model_protocol = protocol,
     output_tokens = configured.output_tokens or configured.max_output_tokens,
     context_layout_policies = layouts,
+    fim_profile = configured.fim_profile,
   }
 end
 local function expected_context_layout(identity, spec)
@@ -183,6 +196,28 @@ local function validate_model_identity(identity, expected_alias)
   if identity.model_protocol ~= spec.model_protocol then
     return nil, "Rust model protocol does not match the allowlist"
   end
+  if spec.model_protocol == fim_v1.WIRE_VERSION then
+    local profile = spec.fim_profile
+    if type(profile) ~= "table" or not is_sha256(profile.artifact_manifest_sha256)
+        or type(profile.tokenizer) ~= "table"
+        or type(identity.fim_profile) ~= "table"
+        or not vim.deep_equal(identity.fim_profile, profile)
+        or identity.completion_mode ~= fim_v1.COMPLETION_MODE then
+      return nil, "Rust FIM artifact/tokenizer identity does not match the allowlist"
+    end
+    local tokenizer = profile.tokenizer
+    local ok_contract, contract_sha = pcall(fim_v1.tokenizer_contract_sha256, tokenizer)
+    if not ok_contract or not is_sha256(contract_sha)
+        or tokenizer.tokenizer_contract_sha256:lower() ~= contract_sha:lower()
+        or identity.tokenizer_id ~= tokenizer.tokenizer_id
+        or identity.tokenizer_revision ~= tokenizer.tokenizer_revision
+        or identity.tokenizer_sha256 ~= tokenizer.tokenizer_sha256
+        or identity.tokenizer_contract_sha256 ~= tokenizer.tokenizer_contract_sha256
+        or identity.tokenizer_vocab_size ~= tokenizer.tokenizer_vocab_size
+        or identity.tokenizer_vocab_ids_sha256 ~= tokenizer.tokenizer_vocab_ids_sha256 then
+      return nil, "Rust FIM tokenizer contract does not match the allowlist"
+    end
+  end
   if not is_sha256(identity.runtime_config_hash) then
     return nil, "Rust runtime configuration digest is invalid"
   end
@@ -206,7 +241,7 @@ end
 local function record_request(state)
   collector.anchor_prediction(state.bufnr)
   collector.store_prediction_blob(state.prompt, function() end)
-  local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+  local is_v1 = is_contract_protocol()
   local identity = state.model_identity or opts.current_model_identity or {}
   local rust = opts.backend == "rust-editor-v1"
   local ev = emit(state, "prediction_requested", {
@@ -344,7 +379,7 @@ local function buffer_state()
   local filetype = vim.bo[buf].filetype
   local cache = repository.cache
   local identity = cache.root and (cache.root .. ":" .. (cache.head or "")) or path
-  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+  if is_contract_protocol() then
     local canonical_filetype = normalized_filetype(filetype)
     if not canonical_filetype then return nil, "single-line-edit-v1 does not support " .. filetype end
     local history_items = {}
@@ -370,6 +405,17 @@ local function buffer_state()
       pre_state_sequence = collector.seq, cursor = { row = row, col = col },
       editable_range = { start_row = row, start_col = 0, end_row = row, end_col = #line },
     }
+    if is_fim_protocol() then
+      local identity = opts.current_model_identity
+      local token_contract = identity and identity._fim_token_contract
+      if not token_contract then return nil, "selected FIM tokenizer identity is unavailable" end
+      local prepared, fim_err = fim_v1.prepare(contract_state.source, row, col, token_contract)
+      if not prepared then return nil, fim_err end
+      state.fim_prepared = prepared
+      state.fim_token_contract = token_contract
+      state.model_identity = identity
+      state.context_policy_version = fim_v1.CONTEXT_POLICY_VERSION
+    end
     state.fingerprint = state_fingerprint(state)
     return state
   end
@@ -398,7 +444,7 @@ local function still_current(state)
   if pos[1] - 1 ~= state.row or pos[2] ~= state.start_col then return false end
   local line = vim.api.nvim_buf_get_lines(state.bufnr, state.row, state.row + 1, false)[1]
   if not line then return false end
-  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+  if is_contract_protocol() then
     if #line ~= state.end_col or not utf8_boundary(line, state.start_col) then return false end
     return content_of(state.bufnr) == state.source
   end
@@ -438,7 +484,7 @@ local function classify_delta(state, delta)
     and not (delta and delta.change_origin == "buffer_reload")
     and (opts.synthetic or (key and key.bufnr == state.bufnr
       and key.mode and key.mode:find("^i") and now() - key.timestamp_ms <= 250))
-  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+  if is_contract_protocol() then
     if delta and key_correlated and delta.start_row == state.row then
       local action = state.action
       local matched = false
@@ -676,7 +722,7 @@ local function preview_single_line_action(state, action)
   preview_inline(bufnr, row, old_end, inserted)
 end
 local function show(state, action)
-  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+  if is_contract_protocol() then
     if action.kind == "keep" then
       lifecycle(state, "model_no_edit", "model emitted N")
       counters.model_no_edit = counters.model_no_edit + 1
@@ -716,7 +762,7 @@ local function show(state, action)
       context_hash = state.context_hash, pre_state_hash = state.content_hash,
       active_buffer = true, ui_attached = #vim.api.nvim_list_uis() > 0, focused = not vim.g.tabcomplete_predictor_focus_lost,
       display_policy = mode, action_blob_hash = state.action_blob_hash,
-      wire_version = single_line_v1.WIRE_VERSION,
+      wire_version = opts.protocol_version,
     })
     state.shown_event_id = shown and shown.event_id
     counters.displayed = counters.displayed + 1
@@ -840,7 +886,7 @@ local function finished(request, result)
       counters.stale_discarded = counters.stale_discarded + 1
       last_status = "stale response discarded"
     else
-      local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+      local is_v1 = is_contract_protocol()
       local is_rust = opts.backend == "rust-editor-v1"
       if is_rust and request.parser.terminal and #request.parser.raw_chunks > 0 then
         local raw_response = table.concat(request.parser.raw_chunks)
@@ -851,7 +897,10 @@ local function finished(request, result)
       end
       local action, raw_or_err
       if is_rust then action, raw_or_err = sse.finish_rust(request.parser, {
-        model_identity = state.model_identity, contract_state = state.contract_state, window = state.window })
+        model_identity = state.model_identity, contract_state = state.contract_state, window = state.window,
+        fim_prepared = state.fim_prepared, fim_token_contract = state.fim_token_contract,
+        request_id = state.request_id, context_hash = state.context_hash,
+        completion_mode = is_fim_protocol() and fim_v1.COMPLETION_MODE or nil })
       elseif is_v1 then action, raw_or_err = sse.finish_single_line(request.parser)
       else action, raw_or_err = sse.finish(request.parser) end
       if not action then
@@ -889,7 +938,7 @@ local function finished(request, result)
             context_layout = is_rust and state.model_identity.context_layout or nil,
             action_validation = is_rust and request.parser.terminal.action_validation or nil,
             runtime_config_hash = is_rust and state.model_identity.runtime_config_hash or nil,
-            wire_version = single_line_v1.WIRE_VERSION,
+            wire_version = opts.protocol_version,
             prompt_tokens = state.prompt_tokens,
             max_output_tokens = is_rust and state.model_identity.output_tokens or single_line_v1.MAX_ACTION_TOKENS,
             first_chunk_at_ms = request.first_chunk_at_ms,
@@ -946,11 +995,16 @@ start_generation = function(request)
   local state = request.state
   request.kind = "generation"
   request.parser = sse.new(opts.max_response_bytes)
-  local is_v1 = opts.protocol_version == single_line_v1.WIRE_VERSION
+  local is_v1 = is_contract_protocol()
   local body_table
   if opts.backend == "rust-editor-v1" then
     body_table = { prompt = state.prompt, n_predict = state.model_identity.output_tokens,
       window = state.window, repository_identity = state.repo_identity, cache_prompt = true }
+    if is_fim_protocol() then
+      body_table.request_id = state.request_id
+      body_table.context_hash = state.context_hash
+      body_table.completion_mode = fim_v1.COMPLETION_MODE
+    end
   else
     body_table = { prompt = state.prompt,
       n_predict = is_v1 and single_line_v1.MAX_ACTION_TOKENS or 96, temperature = 0,
@@ -1185,16 +1239,101 @@ local function get_rust_json(path, callback)
       end)
     end)
 end
+local function fetch_fim_tokenizer(identity, callback)
+  local expected_profile = identity.fim_profile
+  local expected_tokenizer = expected_profile and expected_profile.tokenizer
+  local cache_key = table.concat({ identity.alias or "", identity.model_sha256 or "",
+    expected_profile and expected_profile.artifact_manifest_sha256 or "",
+    expected_tokenizer and expected_tokenizer.tokenizer_contract_sha256 or "" }, "\0")
+  local cached = fim_tokenizer_cache[cache_key]
+  if cached then
+    identity._fim_vocab_ids = cached.vocab_ids
+    identity._fim_token_contract = cached.token_contract
+    callback(true, identity)
+    return
+  end
+  get_rust_json("/v1/fim-tokenizer", function(ok, response)
+    if not ok or type(response) ~= "table" then
+      callback(false, "cannot read the selected FIM tokenizer inventory")
+      return
+    end
+    if type(expected_tokenizer) ~= "table"
+        or response.alias ~= identity.alias
+        or response.model_sha256 ~= identity.model_sha256
+        or response.artifact_manifest_sha256 ~= expected_profile.artifact_manifest_sha256
+        or not vim.deep_equal(response.tokenizer, expected_tokenizer)
+        or type(response.tokenizer_vocab_ids) ~= "table" then
+      callback(false, "selected FIM tokenizer inventory identity mismatch")
+      return
+    end
+    local ok_ids, ids_sha = pcall(fim_v1.tokenizer_vocab_ids_sha256, response.tokenizer_vocab_ids)
+    if not ok_ids or #response.tokenizer_vocab_ids ~= expected_tokenizer.tokenizer_vocab_size
+        or ids_sha:lower() ~= expected_tokenizer.tokenizer_vocab_ids_sha256:lower() then
+      callback(false, "selected FIM tokenizer vocabulary does not match the allowlist")
+      return
+    end
+    local token_config = vim.deepcopy(expected_tokenizer)
+    token_config.tokenizer_vocab_ids = response.tokenizer_vocab_ids
+    local ok_contract, contract = pcall(fim_v1.new_token_contract, token_config)
+    if not ok_contract then
+      callback(false, "selected FIM tokenizer contract is invalid")
+      return
+    end
+    identity._fim_vocab_ids = response.tokenizer_vocab_ids
+    identity._fim_token_contract = contract
+    fim_tokenizer_cache[cache_key] = {
+      vocab_ids = response.tokenizer_vocab_ids,
+      token_contract = contract,
+    }
+    callback(true, identity)
+  end)
+end
+local function finish_model_identity(identity, callback)
+  local validated, err = validate_model_identity(identity)
+  if not validated then callback(false, err); return end
+  if validated.model_protocol == fim_v1.WIRE_VERSION then
+    fetch_fim_tokenizer(validated, callback)
+  else
+    callback(true, validated)
+  end
+end
 local function validate_editor_context(state, response)
   if type(response) ~= "table" or type(response.prompt) ~= "string"
       or not is_integer(response.prompt_tokens) or response.prompt_tokens < 1
       or type(response.context_hash) ~= "string"
-      or not is_sha256(response.context_hash)
-      or util.sha256hex(response.prompt) ~= response.context_hash then
+      or not is_sha256(response.context_hash) then
     return nil, "Rust editor context response failed prompt validation"
   end
-  local identity, identity_err = validate_model_identity(response.model_identity)
+  local expected_alias = state.model_identity and state.model_identity.alias or nil
+  local identity, identity_err = validate_model_identity(response.model_identity, expected_alias)
   if not identity then return nil, identity_err end
+  local fim_prepared
+  if identity.model_protocol == fim_v1.WIRE_VERSION then
+    local token_contract = state.model_identity and state.model_identity._fim_token_contract
+    if not token_contract then return nil, "selected FIM tokenizer inventory is unavailable" end
+    local prepared, prepare_err = fim_v1.prepare(state.contract_state.source,
+      state.contract_state.target_row, state.contract_state.cursor_col, token_contract)
+    if not prepared or response.prompt ~= prepared.prompt
+        or response.request_id ~= state.request_id
+        or response.completion_mode ~= fim_v1.COMPLETION_MODE
+        or response.tokenizer_sha256 ~= identity.tokenizer_sha256
+        or response.tokenizer_contract_sha256 ~= identity.tokenizer_contract_sha256
+        or response.target_row ~= state.contract_state.target_row
+        or response.cursor_col ~= state.contract_state.cursor_col
+        or not vim.deep_equal(response.model_hole_range, prepared.model_hole_range)
+        or not vim.deep_equal(response.apply_range, prepared.apply_range)
+        or response.line_ending ~= prepared.line_ending
+        or response.context_hash ~= fim_v1.context_digest(state.request_id,
+          state.contract_state.source, state.contract_state.target_row,
+          state.contract_state.cursor_col, prepared.prompt, identity.tokenizer_contract_sha256) then
+      return nil, prepare_err or "Rust FIM context does not match the editor state"
+    end
+    identity._fim_token_contract = token_contract
+    identity._fim_vocab_ids = state.model_identity._fim_vocab_ids
+    fim_prepared = prepared
+  elseif util.sha256hex(response.prompt) ~= response.context_hash then
+    return nil, "Rust editor context response failed prompt hash validation"
+  end
   if response.model_protocol ~= identity.model_protocol then
     return nil, "Rust editor context model protocol mismatch"
   end
@@ -1260,6 +1399,7 @@ local function validate_editor_context(state, response)
     model_identity = identity, model_protocol = response.model_protocol, context_layout = expected_layout,
     window = window,
     selected_buffers = response.selected_buffers,
+    fim_prepared = fim_prepared,
   }
 end
 local function tokenize_rust(request)
@@ -1267,6 +1407,10 @@ local function tokenize_rust(request)
   state.context_buffers = editor_context_buffers(state)
   local body = { state = state.contract_state, buffers = state.context_buffers,
     repository_identity = state.repo_identity }
+  if is_fim_protocol() then
+    body.request_id = state.request_id
+    body.completion_mode = fim_v1.COMPLETION_MODE
+  end
   local attempts = 0
   local function attempt()
     attempts = attempts + 1
@@ -1303,6 +1447,7 @@ local function tokenize_rust(request)
       state.model_identity, state.model_protocol = context.model_identity, context.model_protocol
       state.context_layout = context.context_layout
       state.window, state.selected_buffers = context.window, context.selected_buffers
+      state.fim_prepared = context.fim_prepared
       opts.current_model_identity = context.model_identity
       opts.model = context.model_identity.alias
       opts.model_revision = context.model_identity.model_sha256
@@ -1320,7 +1465,7 @@ local function tokenize(request)
     tokenize_rust(request)
     return
   end
-  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+  if is_contract_protocol() then
     tokenize_single_line(request)
     return
   end
@@ -1387,7 +1532,7 @@ function M.predict(options)
   pending = request -- set before an immediate test callback can run
   phase = "request_running"
   collector.anchor_prediction(state.bufnr)
-  if opts.protocol_version ~= single_line_v1.WIRE_VERSION then record_request(state) end
+  if not is_contract_protocol() then record_request(state) end
   tokenize(request)
   return true
 end
@@ -1404,7 +1549,7 @@ function M.accept()
   if not active or not active.action then return false, "no active proposal" end
   local state = active
   if not still_current(state) then dismiss("navigation"); return false, "stale proposal" end
-  if opts.protocol_version == single_line_v1.WIRE_VERSION then
+  if is_contract_protocol() then
     if state.action.kind == "keep" then return false, "no edit" end
     applying = true
     local applied, apply_err = single_line_v1.apply_to_buffer(state.bufnr, state.contract_state, state.action)
@@ -1423,7 +1568,7 @@ function M.accept()
       accepted_lines = state.action.kind == "delete_line" and 0 or 1,
       total_chars = vim.fn.strchars(accepted_text), applied_through_sequence = delta_sequence,
       visible_duration_ms = now() - state.shown_at_ms,
-      action = state.action.kind, wire_version = single_line_v1.WIRE_VERSION,
+      action = state.action.kind, wire_version = state.model_protocol or opts.protocol_version,
       editable_range = state.action_range,
       proposed_start_byte = state.action_range.start_byte,
       proposed_end_byte = state.action_range.end_byte })
@@ -1536,17 +1681,20 @@ function M.set_model(alias, callback)
         return
       end
       if not ok then restore(false, "Rust service did not accept the model switch"); return end
-      local validated, err = validate_model_identity(identity, alias)
-      if not validated then restore(false, err); return end
-      opts.current_model_identity = validated
-      opts.model = validated.alias
-      opts.model_revision = validated.model_sha256
-      opts.model_protocol = validated.model_protocol
-      opts.runtime_config_hash = validated.runtime_config_hash
-      local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
-      opts.context_policy_version = expected_policy
-      last_fingerprint = nil
-      restore(true, nil)
+      finish_model_identity(identity, function(valid, validated_or_error)
+        if not valid then restore(false, validated_or_error); return end
+        local validated = validated_or_error
+        if validated.alias ~= alias then restore(false, "Rust model alias mismatch"); return end
+        opts.current_model_identity = validated
+        opts.model = validated.alias
+        opts.model_revision = validated.model_sha256
+        opts.model_protocol = validated.model_protocol
+        opts.runtime_config_hash = validated.runtime_config_hash
+        local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
+        opts.context_policy_version = expected_policy
+        last_fingerprint = nil
+        restore(true, nil)
+      end)
     end)
   end
   attempt()
@@ -1565,19 +1713,21 @@ function M.refresh_model_identity(callback)
       if callback then callback(false, "cannot read the installed Rust model identity") end
       return
     end
-    local validated, err = validate_model_identity(identity)
-    if not validated then
-      if callback then callback(false, err) end
-      return
-    end
-    opts.current_model_identity = validated
-    opts.model = validated.alias
-    opts.model_revision = validated.model_sha256
-    opts.model_protocol = validated.model_protocol
-    opts.runtime_config_hash = validated.runtime_config_hash
-    local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
-    opts.context_policy_version = expected_policy
-    if callback then callback(true, validated) end
+    finish_model_identity(identity, function(valid, validated_or_error)
+      if not valid then
+        if callback then callback(false, validated_or_error) end
+        return
+      end
+      local validated = validated_or_error
+      opts.current_model_identity = validated
+      opts.model = validated.alias
+      opts.model_revision = validated.model_sha256
+      opts.model_protocol = validated.model_protocol
+      opts.runtime_config_hash = validated.runtime_config_hash
+      local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
+      opts.context_policy_version = expected_policy
+      if callback then callback(true, validated) end
+    end)
   end)
   return true
 end
@@ -1587,7 +1737,9 @@ function M.model_aliases()
     return identity.alias and { identity.alias } or {}
   end
   local aliases = {}
-  for alias in pairs(opts.allowed_models or {}) do aliases[#aliases + 1] = alias end
+  for alias in pairs(opts.allowed_models or {}) do
+    if model_spec(alias) then aliases[#aliases + 1] = alias end
+  end
   table.sort(aliases)
   return aliases
 end
@@ -1612,9 +1764,10 @@ function M.status()
     syntax_validation = identity and identity.syntax_validation,
     protocol_version = opts.protocol_version,
     context_policy_version = identity and opts.context_policy_version
-      or (opts.protocol_version == single_line_v1.WIRE_VERSION
-        and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version),
-    input_token_budget = opts.protocol_version == single_line_v1.WIRE_VERSION
+      or (is_fim_protocol() and fim_v1.CONTEXT_POLICY_VERSION
+        or opts.protocol_version == single_line_v1.WIRE_VERSION
+          and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version),
+    input_token_budget = is_contract_protocol()
       and opts.single_line_input_tokens or opts.max_prompt_tokens,
     revision = opts.model_revision, precision = opts.precision,
     automatic_state = mode == "automatic" and "automatic experimental" or "inactive",
@@ -1710,19 +1863,54 @@ local function refresh_repo_async(buf)
 end
 function M.setup(options)
   local previous_backend = opts.backend
+  local previous_protocol = opts.protocol_version
+  local requested_protocol = options and options.protocol_version
   opts = vim.tbl_deep_extend("force", opts, options or {})
   model_identity_refresh_generation = model_identity_refresh_generation + 1
-  if opts.backend ~= previous_backend then opts.current_model_identity = nil end
+  if opts.backend ~= previous_backend or opts.protocol_version ~= previous_protocol then
+    opts.current_model_identity = nil
+  end
   if opts.backend == "rust-editor-v1" then
     if not (options and options.url) and previous_backend ~= "rust-editor-v1" then
       opts.url = vim.env.TABCOMPLETE_PREDICTOR_URL or "http://127.0.0.1:19094"
     end
-    opts.protocol_version = single_line_v1.WIRE_VERSION
+    opts.protocol_version = requested_protocol == fim_v1.WIRE_VERSION
+      and fim_v1.WIRE_VERSION or single_line_v1.WIRE_VERSION
   end
   opts.allowed_models = opts.allowed_models or default_allowed_models
   if opts.protocol_version ~= "compact-next-edit-v1"
-      and opts.protocol_version ~= single_line_v1.WIRE_VERSION then
+      and opts.protocol_version ~= single_line_v1.WIRE_VERSION
+      and opts.protocol_version ~= fim_v1.WIRE_VERSION then
     error("unsupported TabComplete prediction protocol")
+  end
+  if is_fim_protocol() then
+    if opts.backend ~= "rust-editor-v1" then
+      error("Q25 FIM serving requires the Rust editor backend")
+    end
+    local candidates = 0
+    for _, configured in pairs(opts.allowed_models) do
+      local protocol = type(configured) == "table"
+        and (configured.model_protocol or configured.protocol) or nil
+      if protocol == fim_v1.WIRE_VERSION then
+        candidates = candidates + 1
+        local profile = configured.fim_profile
+        local tokenizer = type(profile) == "table" and profile.tokenizer or nil
+        local ok_contract, contract_sha = false, nil
+        if tokenizer then
+          ok_contract, contract_sha = pcall(fim_v1.tokenizer_contract_sha256, tokenizer)
+        end
+        if not is_sha256(configured.model_sha256 or configured.sha256)
+            or type(profile) ~= "table" or not is_sha256(profile.artifact_manifest_sha256)
+            or type(tokenizer) ~= "table" or not ok_contract
+            or not is_sha256(contract_sha)
+            or not is_sha256(tokenizer.tokenizer_contract_sha256)
+            or tokenizer.tokenizer_contract_sha256:lower() ~= contract_sha:lower()
+            or (configured.output_tokens or configured.max_output_tokens) ~= fim_v1.MAX_OUTPUT_TOKENS then
+          error("Q25 FIM allowed model lacks a frozen artifact/tokenizer profile")
+        end
+      end
+    end
+    if candidates ~= 1 then error("Q25 FIM serving requires exactly one frozen allowed model") end
   end
   local port = opts.url:match(":(%d+)%s*$") or "19093"
   lock_path = "/tmp/tabcomplete-predictor-" .. port .. ".lock"

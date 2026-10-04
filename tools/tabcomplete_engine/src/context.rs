@@ -35,6 +35,10 @@ pub struct ContextRequest {
     pub buffers: Vec<Buffer>,
     #[serde(default)]
     pub repository_identity: String,
+    #[serde(default)]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub completion_mode: Option<String>,
 }
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Window {
@@ -96,6 +100,9 @@ fn validate(s: &EditorState) -> Result<()> {
         "invalid UTF-8 cursor"
     );
     Ok(())
+}
+pub fn validate_editor_state(s: &EditorState) -> Result<()> {
+    validate(s)
 }
 pub fn excluded(path: &str) -> bool {
     let base = path.rsplit('/').next().unwrap_or(path).to_lowercase();
@@ -539,6 +546,8 @@ mod tests {
                 state: serde_json::from_value(case["state"].clone()).unwrap(),
                 buffers: vec![],
                 repository_identity: "golden".into(),
+                request_id: None,
+                completion_mode: None,
             };
             let prepared =
                 prepare(&req, "single-line-edit-v1", 20000, |text| Ok(text.len())).unwrap();
@@ -562,6 +571,8 @@ mod tests {
             state: state(),
             buffers: vec![],
             repository_identity: "layout-test".into(),
+            request_id: None,
+            completion_mode: None,
         };
         let control = prepare(&req, "single-line-edit-v1", 20000, |s| Ok(s.len())).unwrap();
         let trained = prepare_layout(&req, "single-line-edit-v1", "trained-v2", 20000, |s| {
@@ -583,6 +594,8 @@ mod tests {
             state: state(),
             buffers: vec![],
             repository_identity: "layout-test".into(),
+            request_id: None,
+            completion_mode: None,
         };
         let control = prepare(&req, "single-line-edit-v1", 20000, |s| Ok(s.len())).unwrap();
         let moved = prepare_layout(&req, "single-line-edit-v1", "cursor-last-v1", 20000, |s| {
@@ -623,6 +636,8 @@ mod tests {
             state: state(),
             buffers: vec![],
             repository_identity: "layout-test".into(),
+            request_id: None,
+            completion_mode: None,
         };
         let control = prepare(&req, "single-line-edit-v1", 20000, |s| Ok(s.len())).unwrap();
         let budget = control.prompt.len();
@@ -643,6 +658,8 @@ mod tests {
             state: state(),
             buffers: vec![],
             repository_identity: "layout-test".into(),
+            request_id: None,
+            completion_mode: None,
         };
         let control = prepare(&req, "single-line-edit-v1", 20000, |s| Ok(s.len())).unwrap();
         assert!(
@@ -678,6 +695,8 @@ mod tests {
             },
             buffers: vec![],
             repository_identity: "layout-test".into(),
+            request_id: None,
+            completion_mode: None,
         };
         let sweep_control =
             prepare(&sweep_req, "sweep-full-file-v1", 20000, |s| Ok(s.len())).unwrap();
@@ -742,6 +761,8 @@ mod tests {
                 recency: 1,
             }],
             repository_identity: "test".into(),
+            request_id: None,
+            completion_mode: None,
         };
         let p = prepare(&r, "single-line-edit-v1", 2000, |s| Ok(s.len())).unwrap();
         assert!(p.selected_buffers.is_empty());

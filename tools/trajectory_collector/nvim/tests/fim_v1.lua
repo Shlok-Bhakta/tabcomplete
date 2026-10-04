@@ -3,12 +3,16 @@ return function(ok, assert_eq, assert_true)
   local buffers = require("tabcomplete_trajectory.buffers")
 
   local function contract()
-    return fim_v1.new_token_contract({
+    local profile = {
+      tokenizer_id = "synthetic/fim-fixture",
+      tokenizer_revision = "synthetic-revision",
+      completion_mode = fim_v1.COMPLETION_MODE,
       eos_id = 151643,
       fim_prefix_id = 151659,
       fim_middle_id = 151660,
       fim_suffix_id = 151661,
       tokenizer_sha256 = string.rep("a", 64),
+      tokenizer_vocab_ids = { 17, 151643, 151644, 151645, 151659, 151660, 151661 },
       special_tokens = {
         { id = 151643, spelling = "<|endoftext|>" },
         { id = 151644, spelling = "<|im_start|>" },
@@ -17,7 +21,11 @@ return function(ok, assert_eq, assert_true)
         { id = 151660, spelling = "<|fim_middle|>" },
         { id = 151661, spelling = "<|fim_suffix|>" },
       },
-    })
+    }
+    profile.tokenizer_vocab_size = #profile.tokenizer_vocab_ids
+    profile.tokenizer_vocab_ids_sha256 = fim_v1.tokenizer_vocab_ids_sha256(profile.tokenizer_vocab_ids)
+    profile.tokenizer_contract_sha256 = fim_v1.tokenizer_contract_sha256(profile)
+    return fim_v1.new_token_contract(profile)
   end
 
   local function identity()
@@ -25,6 +33,15 @@ return function(ok, assert_eq, assert_true)
       model_protocol = fim_v1.WIRE_VERSION,
       model_sha256 = string.rep("a", 64),
       tokenizer_sha256 = string.rep("a", 64),
+      tokenizer_contract_sha256 = contract().tokenizer_contract_sha256,
+      tokenizer_vocab_size = contract().tokenizer_vocab_size,
+      tokenizer_vocab_ids_sha256 = contract().tokenizer_vocab_ids_sha256,
+      fim_profile = {
+        artifact_manifest_sha256 = string.rep("b", 64),
+        tokenizer = {
+          tokenizer_contract_sha256 = contract().tokenizer_contract_sha256,
+        },
+      },
       output_tokens = fim_v1.MAX_OUTPUT_TOKENS,
     }
   end
@@ -149,6 +166,7 @@ return function(ok, assert_eq, assert_true)
       response("text", { 17 }, { terminal_token_id = 151645 }),
       response("", {}, { terminal_token_id = 151645 }),
       response("text", { 151659 }),
+      response("text", { 18 }),
       response("<|im_end|>", { 17 }),
       response("text", { 17 }, { model_protocol = "single-line-edit-v1" }),
       response("text", { 17 }, { model_sha256 = string.rep("b", 64) }),
