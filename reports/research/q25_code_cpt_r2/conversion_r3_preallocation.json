@@ -1,0 +1,29 @@
+{
+  "actual_pinned_uv_verification": {
+    "agent_worker_tests_passed": 22,
+    "bytes": 56004256,
+    "extracted_binary_sha256": "729d27dbea534ee540a2d3ef43a62fa1a10af7fcbb6d57a70d5859509f624578",
+    "fixed_path": "uv-bootstrap/bin/uv",
+    "version": "uv 0.12.3 (x86_64-unknown-linux-gnu)",
+    "wheel_sha256": "1482d1462b1aecd18ee33627363fe1c63d6a194f12d40d37efc446d9e0d800a1"
+  },
+  "all_old_failure_receipts_preserved": true,
+  "automatic_retry": false,
+  "changed_plan_fields": [
+    "plan_revision",
+    "source_code"
+  ],
+  "config_dataset_reused": "shlokbhakta/tabcomplete-q25-fim-conversion-r1-inputs",
+  "gpu_enabled": false,
+  "new_cpu_session_seconds": 10800,
+  "new_reference": "shlokbhakta/tc-q25-fim-q4-conversion-r3",
+  "observed_at": "2026-10-04T09:56:35.126179+00:00",
+  "plan_sha256": "a06617ff6c899e1eea2f8b19e653527c78ac7124ac09687b179707e1f2aa7c95",
+  "r1_cpu_reservations_remain_seconds": 21600,
+  "r2_failed_cpu_conservative_charge_seconds": 333,
+  "schema": "q25-fim-conversion-r3-preallocation-v1",
+  "source_test_log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-r3-conversion-root.log",
+  "source_tests_passed": 231,
+  "unchanged_campaign_cap_seconds": 72000,
+  "weights_selection_training_and_fixtures_unchanged": true
+}
