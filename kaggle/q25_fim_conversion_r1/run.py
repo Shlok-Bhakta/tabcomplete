@@ -7,10 +7,13 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +28,9 @@ MINIMUM_RESERVE_SECONDS = 1_800
 RUNTIME_SETUP_PEAK_BYTES = 4 * 1024**3
 MAX_ARTIFACT_BYTES = 12 * 1024**3
 MINIMUM_FREE_BYTES = 2 * 1024**3
+MAX_UV_WHEEL_BYTES = 32 * 1024**2
+MAX_UV_BINARY_BYTES = 128 * 1024**2
+UV_WHEEL_BINARY_MEMBER = f"uv-{UV_VERSION}.data/scripts/uv"
 PREFLIGHT_STAGE = "not_started"
 CHECKOUT_FILES = (
     "convert_hf_to_gguf.py",
@@ -196,6 +202,13 @@ def _run(
         stderr = exc.stderr if isinstance(exc.stderr, str) else ""
         (log_root / f"{label}.log").write_text(stdout + stderr, encoding="utf-8")
         raise TimeoutError(f"{label} ran out of the conversion session") from None
+    except OSError as exc:
+        (log_root / f"{label}.log").write_text(
+            f"subprocess launch failed: {type(exc).__name__}\n", encoding="utf-8"
+        )
+        raise RuntimeError(
+            f"{label} could not be started; see the private conversion log"
+        ) from None
     log = log_root / f"{label}.log"
     log.write_text(result.stdout + result.stderr, encoding="utf-8")
     if result.returncode != 0:
@@ -266,12 +279,82 @@ def _cpu_inventory_script() -> str:
     )
 
 
+def _extract_pinned_uv(wheel_path: Path, bootstrap: Path) -> Path:
+    if wheel_path.name != UV_WHEEL_NAME or wheel_path.is_symlink() or not wheel_path.is_file():
+        raise RuntimeError("pinned uv bootstrap wheel is missing or unsafe")
+    if wheel_path.stat().st_size > MAX_UV_WHEEL_BYTES or sha256_file(wheel_path) != UV_WHEEL_SHA256:
+        raise RuntimeError("pinned uv bootstrap wheel identity failed")
+
+    if bootstrap.is_symlink() or (bootstrap.exists() and not bootstrap.is_dir()):
+        raise RuntimeError("uv bootstrap directory is unsafe")
+    bin_dir = bootstrap / "bin"
+    if bin_dir.is_symlink() or (bin_dir.exists() and not bin_dir.is_dir()):
+        raise RuntimeError("uv bootstrap executable directory is unsafe")
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    uv_path = bin_dir / "uv"
+    if uv_path.exists() or uv_path.is_symlink():
+        raise FileExistsError(
+            "uv bootstrap executable already exists; use a fresh runtime directory"
+        )
+
+    try:
+        with zipfile.ZipFile(wheel_path) as archive:
+            matches = [
+                entry for entry in archive.infolist() if entry.filename == UV_WHEEL_BINARY_MEMBER
+            ]
+            if len(matches) != 1:
+                raise RuntimeError("pinned uv wheel does not contain one expected executable")
+            entry = matches[0]
+            mode = entry.external_attr >> 16
+            if (
+                entry.is_dir()
+                or stat.S_IFMT(mode) != stat.S_IFREG
+                or not mode & 0o111
+                or entry.flag_bits & 0x1
+                or entry.file_size <= 4
+                or entry.file_size > MAX_UV_BINARY_BYTES
+                or entry.compress_size <= 0
+                or entry.file_size > entry.compress_size * 32
+            ):
+                raise RuntimeError("pinned uv wheel executable entry is unsafe")
+
+            written = 0
+            with archive.open(entry, "r") as source, uv_path.open("xb") as destination:
+                while chunk := source.read(1024 * 1024):
+                    written += len(chunk)
+                    if written > entry.file_size or written > MAX_UV_BINARY_BYTES:
+                        raise RuntimeError("pinned uv wheel executable exceeds its size bound")
+                    destination.write(chunk)
+            if written != entry.file_size:
+                raise RuntimeError("pinned uv wheel executable is truncated")
+    except (OSError, zipfile.BadZipFile, RuntimeError) as exc:
+        uv_path.unlink(missing_ok=True)
+        if isinstance(exc, RuntimeError):
+            raise
+        raise RuntimeError("pinned uv wheel could not be read safely") from None
+
+    with uv_path.open("rb") as executable:
+        if executable.read(4) != b"\x7fELF":
+            uv_path.unlink(missing_ok=True)
+            raise RuntimeError("pinned uv wheel executable is not a Linux binary")
+    uv_path.chmod(stat.S_IMODE(mode) & 0o777)
+    if uv_path.is_symlink() or not uv_path.is_file() or not os.access(uv_path, os.X_OK):
+        uv_path.unlink(missing_ok=True)
+        raise RuntimeError("pinned uv bootstrap executable is unavailable")
+    return uv_path
+
+
 def _managed_uv(runtime_root: Path, *, log_root: Path, deadline: float) -> tuple[Path, str]:
     bootstrap = runtime_root / "uv-bootstrap"
     wheel_dir = bootstrap / "wheel"
-    install_prefix = bootstrap / "prefix"
+    if bootstrap.is_symlink() or (bootstrap.exists() and not bootstrap.is_dir()):
+        raise RuntimeError("uv bootstrap directory is unsafe")
+    if wheel_dir.is_symlink() or (wheel_dir.exists() and not wheel_dir.is_dir()):
+        raise RuntimeError("uv wheel directory is unsafe")
     wheel_dir.mkdir(parents=True, exist_ok=True)
     wheel_path = wheel_dir / UV_WHEEL_NAME
+    if wheel_path.is_symlink():
+        raise RuntimeError("pinned uv bootstrap wheel is unsafe")
     base_env = _safe_environment(runtime_root=runtime_root)
     if not wheel_path.exists():
         _run(
@@ -295,25 +378,7 @@ def _managed_uv(runtime_root: Path, *, log_root: Path, deadline: float) -> tuple
         )
     if not wheel_path.is_file() or sha256_file(wheel_path) != UV_WHEEL_SHA256:
         raise RuntimeError("pinned uv bootstrap wheel identity failed")
-    bin_dir = install_prefix / "bin"
-    uv_path = bin_dir / "uv"
-    if not uv_path.is_file():
-        _run(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--no-deps",
-                "--prefix",
-                str(install_prefix),
-                str(wheel_path),
-            ],
-            label="bootstrap-uv-install",
-            log_root=log_root,
-            environment=base_env,
-            deadline=deadline,
-        )
+    uv_path = _extract_pinned_uv(wheel_path, bootstrap)
     version = _run(
         [str(uv_path), "--version"],
         label="uv-version",
@@ -321,7 +386,8 @@ def _managed_uv(runtime_root: Path, *, log_root: Path, deadline: float) -> tuple
         environment=base_env,
         deadline=deadline,
     )
-    if not version.startswith(f"uv {UV_VERSION} "):
+    expected_version = re.escape(f"uv {UV_VERSION}")
+    if re.fullmatch(rf"{expected_version}(?: \([A-Za-z0-9_.+-]+\))?", version) is None:
         raise RuntimeError("uv bootstrap version differs from the pinned toolchain")
     return uv_path, sha256_file(uv_path)
 

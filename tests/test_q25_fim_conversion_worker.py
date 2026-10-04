@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import stat
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,8 +17,245 @@ WORKER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(WORKER)
 
 
+def _write_uv_wheel(
+    path: Path, *, entries: tuple[tuple[str, bytes, int], ...] | None = None
+) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if entries is None:
+        entries = (
+            (
+                WORKER.UV_WHEEL_BINARY_MEMBER,
+                b"\x7fELFsynthetic-pinned-uv-binary",
+                stat.S_IFREG | 0o755,
+            ),
+        )
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for filename, data, mode in entries:
+            info = zipfile.ZipInfo(filename)
+            info.create_system = 3
+            info.external_attr = mode << 16
+            archive.writestr(info, data)
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def test_cpu_runtime_probe_is_valid_python_without_importing_torch() -> None:
     compile(WORKER._cpu_inventory_script(), "cpu_runtime_probe.py", "exec")
+
+
+def test_pinned_uv_extraction_uses_only_the_wheel_executable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wheel = tmp_path / WORKER.UV_WHEEL_NAME
+    wheel_sha = _write_uv_wheel(wheel)
+    monkeypatch.setattr(WORKER, "UV_WHEEL_SHA256", wheel_sha)
+
+    executable = WORKER._extract_pinned_uv(wheel, tmp_path / "bootstrap")
+
+    assert executable == tmp_path / "bootstrap" / "bin" / "uv"
+    assert executable.read_bytes() == b"\x7fELFsynthetic-pinned-uv-binary"
+    assert stat.S_IMODE(executable.stat().st_mode) == 0o755
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [
+        (),
+        (
+            (
+                WORKER.UV_WHEEL_BINARY_MEMBER,
+                b"\x7fELFone",
+                stat.S_IFREG | 0o755,
+            ),
+            (
+                WORKER.UV_WHEEL_BINARY_MEMBER,
+                b"\x7fELFtwo",
+                stat.S_IFREG | 0o755,
+            ),
+        ),
+        (
+            (
+                WORKER.UV_WHEEL_BINARY_MEMBER,
+                b"\x7fELFsymlink",
+                stat.S_IFLNK | 0o777,
+            ),
+        ),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:Duplicate name:UserWarning")
+def test_pinned_uv_extraction_rejects_missing_duplicate_or_link_entries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    entries: tuple[tuple[str, bytes, int], ...],
+) -> None:
+    wheel = tmp_path / WORKER.UV_WHEEL_NAME
+    monkeypatch.setattr(WORKER, "UV_WHEEL_SHA256", _write_uv_wheel(wheel, entries=entries))
+    bootstrap = tmp_path / "bootstrap"
+
+    with pytest.raises(RuntimeError):
+        WORKER._extract_pinned_uv(wheel, bootstrap)
+
+    assert not (bootstrap / "bin" / "uv").exists()
+
+
+def test_pinned_uv_extraction_checks_hash_and_wheel_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wheel = tmp_path / WORKER.UV_WHEEL_NAME
+    _write_uv_wheel(wheel)
+    monkeypatch.setattr(WORKER, "UV_WHEEL_SHA256", "0" * 64)
+    with pytest.raises(RuntimeError, match="identity"):
+        WORKER._extract_pinned_uv(wheel, tmp_path / "bad-hash")
+
+    renamed = tmp_path / "untrusted.whl"
+    renamed.write_bytes(wheel.read_bytes())
+    monkeypatch.setattr(WORKER, "UV_WHEEL_SHA256", hashlib.sha256(renamed.read_bytes()).hexdigest())
+    with pytest.raises(RuntimeError, match="missing or unsafe"):
+        WORKER._extract_pinned_uv(renamed, tmp_path / "bad-name")
+
+
+@pytest.mark.parametrize(
+    ("version", "accepted"),
+    [
+        ("uv 0.12.3", True),
+        ("uv 0.12.3 (x86_64-unknown-linux-gnu)", True),
+        ("uv 0.12.30", False),
+        ("uv 0.12.3a1", False),
+        ("uv 0.12.3 unpinned-build", False),
+    ],
+)
+def test_managed_uv_runs_extracted_binary_and_checks_exact_version(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    version: str,
+    accepted: bool,
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    wheel = runtime_root / "uv-bootstrap" / "wheel" / WORKER.UV_WHEEL_NAME
+    monkeypatch.setattr(WORKER, "UV_WHEEL_SHA256", _write_uv_wheel(wheel))
+    calls: list[tuple[list[str], str]] = []
+
+    def fake_run(command: list[str], *, label: str, **_: object) -> str:
+        calls.append((command, label))
+        assert label == "uv-version"
+        return version
+
+    monkeypatch.setattr(WORKER, "_run", fake_run)
+    monkeypatch.setattr(
+        WORKER.shutil,
+        "which",
+        lambda *_: pytest.fail("uv must never fall back to a host executable"),
+    )
+
+    if accepted:
+        uv_path, binary_sha = WORKER._managed_uv(
+            runtime_root, log_root=tmp_path / "logs", deadline=10**12
+        )
+        assert calls == [([str(uv_path), "--version"], "uv-version")]
+        assert uv_path == runtime_root / "uv-bootstrap" / "bin" / "uv"
+        assert binary_sha == hashlib.sha256(uv_path.read_bytes()).hexdigest()
+    else:
+        with pytest.raises(RuntimeError, match="version differs"):
+            WORKER._managed_uv(runtime_root, log_root=tmp_path / "logs", deadline=10**12)
+
+
+def test_managed_uv_rejects_symlinked_bootstrap_before_download(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    bootstrap_target = tmp_path / "external-bootstrap"
+    runtime_root.mkdir()
+    bootstrap_target.mkdir()
+    (runtime_root / "uv-bootstrap").symlink_to(bootstrap_target, target_is_directory=True)
+    monkeypatch.setattr(
+        WORKER,
+        "_run",
+        lambda *_args, **_kwargs: pytest.fail("must reject before downloading a wheel"),
+    )
+
+    with pytest.raises(RuntimeError, match="bootstrap directory is unsafe"):
+        WORKER._managed_uv(runtime_root, log_root=tmp_path / "logs", deadline=10**12)
+
+    assert list(bootstrap_target.iterdir()) == []
+
+
+def test_managed_python_install_and_discovery_share_one_install_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime_root = tmp_path / "runtime"
+    managed_python = runtime_root / "managed-python"
+    venv_python = runtime_root / "python311" / "bin" / "python"
+    managed_interpreter = managed_python / "cpython-3.11.15" / "bin" / "python3.11"
+    inventory = {
+        "python": "3.11.15",
+        "torch": "2.11.0+cpu",
+        "torch_cuda": None,
+        "cuda_available": False,
+        "cuda_devices": 0,
+        "numpy": "2.4.6",
+        "transformers": "5.17.0",
+        "tokenizers": "0.23.2",
+        "nvidia_packages": [],
+    }
+    calls: list[tuple[list[str], str, dict[str, str]]] = []
+
+    def fake_run(
+        command: list[str],
+        *,
+        label: str,
+        environment: dict[str, str],
+        **_: object,
+    ) -> str:
+        calls.append((command, label, environment))
+        if label == "python-find":
+            return str(managed_interpreter)
+        if label == "cpu-runtime-check":
+            return json.dumps(inventory)
+        return ""
+
+    monkeypatch.setattr(WORKER, "_run", fake_run)
+
+    resolved_python, reported_inventory = WORKER._install_python_runtime(
+        uv_path=tmp_path / "uv",
+        runtime_root=runtime_root,
+        lock_path=tmp_path / "requirements.lock",
+        log_root=tmp_path / "logs",
+        deadline=10**12,
+    )
+
+    install_command, install_label, install_env = next(
+        call for call in calls if call[1] == "python-install"
+    )
+    find_command, find_label, find_env = next(call for call in calls if call[1] == "python-find")
+    assert install_label == "python-install"
+    assert find_label == "python-find"
+    assert install_command[install_command.index("--install-dir") + 1] == str(managed_python)
+    assert install_env["UV_PYTHON_INSTALL_DIR"] == find_env["UV_PYTHON_INSTALL_DIR"]
+    assert find_env["UV_PYTHON_INSTALL_DIR"] == str(managed_python)
+    assert find_command[-2:] == ["--managed-python", "--no-project"]
+    assert resolved_python == venv_python
+    assert reported_inventory == inventory
+
+
+def test_subprocess_launch_failure_log_omits_exception_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def missing_executable(*_: object, **__: object) -> None:
+        raise FileNotFoundError("private-path-must-not-escape")
+
+    monkeypatch.setattr(WORKER.subprocess, "run", missing_executable)
+
+    with pytest.raises(RuntimeError, match="could not be started"):
+        WORKER._run(
+            ["/synthetic/private-path"],
+            label="uv-version",
+            log_root=tmp_path / "logs",
+            environment={},
+            deadline=10**12,
+        )
+
+    log = (tmp_path / "logs" / "uv-version.log").read_text(encoding="utf-8")
+    assert log == "subprocess launch failed: FileNotFoundError\n"
+    assert "private-path" not in log
 
 
 def test_preflight_failure_records_stage_without_exception_text(
