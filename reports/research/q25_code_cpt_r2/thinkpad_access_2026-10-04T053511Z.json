@@ -1,0 +1,12 @@
+{
+  "schema": "target-access-observation-v1",
+  "observed_at": "2026-10-04T05:35:11+00:00",
+  "authorized_alias": "thinkpad",
+  "command": "ssh -o BatchMode=yes -o ConnectTimeout=8 thinkpad hostname",
+  "exit_code": 255,
+  "connected": false,
+  "reason": "Connection timed out",
+  "remote_changes": false,
+  "target_hardware_measured": false,
+  "limitation": "No current laptop runtime or deployment verification. Model work continues on the approved research path."
+}

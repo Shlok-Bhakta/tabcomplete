@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC
+from datetime import UTC, timedelta
 from datetime import datetime as RealDatetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -2376,3 +2376,432 @@ def test_collect_fim_rejects_malformed_update_log_without_committing_verificatio
         campaign.collect_fim(plan, arm, attempt=1)
 
     assert not (report / f"fim-verified-{arm}-1.json").exists()
+
+
+def _zero_work_settlement_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    attempts: int = 4,
+) -> tuple[Path, Path]:
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    artifacts = tmp_path / "artifacts"
+    report.mkdir(parents=True)
+    artifacts.mkdir()
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "aggregate_reserved_session_seconds": 72_000,
+                "conservative_account_gpu_hours": 40,
+                "minimum_reserved_future_fim_session_seconds": 21_600,
+            }
+        },
+    )
+    campaign.save(
+        report / "job-1.json",
+        {"conservative_reserved_session_seconds": 40_000},
+    )
+    arm = campaign.FIM_ARMS[0]
+    initializer = {
+        "kind": "untouched_pretrained",
+        "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "revision": "frozen-test-revision",
+        "files": {"model.safetensors": {"sha256": "a" * 64}},
+    }
+    plan_paths = {
+        3: report / "fim_training_plan-r3.json",
+        4: report / "fim_training_plan.json",
+    }
+    plan_hashes: dict[int, str] = {}
+    input_paths = {
+        3: artifacts / "fim/history/plan-r3/input-bundle/input-manifest.json",
+        4: artifacts / "fim/input-bundle/input-manifest.json",
+    }
+    input_hashes: dict[int, str] = {}
+    input_payloads = {
+        "train.jsonl": b'{"prompt":"synthetic train"}\n',
+        "development.jsonl": b'{"prompt":"synthetic development"}\n',
+        "corpus_metadata.json": b'{"schema":"synthetic corpus"}\n',
+        "causal200.jsonl": b'{"case":"synthetic causal"}\n',
+        "line180.jsonl": b'{"case":"synthetic line"}\n',
+    }
+    for revision, manifest_path in input_paths.items():
+        bundle = manifest_path.parent
+        bundle.mkdir(parents=True)
+        records: dict[str, dict[str, Any]] = {}
+        for name, payload in input_payloads.items():
+            staged = bundle / name
+            staged.write_bytes(payload)
+            records[name] = {"bytes": len(payload), "sha256": campaign.digest(staged)}
+        plan = {
+            "schema": "q25-fim-training-plan-v1",
+            "gpu_execution_authorized": True,
+            "plan_revision": revision,
+            "configuration": {"budget": {"session_seconds": 10_800}},
+            "initializers": {arm: initializer},
+            "data": {
+                "train": {
+                    "file": "train.jsonl",
+                    "bytes": records["train.jsonl"]["bytes"],
+                    "sha256": records["train.jsonl"]["sha256"],
+                },
+                "development": {
+                    "file": "development.jsonl",
+                    "bytes": records["development.jsonl"]["bytes"],
+                    "sha256": records["development.jsonl"]["sha256"],
+                },
+                "corpus_metadata_sha256": records["corpus_metadata.json"]["sha256"],
+            },
+            "evaluation": {
+                "fixtures": {
+                    "causal": records["causal200.jsonl"],
+                    "line": records["line180.jsonl"],
+                }
+            },
+        }
+        plan_path = plan_paths[revision]
+        campaign.save(plan_path, plan)
+        plan_hashes[revision] = campaign.digest(plan_path)
+        staged_plan = bundle / "plan.json"
+        staged_plan.write_bytes(plan_path.read_bytes())
+        records["plan.json"] = {
+            "bytes": staged_plan.stat().st_size,
+            "sha256": campaign.digest(staged_plan),
+        }
+        campaign.save(
+            manifest_path,
+            {"files": records, "model_dataset": campaign.BASE_DATASET},
+        )
+        path = manifest_path
+        input_hashes[revision] = campaign.digest(path)
+
+    now = RealDatetime.now(UTC).replace(microsecond=0)
+    prior_reference: str | None = None
+    watch_gaps = (30.25, 60.1, 450.4, 110.01)
+    worker_elapsed = (12.0, 16.0, 400.0, 100.0)
+    for attempt in range(1, attempts + 1):
+        revision = 3 if attempt <= 3 else 4
+        submitted_at = now - timedelta(minutes=60 - 10 * attempt)
+        watch_at = submitted_at + timedelta(seconds=watch_gaps[attempt - 1])
+        verified_at = watch_at + timedelta(seconds=5)
+        reference = f"owner/zero-work-attempt-{attempt}"
+        job = {
+            "reference": reference,
+            "requested_reference": reference,
+            "status": "submitted",
+            "arm": arm,
+            "attempt": attempt,
+            "commit": f"{attempt:040x}",
+            "plan_sha256": plan_hashes[revision],
+            "input_manifest_sha256": input_hashes[revision],
+            "session_seconds": 10_800,
+            "conservative_reserved_session_seconds": 10_800,
+            "submitted_at": submitted_at.isoformat(),
+            "authorization_lineage_reference": prior_reference,
+            "resume_source": None,
+            "resume_identity": None,
+            "own_discarded_tokens": 0,
+            "other_phase_tokens": 123_456,
+            "external_campaign_tokens": 123_456,
+        }
+        status = f'{reference} has status "KernelWorkerStatus.ERROR"'
+        campaign.save(report / f"fim-job-{arm}-{attempt}.json", job)
+        campaign.save(
+            report / f"fim-watch-{arm}-{attempt}.json",
+            {
+                "reference": reference,
+                "status": status,
+                "observed_at": watch_at.isoformat(),
+                "automatic_allocation": False,
+            },
+        )
+        campaign.save(
+            report / f"fim-verified-{arm}-{attempt}.json",
+            {
+                "reference": reference,
+                "status": status,
+                "arm": arm,
+                "attempt": attempt,
+                "plan_sha256": plan_hashes[revision],
+                "input_manifest_sha256": input_hashes[revision],
+                "commit": job["commit"],
+                "checkpoint_verified": False,
+                "carried_checkpoint_verified": False,
+                "carried_checkpoint_source": None,
+                "carried_checkpoint_identity": None,
+                "no_training_executed": True,
+                "training_status": "no_training_executed",
+                "own_discarded_tokens_for_resume": 0,
+                "processed_arm_input_tokens_conservative": 0,
+                "other_phase_processed_tokens_at_submission": 123_456,
+                "observed_at": verified_at.isoformat(),
+            },
+        )
+        output = artifacts / f"fim/output-{arm}-{attempt}/q25_fim_r2"
+        output.mkdir(parents=True)
+        campaign.save(
+            output / "worker-status.json",
+            {
+                "schema": "q25-fim-kaggle-worker-status-v1",
+                "commit": job["commit"],
+                "attempt": attempt,
+                "arm": arm,
+                "plan_sha256": plan_hashes[revision],
+                "input_manifest_sha256": input_hashes[revision],
+                "training_started": False,
+                "state": "failed",
+                "elapsed_seconds": worker_elapsed[attempt - 1],
+                "stages": [{"name": "trainer-preflight", "exit_code": 0}],
+            },
+        )
+        prior_reference = reference
+
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    return report, artifacts
+
+
+def test_settle_only_verified_zero_work_attempts_and_use_conservative_duration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, _artifacts = _zero_work_settlement_context(tmp_path, monkeypatch)
+
+    with pytest.raises(RuntimeError, match="shared CPT/FIM session reservation"):
+        campaign.check_shared_allocation_budget(21_600, phase="fim")
+
+    result = campaign.settle_fim_zero_work_sessions()
+
+    assert result["settled_count"] == 4
+    assert result["already_settled_count"] == 0
+    ledger = json.loads((report / campaign.SESSION_SETTLEMENTS).read_text())
+    entries = ledger["settlements"]
+    assert ledger["schema"] == campaign.SESSION_SETTLEMENT_SCHEMA
+    assert [entry["settled_session_seconds"] for entry in entries] == [91, 121, 511, 171]
+    assert all(entry["original_reserved_session_seconds"] == 10_800 for entry in entries)
+    assert all(
+        entry["job_sha256"] and entry["watch_sha256"] and entry["verified_sha256"]
+        for entry in entries
+    )
+    assert all(entry["worker_status_sha256"] for entry in entries)
+
+    campaign.check_shared_allocation_budget(21_600, phase="fim")
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "worker_started",
+        "worker_elapsed_exceeds_bound",
+        "worker_commit_mismatch",
+        "carried_checkpoint",
+        "token_exposure",
+        "boolean_zero_counter",
+        "job_resume_source",
+        "reference_mismatch",
+        "lineage_mismatch",
+        "naive_submission_time",
+        "watch_before_submission",
+        "receipt_before_watch",
+        "boolean_session_reservation",
+    ],
+)
+def test_zero_work_settlement_fails_closed_on_tampered_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+) -> None:
+    report, artifacts = _zero_work_settlement_context(tmp_path, monkeypatch)
+    arm = campaign.FIM_ARMS[0]
+    job_path = report / f"fim-job-{arm}-1.json"
+    watch_path = report / f"fim-watch-{arm}-1.json"
+    verified_path = report / f"fim-verified-{arm}-1.json"
+    worker_path = artifacts / f"fim/output-{arm}-1/q25_fim_r2/worker-status.json"
+    job = json.loads(job_path.read_text())
+    watch = json.loads(watch_path.read_text())
+    verified = json.loads(verified_path.read_text())
+    worker = json.loads(worker_path.read_text())
+
+    if mutation == "worker_started":
+        worker["training_started"] = True
+        campaign.save(worker_path, worker)
+    elif mutation == "worker_elapsed_exceeds_bound":
+        worker["elapsed_seconds"] = 50_000
+        campaign.save(worker_path, worker)
+    elif mutation == "worker_commit_mismatch":
+        worker["commit"] = "e" * 40
+        campaign.save(worker_path, worker)
+    elif mutation == "carried_checkpoint":
+        verified["carried_checkpoint_verified"] = True
+        verified["carried_checkpoint_source"] = "owner/old-checkpoint"
+        verified["carried_checkpoint_identity"] = {"fingerprint": "bad"}
+        campaign.save(verified_path, verified)
+    elif mutation == "token_exposure":
+        verified["processed_arm_input_tokens_conservative"] = 1
+        campaign.save(verified_path, verified)
+    elif mutation == "boolean_zero_counter":
+        job["own_discarded_tokens"] = False
+        campaign.save(job_path, job)
+    elif mutation == "job_resume_source":
+        job["resume_source"] = "owner/unverified-checkpoint"
+        job["resume_identity"] = {"fingerprint": "bad"}
+        campaign.save(job_path, job)
+    elif mutation == "reference_mismatch":
+        watch["reference"] = "owner/other-kernel"
+        campaign.save(watch_path, watch)
+    elif mutation == "lineage_mismatch":
+        later_job_path = report / f"fim-job-{arm}-3.json"
+        later_job = json.loads(later_job_path.read_text())
+        later_job["authorization_lineage_reference"] = "owner/not-the-prior-attempt"
+        campaign.save(later_job_path, later_job)
+    elif mutation == "naive_submission_time":
+        job["submitted_at"] = job["submitted_at"].split("+")[0]
+        campaign.save(job_path, job)
+    elif mutation == "watch_before_submission":
+        submitted = RealDatetime.fromisoformat(job["submitted_at"])
+        watch["observed_at"] = (submitted - timedelta(seconds=1)).isoformat()
+        campaign.save(watch_path, watch)
+    elif mutation == "receipt_before_watch":
+        verified["observed_at"] = (
+            RealDatetime.fromisoformat(watch["observed_at"]) - timedelta(seconds=1)
+        ).isoformat()
+        campaign.save(verified_path, verified)
+    elif mutation == "boolean_session_reservation":
+        job["session_seconds"] = True
+        campaign.save(job_path, job)
+
+    with pytest.raises(ValueError):
+        campaign.settle_fim_zero_work_sessions()
+    assert not (report / campaign.SESSION_SETTLEMENTS).exists()
+    with pytest.raises(RuntimeError, match="shared CPT/FIM session reservation"):
+        campaign.check_shared_allocation_budget(21_600, phase="fim")
+
+
+def test_unknown_running_job_keeps_its_full_reservation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, _artifacts = _zero_work_settlement_context(tmp_path, monkeypatch, attempts=1)
+    arm = campaign.FIM_ARMS[0]
+    watch_path = report / f"fim-watch-{arm}-1.json"
+    watch = json.loads(watch_path.read_text())
+    watch["status"] = 'owner/zero-work-attempt-1 has status "KernelWorkerStatus.RUNNING"'
+    campaign.save(watch_path, watch)
+
+    result = campaign.settle_fim_zero_work_sessions()
+
+    assert result["settled_count"] == 0
+    assert result["skipped_unverified_or_nonterminal_count"] == 1
+    with pytest.raises(RuntimeError, match="shared CPT/FIM session reservation"):
+        campaign.check_shared_allocation_budget(21_600, phase="fim")
+
+
+def test_completed_training_keeps_its_full_reservation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, _artifacts = _zero_work_settlement_context(tmp_path, monkeypatch)
+    arm = campaign.FIM_ARMS[0]
+    verified_path = report / f"fim-verified-{arm}-4.json"
+    verified = json.loads(verified_path.read_text())
+    verified["no_training_executed"] = False
+    verified["training_status"] = "complete"
+    verified["checkpoint_verified"] = True
+    campaign.save(verified_path, verified)
+
+    result = campaign.settle_fim_zero_work_sessions()
+
+    assert result["settled_count"] == 3
+    settlements = campaign._load_validated_session_settlements()
+    assert "owner/zero-work-attempt-4" not in settlements
+    assert "owner/zero-work-attempt-3" in settlements
+
+
+def test_settlement_requires_manifest_to_bind_plan_and_frozen_input_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, artifacts = _zero_work_settlement_context(tmp_path, monkeypatch)
+    arm = campaign.FIM_ARMS[0]
+    manifest_path = artifacts / "fim/history/plan-r3/input-bundle/input-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["files"]["plan.json"]["sha256"] = "f" * 64
+    campaign.save(manifest_path, manifest)
+    manifest_sha = campaign.digest(manifest_path)
+    for attempt in (1, 2, 3):
+        job_path = report / f"fim-job-{arm}-{attempt}.json"
+        job = json.loads(job_path.read_text())
+        job["input_manifest_sha256"] = manifest_sha
+        campaign.save(job_path, job)
+        verified_path = report / f"fim-verified-{arm}-{attempt}.json"
+        verified = json.loads(verified_path.read_text())
+        verified["input_manifest_sha256"] = manifest_sha
+        campaign.save(verified_path, verified)
+        worker_path = artifacts / f"fim/output-{arm}-{attempt}/q25_fim_r2/worker-status.json"
+        worker = json.loads(worker_path.read_text())
+        worker["input_manifest_sha256"] = manifest_sha
+        campaign.save(worker_path, worker)
+
+    with pytest.raises(ValueError, match="input identity differs"):
+        campaign._read_zero_work_evidence(arm, 1)
+
+
+@pytest.mark.parametrize(
+    "artifact_name",
+    [
+        "resume-step-1.pt",
+        "unexpected.safetensors",
+        "latest.json",
+        "updates.jsonl",
+        "run_result.json",
+    ],
+)
+def test_settlement_rejects_training_artifacts_anywhere_in_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, artifact_name: str
+) -> None:
+    _report, artifacts = _zero_work_settlement_context(tmp_path, monkeypatch)
+    arm = campaign.FIM_ARMS[0]
+    stray = artifacts / f"fim/output-{arm}-1/preflight-cache/{artifact_name}"
+    stray.parent.mkdir(parents=True)
+    stray.write_bytes(b"synthetic artifact")
+
+    with pytest.raises(ValueError, match="training artifacts"):
+        campaign._read_zero_work_evidence(arm, 1)
+
+
+@pytest.mark.parametrize("tamper", ["receipt_file", "ledger_charge"])
+def test_budget_check_rejects_changed_settlement_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str
+) -> None:
+    report, _artifacts = _zero_work_settlement_context(tmp_path, monkeypatch)
+    campaign.settle_fim_zero_work_sessions()
+    arm = campaign.FIM_ARMS[0]
+    if tamper == "receipt_file":
+        verified_path = report / f"fim-verified-{arm}-1.json"
+        verified = json.loads(verified_path.read_text())
+        verified["observed_at"] = (
+            RealDatetime.fromisoformat(verified["observed_at"]) + timedelta(seconds=1)
+        ).isoformat()
+        campaign.save(verified_path, verified)
+    else:
+        ledger_path = report / campaign.SESSION_SETTLEMENTS
+        ledger = json.loads(ledger_path.read_text())
+        ledger["settlements"][0]["settled_session_seconds"] = 1
+        campaign.save(ledger_path, ledger)
+
+    with pytest.raises(ValueError, match="session settlement"):
+        campaign.check_shared_allocation_budget(21_600, phase="fim")
+
+
+def test_settlement_cli_does_not_freeze_or_allocate(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["run_q25_code_cpt.py", "--settle-sessions"])
+    monkeypatch.setattr(campaign, "freeze", lambda _config: pytest.fail("settlement froze a plan"))
+    monkeypatch.setattr(
+        campaign, "cli", lambda *_args, **_kwargs: pytest.fail("settlement called Kaggle")
+    )
+    monkeypatch.setattr(
+        campaign,
+        "settle_fim_zero_work_sessions",
+        lambda: {"settled_count": 0, "ledger": "local-ledger"},
+    )
+
+    campaign.main()
+
+    assert json.loads(capsys.readouterr().out) == {"ledger": "local-ledger", "settled_count": 0}

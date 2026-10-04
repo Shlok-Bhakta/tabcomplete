@@ -1,0 +1,58 @@
+{
+  "attention_kernel_executed": false,
+  "cause": "CUDA peak-memory reset ran before lazy CUDA allocator initialization in the new smoke subprocess.",
+  "commit": "c5693499210936eeb773d6bb58a7b3c2f6aa3759",
+  "efficient_attention_supported": null,
+  "elapsed_worker_seconds": 105.93812536300004,
+  "evaluation_plan_unchanged": true,
+  "evidence": {
+    "monitoring-untouched-a4.json": {
+      "bytes": 177,
+      "sha256": "de7f9bafdf751cc195303889a2ba710c8ffe585e10d9b39e541a0ee400027845"
+    },
+    "output-untouched_q25_to_fim-4/q25_fim_r2/logs/attention-smoke.log": {
+      "bytes": 764,
+      "sha256": "65b3c6841c631ed66c173a938f712f94f26efba6513a2c3ebc0ba39e217939f6"
+    },
+    "output-untouched_q25_to_fim-4/q25_fim_r2/worker-status.json": {
+      "bytes": 3434,
+      "sha256": "3967edd960da7d1a86cf54c59b4eabc59f4f10b01185b4220eef1e25b11c8015"
+    },
+    "quota-after-untouched-a4.json": {
+      "bytes": 9536,
+      "sha256": "2438b6f6889de54d47bd3397b8fde4be0dad114b795e200876ffcaa4ae14fdf7"
+    }
+  },
+  "failure_reason": "fim_attention_smoke_failed",
+  "kernel": "shlokbhakta/tc-q25-fim-r2-0-a4",
+  "monitoring": {
+    "limitation": "Failure occurred before generation telemetry initialized.",
+    "query": "scripts/observability.py run tc-q25-fim-r2-0-a4 --json",
+    "state": "no_runs"
+  },
+  "observed_at": "2026-10-04T05:25:14.625034+00:00",
+  "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "quality_outputs_generated": false,
+  "quota_after": {
+    "observed_at": "2026-10-04T05:23:33.640682+00:00",
+    "remaining": 42.45,
+    "renewal": "2026-10-10T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "units": "Kaggle account GPU-hours",
+    "used": 2.55
+  },
+  "repair": "Initialize CUDA before diagnostic peak reset. No change to model generation, prompts, fixtures, scoring, tokenizer, data or trainer.",
+  "runtime": {
+    "bitsandbytes": "0.50.2",
+    "cuda_runtime": "12.8",
+    "nvidia_shared_library_bytes_reused": 4353932793,
+    "python": "3.11.15",
+    "requirements_lock_sha256": "c84aeaafc81059b2bd4bafd7b8fe819dea93462a7f3423e38246f6e2eae699de",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0"
+  },
+  "schema": "q25-fim-diagnostic-failure-v1",
+  "stable_editor_changed": false,
+  "training_input_tokens": 0,
+  "training_started": false
+}

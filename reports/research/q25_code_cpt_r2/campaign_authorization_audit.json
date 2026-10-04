@@ -1,0 +1,26 @@
+{
+  "schema": "q25-campaign-authorization-audit-v1",
+  "source": "Explicit user instructions in this conversation",
+  "authorization_evidence": [
+    "Go to another training run. Sure. You got the GPUs, you got 45 hours worth of GPU this week",
+    "Feel absolutely free to use Kago. We're not gonna find another use for the GPUs there.",
+    "I want to feed a model ... code ... get a resilient flow, so if this cuts off, it's okay"
+  ],
+  "scope": "Resilient public-code continued pretraining and subsequent matched completion adaptation using the existing Qwen2.5-Coder-0.5B Base checkpoint on free Kaggle GPU sessions.",
+  "precedence": "Specific persistent session authorization supersedes generic repository Colab-only guidance and the older campaign's smaller allocation limits. AGENTS.md is unchanged.",
+  "remaining_limits": {
+    "aggregate_session_hours": 20,
+    "conservative_account_gpu_hours": 40,
+    "processed_training_input_tokens": 32000000,
+    "new_artifact_bytes_per_machine": 12884901888,
+    "minimum_free_bytes": 2147483648,
+    "active_gpu_allocations": 1,
+    "automatic_quota_renewal_use": false,
+    "paid_compute": false,
+    "additional_model_weights": false,
+    "private_or_employer_training_source": false,
+    "automatic_personalization": false,
+    "automatic_candidate_promotion": false
+  },
+  "budget_accounting": "Verified terminal zero-training failures may replace unused deadline reservations with a rounded-up controller submission-to-terminal-observation interval plus 60 seconds. Failed setup and evaluation time remains charged. Unknown or active work retains its full reservation."
+}

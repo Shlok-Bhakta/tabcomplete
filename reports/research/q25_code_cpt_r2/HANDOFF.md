@@ -217,3 +217,38 @@ and other records and do not establish human acceptance. Personalization stays
 disabled. Public single-recorder Rust/Svelte traces replayed exactly but lack
 cursor/intent evidence; use them as mechanics fixtures, not training-ready
 human preference data.
+
+## Diagnostic repair after attempt 4
+
+Attempt 4 reached the pinned runtime but failed before attention ran. The new
+smoke subprocess reset CUDA peak-memory statistics before initializing CUDA.
+Its worker elapsed time was 105.938 seconds and the verified receipt records
+zero training tokens and no carried checkpoint. The fix explicitly initializes
+CUDA and selects device 0 before resetting statistics or allocating tensors.
+The deterministic CPU test verifies that order. Kernel support remains unknown
+until the repaired diagnostic runs on the T4.
+
+Keep the revision 4 plan and private input manifest unchanged. This diagnostic
+repair changes no generation, trainer, prompt, fixture, scoring or data policy.
+Attempt 5 must use immediate lineage
+`--resume-source shlokbhakta/tc-q25-fim-r2-0-a4`; its effective checkpoint source
+remains null. Run the full verification gates, commit and push before allocating,
+and refresh live quota. The last recorded quota is historical, not a fresh fact.
+
+The controller settlement ledger may discount only independently verified
+terminal zero-training failures. It charges the rounded-up interval from
+controller submission through terminal observation plus 60 seconds, including
+queueing, setup, evaluations and failures. Active, unknown or trained work keeps
+its full deadline reservation. Hashes bind jobs, watches, receipts, worker status,
+archived plans and input manifests. The 20 session-hour, 40 conservative account
+GPU-hour and 32 million processed-token limits remain unchanged. The specific
+user authorization is recorded in `campaign_authorization_audit.json`; do not
+edit AGENTS.md or silently increase caps to make a retry fit.
+
+The final attempt-5 repair gate passed 1,037 Python tests with two warnings,
+Ruff, mypy across 92 source files, 16 gateway Bun tests, 59 collector Bun tests
+and both TypeScript checks. `verification-fim-attempt5.json` records actual log
+and source hashes. The session ledger validates all four zero-work failures at
+1,294 seconds total and remains idempotent on a repeated explicit settlement.
+Manifest validation binds the archived plan, exact approved file set and staged
+file hashes; stray training artifacts invalidate a zero-work claim.

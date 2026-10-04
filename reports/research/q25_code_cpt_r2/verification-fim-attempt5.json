@@ -1,0 +1,68 @@
+{
+  "automatic_promotion": false,
+  "bun": {
+    "collector_passed": 59,
+    "gateway_passed": 16
+  },
+  "diff_check": "pass",
+  "failed_session_seconds": 1294,
+  "fim_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "gpu_attention_support": "not yet tested after diagnostic repair",
+  "logs": {
+    "collector-bun-a5.log": {
+      "bytes": 5418,
+      "sha256": "71806f0b1144835f6c0fdc5bfc84c5796aaa0820a9f738e974622b673a27f9a3"
+    },
+    "collector-types-a5.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "full-pytest-a5-final.log": {
+      "bytes": 1769,
+      "sha256": "6dda2d4986d93994e66497566e92b06ebb7987be575d053def155b50146e309c"
+    },
+    "gateway-bun-a5.log": {
+      "bytes": 1395,
+      "sha256": "8929abd4275a3eae4beb77c1fe8cc2881f86517902f55fc11c65769cf7813a1b"
+    },
+    "gateway-types-a5.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mypy-a5-final.log": {
+      "bytes": 376,
+      "sha256": "6680dadf20a3720dee511b5d5094d823d30a253ac5c1496e9b6510468649e989"
+    },
+    "ruff-a5-final.log": {
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  },
+  "mypy": {
+    "source_files": 92,
+    "status": "pass"
+  },
+  "observed_at": "2026-10-04T05:43:30.348845+00:00",
+  "purpose": "CUDA diagnostic initialization repair and conservative closed-failure session accounting before FIM attempt5",
+  "python": {
+    "seconds": 89.96,
+    "tests_passed": 1037,
+    "torch_test_runtime": "2.14.0+cpu from existing environment; not the GPU numerical comparison runtime",
+    "transformers": "5.17.0",
+    "version": "3.11.15",
+    "warnings": 2
+  },
+  "ruff": "pass",
+  "schema": "q25-verification-v1",
+  "settlement_ledger_sha256": "9dec7ed2ec503dd904d9928889e3c3eaf9797ede1be689201fd09383ca2888d7",
+  "source_hashes": {
+    "scripts/evaluate_q25_fim.py": "97706412433d75fde8a26c4f6661a3e18f04e4741f6b24a3180d664c6433b07b",
+    "scripts/run_q25_code_cpt.py": "8ea748a5922037753fc8e474dafed85bec22171c5cc257d67497b60354561262",
+    "tests/test_evaluate_q25_fim.py": "80b02bded33139ed040cf4df73bd9185041babdef7ee091bab21fb7d250d7e1f",
+    "tests/test_run_q25_code_cpt.py": "c59c4ebd239f2029e1c0778727191e9607343f2e01e65648b840c277103e8f05"
+  },
+  "typescript": {
+    "collector": "pass",
+    "gateway": "pass"
+  }
+}

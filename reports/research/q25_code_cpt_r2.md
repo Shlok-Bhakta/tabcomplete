@@ -3,8 +3,9 @@
 This experiment tests the user's request to teach the tiny model more code
 before training completion or next-edit behavior. It starts from the untouched
 Qwen2.5-Coder-0.5B Base checkpoint. The working ThinkPad editor model is preserved.
-The experiment has not established improved model quality merely by preparing
-data or passing trainer tests.
+The completed raw-code pass reduced same-tokenizer development NLL and improved
+some syntax scores. Functional success stayed at 10/200. It has not established
+better practical completion quality.
 
 The [frozen plan](q25_code_cpt_r2/plan.json) binds the source pool, model and
 tokenizer hashes, fixture hashes, split policy, decoding, runtime choices,
@@ -61,7 +62,7 @@ The old prepared files and failure evidence are preserved. This correction
 preceded every FIM model output and does not change CPT data or benchmark fixtures.
 
 Each FIM allocation has a three-hour deadline including setup, evaluation and
-saving. The shared campaign cap is 32 million processed input tokens, 20 reserved
+saving. The shared campaign cap is 32 million processed input tokens, 20 bounded
 session hours and 40 conservatively charged account GPU-hours. Raw CPT retains
 its own 12-million processed-token cap. The controller preserves budget for both
 completion arms and accounts for interrupted tails without summing the same
@@ -310,3 +311,7 @@ The pinned Python 3.11.15 runtime initialized correctly and completed all 240 de
 The repair preserves complete prompts and scoring. Explicit KV-head repetition permits supported memory-efficient SDPA instead of the pinned Torch 2.11 native-GQA math fallback. This changes numerical execution, so both arms rerun evaluation under a new frozen plan. Earlier outputs remain historical.
 
 The revised implementation passed 1,011 Python tests with two dependency warnings in 91.57 seconds, Ruff, and mypy across 92 source files. Gateway Bun tests passed 16 cases and collector Bun tests passed 59; both TypeScript checks passed. The actual T4 efficient-kernel smoke remains a required first-stage check in the next GPU allocation.
+
+### FIM attempt 4 diagnostic failure
+
+Attempt 4 stopped after 105.938 worker seconds, before attention execution or training. The new smoke process called CUDA peak-memory reset before initializing the allocator. This is a diagnostic initialization bug, not evidence that the efficient backend is unsupported. The repaired call order leaves the frozen r4 comparison unchanged. The actual job query returned `no_runs` because generation telemetry had not started. Its zero-work receipt preserves all failed-session accounting.

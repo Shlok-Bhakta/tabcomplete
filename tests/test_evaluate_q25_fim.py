@@ -6,8 +6,10 @@ import argparse
 import hashlib
 import json
 import sys
+import types
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -72,6 +74,7 @@ def _source_syntax_fixture(source: str = "# π\r\nvalue = 1\r\n"):
 class Tokenizer:
     eos_token_id = 9
     all_special_ids = [8, 9]
+    added_tokens_decoder: dict[int, object] = {}
     pieces = {0: " ", 1: "\t", 2: "λ", 3: "\n", 8: "<|fim_middle|>", 9: "<eos>"}
 
     def get_vocab(self):
@@ -389,3 +392,109 @@ def test_source_syntax_cli_path_validates_frozen_files_without_a_model(
     assert summary["model_sha256"] == model_sha
     assert summary["raw_source_pool_file_hashes"] == pool_hashes
     assert "value =" not in report_text
+
+
+def test_attention_smoke_initializes_cuda_before_reset_or_tensor_allocation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import evaluate_q25_fim as evaluation
+
+    events: list[str] = []
+
+    class FakeTensor:
+        def __init__(self, shape: tuple[int, ...]) -> None:
+            self.shape = shape
+
+    class FakeCuda:
+        def is_available(self) -> bool:
+            return True
+
+        def init(self) -> None:
+            events.append("cuda.init")
+
+        def set_device(self, device: str) -> None:
+            assert device == "cuda:0"
+            events.append("cuda.set_device")
+
+        def reset_peak_memory_stats(self, device: str) -> None:
+            assert "cuda.init" in events
+            assert "cuda.set_device" in events
+            events.append("cuda.reset_peak_memory_stats")
+
+        def synchronize(self, device: str) -> None:
+            events.append("cuda.synchronize")
+
+        def get_device_name(self, device: str) -> str:
+            return "mock T4"
+
+        def max_memory_allocated(self, device: str) -> int:
+            return 1234
+
+    fake_torch = types.ModuleType("torch")
+    fake_torch.cuda = FakeCuda()  # type: ignore[attr-defined]
+    fake_torch.float16 = object()  # type: ignore[attr-defined]
+    fake_torch.device = lambda value: value  # type: ignore[attr-defined]
+
+    def zeros(shape: tuple[int, ...], *, dtype: Any, device: str) -> FakeTensor:
+        assert "cuda.reset_peak_memory_stats" in events
+        events.append("tensor.zeros")
+        return FakeTensor(shape)
+
+    def zeros_like(tensor: FakeTensor) -> FakeTensor:
+        assert "cuda.reset_peak_memory_stats" in events
+        events.append("tensor.zeros_like")
+        return FakeTensor(tensor.shape)
+
+    class FiniteResult:
+        def all(self) -> SimpleNamespace:
+            return SimpleNamespace(item=lambda: True)
+
+    fake_torch.zeros = zeros  # type: ignore[attr-defined]
+    fake_torch.zeros_like = zeros_like  # type: ignore[attr-defined]
+    fake_torch.isfinite = lambda _tensor: FiniteResult()  # type: ignore[attr-defined]
+
+    class FakeTokenizer:
+        def encode(self, text: str, *, add_special_tokens: bool) -> list[int]:
+            assert add_special_tokens is False
+            return [0] * len(text)
+
+    fake_transformers = types.ModuleType("transformers")
+    fake_transformers.AutoTokenizer = SimpleNamespace(  # type: ignore[attr-defined]
+        from_pretrained=lambda *args, **kwargs: FakeTokenizer()
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
+    monkeypatch.setattr(evaluation, "install_q25_fim_attention", lambda _backend: None)
+
+    def fake_forward(*args: Any, **kwargs: Any) -> tuple[FakeTensor, None]:
+        events.append("attention.forward")
+        query = args[1]
+        return FakeTensor((1, query.shape[2], 14, 64)), None
+
+    monkeypatch.setattr(evaluation, "registered_sdpa_forward", lambda: fake_forward)
+    model = tmp_path / "model"
+    model.mkdir()
+    (model / "tokenizer.json").write_text("{}\n", encoding="utf-8")
+    development = tmp_path / "development.jsonl"
+    development.write_text(json.dumps({"prompt_tokens": 100}) + "\n", encoding="utf-8")
+    line = tmp_path / "line.jsonl"
+    line.write_text(
+        json.dumps({"source_before": "prefix", "source_after": "suffix"}) + "\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "output/attention-smoke.json"
+
+    report = evaluation._attention_smoke(
+        model_path=model,
+        development_path=development,
+        line_path=line,
+        output_path=output,
+        plan_sha256="a" * 64,
+    )
+
+    assert report["query_tokens"] == 100
+    assert report["success"] is True
+    assert events.index("cuda.init") < events.index("cuda.set_device")
+    assert events.index("cuda.set_device") < events.index("cuda.reset_peak_memory_stats")
+    assert events.index("cuda.reset_peak_memory_stats") < events.index("tensor.zeros")
+    assert events.index("tensor.zeros_like") < events.index("attention.forward")

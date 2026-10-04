@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import re
@@ -263,15 +264,444 @@ def upload_bundle(plan: dict[str, Any]) -> dict[str, Any]:
     return verification
 
 
+SESSION_SETTLEMENTS = "session_settlements.json"
+SESSION_SETTLEMENT_SCHEMA = "q25-session-settlements-v1"
+SESSION_SETTLEMENT_MARGIN_SECONDS = 60
+
+
+def _parse_aware_timestamp(value: Any, *, field: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError(f"session settlement {field} timestamp is missing")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"session settlement {field} timestamp is invalid") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"session settlement {field} timestamp has no timezone")
+    return parsed.astimezone(UTC)
+
+
+def _is_terminal_kernel_status(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and re.search(r"KernelWorkerStatus\.(?:ERROR|COMPLETE)\b", value) is not None
+    )
+
+
+def _is_exact_zero_counter(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value == 0
+
+
+def _fim_plan_for_hash(plan_sha256: str) -> tuple[Path, dict[str, Any]]:
+    candidates = [
+        path
+        for path in REPORT.glob("fim_training_plan*.json")
+        if path.is_file() and not path.is_symlink() and digest(path) == plan_sha256
+    ]
+    if len(candidates) != 1:
+        raise ValueError("session settlement cannot identify one archived FIM plan")
+    plan = json.loads(candidates[0].read_text())
+    if plan.get("schema") != "q25-fim-training-plan-v1" or (
+        plan.get("gpu_execution_authorized") is not True
+    ):
+        raise ValueError("session settlement plan is not an authorized frozen FIM plan")
+    return candidates[0], plan
+
+
+def _fim_input_manifest_for_hash(input_sha256: str) -> Path:
+    candidates = [
+        path
+        for path in [
+            ARTIFACTS / "fim/input-bundle/input-manifest.json",
+            *ARTIFACTS.glob("fim/history/*/input-bundle/input-manifest.json"),
+        ]
+        if path.is_file() and not path.is_symlink() and digest(path) == input_sha256
+    ]
+    if len(candidates) != 1:
+        raise ValueError("session settlement cannot identify one archived FIM input manifest")
+    return candidates[0]
+
+
+def _validate_fim_input_manifest(
+    path: Path, *, input_sha256: str, plan_sha256: str, plan: dict[str, Any]
+) -> None:
+    if digest(path) != input_sha256:
+        raise ValueError("session settlement input-manifest fingerprint differs")
+    manifest = json.loads(path.read_text())
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if manifest.get("model_dataset") != BASE_DATASET or not isinstance(files, dict):
+        raise ValueError("session settlement input manifest identity is invalid")
+    training = plan.get("data", {})
+    fixtures = plan.get("evaluation", {}).get("fixtures", {})
+    expected = {
+        "plan.json": {"sha256": plan_sha256},
+        "train.jsonl": training.get("train", {}),
+        "development.jsonl": training.get("development", {}),
+        "corpus_metadata.json": {"sha256": training.get("corpus_metadata_sha256")},
+        "causal200.jsonl": fixtures.get("causal", {}),
+        "line180.jsonl": fixtures.get("line", {}),
+    }
+    if set(files) != set(expected):
+        raise ValueError("session settlement input manifest file list differs from the frozen plan")
+    for name, identity in expected.items():
+        record = files.get(name)
+        if not isinstance(record, dict):
+            raise ValueError("session settlement input manifest file record is invalid")
+        expected_sha = identity.get("sha256")
+        expected_bytes = identity.get("bytes")
+        if name in {"train.jsonl", "development.jsonl"} and identity.get("file") != name:
+            raise ValueError("session settlement training filename differs from the frozen plan")
+        if (
+            not isinstance(expected_sha, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", expected_sha)
+            or record.get("sha256") != expected_sha
+            or not isinstance(record.get("bytes"), int)
+            or isinstance(record.get("bytes"), bool)
+            or record["bytes"] < 0
+            or (expected_bytes is not None and record["bytes"] != expected_bytes)
+        ):
+            raise ValueError("session settlement input identity differs from the frozen plan")
+        staged = path.parent / name
+        if (
+            not staged.is_file()
+            or staged.is_symlink()
+            or staged.stat().st_size != record["bytes"]
+            or digest(staged) != expected_sha
+        ):
+            raise ValueError("session settlement staged input file differs from its manifest")
+    if digest(path.parent / "plan.json") != plan_sha256:
+        raise ValueError("session settlement bundled plan differs from the job plan")
+
+
+def _read_zero_work_evidence(arm: str, attempt: int) -> dict[str, Any]:
+    if (
+        arm not in FIM_ARMS
+        or not isinstance(attempt, int)
+        or isinstance(attempt, bool)
+        or attempt < 1
+    ):
+        raise ValueError("session settlement has an invalid arm or attempt")
+    job_path = REPORT / f"fim-job-{arm}-{attempt}.json"
+    watch_path = REPORT / f"fim-watch-{arm}-{attempt}.json"
+    verified_path = REPORT / f"fim-verified-{arm}-{attempt}.json"
+    if not all(
+        path.is_file() and not path.is_symlink() for path in (job_path, watch_path, verified_path)
+    ):
+        raise ValueError("session settlement evidence is incomplete")
+    job = json.loads(job_path.read_text())
+    watch = json.loads(watch_path.read_text())
+    verified = json.loads(verified_path.read_text())
+    reference = job.get("reference")
+    plan_sha256 = job.get("plan_sha256")
+    input_sha256 = job.get("input_manifest_sha256")
+    commit = job.get("commit")
+    if (
+        job.get("status") != "submitted"
+        or job.get("arm") != arm
+        or job.get("attempt") != attempt
+        or not isinstance(reference, str)
+        or not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", reference)
+        or not isinstance(plan_sha256, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", plan_sha256)
+        or not isinstance(input_sha256, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", input_sha256)
+        or not isinstance(commit, str)
+        or not re.fullmatch(r"[0-9a-f]{40}", commit)
+        or any(
+            record.get(key) != value
+            for record in (watch, verified)
+            for key, value in (
+                ("reference", reference),
+                ("status", watch.get("status")),
+            )
+        )
+        or any(
+            verified.get(key) != value
+            for key, value in (
+                ("arm", arm),
+                ("attempt", attempt),
+                ("plan_sha256", plan_sha256),
+                ("input_manifest_sha256", input_sha256),
+                ("commit", commit),
+            )
+        )
+        or not _is_terminal_kernel_status(watch.get("status"))
+        or watch.get("automatic_allocation") is not False
+    ):
+        raise ValueError("session settlement job, watch, and receipt identities differ")
+    submitted = _parse_aware_timestamp(job.get("submitted_at"), field="submitted_at")
+    observed = _parse_aware_timestamp(watch.get("observed_at"), field="watch observed_at")
+    verified_at = _parse_aware_timestamp(verified.get("observed_at"), field="receipt observed_at")
+    if observed < submitted or verified_at < observed:
+        raise ValueError("session settlement timestamps are out of order")
+
+    plan_path, plan = _fim_plan_for_hash(plan_sha256)
+    session_seconds = job.get("session_seconds")
+    reserved_seconds = job.get("conservative_reserved_session_seconds")
+    if (
+        not isinstance(session_seconds, int)
+        or isinstance(session_seconds, bool)
+        or session_seconds <= 0
+        or reserved_seconds != session_seconds
+        or session_seconds != plan.get("configuration", {}).get("budget", {}).get("session_seconds")
+    ):
+        raise ValueError("session settlement job reservation is invalid")
+
+    initializer = plan.get("initializers", {}).get(arm)
+    if not isinstance(initializer, dict):
+        raise ValueError("session settlement plan lacks the arm initializer")
+    input_path = _fim_input_manifest_for_hash(input_sha256)
+    _validate_fim_input_manifest(
+        input_path,
+        input_sha256=input_sha256,
+        plan_sha256=plan_sha256,
+        plan=plan,
+    )
+    output = ARTIFACTS / f"fim/output-{arm}-{attempt}"
+    worker_paths = list(output.glob("**/worker-status.json"))
+    if len(worker_paths) != 1 or worker_paths[0].is_symlink():
+        raise ValueError("session settlement requires one preserved worker status")
+    worker_path = worker_paths[0]
+    worker = json.loads(worker_path.read_text())
+    expected_worker_identity = {
+        "schema": "q25-fim-kaggle-worker-status-v1",
+        "commit": commit,
+        "attempt": attempt,
+        "arm": arm,
+        "plan_sha256": plan_sha256,
+        "input_manifest_sha256": input_sha256,
+    }
+    if not isinstance(worker, dict):
+        raise ValueError("session settlement worker status is malformed")
+    stages = worker.get("stages")
+    if (
+        any(worker.get(key) != value for key, value in expected_worker_identity.items())
+        or worker.get("training_started") is not False
+        or worker.get("state")
+        not in {
+            "setup",
+            "verified_inputs",
+            "baseline_evaluation",
+            "training_deferred_insufficient_time",
+            "failed",
+        }
+        or not isinstance(stages, list)
+        or any(not isinstance(stage, dict) or stage.get("name") == "training" for stage in stages)
+        or any(
+            key in worker
+            for key in ("training", "training_exit_code", "checkpoint_pointer_present")
+        )
+    ):
+        raise ValueError("session settlement worker status does not prove zero training work")
+    if output.is_symlink() or any(path.is_symlink() for path in output.rglob("*")):
+        raise ValueError("session settlement output contains symbolic links")
+    training_dirs = list(output.glob("**/training"))
+    training_artifact_names = {"latest.json", "updates.jsonl", "run_result.json", "training.log"}
+    if any(
+        path.is_symlink() or any(child.is_file() or child.is_symlink() for child in path.rglob("*"))
+        for path in training_dirs
+    ) or any(
+        path.is_file()
+        and (
+            path.name in training_artifact_names
+            or (path.name.startswith("resume-step") and path.suffix == ".pt")
+            or path.suffix == ".safetensors"
+        )
+        for path in output.rglob("*")
+    ):
+        raise ValueError("session settlement output contains training artifacts")
+
+    worker_elapsed = worker.get("elapsed_seconds")
+    if (
+        not isinstance(worker_elapsed, (int, float))
+        or isinstance(worker_elapsed, bool)
+        or not math.isfinite(worker_elapsed)
+        or worker_elapsed < 0
+    ):
+        raise ValueError("session settlement worker elapsed time is invalid")
+    expected_tokens = job.get("other_phase_tokens")
+    discarded = job.get("own_discarded_tokens")
+    if (
+        not isinstance(expected_tokens, int)
+        or isinstance(expected_tokens, bool)
+        or expected_tokens < 0
+        or not _is_exact_zero_counter(discarded)
+        or not isinstance(job.get("external_campaign_tokens"), int)
+        or isinstance(job.get("external_campaign_tokens"), bool)
+        or job.get("resume_source") is not None
+        or job.get("resume_identity") is not None
+        or job.get("external_campaign_tokens") != expected_tokens
+        or verified.get("no_training_executed") is not True
+        or verified.get("training_status") != "no_training_executed"
+        or verified.get("checkpoint_verified") is not False
+        or verified.get("carried_checkpoint_verified") is not False
+        or verified.get("carried_checkpoint_source") is not None
+        or verified.get("carried_checkpoint_identity") is not None
+        or not _is_exact_zero_counter(verified.get("own_discarded_tokens_for_resume"))
+        or not _is_exact_zero_counter(verified.get("processed_arm_input_tokens_conservative"))
+        or not isinstance(verified.get("other_phase_processed_tokens_at_submission"), int)
+        or isinstance(verified.get("other_phase_processed_tokens_at_submission"), bool)
+        or verified.get("other_phase_processed_tokens_at_submission") != expected_tokens
+    ):
+        raise ValueError("session settlement receipt carries training state or token exposure")
+
+    lineage_reference = job.get("authorization_lineage_reference")
+    if attempt == 1:
+        if lineage_reference is not None:
+            raise ValueError("first FIM attempt has unexpected retry lineage")
+    else:
+        previous_evidence = _read_zero_work_evidence(arm, attempt - 1)
+        if lineage_reference != previous_evidence["reference"]:
+            raise ValueError(
+                "session settlement retry lineage is not the immediate zero-work attempt"
+            )
+
+    elapsed_plus_margin = (observed - submitted).total_seconds() + SESSION_SETTLEMENT_MARGIN_SECONDS
+    settled_seconds = math.ceil(elapsed_plus_margin)
+    if settled_seconds > session_seconds or math.ceil(worker_elapsed) > settled_seconds:
+        raise ValueError("session settlement upper bound does not cover the allocation")
+    return {
+        "reference": reference,
+        "arm": arm,
+        "attempt": attempt,
+        "plan_sha256": plan_sha256,
+        "input_manifest_sha256": input_sha256,
+        "commit": commit,
+        "initializer_identity_sha256": hashlib.sha256(
+            json.dumps(initializer, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest(),
+        "authorization_lineage_reference": lineage_reference,
+        "job_file": job_path.name,
+        "job_sha256": digest(job_path),
+        "watch_file": watch_path.name,
+        "watch_sha256": digest(watch_path),
+        "verified_file": verified_path.name,
+        "verified_sha256": digest(verified_path),
+        "worker_status_file": str(worker_path.relative_to(ARTIFACTS)),
+        "worker_status_sha256": digest(worker_path),
+        "plan_file": plan_path.name,
+        "input_manifest_file": str(input_path.relative_to(ARTIFACTS)),
+        "submitted_at": job["submitted_at"],
+        "terminal_observed_at": watch["observed_at"],
+        "receipt_observed_at": verified["observed_at"],
+        "worker_elapsed_seconds": worker_elapsed,
+        "original_reserved_session_seconds": session_seconds,
+        "terminal_observation_margin_seconds": SESSION_SETTLEMENT_MARGIN_SECONDS,
+        "settled_session_seconds": settled_seconds,
+    }
+
+
+def _load_validated_session_settlements() -> dict[str, dict[str, Any]]:
+    path = REPORT / SESSION_SETTLEMENTS
+    if not path.exists():
+        return {}
+    ledger = json.loads(path.read_text())
+    if ledger.get("schema") != SESSION_SETTLEMENT_SCHEMA or not isinstance(
+        ledger.get("settlements"), list
+    ):
+        raise ValueError("session settlement ledger schema is invalid")
+    entries: dict[str, dict[str, Any]] = {}
+    known_jobs: dict[str, Path] = {}
+    for job_path in REPORT.glob("fim-job-*.json"):
+        if not job_path.is_file() or job_path.is_symlink():
+            raise ValueError("session settlement found an unsafe FIM job receipt")
+        reference = json.loads(job_path.read_text()).get("reference")
+        if not isinstance(reference, str) or reference in known_jobs:
+            raise ValueError("session settlement jobs have missing or duplicate references")
+        known_jobs[reference] = job_path
+    for entry in ledger["settlements"]:
+        if not isinstance(entry, dict) or not isinstance(entry.get("reference"), str):
+            raise ValueError("session settlement ledger entry is invalid")
+        reference = entry["reference"]
+        if reference in entries or reference not in known_jobs:
+            raise ValueError("session settlement ledger has a duplicate or unknown job")
+        if entry.get("recorded_at") is None:
+            raise ValueError("session settlement ledger lacks its recording time")
+        recorded_at = _parse_aware_timestamp(entry["recorded_at"], field="recorded_at")
+        job_path = known_jobs[reference]
+        job = json.loads(job_path.read_text())
+        arm, attempt = job.get("arm"), job.get("attempt")
+        if not isinstance(arm, str) or not isinstance(attempt, int) or isinstance(attempt, bool):
+            raise ValueError("session settlement job identity is invalid")
+        expected = _read_zero_work_evidence(arm, attempt)
+        if recorded_at < _parse_aware_timestamp(expected["receipt_observed_at"], field="receipt"):
+            raise ValueError("session settlement was recorded before the receipt")
+        if any(entry.get(key) != value for key, value in expected.items()):
+            raise ValueError("session settlement evidence hash or bound differs")
+        entries[reference] = entry
+    return entries
+
+
+def settle_fim_zero_work_sessions() -> dict[str, Any]:
+    """Record conservative charges for terminal, independently verified zero-work FIM jobs."""
+    ledger_path = REPORT / SESSION_SETTLEMENTS
+    existing = _load_validated_session_settlements()
+    entries = {reference: dict(value) for reference, value in existing.items()}
+    skipped = 0
+    for job_path in sorted(REPORT.glob("fim-job-*.json")):
+        if job_path.is_symlink() or not job_path.is_file():
+            raise ValueError("session settlement found an unsafe job receipt")
+        job = json.loads(job_path.read_text())
+        reference = job.get("reference")
+        if reference in entries:
+            continue
+        arm, attempt = job.get("arm"), job.get("attempt")
+        if arm not in FIM_ARMS or not isinstance(attempt, int) or isinstance(attempt, bool):
+            skipped += 1
+            continue
+        watch_path = REPORT / f"fim-watch-{arm}-{attempt}.json"
+        verified_path = REPORT / f"fim-verified-{arm}-{attempt}.json"
+        if not watch_path.is_file() or not verified_path.is_file():
+            skipped += 1
+            continue
+        watch = json.loads(watch_path.read_text())
+        if not _is_terminal_kernel_status(watch.get("status")):
+            skipped += 1
+            continue
+        receipt = json.loads(verified_path.read_text())
+        if (
+            receipt.get("no_training_executed") is not True
+            or receipt.get("training_status") != "no_training_executed"
+        ):
+            skipped += 1
+            continue
+        entry = _read_zero_work_evidence(arm, attempt)
+        entry["recorded_at"] = datetime.now(UTC).isoformat()
+        entries[reference] = entry
+    ordered = sorted(
+        entries.values(), key=lambda entry: (entry["submitted_at"], entry["reference"])
+    )
+    save(
+        ledger_path,
+        {"schema": SESSION_SETTLEMENT_SCHEMA, "settlements": ordered},
+    )
+    return {
+        "settled_count": len(entries) - len(existing),
+        "already_settled_count": len(existing),
+        "skipped_unverified_or_nonterminal_count": skipped,
+        "settled_session_seconds": sum(entry["settled_session_seconds"] for entry in ordered),
+        "ledger": str(ledger_path),
+    }
+
+
 def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
     path = REPORT / "campaign_budget.json"
     if not path.exists():
         return
     shared = json.loads(path.read_text())["shared_limits"]
+    fim_settlements = _load_validated_session_settlements()
     jobs = [*REPORT.glob("job-*.json"), *REPORT.glob("fim-job-*.json")]
-    reserved = sum(
-        int(json.loads(job.read_text())["conservative_reserved_session_seconds"]) for job in jobs
-    )
+    reserved = 0
+    for job_path in jobs:
+        job = json.loads(job_path.read_text())
+        job_reservation = int(job["conservative_reserved_session_seconds"])
+        if job_path.name.startswith("fim-job-"):
+            settlement = fim_settlements.get(job.get("reference"))
+            if settlement is not None:
+                if settlement["job_file"] != job_path.name:
+                    raise ValueError("session settlement points to a different FIM job")
+                job_reservation = int(settlement["settled_session_seconds"])
+        reserved += job_reservation
     future_reserve = (
         int(shared["minimum_reserved_future_fim_session_seconds"]) if phase == "cpt" else 0
     )
@@ -1697,13 +2127,21 @@ def main() -> None:
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--phase", choices=("cpt", "fim"), default="cpt")
     parser.add_argument("--freeze-fim", action="store_true")
+    parser.add_argument("--settle-sessions", action="store_true")
     parser.add_argument("--cpt-attempt", type=int, default=1)
     parser.add_argument("--arm", choices=FIM_ARMS, default=FIM_ARMS[0])
     parser.add_argument("--attempt", type=int, default=1)
     parser.add_argument("--resume-source")
     args = parser.parse_args()
+    result: dict[str, Any]
+    if args.settle_sessions:
+        if any((args.bundle, args.upload, args.execute, args.collect, args.watch, args.freeze_fim)):
+            parser.error("--settle-sessions cannot be combined with other campaign actions")
+        result = settle_fim_zero_work_sessions()
+        print(json.dumps(result, sort_keys=True))
+        return
     plan = freeze(args.config)
-    result: dict[str, Any] = {"plan_sha256": digest(REPORT / "plan.json"), "frozen": True}
+    result = {"plan_sha256": digest(REPORT / "plan.json"), "frozen": True}
     if args.freeze_fim:
         result["fim_plan"] = freeze_fim_plan(plan, args.cpt_attempt)
     if args.phase == "fim":

@@ -683,6 +683,8 @@ def _attention_smoke(
 
     install_q25_fim_attention(ATTENTION_BACKEND)
     device = torch.device("cuda:0")
+    torch.cuda.init()
+    torch.cuda.set_device(device)
     torch.cuda.reset_peak_memory_stats(device)
     query = torch.zeros((1, 14, max_prompt_tokens, 64), dtype=torch.float16, device=device)
     key = torch.zeros((1, 2, max_prompt_tokens, 64), dtype=torch.float16, device=device)

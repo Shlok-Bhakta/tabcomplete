@@ -1,0 +1,19 @@
+{
+  "arm": "untouched_q25_to_fim",
+  "attempt": 4,
+  "carried_checkpoint_identity": null,
+  "carried_checkpoint_source": null,
+  "carried_checkpoint_verified": false,
+  "checkpoint_verified": false,
+  "commit": "c5693499210936eeb773d6bb58a7b3c2f6aa3759",
+  "input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
+  "no_training_executed": true,
+  "observed_at": "2026-10-04T05:19:22.407848+00:00",
+  "other_phase_processed_tokens_at_submission": 7872512,
+  "own_discarded_tokens_for_resume": 0,
+  "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "processed_arm_input_tokens_conservative": 0,
+  "reference": "shlokbhakta/tc-q25-fim-r2-0-a4",
+  "status": "shlokbhakta/tc-q25-fim-r2-0-a4 has status \"KernelWorkerStatus.ERROR\"",
+  "training_status": "no_training_executed"
+}
