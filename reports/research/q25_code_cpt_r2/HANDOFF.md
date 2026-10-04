@@ -4,48 +4,57 @@ Worktree: `/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2`.
 Branch: `research/q25-code-cpt-r2`, from `0047e18`.
 Private artifacts: `/mnt/ssd/tabcomplete-q25-code-cpt-r2`.
 
-## Current execution at 2026-10-04 09:54 UTC
+## Current execution at 2026-10-04 10:16 UTC
 
-Raw CPT and both matched FIM arms are complete. Do not restart training. Direct
-FIM remains selected at 130/240 exact+EOS versus CPT→FIM 127/240, with an
-inconclusive paired difference. Actual native Q4 is still pending.
+CPT and both matched FIM arms remain complete; direct FIM remains selected.
+Do not retrain. Native Q4, real inference/latency and editor/SQLite delivery are
+still pending. Stable desktop/ThinkPad configurations remain unchanged.
 
-CPU conversion R2, reference `shlokbhakta/tc-q25-fim-q4-conversion-r2`, launched
-from pushed `2d4275c` at 09:30:39 UTC and reached verified source/storage setup.
-It failed after 13.1695 worker seconds immediately after pinned uv installation.
-The remote launcher hash matches staging; GPU was disabled and no additional
-training occurred. Failed manifest and compact logs are under
-`fim/conversion-failure-r2`; the actual SigNoz query returned `no_runs`.
-`fim-conversion-failed-r2-1.json` binds its job/watch/failed-manifest hashes.
-The original 10,800-second job reservation is preserved. The runner validates
-and charges 333 seconds covering submission to observed terminal plus 60 seconds.
-Both older R1 CPU reservations remain fully charged. A new explicit 3-hour CPU
-reservation fits the unchanged 20-hour campaign limit; no automatic retry.
+Root HEAD `b1bacdd` includes explicit CPU conversion revisions 1 through 4.
+R2 failed after verified source setup at uv pip-prefix lookup; worker fixed by
+extracting only the exact executable from its SHA-pinned wheel. R3 then verified
+CPU Python3.11.15/Torch2.11.0+cpu, installed dependencies, cloned exact
+llama.cpp `f072b103714dfa1eee531f80b24512faf38e3dd2`, built quantizer and reached
+F16 conversion. It failed at 440.692 worker seconds because the pinned converter
+imports sentencepiece before testing the absent tokenizer.model and falling back
+to GPT2/BPE. Actual private converter traceback confirms ModuleNotFoundError for
+sentencepiece. All logs/failed manifests are under `fim/conversion-failure-r3`;
+SigNoz query again returned no_runs. No additional training or GPU allocation.
 
-Root controller now supports separate explicit `--conversion-revision3` with
-one attempt, isolated plan/ref/paths, preserved R1/R2 evidence, and tested budget
-settlement. The isolated campaign agent has tested direct bounded extraction of
-only uv from its SHA-pinned wheel, rather than pip-prefix path assumptions.
-Await its worker/test commit, merge, freeze the R3 plan, run focused gates, and
-push exact clean source BEFORE allocation. The configuration dataset, selected
-checkpoint, tokenizer, training plan and fixtures must remain unchanged.
+R2/R3 terminal CPU charges are strictly validated 333/561 seconds covering
+submission to observed terminal plus 60 seconds. Original 10,800-second job
+reservations remain untouched; both R1 reservations remain fully charged.
+R4 gets separate plan/ref/paths and one explicit attempt only. Another three-hour
+CPU reservation fits the unchanged twenty-hour cap; no automatic retry.
 
-Root merged replay safeguards as `2ed6817`: hard SIGALRM wall deadline, normal
-sampler exit and monotonic full-window coverage, explicit warm cache-on start
-from the final fresh prompt, and continuous cache trajectories. Root 181 combined
-controller/replay tests passed. Earlier full Python gate passed 1178 tests,
-but rerun after these new source changes. Root Ruff and expanded mypy passed
-before the latest settlement hardening; recheck them. Native quality/latency
-plans must be frozen only after current serving/evaluator identities are final.
+Campaign audit agent is adding hash-pinned sentencepiece to the CPU lock and
+worker inventory. It MUST run the actual pinned converter's --vocab-only route
+on selected local HF config/tokenizer before another allocation. No new weights.
+Await its worker/lock/test commit, merge, freeze R4 plan, independently test,
+commit and push exact clean source, refresh live quota/active jobs, then explicitly
+submit `--execute-conversion --conversion-revision4`. Watch/collect matching R4.
+Do not reuse R3 fingerprints after lock/source changes or retune fixtures.
 
-The existing SQLite prompt blob hash is now distinct from bound FIM context
-hash. Its online backup is retained and no migration/wipe is required. A public
-synthetic Python/Go smoke fixture is prepared under `fim/native/editor-smoke`
-using preselected case `fim-development-4154`; no native model output exists yet.
-Stable desktop service/config are unchanged. ThinkPad SSH still times out.
-Personalization stays disabled. Continue through Q4 retrieval, actual native
-quality/latency, real synthetic Neovim/SQLite replay, and verified experimental
-desktop deployment before calling delivery complete.
+Current verification at pushed source `31dad32`: Python1208, Lua86, collector59,
+analysis38, gateway16 passed; Ruff/mypy93 and all TS checks passed. Root's newer
+R4 controller has 173 focused passes plus mypy/Ruff. Full gate must rerun after
+worker/lock integration. Replay hard deadline, sampling coverage, honest warm
+cache start and Lua prompt blob vs binding hashes are merged. Native case SHA
+remains 57cef82cc1a8cc5d4ddfdc25201b7e54f7f33ec6d2860acf14166bb5537127bc.
+
+Selected native profile/embedding must use actual completed Q4 only, never old
+stable weights. Generic release binary SHA remains d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074.
+Private artifact total about11.44GB of12GiB leaves space for Q4+embedded ELF.
+Stop only the owned old predictor before loading candidate, restore on exit.
+Freeze native quality/latency plans after final source/model/binary/PID identities.
+Run240 exact+EOS cases and144 changed-state/cache latency requests, then real
+synthetic Neovim accept/dismiss/match/undo/navigation and existing-DB replay/blob
+verification. Prepared fixture is fim/native/editor-smoke, case4154,273-bytePython.
+Existing SQLite online backup retained; no migration/wipe needed. Data audit agent
+is ready to audit exact session/prediction IDs, projections and blobs read-only.
+ThinkPad approved SSH alias still times out; retry later without scanning hosts.
+Automatic personalization stays disabled. Continue through measured native
+verification and safe experimental desktop deployment before a completion claim.
 
 ## Matched completion follow-up
 
