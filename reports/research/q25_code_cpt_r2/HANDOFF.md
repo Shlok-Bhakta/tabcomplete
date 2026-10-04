@@ -4,57 +4,38 @@ Worktree: `/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2`.
 Branch: `research/q25-code-cpt-r2`, from `0047e18`.
 Private artifacts: `/mnt/ssd/tabcomplete-q25-code-cpt-r2`.
 
-## Current execution at 2026-10-04 10:16 UTC
+## Current execution at 2026-10-04 10:29 UTC
 
-CPT and both matched FIM arms remain complete; direct FIM remains selected.
-Do not retrain. Native Q4, real inference/latency and editor/SQLite delivery are
-still pending. Stable desktop/ThinkPad configurations remain unchanged.
+CPT and both matched FIM arms are complete. Direct FIM is selected, 130/240
+strict exact+EOS versus 127/240 for CPT→FIM. Do not retrain or alter fixtures.
+Native Q4 quality, latency and actual editor/SQLite delivery remain pending.
 
-Root HEAD `b1bacdd` includes explicit CPU conversion revisions 1 through 4.
-R2 failed after verified source setup at uv pip-prefix lookup; worker fixed by
-extracting only the exact executable from its SHA-pinned wheel. R3 then verified
-CPU Python3.11.15/Torch2.11.0+cpu, installed dependencies, cloned exact
-llama.cpp `f072b103714dfa1eee531f80b24512faf38e3dd2`, built quantizer and reached
-F16 conversion. It failed at 440.692 worker seconds because the pinned converter
-imports sentencepiece before testing the absent tokenizer.model and falling back
-to GPT2/BPE. Actual private converter traceback confirms ModuleNotFoundError for
-sentencepiece. All logs/failed manifests are under `fim/conversion-failure-r3`;
-SigNoz query again returned no_runs. No additional training or GPU allocation.
+SentencePiece0.2.2 is now hash-pinned in the CPU worker/lock. The campaign audit
+agent ran the actual pinned llama.cpp converter --vocab-only on selected metadata:
+151,936 vocabulary items, zero tensors, expected EOS and FIM strings/types/IDs.
+No weights were staged. Temporary output/log were cleaned and no output SHA was
+recorded, explicitly reported in fim_conversion/vocab_only_preflight.json.
+The local preflight used Torch2.14CPU; the remote lock remains Torch2.11CPU.
 
-R2/R3 terminal CPU charges are strictly validated 333/561 seconds covering
-submission to observed terminal plus 60 seconds. Original 10,800-second job
-reservations remain untouched; both R1 reservations remain fully charged.
-R4 gets separate plan/ref/paths and one explicit attempt only. Another three-hour
-CPU reservation fits the unchanged twenty-hour cap; no automatic retry.
+Revision4 plan SHA896e563a0bd107e15fa0800e85639f68ff565667cedaa86c6ebe540e53519c06
+changes only revision and source_code from R3. Same selected checkpoint, tokenizer,
+source config dataset and all quality fixtures. Explicit --conversion-revision4
+gets one CPU attempt, no automatic retry or renewed quota use. R2/R3 failure
+charges333/561s are validated; original10800s reservations remain preserved.
+Source verification now Python1212, Ruff, mypy92 pass. Rust/Lua/server sources
+unchanged from prior verification receipt. Submit only after source/plan commit
+and push; runner refreshes authenticated quota/active jobs before allocation.
 
-Campaign audit agent is adding hash-pinned sentencepiece to the CPU lock and
-worker inventory. It MUST run the actual pinned converter's --vocab-only route
-on selected local HF config/tokenizer before another allocation. No new weights.
-Await its worker/lock/test commit, merge, freeze R4 plan, independently test,
-commit and push exact clean source, refresh live quota/active jobs, then explicitly
-submit `--execute-conversion --conversion-revision4`. Watch/collect matching R4.
-Do not reuse R3 fingerprints after lock/source changes or retune fixtures.
-
-Current verification at pushed source `31dad32`: Python1208, Lua86, collector59,
-analysis38, gateway16 passed; Ruff/mypy93 and all TS checks passed. Root's newer
-R4 controller has 173 focused passes plus mypy/Ruff. Full gate must rerun after
-worker/lock integration. Replay hard deadline, sampling coverage, honest warm
-cache start and Lua prompt blob vs binding hashes are merged. Native case SHA
-remains 57cef82cc1a8cc5d4ddfdc25201b7e54f7f33ec6d2860acf14166bb5537127bc.
-
-Selected native profile/embedding must use actual completed Q4 only, never old
-stable weights. Generic release binary SHA remains d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074.
-Private artifact total about11.44GB of12GiB leaves space for Q4+embedded ELF.
-Stop only the owned old predictor before loading candidate, restore on exit.
-Freeze native quality/latency plans after final source/model/binary/PID identities.
-Run240 exact+EOS cases and144 changed-state/cache latency requests, then real
-synthetic Neovim accept/dismiss/match/undo/navigation and existing-DB replay/blob
-verification. Prepared fixture is fim/native/editor-smoke, case4154,273-bytePython.
-Existing SQLite online backup retained; no migration/wipe needed. Data audit agent
-is ready to audit exact session/prediction IDs, projections and blobs read-only.
-ThinkPad approved SSH alias still times out; retry later without scanning hosts.
-Automatic personalization stays disabled. Continue through measured native
-verification and safe experimental desktop deployment before a completion claim.
+Generic native ELF SHA d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074.
+Collect only Q4+compact manifests. Prepare identity-bound profile and embed actual
+selected GGUF, checking12GiB artifact cap first. Stop only owned old predictor
+before loading candidate, restore on failure. Freeze actual binary/model/PID
+quality and latency plans, run240dev cases and144changed/cache requests. Real
+synthetic Neovim fixture is fim/native/editor-smoke; audit exact prediction/session
+IDs, existing SQLite blobs/replay/dedup before installation claim. Installer backs
+up unit/config, restarts and verifies actual process, keeps training disabled.
+ThinkPad known alias again timed out; no laptop installation or measurements.
+Continue through actual native and safe experimental desktop verification.
 
 ## Matched completion follow-up
 

@@ -1,12 +1,16 @@
 {
   "artifact_cap_bytes": 12884901888,
+  "campaign_processed_training_input_tokens": 11426328,
   "completed_cpt_input_tokens": 7872512,
   "completed_cpt_updates": 481,
-  "current_fim_attempt": 3,
+  "completed_fim_input_tokens": 3553816,
+  "current_conversion_ref": "shlokbhakta/tc-q25-fim-q4-conversion-r4",
+  "current_conversion_revision": 4,
+  "current_fim_attempt": 5,
   "current_fim_input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
-  "current_fim_kernel": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "current_fim_kernel": "shlokbhakta/tc-q25-fim-r2-0-a5",
   "current_fim_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
-  "current_fim_status": "ERROR before training; full line evaluation OOM",
+  "current_fim_status": "both matched arms complete; selected direct FIM; Q4 conversion revision4 frozen, not yet submitted",
   "first_three_fim_attempts": "verified no_training_executed; zero training tokens",
   "first_two_fim_attempts": "verified no_training_executed; zero training tokens",
   "last_authenticated_quota": {
@@ -17,24 +21,26 @@
     "units": "Kaggle account GPU-hours"
   },
   "last_verification": {
-    "environment": "shared Python3.11 environment with existing CPU Torch2.14 via PYTHONPATH",
-    "passed": 1011,
-    "seconds": 91.57,
+    "mypy_source_files": 92,
+    "python_passed": 1212,
+    "ruff": true,
+    "seconds": 91.79,
     "warnings": 2
   },
-  "local_artifact_bytes": 4409549561,
-  "next_attempt": 4,
-  "next_attempt_authorization_lineage": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "local_artifact_bytes": 11435623703,
+  "next_attempt": null,
+  "next_attempt_authorization_lineage": null,
   "next_attempt_checkpoint_source": null,
   "next_steps": [
-    "Freeze explicit memory-efficient evaluation revision; preserve all source fixtures and full prompts",
-    "Verify actual T4 backend before retry training",
-    "Complete matched arms and compare development + general code regression",
-    "Convert only a supported selected candidate"
+    "Submit explicit frozen CPU conversion R4 after exact source push and fresh authenticated quota check",
+    "Verify selected Q4 through native Rust quality and changed-state replay",
+    "Verify real synthetic Neovim proposals and exact existing SQLite replay",
+    "Install bounded experimental automatic desktop provider; retry ThinkPad declarative delivery"
   ],
-  "observed_at": "2026-10-04T05:11:07.416852+00:00",
+  "observed_at": "2026-10-04T10:27:57.767697+00:00",
   "personalization_enabled": false,
   "schema": "q25-cpt-current-state-v1",
+  "selected_arm": "untouched_q25_to_fim",
   "stable_editor_modified_by_campaign": false,
   "thinkpad_access": {
     "attempted": true,
@@ -42,6 +48,6 @@
     "connected": false,
     "new_installation": false,
     "new_laptop_measurement": false,
-    "observed_at": "2026-10-04T05:02:17.362852+00:00"
+    "observed_at": "2026-10-04T10:27:57.767697+00:00"
   }
 }

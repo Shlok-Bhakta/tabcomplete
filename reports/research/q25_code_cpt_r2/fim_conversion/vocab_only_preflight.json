@@ -1,0 +1,32 @@
+{
+  "cpu_runtime_torch": "2.14.0+cpu",
+  "eos_id": 151643,
+  "evidence_source": "campaign audit agent actual CPU converter execution; temporary log and output cleaned",
+  "fim_ids": {
+    "middle": 151660,
+    "prefix": 151659,
+    "suffix": 151661
+  },
+  "fim_strings_and_control_types_verified": true,
+  "gpu_used": false,
+  "llama_cpp_revision": "f072b103714dfa1eee531f80b24512faf38e3dd2",
+  "model_weights_staged": false,
+  "observed_at": "2026-10-04T10:27:07.289640+00:00",
+  "output_bytes": 5928459,
+  "persistent_log": null,
+  "persistent_output_sha256": null,
+  "remote_locked_torch": "2.11.0+cpu",
+  "requirements_lock_sha256": "d915d0fcc2bffe9130b3685c1d43d3cae22831cc4b062a7fe6a65ea7f22dcbb9",
+  "schema": "q25-fim-vocab-preflight-v1",
+  "selected_arm": "untouched_q25_to_fim",
+  "selection_sha256": "3ad25987bccf5cc693dfd95f3c0ef37861c88fda113bb51ac4ff432a0ed313ab",
+  "sentencepiece_version": "0.2.2",
+  "sentencepiece_wheel_sha256": "1416b92f2f010333786fe6306ed2631121d5ea492219b0841e967b6765e64107",
+  "source_export_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+  "source_kernel_reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+  "temporary_cleanup_verified": true,
+  "tensors": 0,
+  "torch_environment_matches_remote": false,
+  "vocab_items": 151936,
+  "worker_sha256": "93480fdeff7e7759a056c573701b487eba760630c3d49ea2d8624baa7773e818"
+}

@@ -1,0 +1,28 @@
+{
+  "logs": {
+    "mypy": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-mypy-r4-source.log",
+      "sha256": "6680dadf20a3720dee511b5d5094d823d30a253ac5c1496e9b6510468649e989"
+    },
+    "python": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-python-r4-source.log",
+      "sha256": "77a45f85b0f383f9d8f1bb9a917c27d3d1ee4b7d46a7dd3d2c6ad49d196b69cc"
+    },
+    "ruff": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-ruff-r4-source.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  },
+  "model_inference_verified": false,
+  "mypy_passed": true,
+  "mypy_source_files": 92,
+  "observed_at": "2026-10-04T10:27:57.767697+00:00",
+  "personalization_enabled": false,
+  "python_passed": 1212,
+  "python_seconds": 91.79,
+  "python_warnings": 2,
+  "ruff_passed": true,
+  "schema": "q25-fim-current-source-verification-v1",
+  "source_commit": "71c3f347b14ac3f7dab71a0453ee881f55b500c4",
+  "unchanged_rust_lua_server_checks": "verification_current_source_r3.json; no Rust/Lua/server changes in R4 dependency repair"
+}
