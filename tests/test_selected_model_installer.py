@@ -166,7 +166,10 @@ def test_failed_service_restart_restores_config_and_restarts_previous_unit(
     assert len([c for c in calls if c[2] == "restart"]) == 2
 
 
-def test_native_fim_profile_binds_artifact_and_all_added_controls(tmp_path, monkeypatch):
+@pytest.mark.parametrize("full_vocabulary", [False, True])
+def test_native_fim_profile_binds_artifact_and_all_added_controls(
+    tmp_path, monkeypatch, full_vocabulary
+):
     import json
 
     from tinycomplete.code_cpt import q25_fim_conversion as contract
@@ -175,7 +178,13 @@ def test_native_fim_profile_binds_artifact_and_all_added_controls(tmp_path, monk
     tokenizer.write_text(
         json.dumps(
             {
-                "model": {"vocab": {"code": 17}},
+                "model": {
+                    "vocab": (
+                        {f"synthetic-token-{i}": i for i in range(151936)}
+                        if full_vocabulary
+                        else {"code": 17}
+                    )
+                },
                 "added_tokens": [
                     {"id": 151643, "content": "<|endoftext|>", "special": True},
                     {"id": 151659, "content": "<|fim_prefix|>", "special": False},
@@ -211,7 +220,9 @@ def test_native_fim_profile_binds_artifact_and_all_added_controls(tmp_path, monk
     registry = json.loads((output / "registry.json").read_text())["q25-fim"]
     profile = registry["fim_profile"]
     assert profile["artifact_manifest_sha256"] == value["source_export_manifest_sha256"]
-    assert profile["tokenizer"]["tokenizer_vocab_ids"] == [17, 151643, 151659, 151660, 151661]
+    assert profile["tokenizer"]["tokenizer_vocab_ids"] == (
+        list(range(151936)) if full_vocabulary else [17, 151643, 151659, 151660, 151661]
+    )
     assert len(profile["tokenizer"]["special_tokens"]) == 4
     editor = json.loads((output / "editor-model.json").read_text())
     assert "tokenizer_vocab_ids" not in editor["fim_profile"]["tokenizer"]
@@ -222,6 +233,7 @@ def test_native_fim_profile_binds_artifact_and_all_added_controls(tmp_path, monk
         "serving_profile": profile,
     }
     assert result["embedded_profile"] == str(output / "embedded-profile.json")
+    assert (output / "embedded-profile.json").stat().st_size < 2 * 1024**2
     assert installer.prepare_native_fim_profile(model, tokenizer, conversion, output) == result
     (output / "registry.json").write_text("different identity")
     with pytest.raises(ValueError, match="another identity"):

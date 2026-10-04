@@ -1,0 +1,17 @@
+{
+  "collected_at": "2026-10-04T10:40:49.897197+00:00",
+  "conversion_manifest_sha256": "c647bd05cd6f62c6da9760fddd78554cd7490b9346771fb3ba08738c639fe817",
+  "conversion_plan_sha256": "896e563a0bd107e15fa0800e85639f68ff565667cedaa86c6ebe540e53519c06",
+  "q4_bytes": 491399808,
+  "q4_file": "q25-untouched_q25_to_fim-Q4_K_M.gguf",
+  "q4_path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/conversion/output-r4/q25_fim_conversion_r4/q25-untouched_q25_to_fim-Q4_K_M.gguf",
+  "q4_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r4",
+  "schema": "q25-fim-q4-conversion-receipt-v1",
+  "selected_arm": "untouched_q25_to_fim",
+  "selection_sha256": "3ad25987bccf5cc693dfd95f3c0ef37861c88fda113bb51ac4ff432a0ed313ab",
+  "source_export_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+  "source_kernel_reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+  "source_weight_or_checkpoint_retrieval": false,
+  "training_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780"
+}

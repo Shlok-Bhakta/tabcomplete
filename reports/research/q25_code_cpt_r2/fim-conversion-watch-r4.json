@@ -1,0 +1,7 @@
+{
+  "automatic_allocation": false,
+  "observed_at": "2026-10-04T10:38:01.387500+00:00",
+  "plan_sha256": "896e563a0bd107e15fa0800e85639f68ff565667cedaa86c6ebe540e53519c06",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r4",
+  "status": "shlokbhakta/tc-q25-fim-q4-conversion-r4 has status \"KernelWorkerStatus.COMPLETE\""
+}

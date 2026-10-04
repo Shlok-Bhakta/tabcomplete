@@ -3711,6 +3711,27 @@ def _csv_ref_exists(reference: str) -> bool:
     )
 
 
+def _collected_conversion_q4_path(name: str) -> Path:
+    """Accept Kaggle's preserved output directory and historical flat layout."""
+    if PurePosixPath(name).name != name or name in {"", ".", ".."}:
+        raise ValueError("conversion artifact filename is unsafe")
+    candidates = (
+        CONVERSION_OUTPUT / name,
+        CONVERSION_OUTPUT / CONVERSION_OUTPUT_SLUG / name,
+    )
+    present = []
+    for path in candidates:
+        if path.parent.is_symlink() or path.is_symlink():
+            raise ValueError("conversion artifact path is unsafe")
+        if path.exists():
+            if not path.is_file():
+                raise ValueError("conversion artifact is not a regular file")
+            present.append(path)
+    if len(present) > 1:
+        raise ValueError("conversion artifact layout is ambiguous")
+    return present[0] if present else candidates[1]
+
+
 def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     plan = _load_conversion_plan() if plan is None else plan
     if plan != _load_conversion_plan() or not CONVERSION_JOB_FILE.is_file():
@@ -3804,7 +3825,7 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
     if "f16_intermediate" in result:
         raise ValueError("conversion worker retained its F16 intermediate")
     existing_bytes = directory_bytes(ARTIFACTS)
-    q4_target = CONVERSION_OUTPUT / expected_name
+    q4_target = _collected_conversion_q4_path(expected_name)
     if not q4_target.exists() and existing_bytes + q4["bytes"] > CONVERSION_ARTIFACT_CAP_BYTES:
         raise OSError("Q4 collection would exceed the artifact cap")
     missing_bytes = 0 if q4_target.exists() else q4["bytes"]
@@ -3822,6 +3843,7 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         re.escape(expected_name) + "$",
         timeout=900,
     )
+    q4_target = _collected_conversion_q4_path(expected_name)
     if (
         q4_target.is_symlink()
         or not q4_target.is_file()
@@ -3840,6 +3862,7 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
         "conversion_manifest_sha256": digest(result_path),
         "q4_file": expected_name,
+        "q4_path": str(q4_target),
         "q4_bytes": q4["bytes"],
         "q4_sha256": q4["sha256"],
         "collected_at": datetime.now(UTC).isoformat(),

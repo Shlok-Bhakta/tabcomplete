@@ -4251,8 +4251,9 @@ def test_conversion_revision2_cli_flag_is_limited_to_conversion_action(
 
 
 @pytest.mark.parametrize("tamper", [None, "worker_hash", "storage_cap"])
+@pytest.mark.parametrize("layout", ["flat", "nested"])
 def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str | None
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str | None, layout: str
 ) -> None:
     selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
         tmp_path, monkeypatch
@@ -4321,6 +4322,8 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
             manifest = destination / "q25_fim_conversion_r1/conversion.json"
             campaign.save(manifest, result)
         else:
+            if layout == "nested":
+                destination = destination / campaign.CONVERSION_OUTPUT_SLUG
             destination.mkdir(parents=True, exist_ok=True)
             (destination / q4_name).write_bytes(q4_bytes)
         return ""
@@ -4340,6 +4343,7 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
             campaign.re.escape(q4_name) + "$",
         ]
         assert receipt["q4_file"] == q4_name
+        assert Path(receipt["q4_path"]).read_bytes() == q4_bytes
         assert receipt["source_weight_or_checkpoint_retrieval"] is False
     else:
         with pytest.raises(ValueError, match="another input"):
@@ -4348,6 +4352,25 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
             call[call.index("--file-pattern") + 1] for call in calls if "--file-pattern" in call
         ]
         assert output_patterns == [r"q25_fim_conversion_r1/conversion\.json$"]
+
+
+def test_conversion_q4_layout_rejects_ambiguity_and_symlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(campaign, "CONVERSION_OUTPUT", tmp_path)
+    name = "selected.gguf"
+    flat = tmp_path / name
+    nested = tmp_path / campaign.CONVERSION_OUTPUT_SLUG / name
+    nested.parent.mkdir()
+    nested.write_bytes(b"GGUF")
+    assert campaign._collected_conversion_q4_path(name) == nested
+    flat.write_bytes(b"GGUF")
+    with pytest.raises(ValueError, match="ambiguous"):
+        campaign._collected_conversion_q4_path(name)
+    flat.unlink()
+    flat.symlink_to(nested)
+    with pytest.raises(ValueError, match="unsafe"):
+        campaign._collected_conversion_q4_path(name)
 
 
 def test_conversion_revision3_preserves_previous_paths_and_allows_one_cpu_attempt(

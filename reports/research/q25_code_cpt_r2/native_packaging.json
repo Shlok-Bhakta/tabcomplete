@@ -1,0 +1,30 @@
+{
+  "actual_model_load_verified": false,
+  "changes": [
+    {
+      "cause": "Kaggle retains worker directory; previous root-level path assumption was false",
+      "fix": "accept only exact flat or worker-directory path; reject ambiguity/symlinks",
+      "remote_rerun": false,
+      "stage": "collection",
+      "tests_passed": 176,
+      "tests_skipped": 1
+    },
+    {
+      "cause": "pretty-printed full vocabulary exceeded 2MiB profile-input ceiling",
+      "fix": "compact JSON with full ID inventory; same tokenizer contract and input ceiling",
+      "stage": "embedding",
+      "tests_passed": 24,
+      "weights_changed": false
+    }
+  ],
+  "compact_profile_bytes": 952319,
+  "compact_profile_sha256": "39f043a548e7274cd868d12889f749f1cf969368aaa57f7a54c29d0fc40f11a3",
+  "executable": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/tabcomplete-q25-fim",
+  "executable_bytes": 501912425,
+  "executable_sha256": "4d5724a3c09cd5bc031ecd2d02250bede4c34fa432d67ec1c6b9f4cf5bc291df",
+  "generic_engine_sha256": "d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074",
+  "gguf_bytes": 491399808,
+  "gguf_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+  "observed_at": "2026-10-04T10:45:05.583439+00:00",
+  "schema": "q25-fim-native-packaging-v1"
+}

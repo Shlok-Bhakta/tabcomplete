@@ -135,7 +135,15 @@ def prepare_native_fim_profile(
         "embedded-profile.json": embedded_profile,
     }.items():
         target = output / name
-        content = json.dumps(value, sort_keys=True, indent=2) + "\n"
+        # The full vocabulary is intentionally embedded. Pretty indentation of
+        # 151k IDs exceeds the appender's bounded 2 MiB profile input.
+        content = (
+            json.dumps(value, sort_keys=True, separators=(",", ":"))
+            if name == "embedded-profile.json"
+            else json.dumps(value, sort_keys=True, indent=2)
+        ) + "\n"
+        if name == "embedded-profile.json" and len(content.encode("utf-8")) > 2 * 1024**2:
+            raise ValueError("embedded FIM profile exceeds its bounded input size")
         if target.exists() and (target.is_symlink() or target.read_text() != content):
             raise ValueError("native FIM profile output already has another identity")
         target.write_text(content)
