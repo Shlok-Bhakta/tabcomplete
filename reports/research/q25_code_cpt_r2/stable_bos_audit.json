@@ -1,0 +1,22 @@
+{
+  "schema": "q25-tokenization-source-audit-v1",
+  "scope": "Read-only source, tokenizer configuration and exact local artifact header. No model load or inference.",
+  "artifact": {
+    "path": "/mnt/ssd/tabcomplete-product-r2/public-functional-lr1e5-v2-selected/q25-public-functional-lr1e5-Q4_K_M.gguf",
+    "sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "bytes": 491399808,
+    "gguf_version": 3,
+    "tensor_count": 291,
+    "tokenizer_model": "gpt2",
+    "pre_tokenizer": "qwen2",
+    "add_bos_key_present": false,
+    "add_eos_key_present": false
+  },
+  "native_behavior": "AddBos::Always passes add_special=true. BPE append helpers consult vocabulary flags. In the installed llama.cpp 0.1.158 source both flags default to false and the qwen2 pre-tokenizer leaves them unchanged.",
+  "saved_tokenizer": "Qwen2Tokenizer, bos_token=null, ByteLevel postprocessing without a BOS template.",
+  "training_behavior": "Stable trainer encodes prompts with add_special_tokens=True and explicitly appends EOS to response labels only.",
+  "conclusion": "No added-BOS mismatch established for the exact current artifact. Preserve the stable profile. New FIM serving will use explicit no-added-special tokenization and require token-ID parity.",
+  "limitation": "Historical native parity receipt lacks GGUF SHA and is not exact-artifact-bound. The ThinkPad is currently unreachable; this is local artifact/source evidence, not live laptop verification.",
+  "older_artifact_distinction": "397807232-byte a45bc50aa7c74a03e7bdcade90315b052b31675a97631ed5c96df953160fd626 is an older prototype and is not the current ThinkPad model.",
+  "deployment_changed": false
+}

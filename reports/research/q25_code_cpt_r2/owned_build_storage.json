@@ -1,0 +1,11 @@
+{
+  "build_bytes": 2559366824,
+  "build_cache_root": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim-preview-build-cache",
+  "cap_bytes": 12884901888,
+  "cleanup_policy": "After required Rust tests, remove only this campaign-owned temporary build cache if needed before model retrieval. Preserve all existing research checkpoints and stable deployed artifacts.",
+  "logical_previous_path": "/home/crabcake/Projects/tabcomplete-q25-fim-preview-r1/tools/tabcomplete_engine/target",
+  "logical_previous_path_type": "symlink to accounted cache",
+  "observed_at": "2026-10-04T05:58:51.363683+00:00",
+  "research_artifact_bytes_including_build": 6986739658,
+  "schema": "q25-owned-build-storage-v1"
+}

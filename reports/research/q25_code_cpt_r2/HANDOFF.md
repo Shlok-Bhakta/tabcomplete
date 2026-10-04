@@ -252,3 +252,29 @@ and source hashes. The session ledger validates all four zero-work failures at
 1,294 seconds total and remains idempotent on a repeated explicit settlement.
 Manifest validation binds the archived plan, exact approved file set and staged
 file hashes; stray training artifacts invalidate a zero-work claim.
+
+Attempt 5 was submitted as `shlokbhakta/tc-q25-fim-r2-0-a5`, pinned to source
+commit `52a31de7ea1af7b125ddac53a6ff4d2b71a46e9f`. Fresh quota observed
+2026-10-04 05:44:34 UTC was 42.45 remaining account GPU-hours, 2.55 used,
+renewal 2026-10-10, and no active jobs before submission. The existing observer
+uses `--phase fim --arm untouched_q25_to_fim --attempt 5 --watch`. Watch only
+this allocation; do not retry a running or uncollected job. Detailed training
+progress is not available from the terminal-only artifact export.
+
+The campaign-owned preview Rust build cache moved into
+`/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim-preview-build-cache`, with a symlink
+from its original preview-worktree target path. The existing storage limiter
+now counts it. `owned_build_storage.json` records 6.987 GB of total artifacts
+including the 2.559 GB cache at that observation. Reuse the cache for required
+tests; remove only this owned temporary cache afterward if needed for checkpoint
+retrieval. Coordinate with the integration agent before removing an active cache.
+Never remove existing research checkpoints to create headroom.
+
+The source-only integration branch is `prototype/q25-fim-integration-r1`,
+based on preview adapter `703fdf2`. It implements a separate research route,
+not a replacement of the stable Qwen profile. FIM prompts use no added special
+tokens, exact PSM, a 96-token ceiling including EOS, cursor-to-line-ending
+replacement and request/context/model identity checks. The conversion agent
+owns the separate preview worktree's CPU-only conversion helper. Neither is
+deployed or selected yet. The exact current stable artifact's header and native
+source show no BOS insertion mismatch; see `stable_bos_audit.json`.
