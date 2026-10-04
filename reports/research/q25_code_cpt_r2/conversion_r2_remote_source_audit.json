@@ -1,0 +1,14 @@
+{
+  "schema": "q25-fim-conversion-remote-source-audit-v1",
+  "observed_at": "2026-10-04T09:34:09.577476+00:00",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r2",
+  "source_sha256": "7bf1808441b3c8920eb4ba264e21e5c7d9bc0e5fcd3f87ddd9264951948e62d8",
+  "same_as_staged": true,
+  "enable_gpu": false,
+  "dataset_sources": [
+    "shlokbhakta/tabcomplete-q25-fim-conversion-r1-inputs"
+  ],
+  "kernel_sources": [
+    "shlokbhakta/tc-q25-fim-r2-0-a5"
+  ]
+}
