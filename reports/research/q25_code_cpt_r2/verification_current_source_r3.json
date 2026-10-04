@@ -1,0 +1,70 @@
+{
+  "schema": "q25-fim-current-source-verification-v1",
+  "observed_at": "2026-10-04T10:05:23.420184+00:00",
+  "source_commit": "31dad3241accc6a699e6419ab6be2db0c9c8d2c8",
+  "model_inference_verified": false,
+  "personalization_enabled": false,
+  "tests": {
+    "python": {
+      "passed": 1208,
+      "failed": 0,
+      "log_sha256": "196cb66a37034e06e67c749f978ed2f01b1f3d449b6fecd317b6c491a15faa91",
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-python-final-native-r5.log"
+    },
+    "lua": {
+      "passed": 86,
+      "failed": 0,
+      "log_sha256": "3b9ba1a3e80014135ed308bfdd341dad655e39e8b4cd5b820b2081e4b382683c",
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-lua-final-r5.log"
+    },
+    "collector_server": {
+      "passed": 59,
+      "failed": 0,
+      "log_sha256": "a9751a4940fdb69679eb7e3472ad9e819f1c818f0acdab3369ff5471406bd506",
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-server-final-r5.log"
+    },
+    "collector_analysis": {
+      "passed": 38,
+      "failed": 0,
+      "log_sha256": "e49d96d866681893f4f8e6450c344d30c634b4a100feac18538384d4415a07df",
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-analysis-final-r5.log"
+    },
+    "observability_gateway": {
+      "passed": 16,
+      "failed": 0,
+      "log_sha256": "3605719e3f1dc9328201c0a361c02ed1f95852824eec5d704e9e783af7339ca1",
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-gateway-final-r5.log"
+    },
+    "focused_conversion": {
+      "passed": 231,
+      "failed": 0,
+      "log_sha256": "ae6d0f44ffcf2b5f91dc5101d4af1e16ec0219535b5da9010908a48d9390a4ee",
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-r3-conversion-root.log"
+    }
+  },
+  "ruff": {
+    "passed": true,
+    "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-ruff-r3-source.log"
+  },
+  "mypy": {
+    "passed": true,
+    "log_sha256": "2111e638862153775bec54bec90c8bb871b5d7be499d6dfdc8cb11bc20bd175c",
+    "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-mypy-r3-source.log"
+  },
+  "server_types": {
+    "passed": true,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-server-type-final-r5.log"
+  },
+  "analysis_types": {
+    "passed": true,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-analysis-type-final-r5.log"
+  },
+  "gateway_types": {
+    "passed": true,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-gateway-type-final-r5.log"
+  }
+}

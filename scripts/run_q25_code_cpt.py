@@ -78,6 +78,7 @@ CONVERSION_OUTPUT_SLUG = "q25_fim_conversion_r1"
 CONVERSION_REFERENCE_R1 = CONVERSION_KERNEL_REFERENCE
 CONVERSION_REFERENCE_R2 = "shlokbhakta/tc-q25-fim-q4-conversion-r2"
 CONVERSION_REFERENCE_R3 = "shlokbhakta/tc-q25-fim-q4-conversion-r3"
+CONVERSION_REFERENCE_R4 = "shlokbhakta/tc-q25-fim-q4-conversion-r4"
 CONVERSION_R2_PLAN = REPORT / "fim_conversion_r2_plan.json"
 CONVERSION_R2_KERNEL_ROOT = ARTIFACTS / "fim/conversion-kernel-r2"
 CONVERSION_R2_JOB_FILE = REPORT / "fim-conversion-job-r2.json"
@@ -98,7 +99,7 @@ def _conversion_reference(attempt: int) -> str:
         if CONVERSION_REVISION == 1:
             raise ValueError("CPU conversion supports only explicitly bounded attempts 1 and 2")
         raise ValueError("CPU conversion attempt must be an integer")
-    if CONVERSION_REVISION in {2, 3}:
+    if CONVERSION_REVISION in {2, 3, 4}:
         if attempt != 1:
             raise ValueError(
                 f"CPU conversion revision {CONVERSION_REVISION} permits one explicit first attempt"
@@ -111,7 +112,7 @@ def _conversion_reference(attempt: int) -> str:
 
 def _conversion_kernel_root(attempt: int) -> Path:
     _conversion_reference(attempt)
-    if CONVERSION_REVISION in {2, 3}:
+    if CONVERSION_REVISION in {2, 3, 4}:
         return CONVERSION_KERNEL_ROOT
     if attempt == 1:
         return CONVERSION_KERNEL_ROOT
@@ -121,7 +122,7 @@ def _conversion_kernel_root(attempt: int) -> Path:
 @contextmanager
 def _conversion_revision_scope(revision: int) -> Iterator[None]:
     """Temporarily select isolated CPU conversion revision paths for one CLI action."""
-    if not isinstance(revision, int) or isinstance(revision, bool) or revision not in {1, 2, 3}:
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision not in {1, 2, 3, 4}:
         raise ValueError("unsupported CPU conversion plan revision")
     names = (
         "CONVERSION_REVISION",
@@ -141,12 +142,16 @@ def _conversion_revision_scope(revision: int) -> Iterator[None]:
     )
     previous = {name: globals()[name] for name in names}
     try:
-        if revision in {2, 3}:
+        if revision in {2, 3, 4}:
             globals().update(
                 CONVERSION_REVISION=revision,
                 CONVERSION_PLAN_REVISION=revision,
                 CONVERSION_KERNEL_REFERENCE=(
-                    CONVERSION_REFERENCE_R2 if revision == 2 else CONVERSION_REFERENCE_R3
+                    {
+                        2: CONVERSION_REFERENCE_R2,
+                        3: CONVERSION_REFERENCE_R3,
+                        4: CONVERSION_REFERENCE_R4,
+                    }[revision]
                 ),
                 CONVERSION_PLAN=REPORT / f"fim_conversion_r{revision}_plan.json",
                 CONVERSION_KERNEL_ROOT=ARTIFACTS / f"fim/conversion-kernel-r{revision}",
@@ -827,9 +832,12 @@ def settle_fim_zero_work_sessions() -> dict[str, Any]:
 
 def _validated_cpu_failure_settlement(job_path: Path, job: dict[str, Any]) -> int | None:
     """Charge a terminal CPU allocation conservatively without erasing its reservation."""
-    if job.get("reference") != CONVERSION_REFERENCE_R2:
+    reference_revisions = {CONVERSION_REFERENCE_R2: 2, CONVERSION_REFERENCE_R3: 3}
+    reference = job.get("reference")
+    revision = reference_revisions.get(reference) if isinstance(reference, str) else None
+    if revision is None:
         return None
-    failure_path = REPORT / "fim-conversion-failed-r2-1.json"
+    failure_path = REPORT / f"fim-conversion-failed-r{revision}-1.json"
     if not failure_path.exists():
         return None
     if failure_path.is_symlink() or not failure_path.is_file():
@@ -840,8 +848,8 @@ def _validated_cpu_failure_settlement(job_path: Path, job: dict[str, Any]) -> in
         return None
     if not isinstance(settlement, dict):
         raise ValueError("CPU failure settlement structure is invalid")
-    watch_path = REPORT / "fim-conversion-watch-r2.json"
-    plan_path = REPORT / "fim_conversion_r2_plan.json"
+    watch_path = REPORT / f"fim-conversion-watch-r{revision}.json"
+    plan_path = REPORT / f"fim_conversion_r{revision}_plan.json"
     for path in (watch_path, plan_path):
         if path.is_symlink() or not path.is_file():
             raise ValueError("CPU failure settlement evidence is unsafe")
@@ -867,7 +875,7 @@ def _validated_cpu_failure_settlement(job_path: Path, job: dict[str, Any]) -> in
         not isinstance(settlement, dict)
         or failure.get("schema") != "q25-fim-cpu-conversion-failure-v1"
         or failure.get("reference") != job["reference"]
-        or job.get("plan_revision") != 2
+        or job.get("plan_revision") != revision
         or job.get("enable_gpu") is not False
         or settlement.get("job_sha256") != digest(job_path)
         or settlement.get("watch_sha256") != digest(watch_path)
@@ -926,7 +934,8 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
     r1_history_root = REPORT / "fim/conversion/history"
     r2_history_root = REPORT / "fim/conversion/history-r2"
     r3_history_root = REPORT / "fim/conversion/history-r3"
-    conversion_history_roots = (r1_history_root, r2_history_root, r3_history_root)
+    r4_history_root = REPORT / "fim/conversion/history-r4"
+    conversion_history_roots = (r1_history_root, r2_history_root, r3_history_root, r4_history_root)
     if any(
         path.is_symlink()
         for path in (
@@ -949,6 +958,7 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
         f"{CONVERSION_REFERENCE_R1}-a2",
         CONVERSION_REFERENCE_R2,
         CONVERSION_REFERENCE_R3,
+        CONVERSION_REFERENCE_R4,
     }
     conversion_references: dict[str, str] = {}
     for job_path in conversion_job_paths:
@@ -966,6 +976,8 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
             or (reference == CONVERSION_REFERENCE_R2 and job.get("plan_revision") != 2)
             or (reference == CONVERSION_REFERENCE_R3 and attempt != 1)
             or (reference == CONVERSION_REFERENCE_R3 and job.get("plan_revision") != 3)
+            or (reference == CONVERSION_REFERENCE_R4 and attempt != 1)
+            or (reference == CONVERSION_REFERENCE_R4 and job.get("plan_revision") != 4)
             or (reference == CONVERSION_REFERENCE_R1 and attempt != 1)
             or (reference == f"{CONVERSION_REFERENCE_R1}-a2" and attempt != 2)
         ):
@@ -3564,7 +3576,7 @@ def submit_fim_conversion(
     resume_source: str | None = None,
 ) -> dict[str, Any]:
     reference = _conversion_reference(attempt)
-    if CONVERSION_REVISION in {2, 3} and (attempt != 1 or resume_source is not None):
+    if CONVERSION_REVISION in {2, 3, 4} and (attempt != 1 or resume_source is not None):
         raise ValueError("revised conversion permits one explicit first attempt only")
     plan = _load_conversion_plan() if plan is None else plan
     if plan != _load_conversion_plan():
@@ -3710,7 +3722,7 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         or job.get("source_kernel_reference") != plan["source"]["kernel_reference"]
         or job.get("enable_gpu") is not False
         or job.get("automatic_allocation") is not False
-        or (CONVERSION_REVISION in {2, 3} and job.get("plan_revision") != CONVERSION_REVISION)
+        or (CONVERSION_REVISION in {2, 3, 4} and job.get("plan_revision") != CONVERSION_REVISION)
         or job.get("reference") != _conversion_reference(job.get("attempt"))
     ):
         raise ValueError("conversion job belongs to another plan or source kernel")
@@ -3848,7 +3860,7 @@ def watch_fim_conversion(
     if (
         job.get("plan_sha256") != digest(CONVERSION_PLAN)
         or job.get("enable_gpu") is not False
-        or (CONVERSION_REVISION in {2, 3} and job.get("plan_revision") != CONVERSION_REVISION)
+        or (CONVERSION_REVISION in {2, 3, 4} and job.get("plan_revision") != CONVERSION_REVISION)
         or job.get("reference") != _conversion_reference(job.get("attempt"))
     ):
         raise ValueError("conversion observer identity differs from the CPU plan")
@@ -3947,6 +3959,7 @@ def main() -> None:
     revision_group = parser.add_mutually_exclusive_group()
     revision_group.add_argument("--conversion-revision2", action="store_true")
     revision_group.add_argument("--conversion-revision3", action="store_true")
+    revision_group.add_argument("--conversion-revision4", action="store_true")
     parser.add_argument("--conversion-selection", type=Path, default=CONVERSION_SELECTION)
     parser.add_argument("--settle-sessions", action="store_true")
     parser.add_argument("--cpt-attempt", type=int, default=1)
@@ -3966,7 +3979,9 @@ def main() -> None:
     selected_conversion_actions = [
         name for name, selected in conversion_actions.items() if selected
     ]
-    if (args.conversion_revision2 or args.conversion_revision3) and not selected_conversion_actions:
+    if (
+        args.conversion_revision2 or args.conversion_revision3 or args.conversion_revision4
+    ) and not selected_conversion_actions:
         parser.error("conversion revision flags apply only to conversion actions")
     if selected_conversion_actions:
         if (
@@ -3986,8 +4001,16 @@ def main() -> None:
         ):
             parser.error("conversion actions must run alone, one at a time")
         action = selected_conversion_actions[0]
-        revision = 3 if args.conversion_revision3 else 2 if args.conversion_revision2 else 1
-        if revision in {2, 3} and (args.attempt != 1 or args.resume_source is not None):
+        revision = (
+            4
+            if args.conversion_revision4
+            else 3
+            if args.conversion_revision3
+            else 2
+            if args.conversion_revision2
+            else 1
+        )
+        if revision in {2, 3, 4} and (args.attempt != 1 or args.resume_source is not None):
             parser.error("revised conversion permits only one explicit first conversion attempt")
         with _conversion_revision_scope(revision):
             if action == "freeze":

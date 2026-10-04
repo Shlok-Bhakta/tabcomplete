@@ -4508,3 +4508,75 @@ def test_cpu_failure_settlement_rejects_unbound_or_unsafe_evidence(
     campaign.save(report / "fim-conversion-failed-r2-1.json", receipt)
     with pytest.raises(ValueError):
         campaign._validated_cpu_failure_settlement(path, job)
+
+
+def test_conversion_revision4_uses_new_plan_paths_without_rewriting_previous_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection, report, artifacts, _training, _sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    with campaign._conversion_revision_scope(3):
+        previous = campaign.freeze_fim_conversion(selection)
+        previous_bytes = campaign.CONVERSION_PLAN.read_bytes()
+    with campaign._conversion_revision_scope(4):
+        revised = campaign.freeze_fim_conversion(selection)
+        kernel = campaign.build_fim_conversion_kernel(revised, "f" * 40)
+        assert revised["plan_revision"] == 4
+        assert revised["source"] == previous["source"]
+        assert kernel == artifacts / "fim/conversion-kernel-r4"
+        assert campaign.CONVERSION_JOB_FILE == report / "fim-conversion-job-r4.json"
+        assert (
+            json.loads((kernel / "kernel-metadata.json").read_text())["id"]
+            == campaign.CONVERSION_REFERENCE_R4
+        )
+        with pytest.raises(ValueError, match="revision 4"):
+            campaign._conversion_reference(2)
+    assert (report / "fim_conversion_r3_plan.json").read_bytes() == previous_bytes
+
+
+def test_cpu_failure_settlement_validates_revision3_and_cannot_discount_revision4(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path, job, report, artifacts, receipt = _seed_cpu_failure_settlement(tmp_path, monkeypatch)
+    prior = path.read_bytes()
+    plan_path = report / "fim_conversion_r3_plan.json"
+    plan = json.loads((report / "fim_conversion_r2_plan.json").read_text())
+    plan["plan_revision"] = 3
+    campaign.save(plan_path, plan)
+    job3 = {
+        **job,
+        "reference": campaign.CONVERSION_REFERENCE_R3,
+        "plan_revision": 3,
+        "plan_sha256": campaign.digest(plan_path),
+    }
+    job3path = report / "fim-conversion-job-r3.json"
+    campaign.save(job3path, job3)
+    watch3path = report / "fim-conversion-watch-r3.json"
+    watch = json.loads((report / "fim-conversion-watch-r2.json").read_text())
+    watch.update(
+        reference=job3["reference"],
+        plan_sha256=job3["plan_sha256"],
+        status=f'{job3["reference"]} has status "KernelWorkerStatus.ERROR"',
+    )
+    campaign.save(watch3path, watch)
+    receipt3 = {
+        **receipt,
+        "reference": job3["reference"],
+        "session_settlement": {
+            **receipt["session_settlement"],
+            "job_sha256": campaign.digest(job3path),
+            "watch_sha256": campaign.digest(watch3path),
+        },
+    }
+    campaign.save(report / "fim-conversion-failed-r3-1.json", receipt3)
+    assert campaign._validated_cpu_failure_settlement(job3path, job3) == 240
+    assert campaign._validated_cpu_failure_settlement(path, job) == 240
+    assert (
+        campaign._validated_cpu_failure_settlement(
+            job3path, {**job3, "reference": campaign.CONVERSION_REFERENCE_R4}
+        )
+        is None
+    )
+    assert path.read_bytes() == prior
+    assert (artifacts / "failed-cpu/conversion.json").is_file()

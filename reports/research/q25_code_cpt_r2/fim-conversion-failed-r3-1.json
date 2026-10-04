@@ -1,0 +1,25 @@
+{
+  "actual_runtime_cpu_verified": true,
+  "additional_training_input_tokens": 0,
+  "conversion_completed": false,
+  "failing_operation_observed": "convert_f16_gguf",
+  "gpu_enabled": false,
+  "monitor_query": "shlokbhakta/tc-q25-fim-q4-conversion-r3",
+  "monitor_result": "no_runs",
+  "observed_at": "2026-10-04T10:10:32.611908+00:00",
+  "observed_exception_class": "ModuleNotFoundError",
+  "observed_missing_dependency": "sentencepiece",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r3",
+  "schema": "q25-fim-cpu-conversion-failure-v1",
+  "session_settlement": {
+    "job_sha256": "18907ebf0db409e58aea75f09c1589b49270d5d934b90bf1454702aabe7fa99e",
+    "manifest_relative_path": "fim/conversion-failure-r3/q25_fim_conversion_r3/conversion.json",
+    "manifest_sha256": "87de05d0b833eca0e5aea796960ee2d393e1fd9c6eed8c5cf6e12e69d88a0329",
+    "original_reserved_session_seconds": 10800,
+    "settled_session_seconds": 561,
+    "terminal_observation_margin_seconds": 60,
+    "watch_sha256": "e2d829b20431ff26e1b26f1fc0acd9073a486bcee238bb66dd5c5f4a026ccd1d"
+  },
+  "source_verified": true,
+  "worker_elapsed_seconds": 440.69224638
+}
