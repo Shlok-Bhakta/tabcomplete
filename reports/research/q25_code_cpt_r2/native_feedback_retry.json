@@ -1,0 +1,24 @@
+{
+  "schema": "native-synthetic-feedback-retry-v1",
+  "observed_at": "2026-10-04T12:49:17.100219+00:00",
+  "session_id": "30243bc9-bd3a-4c73-9d05-a1ea052b5fd1",
+  "synthetic": true,
+  "order": "reversed acknowledged session events",
+  "response": {
+    "ingested": 0,
+    "skipped_duplicate": 47,
+    "total": 47
+  },
+  "before": {
+    "event_count": 47,
+    "projection_sha256": "1fe1e60e0804548dfcd1e79dd3294f6c4bdf137d1d35d418e839ef5c3bbbd507",
+    "projection_count": 4
+  },
+  "after": {
+    "event_count": 47,
+    "projection_sha256": "1fe1e60e0804548dfcd1e79dd3294f6c4bdf137d1d35d418e839ef5c3bbbd507",
+    "projection_count": 4
+  },
+  "projection_unchanged": true,
+  "event_batch_sha256": "66f56874575f2f9a57f2990b22f543adc2fae34296fc6c1befb9ed62e7b9d585"
+}

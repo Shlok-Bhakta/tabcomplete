@@ -1,0 +1,66 @@
+{
+  "candidate_pairs": 0,
+  "content_exported": false,
+  "export_sha256": "246b67541588ddf929950734d51f48a4cb0c6b12c9ab0c0d7b30f4aaf7ff2d10",
+  "observed_at": "2026-10-04T13:09:25.463749+00:00",
+  "proposals": 292,
+  "readiness": {
+    "defensible_preference_pairs": 0,
+    "distinct_verified_sessions": 0,
+    "enabled": false,
+    "generic_regression_set_verified": false,
+    "held_out_temporal_session_split": false,
+    "inference_contention_cleared": false,
+    "minimum_pairs": 256,
+    "minimum_sessions": 3,
+    "ready": false,
+    "rollback_artifact_verified": false,
+    "training_memory_verified": false
+  },
+  "schema_version": "personalization-feedback-evidence-v6",
+  "sequence_gaps": [
+    {
+      "after": 62,
+      "before": 84,
+      "session_id": "1e84a7b0-6464-4e46-8dee-2d0114e62485"
+    },
+    {
+      "after": 496,
+      "before": 498,
+      "session_id": "72abe8e0-990a-4d3c-8ce5-2eb47d957993"
+    },
+    {
+      "after": 498,
+      "before": 500,
+      "session_id": "72abe8e0-990a-4d3c-8ce5-2eb47d957993"
+    },
+    {
+      "after": 511,
+      "before": 533,
+      "session_id": "72abe8e0-990a-4d3c-8ce5-2eb47d957993"
+    },
+    {
+      "after": 2851,
+      "before": 2853,
+      "session_id": "bdc4e53f-7c2b-4856-b0ec-856aa4eba991"
+    },
+    {
+      "after": 0,
+      "before": 0,
+      "session_id": "req-muaomj7y-2sw9u1"
+    },
+    {
+      "after": 0,
+      "before": 0,
+      "session_id": "req-muap6rh5-7qfkg8"
+    },
+    {
+      "after": 0,
+      "before": 0,
+      "session_id": "req-mub8tyx5-10kqel"
+    }
+  ],
+  "sessions_seen": 96,
+  "source_event_snapshot_sha256": "fa9ce8c3d8b1c3c33c9eb17c714452fbad9b8eb50f23491bee26bb1b3e600255",
+  "synthetic_editor_check_not_human_feedback": true
+}

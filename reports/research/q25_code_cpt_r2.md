@@ -1,4 +1,4 @@
-# Qwen2.5 code continued-pretraining experiment
+# Qwen2.5 code pretraining and completion campaign
 
 This experiment tests the user's request to teach the tiny model more code
 before training completion or next-edit behavior. It starts from the untouched
@@ -12,7 +12,9 @@ base raised exact, EOS-terminated synthetic development completion from 47/240
 to 130/240. Starting from the completed code-pretraining checkpoint scored
 127/240 after the same training. The paired difference is inconclusive; the extra
 source pass has not demonstrated a final completion gain. The direct FIM model
-is selected for native Q4 verification. The working editor model is preserved.
+is selected. Native Q4 verification is complete at 126/240 exact+valid+EOS.
+The desktop is configured for the embedded Rust completion model; the existing
+ThinkPad model is preserved while its approved SSH address remains unreachable.
 
 The [frozen plan](q25_code_cpt_r2/plan.json) binds the source pool, model and
 tokenizer hashes, fixture hashes, split policy, decoding, runtime choices,
@@ -21,7 +23,180 @@ tokens and one pass. Four language allocations cover Python, Rust, TypeScript
 and Go. The actual token counts may be lower if a clean source allocation is
 exhausted. No duplicates will be added to fill a quota.
 
-## Source and interpretation
+## Current measured deployment results
+
+The selected Q4 artifact is 491,399,808 bytes with SHA-256
+`ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682`.
+The foundation has 494,032,768 unique parameters. The export has 630,167,424
+physical tensor entries because tied embedding/output values are duplicated;
+byte equality was verified. This is a dense model, not an active-only MoE count.
+The 501,920,617-byte Rust executable directly maps its embedded GGUF. Its SHA-256
+is `9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a`.
+It uses llama.cpp CPU bindings, four generation and four prompt threads,
+context 2,304, input cap 1,024, output cap 96, batch 256, microbatch 64, F16 KV,
+one active sequence and zero saved context snapshots. Syntax validation is off.
+
+Native evaluation preserved all 240 development states and token-ID parity.
+It produced 239 EOS-terminated outputs and 235 valid line actions. Exact, valid,
+terminated replacements scored 126/240 versus 130/240 in HF FP16. There was one
+paired gain and five losses, with a repository-bootstrap interval of -3.78 to
+0.00 percentage points. This changes runtime and precision together. It does
+not isolate weight quantization or demonstrate human editing accuracy.
+[Paired evidence](q25_code_cpt_r2/native_quality_comparison.json).
+
+The actual inference host was crabcake, Ryzen 5 PRO 3400GE with four physical
+cores and eight logical CPUs, about 13.58 GiB total RAM. There was no GPU
+inference. Two CPU configurations each ran 24 deterministic editor states,
+two repetitions and three cache conditions, 144 requests per configuration.
+Source contexts covered roughly 512, 1,024 and 2,048 tokens; the trained PSM
+policy retained at most 899 actual input tokens. Those source buckets are not
+claims of 2,048-token inference.
+
+| CPU setting | Fresh state median / p95 | Changed state median / p95 | Identical repeat median / p95 | Peak predictor RSS |
+| --- | --- | --- | --- | --- |
+| Four generation, four prompt threads, selected | 8,001.956 / 8,515.796 ms | 7,806.500 / 8,275.998 ms | 217.917 / 446.503 ms | 630,923,264 bytes |
+| Two generation, four prompt threads | 8,041.787 / 8,362.982 ms | 7,985.576 / 10,218.686 ms | 326.696 / 424.512 ms | 627,535,872 bytes |
+
+Four-thread startup to health took 981.441 ms; model load took 494.372 ms.
+Filesystem caches were not flushed, so this is not a disk-cold claim. Changed
+state prefill dominated at median 7,732.218 ms versus 174.857 ms decode. Cache
+reuse was measured from actual token prefixes: 7,176 cached and 29,784 recomputed
+tokens for changed states, versus 36,912 cached and 48 recomputed for identical
+repeats. Identical-repeat latency is not ordinary editing latency. The two
+thread configurations differed on 24/144 canonical actions. Four-thread fresh
+and changed cached actions differed on 6/48 pairs; changed versus identical
+repeats differed on 8/48 pairs; exact KV-prefix and trim bookkeeping
+was audited without finding a concrete state bug. Numerical variation remains
+an explanation, not a proven cause or a quality benefit.
+[Plans, timings and memory](q25_code_cpt_r2/native_runtime_selection.json).
+
+Peak and final retained four-thread RSS were 630,923,264 bytes. Final PSS was
+627,230,720 bytes, including 491,554,816 file-backed and 135,675,904 anonymous
+bytes. Anonymous memory includes active state and work buffers; it is not a
+separate measured allocation for each. There are no optional saved snapshots.
+Process and predictor-cgroup swap remained zero. Host swap-in rose by 882 pages,
+swap-out by zero, and major faults by 177; these host totals do not prove
+predictor thrashing. Memory and I/O pressure averages ended at zero, with no
+OOMs. Cgroup memory accounting omits already-charged file pages and is not used
+as total predictor RAM. Controlled runs had no competing benchmark/build, but
+normal human editing workloads were not measured.
+
+[Google Research describes TurboQuant](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
+as KV-cache compression with reported accelerator kernel measurements. The
+pinned CPU runtime has no compatible TurboQuant implementation or flag. A new
+kernel/runtime rewrite was not justified here; the selected Q4 weights and
+standard F16 KV are distinct settings.
+
+## Verified editor deployment and feedback
+
+The actual desktop LazyVim configuration now selects the embedded Q4 completion
+model on loopback port 19093. Automatic experimental mode and normal-mode
+suggestions are enabled; quality validation remains false. Alt+l accepts a
+still-valid proposal, Alt+p forces a request, and `:TabCompleteMode off` cancels
+suggestions. `:TabCompleteMode manual`, `shadow`, `automatic` and
+`:TabCompleteStatus` remain available. Source changes require acceptance.
+Automatic personalization remains disabled.
+
+The real selected-model headless smoke sent four automatic requests and displayed
+three proposals. It verified preview extmarks without source mutation, acceptance,
+clean undo, divergent typing dismissal, typed match and unseen cancellation on a
+file switch. Headless insert-mode state was represented by the documented mode
+seam; buffers, transport, model, collector API and SQLite were real. The first run
+invoked the installed acceptance callback. A second run dispatched `<M-l>` through
+Neovim's actual mapping and also passed. Two fresh processes loaded the installed
+configuration, and actual full LazyVim startup passed before and after the reload
+fix. Commands, mappings, mode persistence and off/automatic transitions passed.
+These are scripted synthetic checks, not human observations or visual approval.
+[Editor smoke](q25_code_cpt_r2/native_end_to_end.json),
+[installed process and configuration](q25_code_cpt_r2/native_installed_configuration.json).
+
+The first smoke session is `30243bc9-bd3a-4c73-9d05-a1ea052b5fd1`. Acceptance
+prediction `d6b9a0c1-7407-472b-a896-5071fb959a92`, divergent typing dismissal
+`a624a1b9-cbf0-462c-abf3-2642c3aa53f3`, typed match
+`c42aeff2-1856-4721-8ceb-f85f240885da`, and unseen navigation cancellation
+`8f0675fe-1c51-427b-901f-e93f4495a90e` remain distinct. The 47 events are contiguous.
+Read-only reconstruction used 15 anchors and eight deltas with zero unanchored
+changes or mismatches, reproducing the final 276-byte file. The accepted insertion
+at sequence 11 is reversed byte-for-byte at sequence 13. The test ran the undo
+command; a reversal delta alone must not be labeled a witnessed human undo.
+
+The existing database is `/mnt/ssd/collector-data/collector.sqlite`, schema and
+prediction projection version 3. No new database, destructive migration or wipe
+was needed. Existing consistent backups passed integrity checks. Requests carry
+the selected model/runtime/tokenizer identities and exact context/pre-state
+hashes. Outcomes refer to raw events and deduplicated content-addressed blobs.
+Re-delivering all 47 acknowledged events in reverse order ingested zero events,
+skipped 47 duplicates and left the full four-row projection unchanged.
+[Replay, resolution and all five decompressed blob hash checks](q25_code_cpt_r2/native_feedback_verification.json),
+[retry receipt](q25_code_cpt_r2/native_feedback_retry.json).
+
+The 92-token small-file smoke first displayed a complete proposal 1,486 ms after
+the preceding buffer delta. Subsequent displays took 464 and 458 ms. All requests
+shared the same FIM context hash because the edited remainder is excluded from
+the completion prompt; the later requests reused 91/92 tokens. These cached
+repeats do not replace the much slower changed-context replay measurements above.
+[Exact timing observations](q25_code_cpt_r2/native_editor_timings.json).
+
+The feedback export contains 292 proposals across 96 observed sessions, zero
+candidate/defensible preference pairs, and eight historical sequence gaps outside
+the verified smoke session. Synthetic or unreviewed records do not establish
+human preferences. Unobserved delayed windows remain censored, and gaps prevent
+preference derivation. Readiness is false and automatic training is disabled.
+[Versioned readiness receipt](q25_code_cpt_r2/native_feedback_readiness.json).
+
+## Final verification and budget
+
+Current verification passed 1,217 Python tests with two warnings, Ruff, mypy on
+195 source files, 45 Rust tests, 93 Neovim tests, separate automatic/SSE and
+review-linkage scripts, 59 collector server tests, 38 analysis tests and 16
+observability gateway tests. All three TypeScript checks passed. No passing count
+is borrowed from an earlier gate. Python/Rust/server sources did not change after
+those gates; the later startup corrections affect Lua only.
+[Gate receipts](q25_code_cpt_r2/verification_native_deployment.json).
+
+The fresh authenticated quota observation at 2026-10-04 13:05:02 UTC reports
+41.08/45 account GPU-hours remaining, 3.92 used, renewal 2026-10-10, and no active
+jobs after verifying 55 statuses including two authenticated 404 results. No
+renewed allocation or paid compute was used. Total training input is 11,426,328
+nonpadding tokens. Both 4,096-state FIM arms trained once, each with 1,776,908
+input and 34,405 supervised target/EOS tokens. Reserved campaign wall time is
+70,588/72,000 seconds including CPU conversion, failures and finalization;
+20.7189 conservative GPU-hours were reserved. These reservations are not measured
+GPU usage. The remaining 1,412 seconds do not accommodate another three-hour run.
+[Budget ledger](q25_code_cpt_r2/campaign_final_budget_audit.json),
+[fresh quota and storage](q25_code_cpt_r2/final_environment.json).
+
+The final artifact inventory contains 12,516,972,641 bytes of the 12,884,901,888-byte
+cap, with 367,929,247 bytes of headroom. The cap includes temporary
+conversion and build cache files.
+No existing research checkpoint was deleted to fit the campaign. Training states
+and weights remain private. The code/model comparison supports selecting direct
+FIM for this prototype, with uncertainty; it does not show that feeding more raw
+code first improved final completion or that the model learned human next-edit
+intent. Native per-request SigNoz traces were not captured; scientific native
+files and SQLite records are authoritative. Training telemetry was imported and
+queried under `run-73c890ceb76492f727219afff8f0ce0c` and shared FIM run
+`run-af49853a32ad56891191cf2d46ec9cee`; arm attribution requires their distinct
+attempt IDs, not the shared run alone.
+
+The ThinkPad's approved SSH alias timed out again. This is a verified desktop
+deployment, not a new ThinkPad installation or laptop benchmark. The declarative
+Nix candidate interface is tested at the source level; Nix is unavailable locally.
+No visual inspection or normal human-editing workload measurement was performed.
+The changed-context latency remains too slow for unobtrusive completions.
+
+For desktop rollback, restore the recorded configuration and service-unit
+backups in `native_installed_configuration.json`, run `systemctl --user
+daemon-reload`, then `systemctl --user restart tabcomplete-predictor.service`, and
+restart Neovim. The preserved old binary/model paths remain available. To stop
+suggestions immediately without rollback, use `:TabCompleteMode off`.
+
+## Experiment history and source interpretation
+
+The sections below preserve preparation and failure history. Statements about
+work being pending describe those earlier stages; current native measurements
+and the final deployment receipt take precedence.
+
 
 The existing private research source pool contains original public code from
 Stack dedup revision `17cad72c886a2858e08d4c349a00d6466f54df63`.
@@ -138,7 +313,8 @@ The controller refreshes quota and job state immediately before allocation.
 This observation does not guarantee a future balance.
 
 The campaign reserves at most 20 aggregate session wall-hours and conservatively
-40 account GPU-hours. Each private Kaggle allocation has a four-hour hard limit,
+40 account GPU-hours. The raw-code allocation had a four-hour hard limit. Completion arms and CPU
+conversion allocations had three-hour limits,
 with at least 30 minutes reserved for saving and final evaluation, increased
 using measured evaluation and checkpoint-save time. One GPU notebook allocation
 may run at a time. Training uses one T4; a second visible device is not treated as

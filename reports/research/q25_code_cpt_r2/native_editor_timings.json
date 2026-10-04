@@ -1,0 +1,64 @@
+{
+  "all_four_model_requests_share_context_blob_sha256": "e43c71557d3bb1060a64b018b0e9af00e8960140b2aac0659ed9992a3427f6dc",
+  "cache_caveat": "The editable remainder differs, but FIM omits that remainder from its prompt. These are identical-context cached repeats, not evidence for general changed-context latency.",
+  "count": 3,
+  "observations": [
+    {
+      "backend_timings": {
+        "cache_n": 0,
+        "predicted_ms": 146.734457,
+        "predicted_n": 6,
+        "prompt_ms": 875.0110930000001,
+        "prompt_n": 92,
+        "total_ms": 1025.808471
+      },
+      "condition": "first_unreused_92_token_prompt",
+      "first_actual_sampled_token_ms": 938,
+      "model_elapsed_ms": 1089,
+      "preceding_buffer_delta_to_shown_ms": 1486,
+      "prediction_id": "d6b9a0c1-7407-472b-a896-5071fb959a92",
+      "prompt_tokens": 92,
+      "request_recorded_to_shown_ms": 1094
+    },
+    {
+      "backend_timings": {
+        "cache_n": 91,
+        "predicted_ms": 143.453695,
+        "predicted_n": 6,
+        "prompt_ms": 27.288548,
+        "prompt_n": 1,
+        "total_ms": 171.245945
+      },
+      "condition": "identical_context_cached_repeat",
+      "first_actual_sampled_token_ms": 81,
+      "model_elapsed_ms": 228,
+      "preceding_buffer_delta_to_shown_ms": 464,
+      "prediction_id": "a624a1b9-cbf0-462c-abf3-2642c3aa53f3",
+      "prompt_tokens": 92,
+      "request_recorded_to_shown_ms": 231
+    },
+    {
+      "backend_timings": {
+        "cache_n": 91,
+        "predicted_ms": 140.448112,
+        "predicted_n": 6,
+        "prompt_ms": 22.655226,
+        "prompt_n": 1,
+        "total_ms": 163.595935
+      },
+      "condition": "identical_context_cached_repeat",
+      "first_actual_sampled_token_ms": 70,
+      "model_elapsed_ms": 215,
+      "preceding_buffer_delta_to_shown_ms": 458,
+      "prediction_id": "c42aeff2-1856-4721-8ceb-f85f240885da",
+      "prompt_tokens": 92,
+      "request_recorded_to_shown_ms": 218
+    }
+  ],
+  "observed_at": "2026-10-04T13:02:20.025553+00:00",
+  "schema": "q25-fim-editor-visible-timing-v1",
+  "scope": "three scripted small-file92-token completions; not changing-state replay or human-normal-editing benchmark",
+  "session_id": "30243bc9-bd3a-4c73-9d05-a1ea052b5fd1",
+  "synthetic": true,
+  "timing_semantics": "preceding actual buffer delta to shown includes debounce and context work; individual stages unknown unless reported"
+}

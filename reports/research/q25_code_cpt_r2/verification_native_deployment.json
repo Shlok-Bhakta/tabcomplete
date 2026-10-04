@@ -1,0 +1,94 @@
+{
+  "checks": {
+    "actual_full_lazyvim_startup": {
+      "configuration": "/home/crabcake/.config/nvim/init.lua",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": true,
+      "synthetic": true
+    },
+    "analysis_types": {
+      "count": null,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-analysis-type-deployment.log",
+      "log_sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "passed": true
+    },
+    "collector_analysis": {
+      "count": 38,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-analysis-deployment.log",
+      "log_sha256": "8eb6f55c1dcc509c48fecc5a48936e3943e08a04ed510b7f38d18e0ebd8afba7",
+      "passed": true
+    },
+    "collector_server": {
+      "count": 59,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-server-deployment.log",
+      "log_sha256": "d9f7be7e4f83530b8b2ae3d4009d7096734dad6a02161adbb3100a04a93ff6bf",
+      "passed": true
+    },
+    "collector_types": {
+      "count": null,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-server-type-deployment.log",
+      "log_sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "passed": true
+    },
+    "gateway_types": {
+      "count": null,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-gateway-type-deployment.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed": true
+    },
+    "lua": {
+      "count": 93,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-lua-bootstrap-final.log",
+      "log_sha256": "95bda173aaa48a084d5b6d6ab9c1a1562e2f71630ee0d3e6a772dd88324b7b4c",
+      "passed": true
+    },
+    "lua_automatic_state_machine": {
+      "count": null,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-lua-automatic_predict-root.log",
+      "log_sha256": "89866c9d2a8557e0064ba3ded34776c85038dba09faf175eb6adf0f7f30d600c",
+      "passed": true
+    },
+    "lua_explicit_review_linkage": {
+      "count": null,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-lua-feedback_review-root.log",
+      "log_sha256": "8cd30a7559cd5ce6ad186377a9313c0c865cd00411d033b1a5cdb773095c887d",
+      "passed": true
+    },
+    "mypy": {
+      "count": 195,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-mypy-deployment.log",
+      "log_sha256": "020e0c7bf5ee29afec36b8b97c5da8baaf3a8a444433eb4cf64c56a95f0d8bfd",
+      "passed": true
+    },
+    "observability_gateway": {
+      "count": 16,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-gateway-deployment.log",
+      "log_sha256": "2325358fc7ba72e3bff456ed4881c45e1b9087fba223b06f70776cc0b3087a3c",
+      "passed": true
+    },
+    "python": {
+      "count": 1217,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-python-deployment.log",
+      "log_sha256": "3776ca698a96d73421a10d8e28686af5c443a05c8cfa6d9b2f06daffca531a82",
+      "passed": true
+    },
+    "ruff": {
+      "count": null,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-ruff-deployment.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "passed": true
+    },
+    "rust": {
+      "count": 45,
+      "log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/gate-rust-eog-compat.log",
+      "log_sha256": "73e419851b76ba42edc5eee064af4166c93abf4839379811cd99daded6cabce6",
+      "passed": true
+    }
+  },
+  "lua_reload_guard_verified": true,
+  "lua_source_commit": "3acc1c4",
+  "lua_startup_fix_pending": false,
+  "observed_at": "2026-10-04T12:57:57.187106+00:00",
+  "python_source_unchanged_after_this_gate": true,
+  "schema": "q25-fim-deployment-gates-v1"
+}

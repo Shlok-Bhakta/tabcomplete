@@ -1,5 +1,5 @@
 {
-  "actual_model_load_verified": false,
+  "actual_model_load_verified": true,
   "changes": [
     {
       "cause": "Kaggle retains worker directory; previous root-level path assumption was false",
@@ -27,12 +27,17 @@
   ],
   "compact_profile_bytes": 952319,
   "compact_profile_sha256": "39f043a548e7274cd868d12889f749f1cf969368aaa57f7a54c29d0fc40f11a3",
+  "editor_real_session_id": "30243bc9-bd3a-4c73-9d05-a1ea052b5fd1",
+  "editor_verification_complete": true,
+  "editor_verification_source_commit": "a34c8ce",
   "executable": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/tabcomplete-q25-fim",
   "executable_bytes": 501920617,
   "executable_sha256": "9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a",
   "generic_engine_sha256": "a6334afc2f612f823e8ccc3913ecfd64c0a21cb473a3edb837b7d9caccc424da",
   "gguf_bytes": 491399808,
   "gguf_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+  "native_model_inference_verified": true,
+  "native_quality_cases": 240,
   "observed_at": "2026-10-04T11:23:36.816969+00:00",
   "prior_failed_executable_sha256": "4d5724a3c09cd5bc031ecd2d02250bede4c34fa432d67ec1c6b9f4cf5bc291df",
   "schema": "q25-fim-native-packaging-v1",
@@ -42,6 +47,7 @@
     "confirmed_failure_code": "fim_special_token_inventory_mismatch",
     "confirmed_failure_stage": "fim_tokenizer_verify",
     "control_inventory_count": 22,
+    "corrected_native_startup": "healthy, executable-mmap, same selected GGUF",
     "embedded_startup": "failed model initialization",
     "external_file_same_engine_startup": "failed model initialization",
     "fix": "exact pinned tokenizer native alias exception; FIM stops only on declared EOS; strict other controls and legacy EOS behavior preserved",
@@ -67,6 +73,6 @@
       "purpose": "bounded compatibility only, not Rust quality",
       "stop_type": "eos"
     },
-    "startup_reverification_pending": true
+    "startup_reverification_pending": false
   }
 }

@@ -86,10 +86,19 @@ else
 end
 local first = wait_shown(prior and prior.event_id)
 assert(first.payload.active_buffer and first.payload.focused)
+assert(vim.api.nvim_buf_get_lines(0, row, row + 1, false)[1] == original_line,
+  "rendering the proposal changed source text")
+local preview_namespace = vim.api.nvim_get_namespaces().TabCompletePredict
+assert(preview_namespace and #vim.api.nvim_buf_get_extmarks(0, preview_namespace,
+  0, -1, { details = true }) > 0, "shown event has no actual preview extmark")
+local addition_highlight = vim.api.nvim_get_hl(0, { name = "TabCompleteDiffAdd" })
+assert(addition_highlight.bg, "replacement preview has no addition background")
 local accepted_prediction_id = first.payload.prediction_id
 local acceptance = vim.fn.maparg("<M-l>", "i", false, true)
 assert(type(acceptance.callback) == "function", "acceptance mapping has no callback")
-acceptance.callback()
+-- -l executes in normal mode; the installed binding exists in both modes.
+-- Dispatch the actual mapping through Neovim rather than calling its callback.
+vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<M-l>", true, false, true), "xt", false)
 assert(predict.status().counters.accepted == 1, "installed acceptance key did not apply")
 assert(vim.api.nvim_buf_get_lines(0, row, row + 1, false)[1] ~= original_line)
 local acceptance_closed_once = 0
@@ -160,4 +169,6 @@ print(vim.json.encode({ session_id = collector.session_id,
   navigation_prediction_id = navigation_prediction_id,
   prediction_count = predict.status().counters.requested,
   displayed_count = predict.status().counters.displayed,
+  preview_extmark_verified = true, source_unchanged_until_acceptance = true,
+  acceptance_key_dispatched = "<M-l>",
   synthetic = true }))

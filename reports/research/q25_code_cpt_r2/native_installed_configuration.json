@@ -1,0 +1,376 @@
+{
+  "acceptance_key": "<M-l>",
+  "automatic_personalization_enabled": false,
+  "binary_sha256": "9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a",
+  "final_editor_source_commit": "3acc1c4",
+  "final_full_lazyvim_restart": {
+    "acceptance_key": "<M-l>",
+    "automatic_personalization_enabled": false,
+    "commands_available": true,
+    "force_prediction_key": "<M-p>",
+    "mode": "automatic",
+    "module_source": "@/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2/tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua",
+    "protocol": "q25-fim-line-completion-v1",
+    "quality_validated": false,
+    "revision": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+    "schema": "full-lazyvim-installed-startup-v1",
+    "source_configuration": "/home/crabcake/.config/nvim/init.lua",
+    "synthetic": true
+  },
+  "final_full_lazyvim_restart_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "force_prediction_key": "<M-p>",
+  "fresh_process_checks": {
+    "full-lazyvim-startup.json": {
+      "acceptance_key": "<M-l>",
+      "automatic_personalization_enabled": false,
+      "commands_available": true,
+      "force_prediction_key": "<M-p>",
+      "mode": "automatic",
+      "module_source": "@/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2/tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua",
+      "protocol": "q25-fim-line-completion-v1",
+      "quality_validated": false,
+      "revision": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+      "schema": "full-lazyvim-installed-startup-v1",
+      "source_configuration": "/home/crabcake/.config/nvim/init.lua",
+      "synthetic": true
+    },
+    "installed-editor-restart-1.log": {
+      "acceptance_key": "<M-l>",
+      "force_prediction_key": "<M-p>",
+      "installed_configuration": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+      "mode_state_path": "/home/crabcake/.local/state/nvim/tabcomplete-q25-fim-mode.json",
+      "module_source": "@/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2/tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua",
+      "off_command": "TabCompleteMode off",
+      "schema": "installed-editor-restart-check-v1",
+      "session_id": "61e73a04-55d3-410c-ab74-92bac9d93555",
+      "status": {
+        "acceptance_key": "<M-l>",
+        "automatic_display_policy": "next-edit",
+        "automatic_normal_mode": true,
+        "automatic_personalization_enabled": false,
+        "automatic_quality_validated": false,
+        "automatic_state": "automatic experimental",
+        "backend": "rust-editor-v1",
+        "backoff_until_ms": 0,
+        "collector_connected": true,
+        "collector_spool_files": 0,
+        "collector_state": "connected",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "context_policy_version": "q25-fim-psm-cursor-to-line-end-bounded640-256-v2",
+        "counters": {
+          "accepted": 0,
+          "automatic_policy_suppressed": 0,
+          "automatic_ui_suppressed": 0,
+          "cancelled_unseen": 0,
+          "dismissed_navigation": 0,
+          "displayed": 0,
+          "expired": 0,
+          "invalid_output": 0,
+          "model_no_edit": 0,
+          "rejected_explicit": 0,
+          "rejected_implicit_typing": 0,
+          "request_failed": 0,
+          "requested": 0,
+          "stale_discarded": 0,
+          "typed_match": 0,
+          "typed_partial_match": 0
+        },
+        "experimental_auto_opt_in": true,
+        "in_flight": false,
+        "input_token_budget": 1024,
+        "mode": "automatic",
+        "model": "q25-fim",
+        "model_alias": "q25-fim",
+        "model_embedded": true,
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_selection": "declarative",
+        "model_storage": "executable-mmap",
+        "model_switch_supported": false,
+        "precision": "Q4_K_M",
+        "prediction_key": "<M-p>",
+        "proposal_active": false,
+        "protocol_version": "q25-fim-line-completion-v1",
+        "quality": "uncalibrated",
+        "revision": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "selected_model": "q25-fim",
+        "stage": "idle",
+        "state": "automatic",
+        "syntax_validation": false
+      },
+      "synthetic": true
+    },
+    "installed-editor-restart-2.log": {
+      "acceptance_key": "<M-l>",
+      "force_prediction_key": "<M-p>",
+      "installed_configuration": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+      "mode_state_path": "/home/crabcake/.local/state/nvim/tabcomplete-q25-fim-mode.json",
+      "module_source": "@/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2/tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua",
+      "off_command": "TabCompleteMode off",
+      "schema": "installed-editor-restart-check-v1",
+      "session_id": "f4aece3b-15d3-4a75-a214-86ae66fe5885",
+      "status": {
+        "acceptance_key": "<M-l>",
+        "automatic_display_policy": "next-edit",
+        "automatic_normal_mode": true,
+        "automatic_personalization_enabled": false,
+        "automatic_quality_validated": false,
+        "automatic_state": "automatic experimental",
+        "backend": "rust-editor-v1",
+        "backoff_until_ms": 0,
+        "collector_connected": true,
+        "collector_spool_files": 0,
+        "collector_state": "connected",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "context_policy_version": "q25-fim-psm-cursor-to-line-end-bounded640-256-v2",
+        "counters": {
+          "accepted": 0,
+          "automatic_policy_suppressed": 0,
+          "automatic_ui_suppressed": 0,
+          "cancelled_unseen": 0,
+          "dismissed_navigation": 0,
+          "displayed": 0,
+          "expired": 0,
+          "invalid_output": 0,
+          "model_no_edit": 0,
+          "rejected_explicit": 0,
+          "rejected_implicit_typing": 0,
+          "request_failed": 0,
+          "requested": 0,
+          "stale_discarded": 0,
+          "typed_match": 0,
+          "typed_partial_match": 0
+        },
+        "experimental_auto_opt_in": true,
+        "in_flight": false,
+        "input_token_budget": 1024,
+        "mode": "automatic",
+        "model": "q25-fim",
+        "model_alias": "q25-fim",
+        "model_embedded": true,
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_selection": "declarative",
+        "model_storage": "executable-mmap",
+        "model_switch_supported": false,
+        "precision": "Q4_K_M",
+        "prediction_key": "<M-p>",
+        "proposal_active": false,
+        "protocol_version": "q25-fim-line-completion-v1",
+        "quality": "uncalibrated",
+        "revision": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "selected_model": "q25-fim",
+        "stage": "idle",
+        "state": "automatic",
+        "syntax_validation": false
+      },
+      "synthetic": true
+    }
+  },
+  "health": {
+    "active_slots": 1,
+    "alias": "q25-fim",
+    "backend": "llama.cpp CPU via Rust",
+    "batch_size": 256,
+    "cache_type": "f16",
+    "completion_mode": "remaining_logical_line_after_utf8_cursor",
+    "context_layout": "q25-fim-psm-bounded-v2",
+    "context_size": 2304,
+    "fim_profile": {
+      "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+      "tokenizer": {
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "eos_id": 151643,
+        "fim_middle_id": 151660,
+        "fim_prefix_id": 151659,
+        "fim_suffix_id": 151661,
+        "special_tokens": [
+          {
+            "id": 151643,
+            "spelling": "<|endoftext|>"
+          },
+          {
+            "id": 151644,
+            "spelling": "<|im_start|>"
+          },
+          {
+            "id": 151645,
+            "spelling": "<|im_end|>"
+          },
+          {
+            "id": 151646,
+            "spelling": "<|object_ref_start|>"
+          },
+          {
+            "id": 151647,
+            "spelling": "<|object_ref_end|>"
+          },
+          {
+            "id": 151648,
+            "spelling": "<|box_start|>"
+          },
+          {
+            "id": 151649,
+            "spelling": "<|box_end|>"
+          },
+          {
+            "id": 151650,
+            "spelling": "<|quad_start|>"
+          },
+          {
+            "id": 151651,
+            "spelling": "<|quad_end|>"
+          },
+          {
+            "id": 151652,
+            "spelling": "<|vision_start|>"
+          },
+          {
+            "id": 151653,
+            "spelling": "<|vision_end|>"
+          },
+          {
+            "id": 151654,
+            "spelling": "<|vision_pad|>"
+          },
+          {
+            "id": 151655,
+            "spelling": "<|image_pad|>"
+          },
+          {
+            "id": 151656,
+            "spelling": "<|video_pad|>"
+          },
+          {
+            "id": 151657,
+            "spelling": "<tool_call>"
+          },
+          {
+            "id": 151658,
+            "spelling": "</tool_call>"
+          },
+          {
+            "id": 151659,
+            "spelling": "<|fim_prefix|>"
+          },
+          {
+            "id": 151660,
+            "spelling": "<|fim_middle|>"
+          },
+          {
+            "id": 151661,
+            "spelling": "<|fim_suffix|>"
+          },
+          {
+            "id": 151662,
+            "spelling": "<|fim_pad|>"
+          },
+          {
+            "id": 151663,
+            "spelling": "<|repo_name|>"
+          },
+          {
+            "id": 151664,
+            "spelling": "<|file_sep|>"
+          }
+        ],
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665
+      }
+    },
+    "fim_token_ids": {
+      "eos": 151643,
+      "fim_middle": 151660,
+      "fim_prefix": 151659,
+      "fim_suffix": 151661
+    },
+    "fim_tokenizer_runtime_policy": "q25-fim-pinned-hf-eos-normal-eog-alias-v1",
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 427.13327,
+    "microbatch_size": 64,
+    "model_embedded": true,
+    "model_protocol": "q25-fim-line-completion-v1",
+    "model_selection": "declarative",
+    "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+    "model_storage": "executable-mmap",
+    "model_switch_supported": false,
+    "output_tokens": 96,
+    "prompt_threads": 4,
+    "runtime_config_hash": "373ca1316a99065ae9e5c503db2ab898efa98abeabe002d18983ca1165102637",
+    "saved_contexts": 0,
+    "status": "ok",
+    "syntax_validation": false,
+    "threads": 4,
+    "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+    "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+    "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+    "tokenizer_vocab_size": 151665
+  },
+  "host": "crabcake",
+  "installer_configuration_and_rollback": {
+    "activated": true,
+    "config_backup": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua.backup-20261004T120552.342883Z",
+    "config_path": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+    "config_sha256": "717ef587e3eaf4b0cf31ac4633f2b1aee9fd675c822b786ee4bbdf9e7c363434",
+    "dry_run": false,
+    "editor_model_sha256": "6fc27da366fbfe447f1032450f5de6c9e9257d237551b5d97eb7fd271bdc0a1a",
+    "memory_max_bytes": 1572864000,
+    "model_bytes": 491399808,
+    "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+    "native_prompt_threads": 4,
+    "native_threads": 4,
+    "runtime_config_hash": "373ca1316a99065ae9e5c503db2ab898efa98abeabe002d18983ca1165102637",
+    "runtime_sha256": "9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a",
+    "unit_backup": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service.backup-20261004T120552.342883Z",
+    "unit_path": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service",
+    "unit_sha256": "4afcf43d01de0330e5957ed63256f0267f76b6ac03bcaa250ff51062bbac6fee"
+  },
+  "launch_arguments": [
+    "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/tabcomplete-q25-fim",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "19093",
+    "--threads",
+    "4",
+    "--prompt-threads",
+    "4",
+    "--context-size",
+    "2304",
+    "--context-layout",
+    "cursor-last-v1",
+    "--input-tokens",
+    "1024",
+    "--batch-size",
+    "256",
+    "--microbatch-size",
+    "64",
+    "--output-tokens",
+    "96",
+    "--cache-type",
+    "f16",
+    "--syntax-validation",
+    "false"
+  ],
+  "observed_at": "2026-10-04T12:53:18.411865+00:00",
+  "off_command": ":TabCompleteMode off",
+  "pid": 2714563,
+  "resident_memory_after_editor_smoke": {
+    "Anonymous_bytes": 126996480,
+    "Pss_Anon_bytes": 126996480,
+    "Pss_File_bytes": 491798528,
+    "Pss_bytes": 618795008,
+    "Rss_bytes": 622317568,
+    "Swap_bytes": 0
+  },
+  "schema": "q25-fim-installed-editor-verification-v1",
+  "synthetic_checks": true,
+  "thinkpad_installed": false,
+  "visual_inspection": false
+}

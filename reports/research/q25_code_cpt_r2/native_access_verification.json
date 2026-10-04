@@ -1,0 +1,17 @@
+{
+  "schema": "native-target-access-v1",
+  "observed_at": "2026-10-04T12:41:42.085635+00:00",
+  "desktop": "crabcake",
+  "inference_backend": "llama.cpp CPU via Rust",
+  "thinkpad": {
+    "authorized_alias": "thinkpad",
+    "command": "ssh -o BatchMode=yes -o ConnectTimeout=8 thinkpad true",
+    "exit_code": 255,
+    "result": "connection timed out",
+    "new_model_installed": false,
+    "latency_measured": false
+  },
+  "nix_candidate": "nix/fim-candidate.nix",
+  "local_nix_available": false,
+  "visual_editor_inspection": false
+}

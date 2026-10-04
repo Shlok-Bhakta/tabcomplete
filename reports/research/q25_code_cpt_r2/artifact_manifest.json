@@ -1,0 +1,141 @@
+{
+  "automatic_personalization_enabled": false,
+  "branch": "research/q25-code-cpt-r2",
+  "embedded_executable": {
+    "bytes": 501920617,
+    "sha256": "9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a",
+    "storage": "executable-mmap",
+    "weights_published": false
+  },
+  "installed_configuration": {
+    "activated": true,
+    "config_backup": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua.backup-20261004T120552.342883Z",
+    "config_path": "/home/crabcake/.config/nvim/lua/plugins/tabcomplete-trajectory.lua",
+    "config_sha256": "717ef587e3eaf4b0cf31ac4633f2b1aee9fd675c822b786ee4bbdf9e7c363434",
+    "dry_run": false,
+    "editor_model_sha256": "6fc27da366fbfe447f1032450f5de6c9e9257d237551b5d97eb7fd271bdc0a1a",
+    "memory_max_bytes": 1572864000,
+    "model_bytes": 491399808,
+    "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+    "native_prompt_threads": 4,
+    "native_threads": 4,
+    "runtime_config_hash": "373ca1316a99065ae9e5c503db2ab898efa98abeabe002d18983ca1165102637",
+    "runtime_sha256": "9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a",
+    "unit_backup": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service.backup-20261004T120552.342883Z",
+    "unit_path": "/home/crabcake/.config/systemd/user/tabcomplete-predictor.service",
+    "unit_sha256": "4afcf43d01de0330e5957ed63256f0267f76b6ac03bcaa250ff51062bbac6fee"
+  },
+  "last_verified_source_commit": "c6062d440078830c6872e6f2c27d9926062b5a68",
+  "model": {
+    "bytes": 491399808,
+    "license": "Apache-2.0; training sources retain per-file licenses; no derivative publication",
+    "physical_export_entries": 630167424,
+    "precision": "Q4_K_M",
+    "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+    "source": "Qwen/Qwen2.5-Coder-0.5B",
+    "unique_parameters": 494032768,
+    "variant": "Base pretrained, direct response-only FIM adapted"
+  },
+  "observed_at": "2026-10-04T13:19:31.311275+00:00",
+  "schema": "q25-code-fim-final-artifact-manifest-v1",
+  "scientific_and_source_files": {
+    "HANDOFF.md": {
+      "bytes": 8059,
+      "sha256": "d9fe15d71c0b3e681b0cbd601ef4db31225beba16f40e230a5bb9a9d1d223e67"
+    },
+    "campaign_authorization_audit.json": {
+      "bytes": 1632,
+      "sha256": "b7f42dd8ffc2d958e0cc3737bb6b148bf7aa6cba4b88c8062f78fb13e35b0042"
+    },
+    "campaign_final_budget_audit.json": {
+      "bytes": 19043,
+      "sha256": "f77a264d12c54094ee386ad1ddb3343dc7a9cc2fb35ed2362ac523f728017b05"
+    },
+    "download_manifest.json": {
+      "bytes": 1803,
+      "sha256": "eb0bd03bfca68edaf1b426812f4892e4c4ff7c8655955d74a7f25afd7b8bfea3"
+    },
+    "fim_results_completed_cpt_a1.json": {
+      "bytes": 31150,
+      "sha256": "58b9d774f3176a31b3172c668af19f7577b9a61115d1dfb1f0a982a20e8bc5cb"
+    },
+    "fim_results_untouched_a5.json": {
+      "bytes": 22016,
+      "sha256": "e00ef5034e4b40110a849022fb4ed733def5087b23679b9f971d37a3a37887b8"
+    },
+    "fim_training_plan.json": {
+      "bytes": 8788,
+      "sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780"
+    },
+    "final_environment.json": {
+      "bytes": 11685,
+      "sha256": "9f466b5b8a323c5cbb4d8d9c915236c00315782bc0bdbe4a11713dd117551e22"
+    },
+    "models.json": {
+      "bytes": 830,
+      "sha256": "0545e8216d578eaf6f332778bff07670928cc2608ba3c6f3026b8b1bb0fc1ef0"
+    },
+    "native_access_verification.json": {
+      "bytes": 536,
+      "sha256": "a407c3f637338933b6b25e8896944b3eb4bd4c6c2546c80aa0f1c48d3d9cf5f1"
+    },
+    "native_editor_timings.json": {
+      "bytes": 2397,
+      "sha256": "ea8f74aa0645f5f617ebd43044fc87bf029d3dc4a7c5a14fab66e7b4007f8003"
+    },
+    "native_end_to_end.json": {
+      "bytes": 2280,
+      "sha256": "ebc220c6189c5f9d6a72033af86d48f2155d0462039686b809d9433c19f9da3a"
+    },
+    "native_feedback_readiness.json": {
+      "bytes": 1726,
+      "sha256": "5bcde8605b706be4a952721d6b40acce6d34fb9affda458def432f61b10522b9"
+    },
+    "native_feedback_retry.json": {
+      "bytes": 764,
+      "sha256": "706a3b5ba89a8ac7324b45ece3df8eedbe7d3b8058c368a7f0fbc5e03a5bedda"
+    },
+    "native_feedback_verification.json": {
+      "bytes": 11441,
+      "sha256": "fc3a62ebc2859c3ff79294fd8acc356e308b0bc4be9e03cddb72d6c76460d376"
+    },
+    "native_installed_configuration.json": {
+      "bytes": 13687,
+      "sha256": "5b2597cfc004a3e58b6d647614a3d1206a4a62827aa0d6ac97297a5955ee6198"
+    },
+    "native_packaging.json": {
+      "bytes": 3516,
+      "sha256": "9b806730bf5bcd75e55e24c0c3c7c9a2dcf6de48f06a555dec25805a9c7304c4"
+    },
+    "native_quality_comparison.json": {
+      "bytes": 879,
+      "sha256": "c76f4de05e857add7cadf62c225852a511b13cab1d63c2095d9b04bc2f60f9f4"
+    },
+    "native_runtime_selection.json": {
+      "bytes": 19609,
+      "sha256": "1535f47263b1fd75d78db3b879cb4ff47ab7655bb400a00958e45380954fe988"
+    },
+    "plan.json": {
+      "bytes": 15664,
+      "sha256": "1aaff2ee4f4e0adeeafb87e616f99e657f7ff0be4fa438f40ecbb1150aeed1f9"
+    },
+    "reports/research/q25_code_cpt_r2.md": {
+      "bytes": 38012,
+      "sha256": "161bf8ed4e5cff7c50f71da5e99c3b2897711073060d8c4eb124e3257374b1f5"
+    },
+    "tools/trajectory_collector/nvim/lua/tabcomplete_trajectory/predict.lua": {
+      "bytes": 109350,
+      "sha256": "5e187dbf01927f3534d3da75d73f9a864a5f408aa8eda000287ec5ba181b9f95"
+    },
+    "tools/trajectory_collector/nvim/tests/automatic_real.lua": {
+      "bytes": 8801,
+      "sha256": "8f188e76c5e332f00954445c6983733d18597a23293aff049940a35bd5eccd3a"
+    },
+    "verification_native_deployment.json": {
+      "bytes": 3804,
+      "sha256": "e8f0aad81c7e817d32c24b8dbaff0b6d728b197f8c2e04f68cec7d1f3b34b448"
+    }
+  },
+  "synthetic_editor_checks_are_human_feedback": false
+}
