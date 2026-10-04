@@ -18,13 +18,24 @@
     },
     {
       "evidence": "Installed kaggle_api_extended.py kernels_push request.text = script_body",
+      "fix": "Single code_file carries exact five hashed public source files, bounded extraction and nested mount discovery by immutable manifest hashes",
       "issue": "kernels_push uploads only code_file text, not adjacent source files",
-      "status": "source-only embedding fix in progress before allocation"
+      "source_commit": "9408ca2",
+      "status": "fixed and independently tested before allocation"
     }
   ],
   "local_staging_files": 6,
   "model_weights_downloaded": 0,
   "schema": "q25-fim-conversion-preallocation-fixes-v1",
   "scientific_quality_outputs_changed": false,
-  "training_plan_or_fixtures_changed": false
+  "training_plan_or_fixtures_changed": false,
+  "verification": {
+    "collector_analysis_tests": 38,
+    "collector_analysis_typecheck": "passed",
+    "controller_and_conversion_tests": 163,
+    "failures": 0,
+    "log_sha256": "a86aa89ea387520f0e2bc4665c02153ce40dd9aad63f1f7f02611801b431d246",
+    "nested_mount_execution_test": true,
+    "single_file_execution_test": true
+  }
 }
