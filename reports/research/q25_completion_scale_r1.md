@@ -13,9 +13,9 @@ fell from 1.030 to 0.534 with the same tokenizer. The first and last sixteen
 training updates averaged losses of 0.662 and 0.535.
 
 A post-hoc lexical breakdown of that historical development slice found 200
-content-bearing targets, with exact/EOS completion improving from36 to94.
-The other40 targets contained only punctuation and whitespace, improving
-from11 to36. This is a coarse text classification, not a functional check.
+content-bearing targets, with exact/EOS completion improving from 36 to 94.
+The other 40 targets contained only punctuation and whitespace, improving
+from 11 to 36. This is a coarse text classification, not a functional check.
 It shows that the aggregate gain was not entirely closing punctuation. The new
 comparison reports these strata under a plan frozen before its outputs.
 

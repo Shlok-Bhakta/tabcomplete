@@ -68,3 +68,19 @@ def test_target_hash_mismatch_stops_analysis():
     corpus[0]["target_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="target token IDs"):
         analyze(corpus, repeat, repeat, tokenizer=Tokenizer())
+
+
+def test_related_primary_repositories_share_one_bootstrap_cluster():
+    corpus, repeat = fixture()
+    for row in corpus:
+        row["repository_group_sha256"] = "a" * 64
+    result = analyze(corpus, repeat, repeat, tokenizer=Tokenizer())
+    assert result["primary"]["repository_groups"] == 1
+    assert result["bootstrap_group_identity"] == "transitive_repository_alias_component"
+
+
+def test_partial_component_metadata_is_rejected():
+    corpus, repeat = fixture()
+    corpus[0]["repository_group_sha256"] = "a" * 64
+    with pytest.raises(ValueError, match="component identity"):
+        analyze(corpus, repeat, repeat, tokenizer=Tokenizer())

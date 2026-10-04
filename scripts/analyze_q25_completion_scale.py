@@ -57,6 +57,24 @@ def analyze(
             ):
                 raise ValueError("prediction does not belong to its source state")
 
+    # Preserve original request identity checks above, then cluster uncertainty
+    # by the whole transitive alias component when the frozen corpus supplies it.
+    group_field = "repository_group_sha256"
+    grouped = any(group_field in source for source in sources.values())
+    if grouped:
+        for source in sources.values():
+            group = source.get(group_field)
+            if not isinstance(group, str) or len(group) != 64 or any(
+                character not in "0123456789abcdef" for character in group
+            ):
+                raise ValueError("development repository component identity is missing or invalid")
+        repeat = [
+            {**row, "repository": sources[row["case_id"]][group_field]} for row in repeat
+        ]
+        scaled = [
+            {**row, "repository": sources[row["case_id"]][group_field]} for row in scaled
+        ]
+
     strata: dict[str, dict[str, str]] = {}
     for case_id, source in sources.items():
         response = source["input_ids"][source["prompt_tokens"] : -1]
@@ -91,6 +109,9 @@ def analyze(
         "repeat": summarize(repeat),
         "scaled": summarize(scaled),
         "strata": comparisons,
+        "bootstrap_group_identity": (
+            "transitive_repository_alias_component" if grouped else "historical_primary_repository"
+        ),
         "general_human_edit_quality_established": False,
         "automatic_personalization_enabled": False,
     }
