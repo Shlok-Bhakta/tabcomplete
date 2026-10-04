@@ -3483,11 +3483,11 @@ def submit_fim_conversion(
         raise ValueError("conversion plan differs from its frozen report")
     if attempt == 1 and resume_source is not None:
         raise ValueError("first CPU conversion attempt cannot name a resume source")
-    first_failure_receipt = REPORT / "fim-conversion-failed-1.json"
+    first_failure_receipt = CONVERSION_FAILED_FILE
     if attempt == 1 and (
         CONVERSION_JOB_FILE.exists()
         or CONVERSION_JOB_FILE.is_symlink()
-        or list(REPORT.glob("fim-conversion-job*.json"))
+        or list(REPORT.glob(CONVERSION_JOB_GLOB))
         or first_failure_receipt.exists()
         or first_failure_receipt.is_symlink()
         or CONVERSION_HISTORY_ROOT.exists()

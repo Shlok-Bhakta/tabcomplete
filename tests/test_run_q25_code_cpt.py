@@ -4048,6 +4048,116 @@ def test_conversion_revision2_kernel_has_separate_reference_output_and_receipts(
     assert not (artifacts / "fim/conversion-kernel").exists()
 
 
+def test_conversion_revision2_submit_ignores_but_budgets_preserved_r1_lineage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    fim_job_path = next(report.glob("fim-job-*.json"))
+    fim_job = json.loads(fim_job_path.read_text())
+    fim_job["conservative_reserved_session_seconds"] = 0
+    campaign.save(fim_job_path, fim_job)
+
+    r1_reservation = campaign.CONVERSION_SESSION_SECONDS
+    r1_job = {
+        "reference": campaign.CONVERSION_REFERENCE_R1,
+        "attempt": 1,
+        "plan_revision": 1,
+        "conservative_reserved_session_seconds": r1_reservation,
+        "enable_gpu": False,
+    }
+    r1_job_path = report / "fim-conversion-job.json"
+    campaign.save(r1_job_path, r1_job)
+    r1_failure_path = report / "fim-conversion-failed-1.json"
+    r1_failure_path.write_text("preserved original r1 failure receipt\n")
+    r1_history = report / "fim/conversion/history/attempt-1"
+    r1_history.mkdir(parents=True)
+    (r1_history / "job.json").write_bytes(r1_job_path.read_bytes())
+    (r1_history / "failure.json").write_bytes(r1_failure_path.read_bytes())
+    (r1_history / "watch.json").write_text("preserved r1 watch receipt\n")
+    r1_kernel = artifacts / "fim/conversion-kernel"
+    r1_kernel.mkdir(parents=True)
+    (r1_kernel / "run.py").write_text("preserved r1 launcher\n")
+    preserved_r1_files = {
+        path: path.read_bytes()
+        for path in (
+            r1_job_path,
+            r1_failure_path,
+            r1_history / "job.json",
+            r1_history / "failure.json",
+            r1_history / "watch.json",
+            r1_kernel / "run.py",
+        )
+    }
+
+    with campaign._conversion_revision_scope(2):
+        plan = campaign.freeze_fim_conversion(selection_path)
+        bundle = campaign.build_fim_conversion_bundle(plan)
+        input_manifest_sha = campaign.digest(bundle / "input-manifest.json")
+        campaign.save(
+            campaign.CONVERSION_SUBMISSION_FILE,
+            {
+                "dataset": campaign.CONVERSION_DATASET,
+                "state": "verified",
+                "input_manifest_sha256": input_manifest_sha,
+            },
+        )
+        budget = {
+            "shared_limits": {
+                "aggregate_reserved_session_seconds": r1_reservation * 2,
+                "minimum_reserved_future_fim_session_seconds": 0,
+                "conservative_account_gpu_hours": 40,
+                "quota_renewal": "2026-10-10T00:00:00",
+            }
+        }
+        campaign.save(report / "campaign_budget.json", budget)
+
+        calls: list[tuple[str, ...]] = []
+        commit = "f" * 40
+
+        def fake_cli(*args: str, timeout: int = 120) -> str:
+            del timeout
+            call = tuple(args)
+            calls.append(call)
+            if call[-2:] == ("branch", "--show-current"):
+                return campaign.CONVERSION_BRANCH
+            if call[-2:] == ("status", "--porcelain"):
+                return ""
+            if call[-2:] == ("rev-parse", "HEAD"):
+                return commit
+            if call[-2:] == (
+                "origin",
+                f"refs/heads/{campaign.CONVERSION_BRANCH}",
+            ):
+                return f"{commit}\trefs/heads/{campaign.CONVERSION_BRANCH}"
+            if call[:3] == ("kaggle", "kernels", "status"):
+                return "COMPLETE"
+            if call[:3] == ("kaggle", "kernels", "push"):
+                pushed_kernel = Path(call[call.index("-p") + 1])
+                assert pushed_kernel == campaign._conversion_kernel_root(1)
+                pushed_metadata = json.loads((pushed_kernel / "kernel-metadata.json").read_text())
+                assert pushed_metadata["id"] == campaign.CONVERSION_REFERENCE_R2
+                return "https://www.kaggle.com/code/shlokbhakta/tc-q25-fim-q4-conversion-r2"
+            return ""
+
+        monkeypatch.setattr(campaign, "cli", fake_cli)
+        monkeypatch.setattr(campaign, "quota", lambda: _observation())
+        monkeypatch.setattr(campaign, "_csv_ref_exists", lambda _reference: False)
+
+        job = campaign.submit_fim_conversion(plan)
+
+        assert job["reference"] == campaign.CONVERSION_REFERENCE_R2
+        assert job["plan_revision"] == 2
+        assert job["attempt"] == 1
+        assert job["retry_authorization_reference"] is None
+        assert campaign.CONVERSION_JOB_FILE == report / "fim-conversion-job-r2.json"
+        assert campaign.CONVERSION_JOB_FILE.is_file()
+        assert (artifacts / "fim/conversion-kernel-r2/run.py").is_file()
+        assert len([call for call in calls if call[:3] == ("kaggle", "kernels", "push")]) == 1
+        assert all(path.read_bytes() == payload for path, payload in preserved_r1_files.items())
+
+
 def test_shared_conversion_budget_counts_r1_and_revision2_history(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
