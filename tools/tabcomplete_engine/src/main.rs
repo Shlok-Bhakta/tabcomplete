@@ -339,6 +339,56 @@ fn verify_fim_tokenizer(
     );
     fim_v1::TokenContract::from_profile(tokenizer)
 }
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum WorkerFailureStage {
+    BackendInit,
+    ModelIdentityVerify,
+    ModelContainerOpen,
+    ModelLoad,
+    FimProfileIdentity,
+    FimTokenizerVerify,
+    RuntimeConfiguration,
+    ModelContextCreate,
+    ModelSelectionCommit,
+    RuntimeIdentityBuild,
+    WorkerLoop,
+}
+
+impl WorkerFailureStage {
+    fn stage(self) -> &'static str {
+        match self {
+            Self::BackendInit => "backend_init",
+            Self::ModelIdentityVerify => "model_identity_verify",
+            Self::ModelContainerOpen => "model_container_open",
+            Self::ModelLoad => "model_load",
+            Self::FimProfileIdentity => "fim_profile_identity",
+            Self::FimTokenizerVerify => "fim_tokenizer_verify",
+            Self::RuntimeConfiguration => "runtime_configuration",
+            Self::ModelContextCreate => "model_context_create",
+            Self::ModelSelectionCommit => "model_selection_commit",
+            Self::RuntimeIdentityBuild => "runtime_identity_build",
+            Self::WorkerLoop => "worker_loop",
+        }
+    }
+
+    fn code(self) -> &'static str {
+        match self {
+            Self::BackendInit => "backend_init_failed",
+            Self::ModelIdentityVerify => "model_identity_verification_failed",
+            Self::ModelContainerOpen => "model_container_open_failed",
+            Self::ModelLoad => "gguf_model_load_failed",
+            Self::FimProfileIdentity => "fim_profile_identity_failed",
+            Self::FimTokenizerVerify => "fim_tokenizer_contract_failed",
+            Self::RuntimeConfiguration => "runtime_configuration_failed",
+            Self::ModelContextCreate => "model_context_initialization_failed",
+            Self::ModelSelectionCommit => "model_selection_commit_failed",
+            Self::RuntimeIdentityBuild => "runtime_identity_build_failed",
+            Self::WorkerLoop => "model_worker_failed",
+        }
+    }
+}
+
 fn worker(
     args: Args,
     app: App,
@@ -347,6 +397,7 @@ fn worker(
     rx: channel::Receiver<Job>,
 ) {
     let mut ready = Some(ready);
+    let mut failure_stage = WorkerFailureStage::BackendInit;
     let outcome = (|| -> Result<()> {
         let mut backend = LlamaBackend::init()?;
         backend.void_logs();
@@ -360,9 +411,11 @@ fn worker(
                 .get(&alias)
                 .ok_or_else(|| anyhow::anyhow!("unknown model"))?
                 .clone();
+            failure_stage = WorkerFailureStage::ModelIdentityVerify;
             verify_model(&profile)?;
             let load = Instant::now();
             // Retain the borrowed FILE until after model/context destruction.
+            failure_stage = WorkerFailureStage::ModelContainerOpen;
             let embedded_file = profile
                 .embedded
                 .as_ref()
@@ -371,6 +424,7 @@ fn worker(
             let model_params = LlamaModelParams::default()
                 .with_n_gpu_layers(0)
                 .with_use_mmap(true);
+            failure_stage = WorkerFailureStage::ModelLoad;
             let loaded = if let Some(file) = &embedded_file {
                 // SAFETY: owned seekable FILE at the verified aligned GGUF;
                 // no other thread accesses it, and it outlives the model.
@@ -390,16 +444,17 @@ fn worker(
                 }
             };
             let fim_contract = if profile.protocol == fim_v1::WIRE_VERSION {
-                Some(verify_fim_tokenizer(
-                    &model,
-                    profile
-                        .fim_profile
-                        .as_ref()
-                        .ok_or_else(|| anyhow::anyhow!("FIM profile identity is required"))?,
-                )?)
+                failure_stage = WorkerFailureStage::FimProfileIdentity;
+                let fim_profile = profile
+                    .fim_profile
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("FIM profile identity is required"))?;
+                failure_stage = WorkerFailureStage::FimTokenizerVerify;
+                Some(verify_fim_tokenizer(&model, fim_profile)?)
             } else {
                 None
             };
+            failure_stage = WorkerFailureStage::RuntimeConfiguration;
             let cache_type = match args.cache_type.as_str() {
                 "f16" => KvCacheType::F16,
                 "q8" => KvCacheType::Q8_0,
@@ -416,6 +471,7 @@ fn worker(
                 .with_type_v(cache_type)
                 .with_flash_attention_policy(llama_cpp_sys_2::LLAMA_FLASH_ATTN_TYPE_AUTO)
                 .with_no_perf(false);
+            failure_stage = WorkerFailureStage::ModelContextCreate;
             let mut ctx = match model.new_context(&backend, params) {
                 Ok(ctx) => ctx,
                 Err(error) => {
@@ -433,12 +489,14 @@ fn worker(
             {
                 drop(ctx);
                 drop(model);
+                failure_stage = WorkerFailureStage::ModelSelectionCommit;
                 alias = fallback_alias
                     .take()
                     .ok_or_else(|| anyhow::anyhow!("missing switch rollback"))?;
                 switch_failed = true;
                 continue;
             }
+            failure_stage = WorkerFailureStage::RuntimeIdentityBuild;
             let context_layout = if profile.protocol == fim_v1::WIRE_VERSION {
                 fim_v1::CONTEXT_LAYOUT
             } else {
@@ -491,6 +549,7 @@ fn worker(
                 switch_failed = false;
                 app.busy.store(false, Ordering::Release);
             }
+            failure_stage = WorkerFailureStage::WorkerLoop;
             let mut cached: Vec<LlamaToken> = Vec::new();
             let mut cache_repo = String::new();
             let mut prepared_context: Option<(String, context::EditorState)> = None;
@@ -941,7 +1000,16 @@ fn worker(
         }
     })();
     if outcome.is_err() {
-        *app.identity.lock().unwrap() = json!({"status":"failed","error":"model worker failed"});
+        eprintln!(
+            "tabcomplete_model_worker_failure stage={} code={}",
+            failure_stage.stage(),
+            failure_stage.code()
+        );
+        *app.identity.lock().unwrap() = json!({
+            "status":"failed",
+            "failure_stage":failure_stage.stage(),
+            "failure_code":failure_stage.code()
+        });
         app.busy.store(false, Ordering::Release);
         if let Some(reply) = ready.take() {
             let _ = reply.send(false);
@@ -1235,6 +1303,45 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod worker_guard_tests {
     use super::*;
+
+    #[test]
+    fn startup_failure_codes_distinguish_load_tokenizer_and_context_stages() {
+        let cases = [
+            (
+                WorkerFailureStage::ModelLoad,
+                "model_load",
+                "gguf_model_load_failed",
+            ),
+            (
+                WorkerFailureStage::FimTokenizerVerify,
+                "fim_tokenizer_verify",
+                "fim_tokenizer_contract_failed",
+            ),
+            (
+                WorkerFailureStage::ModelContextCreate,
+                "model_context_create",
+                "model_context_initialization_failed",
+            ),
+        ];
+        for &(stage, expected_stage, expected_code) in &cases {
+            assert_eq!(stage.stage(), expected_stage);
+            assert_eq!(stage.code(), expected_code);
+            assert!(
+                stage
+                    .stage()
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte == b'_')
+            );
+            assert!(
+                stage
+                    .code()
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte == b'_')
+            );
+        }
+        assert_ne!(cases[0].2, cases[1].2);
+        assert_ne!(cases[1].2, cases[2].2);
+    }
 
     fn synthetic_fim_profile() -> fim_v1::ServingProfile {
         let tokenizer_vocab_ids = vec![
