@@ -178,8 +178,12 @@ def test_managed_uv_rejects_symlinked_bootstrap_before_download(
     assert list(bootstrap_target.iterdir()) == []
 
 
-def test_managed_python_install_and_discovery_share_one_install_directory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(("sentencepiece_version", "accepted"), [("0.2.2", True), ("0.2.1", False)])
+def test_managed_python_install_and_discovery_share_one_install_directory_and_pin_sentencepiece(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    sentencepiece_version: str,
+    accepted: bool,
 ) -> None:
     runtime_root = tmp_path / "runtime"
     managed_python = runtime_root / "managed-python"
@@ -194,6 +198,7 @@ def test_managed_python_install_and_discovery_share_one_install_directory(
         "numpy": "2.4.6",
         "transformers": "5.17.0",
         "tokenizers": "0.23.2",
+        "sentencepiece": sentencepiece_version,
         "nvidia_packages": [],
     }
     calls: list[tuple[list[str], str, dict[str, str]]] = []
@@ -214,13 +219,24 @@ def test_managed_python_install_and_discovery_share_one_install_directory(
 
     monkeypatch.setattr(WORKER, "_run", fake_run)
 
-    resolved_python, reported_inventory = WORKER._install_python_runtime(
-        uv_path=tmp_path / "uv",
-        runtime_root=runtime_root,
-        lock_path=tmp_path / "requirements.lock",
-        log_root=tmp_path / "logs",
-        deadline=10**12,
-    )
+    if accepted:
+        resolved_python, reported_inventory = WORKER._install_python_runtime(
+            uv_path=tmp_path / "uv",
+            runtime_root=runtime_root,
+            lock_path=tmp_path / "requirements.lock",
+            log_root=tmp_path / "logs",
+            deadline=10**12,
+        )
+    else:
+        with pytest.raises(RuntimeError, match="pinned CPU-only runtime"):
+            WORKER._install_python_runtime(
+                uv_path=tmp_path / "uv",
+                runtime_root=runtime_root,
+                lock_path=tmp_path / "requirements.lock",
+                log_root=tmp_path / "logs",
+                deadline=10**12,
+            )
+        return
 
     install_command, install_label, install_env = next(
         call for call in calls if call[1] == "python-install"
@@ -325,17 +341,29 @@ def test_cli_requires_and_preserves_selected_source_binding(
 
 def test_conversion_runtime_lock_is_hashed_and_cpu_only() -> None:
     lock = WORKER_PATH.with_name("requirements-conversion.lock")
+    inputs = WORKER_PATH.with_name("requirements-conversion.in")
     contents = lock.read_text(encoding="utf-8")
     digest = hashlib.sha256(lock.read_bytes()).hexdigest()
 
     assert digest == WORKER.REQUIREMENTS_LOCK_SHA256
+    assert "sentencepiece==0.2.2" in inputs.read_text(encoding="utf-8")
     assert "torch==2.11.0+cpu" in contents
     assert "pyyaml==6.0.3" in contents
     assert "requests==2.34.2" in contents
     assert "tqdm==4.70.1" in contents
+    assert "sentencepiece==0.2.2" in contents
+    assert "1416b92f2f010333786fe6306ed2631121d5ea492219b0841e967b6765e64107" in contents
     assert "nvidia-" not in contents
     assert "triton==" not in contents
     assert "bitsandbytes==" not in contents
+
+
+def test_cpu_runtime_probe_records_and_pins_sentencepiece_version() -> None:
+    probe = WORKER._cpu_inventory_script()
+
+    assert "sentencepiece" in probe
+    assert "'sentencepiece': sentencepiece.__version__" in probe
+    assert 'runtime.get("sentencepiece") != "0.2.2"' in WORKER_PATH.read_text(encoding="utf-8")
 
 
 def test_worker_environment_ignores_host_credentials_and_cuda(tmp_path: Path, monkeypatch) -> None:

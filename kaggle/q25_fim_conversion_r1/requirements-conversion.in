@@ -7,3 +7,4 @@ transformers==5.17.0
 PyYAML==6.0.3
 requests==2.34.2
 tqdm==4.70.1
+sentencepiece==0.2.2

@@ -22,7 +22,7 @@ LLAMA_CPP_REVISION = "f072b103714dfa1eee531f80b24512faf38e3dd2"
 UV_VERSION = "0.12.3"
 UV_WHEEL_NAME = "uv-0.12.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
 UV_WHEEL_SHA256 = "1482d1462b1aecd18ee33627363fe1c63d6a194f12d40d37efc446d9e0d800a1"
-REQUIREMENTS_LOCK_SHA256 = "88a05eef53ef5d3ff95c06d3d2e69266afdc59be032ef2bb414f7555f8de4e58"
+REQUIREMENTS_LOCK_SHA256 = "d915d0fcc2bffe9130b3685c1d43d3cae22831cc4b062a7fe6a65ea7f22dcbb9"
 MAX_SESSION_SECONDS = 10_800
 MINIMUM_RESERVE_SECONDS = 1_800
 RUNTIME_SETUP_PEAK_BYTES = 4 * 1024**3
@@ -255,7 +255,7 @@ def _cpu_inventory_script() -> str:
     return "\n".join(
         (
             "import importlib.metadata as metadata",
-            "import json, platform, torch, numpy, transformers, tokenizers",
+            "import json, platform, torch, numpy, transformers, tokenizers, sentencepiece",
             "names = {",
             "    dist.metadata['Name'].lower().replace('_', '-')",
             "    for dist in metadata.distributions()",
@@ -269,6 +269,7 @@ def _cpu_inventory_script() -> str:
             "    'numpy': numpy.__version__,",
             "    'transformers': transformers.__version__,",
             "    'tokenizers': tokenizers.__version__,",
+            "    'sentencepiece': sentencepiece.__version__,",
             "    'nvidia_packages': sorted(",
             "        name for name in names",
             "        if name.startswith('nvidia-') or name == 'bitsandbytes'",
@@ -478,6 +479,7 @@ def _install_python_runtime(
         or runtime.get("numpy") != "2.4.6"
         or runtime.get("transformers") != "5.17.0"
         or runtime.get("tokenizers") != "0.23.2"
+        or runtime.get("sentencepiece") != "0.2.2"
         or runtime.get("nvidia_packages")
     ):
         raise RuntimeError("conversion Python environment is not the pinned CPU-only runtime")
