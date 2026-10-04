@@ -62,12 +62,27 @@ CONVERSION_QUALITY_REPORT = REPORT / "fim_quality_comparison.json"
 CONVERSION_INPUT_BUNDLE = ARTIFACTS / "fim/conversion-input-bundle"
 CONVERSION_KERNEL_ROOT = ARTIFACTS / "fim/conversion-kernel"
 CONVERSION_JOB_FILE = REPORT / "fim-conversion-job.json"
+CONVERSION_WATCH_FILE = REPORT / "fim-conversion-watch.json"
+CONVERSION_HISTORY_ROOT = REPORT / "fim/conversion/history"
 CONVERSION_SUBMISSION_FILE = REPORT / "fim-conversion-dataset-submission.json"
 CONVERSION_OUTPUT = ARTIFACTS / "fim/conversion/output"
 FIM_ARMS = ("untouched_q25_to_fim", "completed_cpt_q25_to_fim")
 FIM_LINE_SOURCE = Path(
     "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl"
 )
+
+
+def _conversion_reference(attempt: int) -> str:
+    if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt not in {1, 2}:
+        raise ValueError("CPU conversion supports only explicitly bounded attempts 1 and 2")
+    return CONVERSION_KERNEL_REFERENCE if attempt == 1 else f"{CONVERSION_KERNEL_REFERENCE}-a2"
+
+
+def _conversion_kernel_root(attempt: int) -> Path:
+    _conversion_reference(attempt)
+    if attempt == 1:
+        return CONVERSION_KERNEL_ROOT
+    return CONVERSION_KERNEL_ROOT.with_name(f"{CONVERSION_KERNEL_ROOT.name}-attempt-{attempt}")
 
 
 def digest(path: Path) -> str:
@@ -735,8 +750,39 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
         gpu_reserved += job_reservation
     # A CPU conversion kernel consumes the aggregate Kaggle session window but
     # does not consume account GPU-hours. Keep these units separate.
-    for job_path in REPORT.glob("fim-conversion-job*.json"):
+    if any(
+        path.is_symlink()
+        for path in (
+            REPORT / "fim",
+            REPORT / "fim/conversion",
+            CONVERSION_HISTORY_ROOT,
+        )
+    ):
+        raise ValueError("CPU conversion history root is unsafe")
+    conversion_job_paths = [
+        *REPORT.glob("fim-conversion-job*.json"),
+        *CONVERSION_HISTORY_ROOT.glob("attempt-*/job.json"),
+    ]
+    conversion_references: dict[str, str] = {}
+    for job_path in conversion_job_paths:
+        if job_path.is_symlink() or not job_path.is_file():
+            raise ValueError("CPU conversion history contains an unsafe job receipt")
         job = json.loads(job_path.read_text())
+        reference = job.get("reference")
+        attempt = job.get("attempt")
+        if (
+            not isinstance(reference, str)
+            or not isinstance(attempt, int)
+            or isinstance(attempt, bool)
+            or reference != _conversion_reference(attempt)
+        ):
+            raise ValueError("CPU conversion history has an invalid job identity")
+        receipt_hash = digest(job_path)
+        if reference in conversion_references:
+            if conversion_references[reference] != receipt_hash:
+                raise ValueError("CPU conversion history has conflicting duplicate references")
+            continue
+        conversion_references[reference] = receipt_hash
         reservation = job.get("conservative_reserved_session_seconds")
         if not isinstance(reservation, int) or isinstance(reservation, bool) or reservation <= 0:
             raise ValueError("CPU conversion job has an invalid session reservation")
@@ -2732,20 +2778,58 @@ MAX_INPUT_DEPTH = 32
 MAX_MATCHING_FILES = 128
 MAX_EMBEDDED_SOURCE_BYTES = __SOURCE_LIMIT__
 REQUIRED_SOURCE_PATHS = set(__REQUIRED_PATHS__)
+STAGE = "launcher_init"
+MANIFEST_INVENTORY = {
+    "entries_scanned": 0,
+    "manifest_candidates": 0,
+    "input_manifest_candidates": 0,
+    "artifact_manifest_candidates": 0,
+    "config_hash_matches": 0,
+    "source_path_matches": 0,
+    "source_hash_matches": 0,
+}
+
+def fail(code="guard_failed"):
+    record = {
+        "schema": "q25-fim-conversion-launcher-diagnostic-v1",
+        "stage": STAGE,
+        "code": code,
+        "manifest_inventory": MANIFEST_INVENTORY,
+        "temp_root_ready": TEMP_ROOT.is_dir() and not TEMP_ROOT.is_symlink(),
+    }
+    print("Q25_FIM_CONVERSION_DIAGNOSTIC " + json.dumps(record, sort_keys=True), file=sys.stderr)
+    raise SystemExit("conversion launcher stopped before the worker")
 
 def sha(path):
     value = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
-            value.update(block)
+    try:
+        with path.open("rb") as handle:
+            for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+                value.update(block)
+    except OSError:
+        fail("manifest_or_source_unreadable")
     return value.hexdigest()
 
-def fail():
-    raise SystemExit("conversion input identity is missing or ambiguous")
+def ensure_temp_root():
+    global STAGE
+    STAGE = "temp_root"
+    kaggle_root = Path("/kaggle")
+    if kaggle_root.is_symlink() or not kaggle_root.is_dir():
+        fail("kaggle_root_unavailable_or_unsafe")
+    if TEMP_ROOT.is_symlink():
+        fail("temp_root_symlink")
+    try:
+        TEMP_ROOT.mkdir(mode=0o700, exist_ok=True)
+    except OSError:
+        fail("temp_root_create_failed")
+    if TEMP_ROOT.is_symlink() or not TEMP_ROOT.is_dir():
+        fail("temp_root_unavailable_or_unsafe")
 
 def input_files():
+    global STAGE
+    STAGE = "input_scan"
     if INPUT_ROOT.is_symlink() or not INPUT_ROOT.is_dir():
-        fail()
+        fail("input_root_unavailable_or_unsafe")
     pending = [(INPUT_ROOT, 0)]
     found = []
     visited = 0
@@ -2755,8 +2839,9 @@ def input_files():
             with os.scandir(directory) as entries:
                 for entry in entries:
                     visited += 1
+                    MANIFEST_INVENTORY["entries_scanned"] = visited
                     if visited > MAX_INPUT_ENTRIES:
-                        fail()
+                        fail("input_entry_limit")
                     if entry.is_symlink():
                         continue
                     if entry.is_dir(follow_symlinks=False):
@@ -2767,24 +2852,31 @@ def input_files():
                         "input-manifest.json",
                         "artifact_manifest.json",
                     }:
+                        MANIFEST_INVENTORY["manifest_candidates"] += 1
+                        counter = (
+                            "input_manifest_candidates"
+                            if entry.name == "input-manifest.json"
+                            else "artifact_manifest_candidates"
+                        )
+                        MANIFEST_INVENTORY[counter] += 1
                         found.append(Path(entry.path))
                         if len(found) > MAX_MATCHING_FILES:
-                            fail()
+                            fail("manifest_candidate_limit")
         except OSError:
-            fail()
+            fail("input_scan_io_error")
     return found
 
 def extract_sources():
-    if TEMP_ROOT.is_symlink() or not TEMP_ROOT.is_dir():
-        fail()
+    global STAGE
+    STAGE = "embedded_source_validation"
     code_root = TEMP_ROOT / "q25_fim_conversion_code"
     if code_root.exists() or code_root.is_symlink():
-        fail()
+        fail("owned_code_root_already_exists_or_unsafe")
     source_hashes = SESSION.get("source_code")
     source_records = SESSION.get("embedded_sources")
     if (not isinstance(source_hashes, dict) or set(source_hashes) != REQUIRED_SOURCE_PATHS
         or not isinstance(source_records, dict) or set(source_records) != REQUIRED_SOURCE_PATHS):
-        fail()
+        fail("embedded_source_set_mismatch")
     decoded = {}
     total = 0
     max_encoded_bytes = 4 * ((MAX_EMBEDDED_SOURCE_BYTES + 2) // 3)
@@ -2796,22 +2888,22 @@ def extract_sources():
             or not isinstance(record, dict) or not isinstance(expected_sha, str)
             or len(expected_sha) != 64
             or any(character not in "0123456789abcdef" for character in expected_sha)):
-            fail()
+            fail("embedded_source_record_invalid")
         encoded = record.get("base64")
         size = record.get("bytes")
         source_sha = record.get("sha256")
         if (not isinstance(encoded, str) or len(encoded) > max_encoded_bytes
             or not isinstance(size, int) or isinstance(size, bool) or size < 0
             or not isinstance(source_sha, str) or source_sha != expected_sha):
-            fail()
+            fail("embedded_source_record_invalid")
         try:
             payload = base64.b64decode(encoded, validate=True)
         except (ValueError, binascii.Error):
-            fail()
+            fail("embedded_source_base64_invalid")
         total += len(payload)
         if (len(payload) != size or total > MAX_EMBEDDED_SOURCE_BYTES
             or hashlib.sha256(payload).hexdigest() != expected_sha):
-            fail()
+            fail("embedded_source_hash_or_size_mismatch")
         decoded[name] = payload
 
     code_root.mkdir(mode=0o700)
@@ -2822,70 +2914,83 @@ def extract_sources():
         for part in relative.parts[:-1]:
             current = current / part
             if current.is_symlink():
-                fail()
+                fail("embedded_source_parent_symlink")
             current.mkdir(exist_ok=True)
         if target.exists() or target.is_symlink():
-            fail()
+            fail("embedded_source_target_exists_or_unsafe")
         with target.open("xb") as handle:
             handle.write(payload)
         if (target.is_symlink() or not target.is_file() or target.stat().st_size != len(payload)
             or sha(target) != source_hashes[name]):
-            fail()
+            fail("embedded_source_write_verification_failed")
     staged = {
         path.relative_to(code_root).as_posix()
         for path in code_root.rglob("*")
         if path.is_file() and not path.is_symlink()
     }
     if staged != REQUIRED_SOURCE_PATHS:
-        fail()
+        fail("embedded_source_set_mismatch")
     return code_root.resolve(strict=True)
 
+ensure_temp_root()
 CODE_ROOT = extract_sources()
 files = input_files()
-config_manifests = [
-    path for path in files
-    if path.name == "input-manifest.json" and not path.is_symlink()
-    and sha(path) == SESSION["input_manifest_sha256"]
-]
+STAGE = "config_manifest_discovery"
+input_manifests = [path for path in files if path.name == "input-manifest.json"]
+MANIFEST_INVENTORY["input_manifest_candidates"] = len(input_manifests)
+config_manifests = []
+for path in input_manifests:
+    if not path.is_symlink() and sha(path) == SESSION["input_manifest_sha256"]:
+        config_manifests.append(path)
+MANIFEST_INVENTORY["config_hash_matches"] = len(config_manifests)
 if len(config_manifests) != 1:
-    fail()
+    fail("config_manifest_missing_or_ambiguous")
 config_root = config_manifests[0].parent.resolve(strict=True)
-manifest = json.loads(config_manifests[0].read_text(encoding="utf-8"))
+STAGE = "config_manifest_validation"
+try:
+    manifest = json.loads(config_manifests[0].read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    fail("config_manifest_unreadable_or_invalid")
 if (manifest.get("schema") != "q25-fim-conversion-input-manifest-v1"
     or manifest.get("selection_sha256") != SESSION["selection_sha256"]
     or manifest.get("training_plan_sha256") != SESSION["training_plan_sha256"]
     or manifest.get("selected_arm") != SESSION["selected_arm"]
     or manifest.get("source_kernel_reference") != SESSION["source_kernel_reference"]
     or manifest.get("source_export_manifest_sha256") != SESSION["source_export_manifest_sha256"]):
-    fail()
+    fail("config_manifest_identity_mismatch")
 files_by_name = manifest.get("files")
 if not isinstance(files_by_name, dict) or set(files_by_name) != {
     "selection.json", "training_plan.json", "original_config.json", "original_tokenizer.json"
 }:
-    fail()
+    fail("config_file_set_mismatch")
 for name, record in files_by_name.items():
     relative = PurePosixPath(name)
     path = config_root.joinpath(*relative.parts)
     if (relative.is_absolute() or ".." in relative.parts or path.is_symlink()
         or not path.is_file() or path.stat().st_size != record.get("bytes")
         or sha(path) != record.get("sha256")):
-        fail()
+        fail("config_payload_hash_or_path_mismatch")
 if sha(config_root / "selection.json") != SESSION["selection_sha256"]:
-    fail()
+    fail("selection_hash_mismatch")
 if sha(config_root / "training_plan.json") != SESSION["training_plan_sha256"]:
-    fail()
-selection = json.loads((config_root / "selection.json").read_text(encoding="utf-8"))
+    fail("training_plan_hash_mismatch")
+STAGE = "selection_validation"
+try:
+    selection = json.loads((config_root / "selection.json").read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    fail("selection_unreadable_or_invalid")
 if (selection.get("source_kernel_reference") != SESSION["source_kernel_reference"]
     or selection.get("selected_arm") != SESSION["selected_arm"]
     or selection.get("source_export", {}).get("directory") != SESSION["source_export_directory"]
     or selection.get("source_export", {}).get("artifact_manifest_sha256")
        != SESSION["source_export_manifest_sha256"]):
-    fail()
+    fail("selection_identity_mismatch")
 relative_export = PurePosixPath(SESSION["source_export_directory"])
 if relative_export.is_absolute() or ".." in relative_export.parts:
-    fail()
+    fail("source_export_path_invalid")
 suffix = (*relative_export.parts, "artifact_manifest.json")
 source_roots = []
+STAGE = "source_manifest_discovery"
 for manifest_path in files:
     if manifest_path.name != "artifact_manifest.json" or manifest_path.is_symlink():
         continue
@@ -2899,14 +3004,17 @@ for manifest_path in files:
     source_root = INPUT_ROOT.joinpath(*root_parts)
     if source_root.resolve(strict=True) == config_root:
         continue
+    MANIFEST_INVENTORY["source_path_matches"] += 1
     if sha(manifest_path) == SESSION["source_export_manifest_sha256"]:
+        MANIFEST_INVENTORY["source_hash_matches"] += 1
         source_roots.append(source_root.resolve(strict=True))
 if len(source_roots) != 1:
-    fail()
+    fail("source_manifest_missing_or_ambiguous")
 source_root = source_roots[0]
+STAGE = "worker_launch"
 worker = CODE_ROOT / "conversion_worker.py"
 if worker.is_symlink() or not worker.is_file():
-    fail()
+    fail("worker_source_missing_or_unsafe")
 sys.argv = [str(worker),
     "--input-root", str(INPUT_ROOT),
     "--selection", str(config_root / "selection.json"),
@@ -2930,10 +3038,13 @@ runpy.run_path(str(worker), run_name="__main__")
     return template
 
 
-def build_fim_conversion_kernel(plan: dict[str, Any], commit: str) -> Path:
+def build_fim_conversion_kernel(plan: dict[str, Any], commit: str, *, attempt: int = 1) -> Path:
+    reference = _conversion_reference(attempt)
     bundle = build_fim_conversion_bundle(plan)
     input_manifest_sha = digest(bundle / "input-manifest.json")
-    kernel = CONVERSION_KERNEL_ROOT
+    kernel = _conversion_kernel_root(attempt)
+    if kernel.is_symlink():
+        raise ValueError("conversion kernel staging root is unsafe")
     kernel.mkdir(parents=True, exist_ok=True)
     code_files = _conversion_code_files()
     allowed_paths = {"run.py", "kernel-metadata.json"} | set(code_files)
@@ -2943,6 +3054,7 @@ def build_fim_conversion_kernel(plan: dict[str, Any], commit: str) -> Path:
         if existing.is_file() and existing.relative_to(kernel).as_posix() not in allowed_paths:
             raise ValueError("conversion kernel staging contains an unapproved file")
     session = {
+        "attempt": attempt,
         "commit": commit,
         "plan_sha256": digest(CONVERSION_PLAN),
         "input_manifest_sha256": input_manifest_sha,
@@ -2994,8 +3106,12 @@ def build_fim_conversion_kernel(plan: dict[str, Any], commit: str) -> Path:
     else:
         run_path.write_text(launcher)
     metadata = {
-        "id": CONVERSION_KERNEL_REFERENCE,
-        "title": "tc q25 fim q4 conversion r1",
+        "id": reference,
+        "title": (
+            "tc q25 fim q4 conversion r1"
+            if attempt == 1
+            else f"tc q25 fim q4 conversion r1 a{attempt}"
+        ),
         "code_file": "run.py",
         "language": "python",
         "kernel_type": "script",
@@ -3048,12 +3164,224 @@ def _check_conversion_quota(plan: dict[str, Any], observation: dict[str, Any]) -
         raise RuntimeError("live account quota is unavailable or invalid")
 
 
-def submit_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
+def _conversion_retry_evidence(
+    plan: dict[str, Any], input_manifest_sha256: str, resume_source: str | None
+) -> dict[str, Any]:
+    prior_reference = _conversion_reference(1)
+    if resume_source != prior_reference:
+        raise ValueError("conversion retry must explicitly name its immediate failed attempt")
+    watch_path = CONVERSION_WATCH_FILE
+    failure_path = REPORT / "fim-conversion-failed-1.json"
+    paths = (CONVERSION_JOB_FILE, watch_path, failure_path)
+    if any(path.is_symlink() or not path.is_file() for path in paths):
+        raise ValueError("conversion retry lacks safe prior job, watch, and failure receipts")
+    job_bytes, watch_bytes, failure_bytes = (path.read_bytes() for path in paths)
+    if any(len(payload) > 2 * 1024**2 for payload in (job_bytes, watch_bytes, failure_bytes)):
+        raise ValueError("conversion retry evidence exceeds its size bound")
+    try:
+        job, watch, failure = (
+            json.loads(payload) for payload in (job_bytes, watch_bytes, failure_bytes)
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise ValueError("conversion retry evidence is not valid JSON") from None
+    if not all(isinstance(value, dict) for value in (job, watch, failure)):
+        raise ValueError("conversion retry evidence has an invalid shape")
+
+    expected_plan_sha256 = digest(CONVERSION_PLAN)
+    if (
+        job.get("attempt") != 1
+        or isinstance(job.get("attempt"), bool)
+        or job.get("reference") != prior_reference
+        or job.get("status") != "submitted"
+        or job.get("plan_sha256") != expected_plan_sha256
+        or job.get("selection_sha256") != plan["selection_sha256"]
+        or job.get("training_plan_sha256") != plan["training_plan_sha256"]
+        or job.get("input_manifest_sha256") != input_manifest_sha256
+        or job.get("source_kernel_reference") != plan["source"]["kernel_reference"]
+        or job.get("selected_arm") != plan["source"]["arm"]
+        or not isinstance(job.get("commit"), str)
+        or not re.fullmatch(r"[0-9a-f]{40}", job["commit"])
+        or job.get("enable_gpu") is not False
+        or job.get("automatic_allocation") is not False
+        or job.get("paid_compute") is not False
+        or job.get("automatic_renewal_use") is not False
+        or job.get("session_seconds") != CONVERSION_SESSION_SECONDS
+        or not isinstance(job.get("session_seconds"), int)
+        or isinstance(job.get("session_seconds"), bool)
+        or job.get("conservative_reserved_session_seconds") != CONVERSION_SESSION_SECONDS
+        or not isinstance(job.get("conservative_reserved_session_seconds"), int)
+        or isinstance(job.get("conservative_reserved_session_seconds"), bool)
+    ):
+        raise ValueError("conversion retry job identity differs from the frozen CPU plan")
+    watch_status_value = watch.get("status")
+    watch_status = watch_status_value.upper() if isinstance(watch_status_value, str) else ""
+    if (
+        watch.get("reference") != prior_reference
+        or watch.get("plan_sha256") != expected_plan_sha256
+        or watch.get("automatic_allocation") is not False
+        or "ERROR" not in watch_status
+        or "COMPLETE" in watch_status
+    ):
+        raise ValueError("conversion retry watch does not prove a terminal ERROR")
+    try:
+        submitted_at = datetime.fromisoformat(str(job["submitted_at"]).replace("Z", "+00:00"))
+        watched_at = datetime.fromisoformat(str(watch["observed_at"]).replace("Z", "+00:00"))
+        failure_at = datetime.fromisoformat(str(failure["observed_at"]).replace("Z", "+00:00"))
+    except (KeyError, ValueError):
+        raise ValueError("conversion retry timestamps are missing or invalid") from None
+    if (
+        submitted_at.tzinfo is None
+        or watched_at.tzinfo is None
+        or failure_at.tzinfo is None
+        or watched_at < submitted_at
+        or failure_at < watched_at
+    ):
+        raise ValueError("conversion retry evidence timestamps are inconsistent")
+
+    launcher_path = CONVERSION_KERNEL_ROOT / "run.py"
+    if (
+        CONVERSION_KERNEL_ROOT.is_symlink()
+        or launcher_path.is_symlink()
+        or not launcher_path.is_file()
+        or launcher_path.stat().st_size > 1_048_576
+    ):
+        raise ValueError("conversion retry prior launcher is missing or unsafe")
+    launcher_sha256 = digest(launcher_path)
+    remote_inputs = {
+        "dataset_sources": [CONVERSION_DATASET],
+        "enable_gpu": False,
+        "kernel_sources": [plan["source"]["kernel_reference"]],
+    }
+    failure_log_relative = failure.get("failure_log_file")
+    if not isinstance(failure_log_relative, str):
+        raise ValueError("conversion retry failure log reference is invalid")
+    failure_log_path = PurePosixPath(failure_log_relative)
+    if (
+        failure_log_path.is_absolute()
+        or ".." in failure_log_path.parts
+        or failure_log_path.as_posix() != failure_log_relative
+        or not failure_log_path.parts
+        or ARTIFACTS.is_symlink()
+    ):
+        raise ValueError("conversion retry failure log path is unsafe")
+    failure_log = ARTIFACTS.joinpath(*failure_log_path.parts)
+    current = ARTIFACTS
+    for part in failure_log_path.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("conversion retry failure log path contains a symlink")
+    if (
+        not failure_log.is_file()
+        or failure_log.stat().st_size <= 0
+        or failure_log.stat().st_size > 1_048_576
+        or digest(failure_log) != failure.get("failure_log_sha256")
+    ):
+        raise ValueError("conversion retry failure log hash is missing or mismatched")
+
+    query_sha256 = failure.get("telemetry_query_sha256")
+    remote_metadata_sha256 = failure.get("remote_metadata_sha256")
+    observed_seconds = failure.get("launcher_failure_observed_seconds")
+    if (
+        failure.get("schema") != "q25-fim-cpu-conversion-failure-v1"
+        or failure.get("reference") != prior_reference
+        or failure.get("attempt") != 1
+        or isinstance(failure.get("attempt"), bool)
+        or failure.get("job_sha256") != hashlib.sha256(job_bytes).hexdigest()
+        or failure.get("watch_sha256") != hashlib.sha256(watch_bytes).hexdigest()
+        or failure.get("plan_sha256") != expected_plan_sha256
+        or failure.get("selection_sha256") != plan["selection_sha256"]
+        or failure.get("source_kernel_reference") != plan["source"]["kernel_reference"]
+        or failure.get("terminal_status") != "ERROR"
+        or failure.get("failure_kind") != "launcher_pre_worker"
+        or failure.get("worker_started") is not False
+        or failure.get("conversion_started") is not False
+        or failure.get("worker_elapsed_seconds") is not None
+        or failure.get("gpu_enabled") is not False
+        or failure.get("training_input_tokens") != 0
+        or isinstance(failure.get("training_input_tokens"), bool)
+        or failure.get("automatic_retry") is not False
+        or failure.get("conservative_reserved_session_seconds") != CONVERSION_SESSION_SECONDS
+        or not isinstance(failure.get("conservative_reserved_session_seconds"), int)
+        or isinstance(failure.get("conservative_reserved_session_seconds"), bool)
+        or failure.get("observed_at") != watch.get("observed_at")
+        or failure.get("launcher_sha256") != launcher_sha256
+        or failure.get("pulled_launcher_sha256") != launcher_sha256
+        or failure.get("remote_inputs_verified") != remote_inputs
+        or not isinstance(remote_metadata_sha256, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", remote_metadata_sha256)
+        or failure.get("telemetry_query_state") != "no_runs"
+        or not isinstance(query_sha256, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", query_sha256)
+        or isinstance(observed_seconds, bool)
+        or not isinstance(observed_seconds, (int, float))
+        or not math.isfinite(observed_seconds)
+        or not 0 <= observed_seconds < CONVERSION_SESSION_SECONDS
+    ):
+        raise ValueError("conversion retry failure receipt is incomplete or unsafe")
+    return {
+        "job": job,
+        "watch": watch,
+        "failure": failure,
+        "job_bytes": job_bytes,
+        "watch_bytes": watch_bytes,
+        "failure_bytes": failure_bytes,
+        "launcher_bytes": launcher_path.read_bytes(),
+    }
+
+
+def _archive_conversion_retry_evidence(evidence: dict[str, Any]) -> Path:
+    history_root = CONVERSION_HISTORY_ROOT
+    archive = history_root / "attempt-1"
+    for path in (REPORT / "fim", REPORT / "fim/conversion", history_root, archive):
+        if path.is_symlink():
+            raise ValueError("conversion retry history contains a symlink")
+    expected_files = {
+        "job.json": evidence["job_bytes"],
+        "watch.json": evidence["watch_bytes"],
+        "failure.json": evidence["failure_bytes"],
+        "run.py": evidence["launcher_bytes"],
+    }
+    if archive.exists():
+        if not archive.is_dir() or {path.name for path in archive.iterdir()} != set(expected_files):
+            raise ValueError("conversion retry history already exists with different contents")
+        for name, payload in expected_files.items():
+            path = archive / name
+            if path.is_symlink() or not path.is_file() or path.read_bytes() != payload:
+                raise ValueError("conversion retry history differs from original evidence")
+        return archive
+    history_root.mkdir(parents=True, exist_ok=True)
+    archive.mkdir()
+    for name, payload in expected_files.items():
+        with (archive / name).open("xb") as handle:
+            handle.write(payload)
+    return archive
+
+
+def submit_fim_conversion(
+    plan: dict[str, Any] | None = None,
+    *,
+    attempt: int = 1,
+    resume_source: str | None = None,
+) -> dict[str, Any]:
+    reference = _conversion_reference(attempt)
     plan = _load_conversion_plan() if plan is None else plan
     if plan != _load_conversion_plan():
         raise ValueError("conversion plan differs from its frozen report")
-    if CONVERSION_JOB_FILE.exists():
-        raise ValueError("conversion job already has a submission receipt; inspect it instead")
+    if attempt == 1 and resume_source is not None:
+        raise ValueError("first CPU conversion attempt cannot name a resume source")
+    first_failure_receipt = REPORT / "fim-conversion-failed-1.json"
+    if attempt == 1 and (
+        CONVERSION_JOB_FILE.exists()
+        or CONVERSION_JOB_FILE.is_symlink()
+        or list(REPORT.glob("fim-conversion-job*.json"))
+        or first_failure_receipt.exists()
+        or first_failure_receipt.is_symlink()
+        or CONVERSION_HISTORY_ROOT.exists()
+        or CONVERSION_HISTORY_ROOT.is_symlink()
+    ):
+        raise ValueError("conversion attempt one already has a receipt or retry lineage")
+    if attempt == 2 and (not CONVERSION_JOB_FILE.is_file() or CONVERSION_JOB_FILE.is_symlink()):
+        raise ValueError("second CPU conversion attempt requires the first attempt receipt")
     if cli("git", "-C", str(ROOT), "branch", "--show-current") != CONVERSION_BRANCH:
         raise ValueError("conversion source is not on its frozen branch")
     if cli("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=all"):
@@ -3078,25 +3406,30 @@ def submit_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         or submission.get("input_manifest_sha256") != digest(bundle / "input-manifest.json")
     ):
         raise ValueError("private CPU conversion inputs are not uploaded and verified")
-    existing = list(REPORT.glob("fim-conversion-job*.json"))
-    if existing:
-        raise ValueError("conversion allocation already exists; automatic retry is disabled")
+    retry_evidence = (
+        _conversion_retry_evidence(plan, digest(bundle / "input-manifest.json"), resume_source)
+        if attempt == 2
+        else None
+    )
     check_shared_allocation_budget(CONVERSION_SESSION_SECONDS, phase="conversion")
     observation = quota()
     _check_conversion_quota(plan, observation)
-    if _csv_ref_exists(CONVERSION_KERNEL_REFERENCE):
+    if _csv_ref_exists(reference):
         raise ValueError(
             "conversion kernel reference already exists; refusing duplicate allocation"
         )
     source_status = cli("kaggle", "kernels", "status", plan["source"]["kernel_reference"])
     if "COMPLETE" not in source_status.upper():
         raise RuntimeError("selected source FIM kernel is not complete")
-    kernel = build_fim_conversion_kernel(plan, commit)
+    kernel = build_fim_conversion_kernel(plan, commit, attempt=attempt)
+    if retry_evidence is not None:
+        _archive_conversion_retry_evidence(retry_evidence)
     job = {
-        "reference": CONVERSION_KERNEL_REFERENCE,
+        "reference": reference,
         "source_kernel_reference": plan["source"]["kernel_reference"],
         "selected_arm": plan["source"]["arm"],
-        "attempt": 1,
+        "attempt": attempt,
+        "retry_authorization_reference": resume_source,
         "plan_sha256": digest(CONVERSION_PLAN),
         "selection_sha256": plan["selection_sha256"],
         "training_plan_sha256": plan["training_plan_sha256"],
@@ -3115,6 +3448,17 @@ def submit_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
     }
     save(REPORT / "fim-conversion-quota.json", observation)
     save(CONVERSION_JOB_FILE, job)
+    if attempt == 2:
+        save(
+            CONVERSION_WATCH_FILE,
+            {
+                "reference": reference,
+                "plan_sha256": job["plan_sha256"],
+                "observed_at": job["submitted_at"],
+                "automatic_allocation": False,
+                "status": "SUBMISSION_PENDING",
+            },
+        )
     try:
         response = cli(
             "kaggle",
@@ -3132,8 +3476,8 @@ def submit_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
         job.update(
             status="submitted",
             submission_response=response,
-            requested_reference=CONVERSION_KERNEL_REFERENCE,
-            reference=urls[-1] if urls else CONVERSION_KERNEL_REFERENCE,
+            requested_reference=reference,
+            reference=urls[-1] if urls else reference,
         )
     except Exception as exc:
         job.update(status="submission_unknown", error_class=type(exc).__name__)
@@ -3321,14 +3665,14 @@ def watch_fim_conversion(
         except (RuntimeError, subprocess.TimeoutExpired) as exc:
             failures += 1
             observation.update(error_class=type(exc).__name__, consecutive_failures=failures)
-            save(REPORT / "fim-conversion-watch.json", observation)
+            save(CONVERSION_WATCH_FILE, observation)
             if failures >= 3:
                 raise RuntimeError(
                     "conversion observer lost connectivity; no job was retried"
                 ) from None
             time.sleep(poll_seconds)
             continue
-        save(REPORT / "fim-conversion-watch.json", observation)
+        save(CONVERSION_WATCH_FILE, observation)
         if "COMPLETE" in status.upper():
             return collect_fim_conversion(plan)
         if "ERROR" in status.upper():
@@ -3438,7 +3782,13 @@ def main() -> None:
             elif action == "upload":
                 result = {"conversion_dataset": upload_fim_conversion_bundle(conversion_plan)}
             elif action == "execute":
-                result = {"conversion_job": submit_fim_conversion(conversion_plan)}
+                result = {
+                    "conversion_job": submit_fim_conversion(
+                        conversion_plan,
+                        attempt=args.attempt,
+                        resume_source=args.resume_source,
+                    )
+                }
             elif action == "collect":
                 result = {"conversion_output": collect_fim_conversion(conversion_plan)}
             else:

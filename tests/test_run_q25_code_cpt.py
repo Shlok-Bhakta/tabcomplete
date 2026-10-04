@@ -3069,6 +3069,8 @@ def _fim_conversion_context(
     )
     monkeypatch.setattr(campaign, "CONVERSION_KERNEL_ROOT", artifacts / "fim/conversion-kernel")
     monkeypatch.setattr(campaign, "CONVERSION_JOB_FILE", report / "fim-conversion-job.json")
+    monkeypatch.setattr(campaign, "CONVERSION_WATCH_FILE", report / "fim-conversion-watch.json")
+    monkeypatch.setattr(campaign, "CONVERSION_HISTORY_ROOT", report / "fim/conversion/history")
     monkeypatch.setattr(
         campaign, "CONVERSION_SUBMISSION_FILE", report / "fim-conversion-dataset-submission.json"
     )
@@ -3078,6 +3080,100 @@ def _fim_conversion_context(
         campaign.shutil, "disk_usage", lambda _path: SimpleNamespace(free=64 * 1024**3)
     )
     return selection_path, report, artifacts, training_plan, code_sources
+
+
+def _seed_verified_conversion_failure(
+    selection_path: Path, artifacts: Path, report: Path
+) -> tuple[dict[str, Any], Path, dict[str, bytes]]:
+    plan = campaign.freeze_fim_conversion(selection_path)
+    bundle = campaign.build_fim_conversion_bundle(plan)
+    input_manifest_sha256 = campaign.digest(bundle / "input-manifest.json")
+    submitted_at = "2026-10-04T08:08:55.609237+00:00"
+    observed_at = "2026-10-04T08:11:04.083435+00:00"
+    prior_reference = campaign._conversion_reference(1)
+    commit = "a" * 40
+    kernel = campaign.build_fim_conversion_kernel(plan, commit)
+    campaign.save(
+        campaign.CONVERSION_SUBMISSION_FILE,
+        {
+            "dataset": campaign.CONVERSION_DATASET,
+            "state": "verified",
+            "input_manifest_sha256": input_manifest_sha256,
+        },
+    )
+    job = {
+        "reference": prior_reference,
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "selected_arm": plan["source"]["arm"],
+        "attempt": 1,
+        "plan_sha256": campaign.digest(campaign.CONVERSION_PLAN),
+        "selection_sha256": plan["selection_sha256"],
+        "training_plan_sha256": plan["training_plan_sha256"],
+        "input_manifest_sha256": input_manifest_sha256,
+        "commit": commit,
+        "enable_gpu": False,
+        "session_seconds": campaign.CONVERSION_SESSION_SECONDS,
+        "conservative_reserved_session_seconds": campaign.CONVERSION_SESSION_SECONDS,
+        "account_gpu_hours_reserved": 0,
+        "paid_compute": False,
+        "automatic_renewal_use": False,
+        "status": "submitted",
+        "submitted_at": submitted_at,
+        "automatic_allocation": False,
+    }
+    watch = {
+        "reference": prior_reference,
+        "plan_sha256": campaign.digest(campaign.CONVERSION_PLAN),
+        "observed_at": observed_at,
+        "automatic_allocation": False,
+        "status": f'{prior_reference} has status "KernelWorkerStatus.ERROR"',
+    }
+    campaign.save(campaign.CONVERSION_JOB_FILE, job)
+    campaign.save(campaign.CONVERSION_WATCH_FILE, watch)
+    failure_log = artifacts / "fim/conversion-failure-r1/tc-q25-fim-q4-conversion-r1.log"
+    failure_log.parent.mkdir(parents=True)
+    failure_log.write_text("bounded launcher error fixture\n")
+    launcher_sha256 = campaign.digest(kernel / "run.py")
+    failure = {
+        "schema": "q25-fim-cpu-conversion-failure-v1",
+        "reference": prior_reference,
+        "attempt": 1,
+        "job_sha256": campaign.digest(campaign.CONVERSION_JOB_FILE),
+        "watch_sha256": campaign.digest(campaign.CONVERSION_WATCH_FILE),
+        "plan_sha256": campaign.digest(campaign.CONVERSION_PLAN),
+        "selection_sha256": plan["selection_sha256"],
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "launcher_sha256": launcher_sha256,
+        "pulled_launcher_sha256": launcher_sha256,
+        "failure_log_sha256": campaign.digest(failure_log),
+        "failure_log_file": failure_log.relative_to(artifacts).as_posix(),
+        "terminal_status": "ERROR",
+        "failure_kind": "launcher_pre_worker",
+        "worker_started": False,
+        "conversion_started": False,
+        "gpu_enabled": False,
+        "training_input_tokens": 0,
+        "automatic_retry": False,
+        "conservative_reserved_session_seconds": campaign.CONVERSION_SESSION_SECONDS,
+        "observed_at": observed_at,
+        "launcher_failure_observed_seconds": 0.8,
+        "remote_inputs_verified": {
+            "dataset_sources": [campaign.CONVERSION_DATASET],
+            "enable_gpu": False,
+            "kernel_sources": [plan["source"]["kernel_reference"]],
+        },
+        "remote_metadata_sha256": "1" * 64,
+        "telemetry_query_state": "no_runs",
+        "telemetry_query_sha256": "2" * 64,
+    }
+    campaign.save(report / "fim-conversion-failed-1.json", failure)
+    original = {
+        "job": campaign.CONVERSION_JOB_FILE.read_bytes(),
+        "watch": campaign.CONVERSION_WATCH_FILE.read_bytes(),
+        "failure": (report / "fim-conversion-failed-1.json").read_bytes(),
+        "launcher": (kernel / "run.py").read_bytes(),
+    }
+    return plan, kernel, original
 
 
 def test_conversion_freeze_binds_manual_arm_quality_receipt_and_cpu_only_plan(
@@ -3348,6 +3444,12 @@ def test_conversion_kernel_is_cpu_only_and_attaches_only_selected_source_kernel(
     )
 
 
+@pytest.mark.parametrize("attempt", [0, 3, True])
+def test_conversion_attempt_reference_is_bounded(attempt: int) -> None:
+    with pytest.raises(ValueError, match="attempts 1 and 2"):
+        campaign._conversion_reference(attempt)
+
+
 def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -3366,7 +3468,9 @@ def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
     (uploaded_kernel / "run.py").write_text(launcher)
     assert [path.name for path in uploaded_kernel.iterdir()] == ["run.py"]
 
-    input_root = tmp_path / "mounted-input"
+    kaggle_root = tmp_path / "kaggle"
+    kaggle_root.mkdir()
+    input_root = kaggle_root / "input"
     config_root = input_root / "datasets" / "nested" / "private-config"
     config_root.mkdir(parents=True)
     bundle = campaign.build_fim_conversion_bundle(plan)
@@ -3385,8 +3489,8 @@ def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
     )
     (export_root / "artifact_manifest.json").write_bytes(source_manifest.read_bytes())
 
-    temp_root = tmp_path / "worker-temp"
-    temp_root.mkdir()
+    temp_root = kaggle_root / "temp"
+    assert not temp_root.exists()
     output_root = tmp_path / "worker-output"
     output_root.mkdir()
     captured: dict[str, Any] = {}
@@ -3398,8 +3502,10 @@ def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
         return {}
 
     monkeypatch.setattr(runpy, "run_path", fake_run_path)
-    executable = launcher.replace('Path("/kaggle/input")', f"Path({str(input_root)!r})").replace(
-        'Path("/kaggle/temp")', f"Path({str(temp_root)!r})"
+    executable = (
+        launcher.replace('Path("/kaggle")', f"Path({str(kaggle_root)!r})")
+        .replace('Path("/kaggle/input")', f"Path({str(input_root)!r})")
+        .replace('Path("/kaggle/temp")', f"Path({str(temp_root)!r})")
     )
     executable = executable.replace(
         '"/kaggle/working/q25_fim_conversion_r1"', repr(str(output_root))
@@ -3411,6 +3517,7 @@ def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
     assert {
         path.relative_to(code_root).as_posix() for path in code_root.rglob("*") if path.is_file()
     } == expected_paths
+    assert temp_root.is_dir()
     assert {relative: campaign.digest(code_root / relative) for relative in expected_paths} == plan[
         "source_code"
     ]
@@ -3423,6 +3530,91 @@ def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
     assert arguments[arguments.index("--source-kernel-reference") + 1] == (
         "owner/selected-fim-kernel"
     )
+
+
+def test_conversion_launcher_reports_bounded_manifest_diagnostic_for_missing_mount(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    kernel = campaign.build_fim_conversion_kernel(plan, "f" * 40)
+    launcher = (kernel / "run.py").read_text()
+
+    kaggle_root = tmp_path / "kaggle"
+    input_root = kaggle_root / "input"
+    input_root.mkdir(parents=True)
+    temp_root = kaggle_root / "temp"
+    assert not temp_root.exists()
+    executable = (
+        launcher.replace('Path("/kaggle")', f"Path({str(kaggle_root)!r})")
+        .replace('Path("/kaggle/input")', f"Path({str(input_root)!r})")
+        .replace('Path("/kaggle/temp")', f"Path({str(temp_root)!r})")
+    )
+
+    with pytest.raises(SystemExit, match="stopped before the worker"):
+        exec(compile(executable, str(kernel / "run.py"), "exec"), {"__name__": "__main__"})
+
+    lines = capsys.readouterr().err.splitlines()
+    diagnostic_lines = [line for line in lines if line.startswith("Q25_FIM_CONVERSION_DIAGNOSTIC ")]
+    assert len(diagnostic_lines) == 1
+    diagnostic = json.loads(diagnostic_lines[0].split(" ", maxsplit=1)[1])
+    assert diagnostic["schema"] == "q25-fim-conversion-launcher-diagnostic-v1"
+    assert diagnostic["stage"] == "config_manifest_discovery"
+    assert diagnostic["code"] == "config_manifest_missing_or_ambiguous"
+    assert diagnostic["temp_root_ready"] is True
+    assert diagnostic["manifest_inventory"] == {
+        "artifact_manifest_candidates": 0,
+        "config_hash_matches": 0,
+        "entries_scanned": 0,
+        "input_manifest_candidates": 0,
+        "manifest_candidates": 0,
+        "source_hash_matches": 0,
+        "source_path_matches": 0,
+    }
+    assert len(diagnostic_lines[0].encode("utf-8")) < 2048
+    assert str(tmp_path) not in diagnostic_lines[0]
+
+
+def test_conversion_launcher_rejects_symlinked_temp_root_without_writing_through_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    kernel = campaign.build_fim_conversion_kernel(plan, "f" * 40)
+    launcher = (kernel / "run.py").read_text()
+    kaggle_root = tmp_path / "kaggle"
+    kaggle_root.mkdir()
+    outside_temp = tmp_path / "outside-temp"
+    outside_temp.mkdir()
+    sentinel = outside_temp / "sentinel"
+    sentinel.write_text("preserve")
+    (kaggle_root / "temp").symlink_to(outside_temp, target_is_directory=True)
+    input_root = kaggle_root / "input"
+    input_root.mkdir()
+    executable = (
+        launcher.replace('Path("/kaggle")', f"Path({str(kaggle_root)!r})")
+        .replace('Path("/kaggle/input")', f"Path({str(input_root)!r})")
+        .replace('Path("/kaggle/temp")', f"Path({str(kaggle_root / 'temp')!r})")
+    )
+
+    with pytest.raises(SystemExit, match="stopped before the worker"):
+        exec(compile(executable, str(kernel / "run.py"), "exec"), {"__name__": "__main__"})
+
+    diagnostic_lines = [
+        line
+        for line in capsys.readouterr().err.splitlines()
+        if line.startswith("Q25_FIM_CONVERSION_DIAGNOSTIC ")
+    ]
+    assert len(diagnostic_lines) == 1
+    diagnostic = json.loads(diagnostic_lines[0].split(" ", maxsplit=1)[1])
+    assert diagnostic["stage"] == "temp_root"
+    assert diagnostic["code"] == "temp_root_symlink"
+    assert sentinel.read_text() == "preserve"
+    assert list(outside_temp.iterdir()) == [sentinel]
 
 
 def test_conversion_quota_rejects_gpu_enabled_plan_before_any_submit(
@@ -3487,6 +3679,265 @@ def test_conversion_submit_blocks_on_active_job_without_kernel_push(
     assert not campaign.CONVERSION_JOB_FILE.exists()
 
 
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "wrong_resume",
+        "job_hash",
+        "terminal_watch",
+        "worker_started",
+        "training_tokens",
+        "automatic_retry",
+        "failure_log",
+        "prior_launcher",
+        "telemetry_query",
+    ],
+)
+def test_conversion_retry_rejects_unverified_or_nonzero_work_before_quota(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str
+) -> None:
+    selection_path, report, artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan, prior_kernel, _original = _seed_verified_conversion_failure(
+        selection_path, artifacts, report
+    )
+    failure_path = report / "fim-conversion-failed-1.json"
+    failure = json.loads(failure_path.read_text())
+    if tamper == "wrong_resume":
+        resume_source = "owner/other-kernel"
+    else:
+        resume_source = campaign._conversion_reference(1)
+    if tamper == "job_hash":
+        failure["job_sha256"] = "f" * 64
+    elif tamper == "terminal_watch":
+        watch = json.loads(campaign.CONVERSION_WATCH_FILE.read_text())
+        watch["status"] = "RUNNING"
+        campaign.save(campaign.CONVERSION_WATCH_FILE, watch)
+        failure["watch_sha256"] = campaign.digest(campaign.CONVERSION_WATCH_FILE)
+    elif tamper == "worker_started":
+        failure["worker_started"] = True
+    elif tamper == "training_tokens":
+        failure["training_input_tokens"] = 1
+    elif tamper == "automatic_retry":
+        failure["automatic_retry"] = True
+    elif tamper == "failure_log":
+        log_path = artifacts / failure["failure_log_file"]
+        log_path.write_text("changed failure output\n")
+    elif tamper == "prior_launcher":
+        (prior_kernel / "run.py").write_text("changed launcher\n")
+    elif tamper == "telemetry_query":
+        failure["telemetry_query_state"] = "unknown"
+    campaign.save(failure_path, failure)
+
+    calls: list[tuple[str, ...]] = []
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        del timeout
+        calls.append(tuple(args))
+        if args[-2:] == ("branch", "--show-current"):
+            return campaign.CONVERSION_BRANCH
+        if args[-2:] == ("status", "--porcelain"):
+            return ""
+        if args[-2:] == ("rev-parse", "HEAD"):
+            return "f" * 40
+        if args[-2:] == ("origin", f"refs/heads/{campaign.CONVERSION_BRANCH}"):
+            return f"{'f' * 40}\trefs/heads/{campaign.CONVERSION_BRANCH}"
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(
+        campaign, "quota", lambda: pytest.fail("invalid retry evidence reached quota")
+    )
+
+    with pytest.raises(ValueError, match="conversion retry"):
+        campaign.submit_fim_conversion(plan, attempt=2, resume_source=resume_source)
+
+    assert not campaign.CONVERSION_HISTORY_ROOT.exists()
+    assert not campaign._conversion_kernel_root(2).exists()
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in calls)
+
+
+def test_conversion_retry_archives_attempt_one_and_submits_distinct_cpu_kernel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan, prior_kernel, original = _seed_verified_conversion_failure(
+        selection_path, artifacts, report
+    )
+    commit = "f" * 40
+    calls: list[tuple[str, ...]] = []
+    budget_calls: list[tuple[int, str]] = []
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        del timeout
+        call = tuple(args)
+        calls.append(call)
+        if call[-2:] == ("branch", "--show-current"):
+            return campaign.CONVERSION_BRANCH
+        if call[-2:] == ("status", "--porcelain"):
+            return ""
+        if call[-2:] == ("rev-parse", "HEAD"):
+            return commit
+        if call[-2:] == ("origin", f"refs/heads/{campaign.CONVERSION_BRANCH}"):
+            return f"{commit}\trefs/heads/{campaign.CONVERSION_BRANCH}"
+        if call[:3] == ("kaggle", "kernels", "status"):
+            return "COMPLETE"
+        if call[:3] == ("kaggle", "kernels", "push"):
+            kernel_root = Path(call[call.index("-p") + 1])
+            assert kernel_root == campaign._conversion_kernel_root(2)
+            metadata = json.loads((kernel_root / "kernel-metadata.json").read_text())
+            assert metadata["id"] == campaign._conversion_reference(2)
+            assert metadata["enable_gpu"] is False
+            assert metadata["dataset_sources"] == [campaign.CONVERSION_DATASET]
+            assert metadata["kernel_sources"] == [plan["source"]["kernel_reference"]]
+            return "https://www.kaggle.com/code/shlokbhakta/tc-q25-fim-q4-conversion-r1-a2"
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(campaign, "quota", lambda: _observation())
+    monkeypatch.setattr(
+        campaign,
+        "check_shared_allocation_budget",
+        lambda seconds, *, phase: budget_calls.append((seconds, phase)),
+    )
+    monkeypatch.setattr(campaign, "_csv_ref_exists", lambda _reference: False)
+    campaign.save(
+        report / "campaign_budget.json",
+        {"shared_limits": {"quota_renewal": "2026-10-10T00:00:00"}},
+    )
+
+    job = campaign.submit_fim_conversion(
+        plan, attempt=2, resume_source=campaign._conversion_reference(1)
+    )
+
+    archive = campaign.CONVERSION_HISTORY_ROOT / "attempt-1"
+    assert {path.name for path in archive.iterdir()} == {
+        "failure.json",
+        "job.json",
+        "run.py",
+        "watch.json",
+    }
+    assert (archive / "job.json").read_bytes() == original["job"]
+    assert (archive / "watch.json").read_bytes() == original["watch"]
+    assert (archive / "failure.json").read_bytes() == original["failure"]
+    assert (archive / "run.py").read_bytes() == original["launcher"]
+    assert (prior_kernel / "run.py").read_bytes() == original["launcher"]
+    assert job["attempt"] == 2
+    assert job["reference"] == campaign._conversion_reference(2)
+    assert job["retry_authorization_reference"] == campaign._conversion_reference(1)
+    assert job["enable_gpu"] is False
+    assert campaign._conversion_kernel_root(2).is_dir()
+    assert json.loads(campaign.CONVERSION_JOB_FILE.read_text())["attempt"] == 2
+    assert json.loads(campaign.CONVERSION_WATCH_FILE.read_text())["reference"] == job["reference"]
+    assert budget_calls == [(campaign.CONVERSION_SESSION_SECONDS, "conversion")]
+    assert sum(call[:3] == ("kaggle", "kernels", "push") for call in calls) == 1
+
+
+def test_conversion_retry_still_requires_a_fresh_idle_quota_observation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan, _prior_kernel, original = _seed_verified_conversion_failure(
+        selection_path, artifacts, report
+    )
+    campaign.save(
+        report / "campaign_budget.json",
+        {"shared_limits": {"quota_renewal": "2026-10-10T00:00:00"}},
+    )
+    commit = "f" * 40
+    calls: list[tuple[str, ...]] = []
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        del timeout
+        calls.append(tuple(args))
+        if args[-2:] == ("branch", "--show-current"):
+            return campaign.CONVERSION_BRANCH
+        if args[-2:] == ("status", "--porcelain"):
+            return ""
+        if args[-2:] == ("rev-parse", "HEAD"):
+            return commit
+        if args[-2:] == ("origin", f"refs/heads/{campaign.CONVERSION_BRANCH}"):
+            return f"{commit}\trefs/heads/{campaign.CONVERSION_BRANCH}"
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(
+        campaign,
+        "quota",
+        lambda: _observation(active_jobs=[{"reference": "owner/other", "status": "RUNNING"}]),
+    )
+    monkeypatch.setattr(campaign, "check_shared_allocation_budget", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        campaign,
+        "_csv_ref_exists",
+        lambda _reference: pytest.fail("active job must stop before duplicate lookup"),
+    )
+
+    with pytest.raises(RuntimeError, match="another Kaggle job is active"):
+        campaign.submit_fim_conversion(
+            plan, attempt=2, resume_source=campaign._conversion_reference(1)
+        )
+
+    assert campaign.CONVERSION_JOB_FILE.read_bytes() == original["job"]
+    assert campaign.CONVERSION_WATCH_FILE.read_bytes() == original["watch"]
+    assert not campaign.CONVERSION_HISTORY_ROOT.exists()
+    assert not campaign._conversion_kernel_root(2).exists()
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in calls)
+
+
+def test_shared_budget_counts_archived_and_active_conversion_receipts_once_per_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _selection, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    job = {
+        "reference": campaign._conversion_reference(1),
+        "attempt": 1,
+        "conservative_reserved_session_seconds": campaign.CONVERSION_SESSION_SECONDS,
+        "enable_gpu": False,
+    }
+    campaign.save(campaign.CONVERSION_JOB_FILE, job)
+    archive = campaign.CONVERSION_HISTORY_ROOT / "attempt-1"
+    archive.mkdir(parents=True)
+    (archive / "job.json").write_bytes(campaign.CONVERSION_JOB_FILE.read_bytes())
+    fim_job_path = next(report.glob("fim-job-*.json"))
+    fim_job = json.loads(fim_job_path.read_text())
+    fim_job["conservative_reserved_session_seconds"] = campaign.CONVERSION_SESSION_SECONDS
+    campaign.save(fim_job_path, fim_job)
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "aggregate_reserved_session_seconds": 3 * campaign.CONVERSION_SESSION_SECONDS,
+                "minimum_reserved_future_fim_session_seconds": 0,
+                "conservative_account_gpu_hours": 40,
+            }
+        },
+    )
+
+    campaign.check_shared_allocation_budget(campaign.CONVERSION_SESSION_SECONDS, phase="conversion")
+
+    second_attempt = {
+        **job,
+        "reference": campaign._conversion_reference(2),
+        "attempt": 2,
+    }
+    campaign.save(campaign.CONVERSION_JOB_FILE, second_attempt)
+    campaign.check_shared_allocation_budget(0, phase="conversion")
+
+    limits = json.loads((report / "campaign_budget.json").read_text())
+    limits["shared_limits"]["aggregate_reserved_session_seconds"] -= 1
+    campaign.save(report / "campaign_budget.json", limits)
+    with pytest.raises(RuntimeError, match="session reservation exhausted"):
+        campaign.check_shared_allocation_budget(0, phase="conversion")
+
+
 def test_conversion_cli_has_separate_non_gpu_action_path(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -3502,6 +3953,41 @@ def test_conversion_cli_has_separate_non_gpu_action_path(
     campaign.main()
 
     assert json.loads(capsys.readouterr().out) == {"conversion_bundle": "/private/config-bundle"}
+
+
+def test_conversion_cli_forwards_explicit_retry_lineage(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prior_reference = campaign._conversion_reference(1)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_q25_code_cpt.py",
+            "--execute-conversion",
+            "--attempt",
+            "2",
+            "--resume-source",
+            prior_reference,
+        ],
+    )
+    monkeypatch.setattr(campaign, "_load_conversion_plan", lambda: {"schema": "frozen"})
+    captured: dict[str, Any] = {}
+
+    def fake_submit(
+        _plan: dict[str, Any], *, attempt: int, resume_source: str | None
+    ) -> dict[str, Any]:
+        captured.update(attempt=attempt, resume_source=resume_source)
+        return {"attempt": attempt, "reference": campaign._conversion_reference(attempt)}
+
+    monkeypatch.setattr(campaign, "submit_fim_conversion", fake_submit)
+
+    campaign.main()
+
+    assert captured == {"attempt": 2, "resume_source": prior_reference}
+    assert json.loads(capsys.readouterr().out) == {
+        "conversion_job": {"attempt": 2, "reference": campaign._conversion_reference(2)}
+    }
 
 
 @pytest.mark.parametrize("tamper", [None, "worker_hash", "storage_cap"])
