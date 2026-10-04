@@ -112,7 +112,16 @@ def prepare_native_fim_profile(
     if output.is_symlink():
         raise ValueError("native FIM profile output must not be a symbolic link")
     output.mkdir(parents=True, exist_ok=True)
-    for name, value in {"registry.json": registry, "editor-model.json": spec}.items():
+    embedded_profile = {
+        "schema": "tabcomplete-q25-fim-embedded-profile-v1",
+        "model_sha256": artifact["sha256"],
+        "serving_profile": profile,
+    }
+    for name, value in {
+        "registry.json": registry,
+        "editor-model.json": spec,
+        "embedded-profile.json": embedded_profile,
+    }.items():
         target = output / name
         content = json.dumps(value, sort_keys=True, indent=2) + "\n"
         if target.exists() and (target.is_symlink() or target.read_text() != content):
@@ -123,6 +132,7 @@ def prepare_native_fim_profile(
         "protocol": protocol,
         "registry": str(output / "registry.json"),
         "editor_model": str(output / "editor-model.json"),
+        "embedded_profile": str(output / "embedded-profile.json"),
         "tokenizer_contract_sha256": tokenizer_profile["tokenizer_contract_sha256"],
         "activated": False,
         "automatic_personalization_enabled": False,

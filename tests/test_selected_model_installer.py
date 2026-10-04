@@ -210,6 +210,13 @@ def test_native_fim_profile_binds_artifact_and_all_added_controls(tmp_path, monk
     assert len(profile["tokenizer"]["special_tokens"]) == 4
     editor = json.loads((output / "editor-model.json").read_text())
     assert "tokenizer_vocab_ids" not in editor["fim_profile"]["tokenizer"]
+    embedded = json.loads((output / "embedded-profile.json").read_text())
+    assert embedded == {
+        "schema": "tabcomplete-q25-fim-embedded-profile-v1",
+        "model_sha256": installer.sha(model),
+        "serving_profile": profile,
+    }
+    assert result["embedded_profile"] == str(output / "embedded-profile.json")
     assert installer.prepare_native_fim_profile(model, tokenizer, conversion, output) == result
     (output / "registry.json").write_text("different identity")
     with pytest.raises(ValueError, match="another identity"):
