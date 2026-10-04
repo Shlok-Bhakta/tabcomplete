@@ -3348,6 +3348,83 @@ def test_conversion_kernel_is_cpu_only_and_attaches_only_selected_source_kernel(
     )
 
 
+def test_conversion_launcher_runs_as_single_file_and_finds_nested_kaggle_mounts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import runpy
+
+    selection_path, _report, artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    kernel = campaign.build_fim_conversion_kernel(plan, "f" * 40)
+    launcher = (kernel / "run.py").read_text()
+
+    # Kaggle sends only script_body, so the uploaded kernel contains no siblings.
+    uploaded_kernel = tmp_path / "uploaded-kernel"
+    uploaded_kernel.mkdir()
+    (uploaded_kernel / "run.py").write_text(launcher)
+    assert [path.name for path in uploaded_kernel.iterdir()] == ["run.py"]
+
+    input_root = tmp_path / "mounted-input"
+    config_root = input_root / "datasets" / "nested" / "private-config"
+    config_root.mkdir(parents=True)
+    bundle = campaign.build_fim_conversion_bundle(plan)
+    for source in bundle.iterdir():
+        if source.name != "dataset-metadata.json":
+            (config_root / source.name).write_bytes(source.read_bytes())
+
+    source_root = input_root / "notebooks" / "nested" / "selected-kernel"
+    export_root = source_root / campaign.CONVERSION_EXPORT_DIRECTORY
+    export_root.mkdir(parents=True)
+    source_manifest = (
+        artifacts
+        / "fim/output-untouched_q25_to_fim-1"
+        / campaign.CONVERSION_EXPORT_DIRECTORY
+        / "artifact_manifest.json"
+    )
+    (export_root / "artifact_manifest.json").write_bytes(source_manifest.read_bytes())
+
+    temp_root = tmp_path / "worker-temp"
+    temp_root.mkdir()
+    output_root = tmp_path / "worker-output"
+    output_root.mkdir()
+    captured: dict[str, Any] = {}
+
+    def fake_run_path(path: str, *, run_name: str) -> dict[str, Any]:
+        captured["worker"] = Path(path)
+        captured["run_name"] = run_name
+        captured["argv"] = list(sys.argv)
+        return {}
+
+    monkeypatch.setattr(runpy, "run_path", fake_run_path)
+    executable = launcher.replace('Path("/kaggle/input")', f"Path({str(input_root)!r})").replace(
+        'Path("/kaggle/temp")', f"Path({str(temp_root)!r})"
+    )
+    executable = executable.replace(
+        '"/kaggle/working/q25_fim_conversion_r1"', repr(str(output_root))
+    ).replace('"/kaggle/temp/q25_fim_conversion_r1"', repr(str(temp_root / "runtime")))
+    exec(compile(executable, str(uploaded_kernel / "run.py"), "exec"), {"__name__": "__main__"})
+
+    code_root = temp_root / "q25_fim_conversion_code"
+    expected_paths = set(campaign.CONVERSION_EMBEDDED_SOURCE_PATHS)
+    assert {
+        path.relative_to(code_root).as_posix() for path in code_root.rglob("*") if path.is_file()
+    } == expected_paths
+    assert {relative: campaign.digest(code_root / relative) for relative in expected_paths} == plan[
+        "source_code"
+    ]
+    assert captured["worker"] == code_root / "conversion_worker.py"
+    assert captured["run_name"] == "__main__"
+    arguments = captured["argv"]
+    assert arguments[arguments.index("--input-root") + 1] == str(input_root)
+    assert arguments[arguments.index("--selection") + 1] == str(config_root / "selection.json")
+    assert arguments[arguments.index("--source-root") + 1] == str(source_root)
+    assert arguments[arguments.index("--source-kernel-reference") + 1] == (
+        "owner/selected-fim-kernel"
+    )
+
+
 def test_conversion_quota_rejects_gpu_enabled_plan_before_any_submit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

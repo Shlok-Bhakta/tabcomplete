@@ -7,6 +7,7 @@ Preparation is CPU-only; allocation checks current quota immediately before push
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import math
@@ -43,6 +44,17 @@ CONVERSION_SESSION_SECONDS = 10_800
 CONVERSION_FINALIZATION_RESERVE_SECONDS = 1_800
 CONVERSION_ARTIFACT_CAP_BYTES = 12 * 1024**3
 CONVERSION_MINIMUM_FREE_BYTES = 2 * 1024**3
+CONVERSION_EMBEDDED_SOURCE_PATHS = frozenset(
+    {
+        "conversion_worker.py",
+        "src/tinycomplete/__init__.py",
+        "src/tinycomplete/code_cpt/__init__.py",
+        "src/tinycomplete/code_cpt/q25_fim_conversion.py",
+        "kaggle/q25_fim_conversion_r1/requirements-conversion.lock",
+    }
+)
+CONVERSION_EMBEDDED_SOURCE_MAX_BYTES = 256 * 1024
+CONVERSION_LAUNCHER_MAX_BYTES = 1024 * 1024
 CONVERSION_EXPORT_DIRECTORY = "q25_fim_r2/training/inference-f16"
 CONVERSION_PLAN = REPORT / "fim_conversion_plan.json"
 CONVERSION_SELECTION = REPORT / "fim_conversion" / "selection.json"
@@ -2672,9 +2684,39 @@ def upload_fim_conversion_bundle(plan: dict[str, Any] | None = None) -> dict[str
     return verification
 
 
-def _conversion_launcher(session: dict[str, Any]) -> str:
-    embedded = repr(json.dumps(session, sort_keys=True, separators=(",", ":")))
+def _conversion_launcher(session: dict[str, Any], code_files: dict[str, Path]) -> str:
+    if set(code_files) != CONVERSION_EMBEDDED_SOURCE_PATHS:
+        raise ValueError("conversion launcher requires the exact frozen worker source set")
+    source_hashes = session.get("source_code")
+    if (
+        not isinstance(source_hashes, dict)
+        or set(source_hashes) != CONVERSION_EMBEDDED_SOURCE_PATHS
+    ):
+        raise ValueError("conversion launcher is missing the frozen worker source hashes")
+    embedded_sources: dict[str, dict[str, Any]] = {}
+    total_source_bytes = 0
+    for relative in sorted(CONVERSION_EMBEDDED_SOURCE_PATHS):
+        source = code_files[relative]
+        if source.is_symlink() or not source.is_file():
+            raise ValueError("conversion launcher source is missing or unsafe")
+        payload = source.read_bytes()
+        total_source_bytes += len(payload)
+        if total_source_bytes > CONVERSION_EMBEDDED_SOURCE_MAX_BYTES:
+            raise OSError("embedded conversion source exceeds its bounded launcher size")
+        source_sha256 = hashlib.sha256(payload).hexdigest()
+        if source_sha256 != source_hashes[relative]:
+            raise ValueError("embedded conversion source differs from its frozen hash")
+        embedded_sources[relative] = {
+            "bytes": len(payload),
+            "sha256": source_sha256,
+            "base64": base64.b64encode(payload).decode("ascii"),
+        }
+    launcher_session = {**session, "embedded_sources": embedded_sources}
+    embedded = repr(json.dumps(launcher_session, sort_keys=True, separators=(",", ":")))
+    required_paths = repr(sorted(CONVERSION_EMBEDDED_SOURCE_PATHS))
     template = r"""from __future__ import annotations
+import base64
+import binascii
 import hashlib
 import json
 import os
@@ -2684,7 +2726,12 @@ from pathlib import Path, PurePosixPath
 
 SESSION = json.loads(__SESSION_JSON__)
 INPUT_ROOT = Path("/kaggle/input")
-CODE_ROOT = Path(__file__).resolve().parent
+TEMP_ROOT = Path("/kaggle/temp")
+MAX_INPUT_ENTRIES = 100000
+MAX_INPUT_DEPTH = 32
+MAX_MATCHING_FILES = 128
+MAX_EMBEDDED_SOURCE_BYTES = __SOURCE_LIMIT__
+REQUIRED_SOURCE_PATHS = set(__REQUIRED_PATHS__)
 
 def sha(path):
     value = hashlib.sha256()
@@ -2696,29 +2743,114 @@ def sha(path):
 def fail():
     raise SystemExit("conversion input identity is missing or ambiguous")
 
-def direct_mounts():
+def input_files():
     if INPUT_ROOT.is_symlink() or not INPUT_ROOT.is_dir():
         fail()
-    values = []
-    for path in INPUT_ROOT.iterdir():
-        if path.is_symlink():
-            continue
-        if path.is_dir():
-            values.append(path.resolve(strict=True))
-    return values
+    pending = [(INPUT_ROOT, 0)]
+    found = []
+    visited = 0
+    while pending:
+        directory, depth = pending.pop()
+        try:
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    visited += 1
+                    if visited > MAX_INPUT_ENTRIES:
+                        fail()
+                    if entry.is_symlink():
+                        continue
+                    if entry.is_dir(follow_symlinks=False):
+                        if depth >= MAX_INPUT_DEPTH:
+                            fail()
+                        pending.append((Path(entry.path), depth + 1))
+                    elif entry.is_file(follow_symlinks=False) and entry.name in {
+                        "input-manifest.json",
+                        "artifact_manifest.json",
+                    }:
+                        found.append(Path(entry.path))
+                        if len(found) > MAX_MATCHING_FILES:
+                            fail()
+        except OSError:
+            fail()
+    return found
 
-mounts = direct_mounts()
-config_mounts = []
-for mount in mounts:
-    manifest = mount / "input-manifest.json"
-    if manifest.is_symlink() or not manifest.is_file():
-        continue
-    if sha(manifest) == SESSION["input_manifest_sha256"]:
-        config_mounts.append(mount)
-if len(config_mounts) != 1:
+def extract_sources():
+    if TEMP_ROOT.is_symlink() or not TEMP_ROOT.is_dir():
+        fail()
+    code_root = TEMP_ROOT / "q25_fim_conversion_code"
+    if code_root.exists() or code_root.is_symlink():
+        fail()
+    source_hashes = SESSION.get("source_code")
+    source_records = SESSION.get("embedded_sources")
+    if (not isinstance(source_hashes, dict) or set(source_hashes) != REQUIRED_SOURCE_PATHS
+        or not isinstance(source_records, dict) or set(source_records) != REQUIRED_SOURCE_PATHS):
+        fail()
+    decoded = {}
+    total = 0
+    max_encoded_bytes = 4 * ((MAX_EMBEDDED_SOURCE_BYTES + 2) // 3)
+    for name in REQUIRED_SOURCE_PATHS:
+        relative = PurePosixPath(name)
+        record = source_records.get(name)
+        expected_sha = source_hashes.get(name)
+        if (relative.is_absolute() or ".." in relative.parts or relative.as_posix() != name
+            or not isinstance(record, dict) or not isinstance(expected_sha, str)
+            or len(expected_sha) != 64
+            or any(character not in "0123456789abcdef" for character in expected_sha)):
+            fail()
+        encoded = record.get("base64")
+        size = record.get("bytes")
+        source_sha = record.get("sha256")
+        if (not isinstance(encoded, str) or len(encoded) > max_encoded_bytes
+            or not isinstance(size, int) or isinstance(size, bool) or size < 0
+            or not isinstance(source_sha, str) or source_sha != expected_sha):
+            fail()
+        try:
+            payload = base64.b64decode(encoded, validate=True)
+        except (ValueError, binascii.Error):
+            fail()
+        total += len(payload)
+        if (len(payload) != size or total > MAX_EMBEDDED_SOURCE_BYTES
+            or hashlib.sha256(payload).hexdigest() != expected_sha):
+            fail()
+        decoded[name] = payload
+
+    code_root.mkdir(mode=0o700)
+    for name, payload in decoded.items():
+        relative = PurePosixPath(name)
+        target = code_root.joinpath(*relative.parts)
+        current = code_root
+        for part in relative.parts[:-1]:
+            current = current / part
+            if current.is_symlink():
+                fail()
+            current.mkdir(exist_ok=True)
+        if target.exists() or target.is_symlink():
+            fail()
+        with target.open("xb") as handle:
+            handle.write(payload)
+        if (target.is_symlink() or not target.is_file() or target.stat().st_size != len(payload)
+            or sha(target) != source_hashes[name]):
+            fail()
+    staged = {
+        path.relative_to(code_root).as_posix()
+        for path in code_root.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+    if staged != REQUIRED_SOURCE_PATHS:
+        fail()
+    return code_root.resolve(strict=True)
+
+CODE_ROOT = extract_sources()
+files = input_files()
+config_manifests = [
+    path for path in files
+    if path.name == "input-manifest.json" and not path.is_symlink()
+    and sha(path) == SESSION["input_manifest_sha256"]
+]
+if len(config_manifests) != 1:
     fail()
-config_root = config_mounts[0]
-manifest = json.loads((config_root / "input-manifest.json").read_text(encoding="utf-8"))
+config_root = config_manifests[0].parent.resolve(strict=True)
+manifest = json.loads(config_manifests[0].read_text(encoding="utf-8"))
 if (manifest.get("schema") != "q25-fim-conversion-input-manifest-v1"
     or manifest.get("selection_sha256") != SESSION["selection_sha256"]
     or manifest.get("training_plan_sha256") != SESSION["training_plan_sha256"]
@@ -2726,12 +2858,12 @@ if (manifest.get("schema") != "q25-fim-conversion-input-manifest-v1"
     or manifest.get("source_kernel_reference") != SESSION["source_kernel_reference"]
     or manifest.get("source_export_manifest_sha256") != SESSION["source_export_manifest_sha256"]):
     fail()
-files = manifest.get("files")
-if not isinstance(files, dict) or set(files) != {
+files_by_name = manifest.get("files")
+if not isinstance(files_by_name, dict) or set(files_by_name) != {
     "selection.json", "training_plan.json", "original_config.json", "original_tokenizer.json"
 }:
     fail()
-for name, record in files.items():
+for name, record in files_by_name.items():
     relative = PurePosixPath(name)
     path = config_root.joinpath(*relative.parts)
     if (relative.is_absolute() or ".." in relative.parts or path.is_symlink()
@@ -2752,21 +2884,26 @@ if (selection.get("source_kernel_reference") != SESSION["source_kernel_reference
 relative_export = PurePosixPath(SESSION["source_export_directory"])
 if relative_export.is_absolute() or ".." in relative_export.parts:
     fail()
-source_mounts = []
-for mount in mounts:
-    if mount == config_root:
+suffix = (*relative_export.parts, "artifact_manifest.json")
+source_roots = []
+for manifest_path in files:
+    if manifest_path.name != "artifact_manifest.json" or manifest_path.is_symlink():
         continue
-    export = mount.joinpath(*relative_export.parts)
-    manifest_path = export / "artifact_manifest.json"
-    if not manifest_path.exists():
+    relative_manifest = PurePosixPath(manifest_path.relative_to(INPUT_ROOT).as_posix())
+    if (len(relative_manifest.parts) <= len(suffix)
+        or relative_manifest.parts[-len(suffix):] != suffix):
         continue
-    if any(path.is_symlink() for path in (mount, export, manifest_path)):
-        fail()
-    if manifest_path.is_file() and sha(manifest_path) == SESSION["source_export_manifest_sha256"]:
-        source_mounts.append(mount)
-if len(source_mounts) != 1:
+    root_parts = relative_manifest.parts[:-len(suffix)]
+    if not root_parts:
+        continue
+    source_root = INPUT_ROOT.joinpath(*root_parts)
+    if source_root.resolve(strict=True) == config_root:
+        continue
+    if sha(manifest_path) == SESSION["source_export_manifest_sha256"]:
+        source_roots.append(source_root.resolve(strict=True))
+if len(source_roots) != 1:
     fail()
-source_root = source_mounts[0]
+source_root = source_roots[0]
 worker = CODE_ROOT / "conversion_worker.py"
 if worker.is_symlink() or not worker.is_file():
     fail()
@@ -2784,7 +2921,13 @@ sys.argv = [str(worker),
     "--reserve-seconds", str(SESSION["finalization_reserve_seconds"])]
 runpy.run_path(str(worker), run_name="__main__")
 """
-    return template.replace("__SESSION_JSON__", embedded)
+    template = template.replace("__SESSION_JSON__", embedded)
+    template = template.replace(
+        "__SOURCE_LIMIT__", str(CONVERSION_EMBEDDED_SOURCE_MAX_BYTES)
+    ).replace("__REQUIRED_PATHS__", required_paths)
+    if len(template.encode("utf-8")) > CONVERSION_LAUNCHER_MAX_BYTES:
+        raise OSError("self-contained conversion launcher exceeds its source-size bound")
+    return template
 
 
 def build_fim_conversion_kernel(plan: dict[str, Any], commit: str) -> Path:
@@ -2809,22 +2952,46 @@ def build_fim_conversion_kernel(plan: dict[str, Any], commit: str) -> Path:
         "source_kernel_reference": plan["source"]["kernel_reference"],
         "source_export_directory": plan["source"]["export_directory"],
         "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
+        "source_code": plan["source_code"],
         "session_seconds": CONVERSION_SESSION_SECONDS,
         "finalization_reserve_seconds": CONVERSION_FINALIZATION_RESERVE_SECONDS,
     }
+    if (
+        set(code_files) != CONVERSION_EMBEDDED_SOURCE_PATHS
+        or set(plan["source_code"]) != CONVERSION_EMBEDDED_SOURCE_PATHS
+    ):
+        raise ValueError("conversion worker source set differs from the frozen plan")
     for relative, source in code_files.items():
         target = kernel / relative
+        if (
+            source.is_symlink()
+            or not source.is_file()
+            or digest(source) != plan["source_code"][relative]
+        ):
+            raise ValueError("conversion source differs from the frozen source hash")
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
-            if target.is_symlink() or not target.is_file() or digest(target) != digest(source):
+            if (
+                target.is_symlink()
+                or not target.is_file()
+                or digest(target) != plan["source_code"][relative]
+            ):
                 raise ValueError("staged conversion source differs from the frozen code")
         else:
             shutil.copy2(source, target)
-    launcher = _conversion_launcher(session)
+    staged_code_files = {relative: kernel / relative for relative in code_files}
+    launcher = _conversion_launcher(session, staged_code_files)
     run_path = kernel / "run.py"
-    if run_path.exists() and run_path.read_text() != launcher:
-        raise ValueError("frozen conversion launcher differs from its input receipt")
-    if not run_path.exists():
+    if run_path.exists():
+        if run_path.is_symlink() or not run_path.is_file():
+            raise ValueError("conversion launcher staging is unsafe")
+        if run_path.read_text() != launcher:
+            if CONVERSION_JOB_FILE.exists():
+                raise ValueError("cannot replace a conversion launcher after job submission")
+            temporary_launcher = run_path.with_name(run_path.name + ".tmp")
+            temporary_launcher.write_text(launcher)
+            os.replace(temporary_launcher, run_path)
+    else:
         run_path.write_text(launcher)
     metadata = {
         "id": CONVERSION_KERNEL_REFERENCE,
