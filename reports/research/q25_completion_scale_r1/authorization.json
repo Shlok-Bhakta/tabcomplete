@@ -1,0 +1,5 @@
+{
+  "old_campaign_limits_unchanged": true,
+  "scope": "Separate bounded diagnostic completion experiment. Existing q25 weights only, no paid calls or new model downloads; no preference training; no silent use of renewed quota.",
+  "source": "Explicit user requests in this conversation on October4: run additional free Kaggle experiments; continue; use more compute if compute is the bottleneck."
+}

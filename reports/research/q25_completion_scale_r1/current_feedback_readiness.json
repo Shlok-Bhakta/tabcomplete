@@ -1,0 +1,14 @@
+{
+  "automatic_personalization_enabled": false,
+  "candidate_pairs": 0,
+  "content_exported": false,
+  "defensible_pairs": 0,
+  "observed_at": "2026-10-04T14:31:09.307269+00:00",
+  "private_export_sha256": "f0f1a7e55b22bf0c6f7254acbd90024b8acd19ae22c3697b95249ed4216b8d36",
+  "proposals": 292,
+  "read_only": true,
+  "ready": false,
+  "sequence_gaps": 8,
+  "sessions": 96,
+  "source_database": "/mnt/ssd/collector-data/collector.sqlite"
+}

@@ -1,0 +1,170 @@
+{
+  "authorization": {
+    "old_campaign_limits_unchanged": true,
+    "scope": "Separate bounded diagnostic completion experiment. Existing q25 weights only, no paid calls or new model downloads; no preference training; no silent use of renewed quota.",
+    "source": "Explicit user requests in this conversation on October4: run additional free Kaggle experiments; continue; use more compute if compute is the bottleneck."
+  },
+  "base_commit": "dd7ef12e120da7e74ffc193910b9006f0bd71dfc",
+  "branch": "research/q25-completion-scale-r1",
+  "budget": {
+    "aggregate_session_seconds": 21600,
+    "automatic_renewal_use": false,
+    "conservative_account_gpu_hours": 12,
+    "conservative_quota_multiplier": 2,
+    "cpu_preparation_only": true,
+    "final_training_plan_required_before_gpu": true,
+    "finalization_reserve_seconds": 1800,
+    "gpu_allocation_authorized_by_this_plan": false,
+    "maximum_campaign_input_tokens": 10000000,
+    "maximum_discarded_replay_input_tokens": 2000000,
+    "minimum_finalization_reserve_seconds": 1800,
+    "minimum_free_bytes": 2147483648,
+    "new_artifact_bytes_cap": 12884901888,
+    "paid_compute": false,
+    "quota_renewal": "2026-10-10T00:00:00",
+    "runtime_setup_reserve_seconds": 1800,
+    "session_seconds": 10800
+  },
+  "data": {
+    "development_allocation": "all_eligible_manifest_documents_no_language_downsampling",
+    "development_id_offset": 8192,
+    "development_states_max": 512,
+    "encoding": "Own tokenizer, no auto-special tokens; target plus tokenizer EOS, prompt masked, no label truncation. Prefix/suffix token slices may only remove remote context and must decode on UTF-8 boundaries.",
+    "hole_modes": [
+      "whole_logical_line",
+      "remaining_logical_line_after_utf8_cursor"
+    ],
+    "language_weights": {
+      "go": 0.15,
+      "python": 0.4,
+      "rust": 0.25,
+      "typescript": 0.2
+    },
+    "markers": [
+      "<|fim_prefix|>",
+      "<|fim_suffix|>",
+      "<|fim_middle|>"
+    ],
+    "max_total_tokens": 1024,
+    "mode_assignment": "hash of content SHA and variant index modulo two; enumerate two variants per document, retain only distinct valid states",
+    "new_development_policy": "Connected repository-alias groups wholly disjoint from previous 4096 training states. Order groups by SHA256 of seed and sorted aliases; language quotas fixed before model outputs. Reserve whole groups before selecting new training states.",
+    "new_development_seed": 271828,
+    "new_development_states": 512,
+    "new_train_states": 4096,
+    "original_development_policy": "Preserve exact original 240 rows separately, secondary historical comparison only; these outcomes have already been inspected.",
+    "prefix_tokens_max": 640,
+    "prompt_format": "PSM through existing tinycomplete.data.fim.format_psm, no chat template",
+    "repeat_training_policy": "Retain exact previous 4096 states, two passes. No duplicate inflation of distinct-state counts.",
+    "scaled_training_policy": "Retain every previous training row byte-for-byte as first 4096; append 4096 eligible distinct states using existing variant 0 and 1, frozen language quotas, no oversampling. No new variants.",
+    "sealed_test_access": false,
+    "seed": 314159,
+    "skip_empty_or_whitespace_only_targets": true,
+    "skip_overlength_targets": true,
+    "source_order": "sha256(seed, split, content SHA, variant) sorted; deterministic per-language allocation with no oversampling",
+    "suffix_tokens_max": 256,
+    "target_tokens_including_eos_max": 96,
+    "task": "synthetic one-line FIM completion; not observed next-edit intent",
+    "token_roundtrip": "Require exact tokenizer decode of prompt and target IDs to original strings with special tokens retained and cleanup disabled; reject normalized or otherwise non-roundtripping states before deterministic allocation.",
+    "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "train_states_max": 8192,
+    "training_allocation": "frozen language weights, deterministic quotas, no oversampling",
+    "validation": "Exact source hash, unchanged region round trip, target application reconstructs full source; source-group split/dedup; no sealed fixtures read.",
+    "variants_per_document_max": 2
+  },
+  "evaluation": {
+    "automatic_editor_promotion": false,
+    "automatic_personalization_enabled": false,
+    "decision": "Use measured primary improvement and general regression. Lock selection before any further held-out evaluation. No claim of production accuracy.",
+    "decoding": "greedy; actual declared EOS; no parser repair, whitespace trim or selected truncation",
+    "max_output_tokens": 96,
+    "primary": "Common new repository-disjoint 512-state development exact_and_terminated. Paired outcomes with repository-clustered bootstrap, 2000 samples, seed271828.",
+    "secondary": "Preserved original 240-state development, unchanged FIM line180, raw causal200 and raw line180. Scoring and fixtures unchanged.",
+    "stable_served_model_unchanged": true
+  },
+  "experiment": {
+    "limitations": [
+      "Equal example exposures do not guarantee identical FLOPs because source lengths differ.",
+      "Synthetic source completion is not a human intent label.",
+      "No intermediate development snapshots from prior one-pass run establish saturation."
+    ],
+    "matched": "Same untouched base, tokenizer, objective, optimizer, 512 updates and schedule; equal example exposure, actual input and target token counts reported separately.",
+    "repeat": {
+      "distinct_states": 4096,
+      "epochs": 2,
+      "example_exposures": 8192
+    },
+    "scaled": {
+      "distinct_states": 8192,
+      "epochs": 1,
+      "example_exposures": 8192
+    }
+  },
+  "frozen_at": "2026-10-04T14:24:44.842328+00:00",
+  "model": {
+    "id": "Qwen/Qwen2.5-Coder-0.5B",
+    "initializer": "untouched_pretrained",
+    "license": "Apache-2.0",
+    "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+  },
+  "parent_cpt_plan_sha256": "1aaff2ee4f4e0adeeafb87e616f99e657f7ff0be4fa438f40ecbb1150aeed1f9",
+  "parent_preparation_plan": {
+    "path": "reports/research/q25_code_cpt_r2/fim_preparation_plan.json",
+    "sha256": "460770a6bab77eeecd7b31eb2c8da278c5c29cea98cc872d8fbd36b22a6dc6de"
+  },
+  "plan_revision": 1,
+  "previous_development": {
+    "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/corpus-r3/development.jsonl",
+    "rows": 240,
+    "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+  },
+  "previous_training": {
+    "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/corpus-r3/train.jsonl",
+    "rows": 4096,
+    "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690"
+  },
+  "runtime_lock": {
+    "path": "reports/research/q25_code_cpt_r2/fim_runtime_lock.json",
+    "sha256": "5f1dd30f40fd208f435e40e1edae59caf7a2f22778c67313b3c5bf47e5b5f65d"
+  },
+  "schema": "q25-completion-scale-preparation-plan-v1",
+  "sources": {
+    "benchmark_exclusion_sha256": "afa1501dceb8eda249a0c7c78c6c70a8f4c1d048a036fd2b1f7b7da7747c4d70",
+    "dataset": "bigcode/the-stack-dedup",
+    "development_manifest": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/corpus/development_manifest.jsonl",
+      "sha256": "a345581c23fdf556df145a9ac90b5c61b7ea369cedaaa6ca930403cc6ab4a07c"
+    },
+    "pool": {
+      "go": {
+        "bytes": 75753945,
+        "sha256": "1dbca27bf3cf40513e19aa88180955f40e79ed51f72676d3c20605b360310ba2",
+        "sidecar_sha256": "dbc1fc05a6fe5dbf51cad0c02f6c93539d8bcc1732b31413397d009d134cecc3"
+      },
+      "python": {
+        "bytes": 31289717,
+        "sha256": "991ff59e26bba6191abd2d3017b0a7aaa6e089882d9cbb92c87563da846e0c37",
+        "sidecar_sha256": "3880e7e65f2a5eab932790a11556f9cc996fda256a7f64bed4fd533da2a22c85"
+      },
+      "rust": {
+        "bytes": 66121278,
+        "sha256": "676cc14204029bff85a9c692e52ca7dc99504fc0389472cd879e5ebb9c388735",
+        "sidecar_sha256": "cd032256e19c213f9486db8a91dfe0ff14456191821c9d0a5e2bdcbed2d0a183"
+      },
+      "typescript": {
+        "bytes": 27071751,
+        "sha256": "f54d113d17c40d0997da6567e95ac18204a3ac7c443f3b390a0f28d45a63a16a",
+        "sidecar_sha256": "ace70e4b7abea5b73ff73cf5f6340d9928f9743cd44ad836359596bc1a9214d8"
+      }
+    },
+    "raw_pool": "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/pool",
+    "revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+    "split_membership": "Only exact clean feeder documents in frozen CPT train/development manifests; related variants retain that split.",
+    "train_manifest": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/corpus/train_manifest.jsonl",
+      "sha256": "5ad7e2260424624a59b6c6be6b4aaac125ef4d59889a54fca15522db80eca0f3"
+    }
+  }
+}

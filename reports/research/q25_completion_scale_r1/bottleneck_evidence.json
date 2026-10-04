@@ -1,0 +1,20 @@
+{
+  "chosen_diagnostic": "Same original4096 states twice versus original4096 plus4096 new distinct states once; equal exposures and512 updates, exact common first stage, common new512 development states.",
+  "compute_bottleneck_established": false,
+  "first_16_update_loss_mean": 0.6615923214703798,
+  "human_edit_data_bottleneck": "Latest audited96-session collector export had zero defensible preference pairs. Synthetic source completion can be trained independently; it does not supply human next-edit intent.",
+  "intermediate_development_curve_available": false,
+  "last_16_update_loss_mean": 0.5348573578521609,
+  "observed_at": "2026-10-04T14:27:21.528180+00:00",
+  "prior_development_response_nll_after": 0.5337485671043396,
+  "prior_development_response_nll_before": 1.0296014547348022,
+  "prior_input_tokens": 1776908,
+  "prior_supervised_target_tokens": 34405,
+  "prior_training_examples": 4096,
+  "prior_training_result_sha256": "1f09ca07024f38fd90497475b7fc42713441603dc187870facb98e3088a16964",
+  "prior_training_seconds": 1303.3687599480002,
+  "prior_updates": 256,
+  "prior_updates_sha256": "9018c8d407a2ce58298b1c13718c7a6ff447f4aa2d05ef47b082b7ffc9fdd5f5",
+  "schema": "q25-completion-scale-bottleneck-evidence-v1",
+  "stable_served_model_changed": false
+}

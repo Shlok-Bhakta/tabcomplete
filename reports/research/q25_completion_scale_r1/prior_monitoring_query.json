@@ -1,0 +1,56 @@
+{
+  "page": {
+    "limit": 5,
+    "next_cursor": "5"
+  },
+  "queried_at": 1791124042704,
+  "query": "tabcomplete-observe run run-af49853a32ad56891191cf2d46ec9cee --limit5 --json",
+  "rows": [
+    {
+      "name": "run.summary",
+      "tabcomplete.historical": true,
+      "tabcomplete.run.state": "completed",
+      "tabcomplete.run_attempt_id": "attempt-e64096cc-be78-4d36-b896-2e0bc83003db",
+      "tabcomplete.run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+      "timestamp": "2026-10-04T07:06:40.190207199Z",
+      "trace_id": "b4391e11f99a4cb2f2a88b64ba3ce044"
+    },
+    {
+      "name": "run.heartbeat",
+      "tabcomplete.historical": true,
+      "tabcomplete.run.state": "active",
+      "tabcomplete.run_attempt_id": "attempt-e64096cc-be78-4d36-b896-2e0bc83003db",
+      "tabcomplete.run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+      "timestamp": "2026-10-04T07:06:39.68665734Z",
+      "trace_id": "64ca44c36bdda4d4618a773ffe88bd73"
+    },
+    {
+      "name": "checkpoint.save",
+      "tabcomplete.historical": true,
+      "tabcomplete.run.state": null,
+      "tabcomplete.run_attempt_id": "attempt-e64096cc-be78-4d36-b896-2e0bc83003db",
+      "tabcomplete.run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+      "timestamp": "2026-10-04T07:06:34.291603675Z",
+      "trace_id": "094ca9d1c48e2e0e73fd4659486b0f62"
+    },
+    {
+      "name": "run.heartbeat",
+      "tabcomplete.historical": true,
+      "tabcomplete.run.state": "active",
+      "tabcomplete.run_attempt_id": "attempt-e64096cc-be78-4d36-b896-2e0bc83003db",
+      "tabcomplete.run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+      "timestamp": "2026-10-04T07:06:24.686150525Z",
+      "trace_id": "dcdd5801a5e43551c0b898f176cbeffb"
+    },
+    {
+      "name": "model.score",
+      "tabcomplete.historical": true,
+      "tabcomplete.run.state": null,
+      "tabcomplete.run_attempt_id": "attempt-e64096cc-be78-4d36-b896-2e0bc83003db",
+      "tabcomplete.run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+      "timestamp": "2026-10-04T07:06:18.012302639Z",
+      "trace_id": "8fad50c24cd9dae957da92937de050a3"
+    }
+  ],
+  "state": "ok"
+}

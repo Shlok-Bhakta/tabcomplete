@@ -1,0 +1,64 @@
+schema: q25-completion-scale-config-v1
+branch: research/q25-completion-scale-r1
+artifact_root: /mnt/ssd/tabcomplete-q25-completion-scale-r1
+report_root: reports/research/q25_completion_scale_r1
+preparation_plan: reports/research/q25_completion_scale_r1/preparation_plan-r2.json
+preparation_plan_sha256: be920b0e4e598ae35ad5e5cca85f1a2bc220d0446e2a8f8ba170689230befa2d
+model:
+  id: Qwen/Qwen2.5-Coder-0.5B
+  initializer: untouched_pretrained
+  license: Apache-2.0
+  revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+  tokenizer_sha256: c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539
+  weight_sha256: aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80
+budget:
+  cpu_preparation_only: true
+  gpu_allocation_authorized_by_this_plan: false
+  final_training_plan_required_before_gpu: true
+  aggregate_session_seconds: 21600
+  session_seconds: 10800
+  conservative_account_gpu_hours: 12
+  conservative_quota_multiplier: 2
+  maximum_campaign_input_tokens: 10000000
+  maximum_discarded_replay_input_tokens: 2000000
+  new_artifact_bytes_cap: 12884901888
+  minimum_free_bytes: 2147483648
+  finalization_reserve_seconds: 1800
+  minimum_finalization_reserve_seconds: 1800
+  runtime_setup_reserve_seconds: 1800
+  quota_renewal: '2026-10-10T00:00:00'
+  automatic_renewal_use: false
+  paid_compute: false
+variants:
+  limitations:
+  - Equal example exposures do not guarantee identical FLOPs because source lengths
+    differ.
+  - Synthetic source completion is not a human intent label.
+  - No intermediate development snapshots from prior one-pass run establish saturation.
+  matched: Same untouched base, tokenizer, objective, optimizer, 512 updates and schedule;
+    equal example exposure, actual input and target token counts reported separately.
+  repeat:
+    distinct_states: 4096
+    epochs: 2
+    example_exposures: 8192
+  scaled:
+    distinct_states: 8192
+    epochs: 1
+    example_exposures: 8192
+  matched_batch_schedule: Two4096-state stages with batch16. First-stage batches exactly
+    the previous4096 batch order with seed314159 for both variants. Second-stage replay
+    or new examples bucketed with seed314160. One global512-update LR schedule, no
+    restart between stages.
+selection:
+  primary: Common new repository-disjoint 512-state development exact_and_terminated.
+    Paired outcomes with repository-clustered bootstrap, 2000 samples, seed271828.
+  secondary: Preserved original 240-state development, unchanged FIM line180, raw
+    causal200 and raw line180. Scoring and fixtures unchanged.
+  max_output_tokens: 96
+  decoding: greedy; actual declared EOS; no parser repair, whitespace trim or selected
+    truncation
+  decision: Use measured primary improvement and general regression. Lock selection
+    before any further held-out evaluation. No claim of production accuracy.
+  automatic_editor_promotion: false
+  stable_served_model_unchanged: true
+  automatic_personalization_enabled: false
