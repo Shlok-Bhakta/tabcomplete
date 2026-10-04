@@ -1,0 +1,41 @@
+{
+  "schema": "q25-fim-unsubmitted-staging-audit-v1",
+  "observed_at": "2026-10-04T09:29:22.195736+00:00",
+  "actual_failure": "staged_conversion_source_hash_mismatch",
+  "allocation_occurred": false,
+  "synthetic_source_marker_verified": true,
+  "preserved_directory": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/conversion-kernel-r2-unsubmitted-synthetic-evidence",
+  "files": {
+    "run.py": {
+      "bytes": 14151,
+      "sha256": "18e5ce1d51f77bab93f7abce2c730a8ccdb65a11975bb26d526906a1c365a05e"
+    },
+    "kernel-metadata.json": {
+      "bytes": 390,
+      "sha256": "64f68b7392e6de54af511a896dbb915732c4c48bd80ca0fa11d1ed13930b2658"
+    },
+    "conversion_worker.py": {
+      "bytes": 35,
+      "sha256": "5b090a9d68ccfe28de0fa81908095e95c2160d894823303b7b97cfe8a7ac9ded"
+    },
+    "kaggle/q25_fim_conversion_r1/requirements-conversion.lock": {
+      "bytes": 35,
+      "sha256": "5b090a9d68ccfe28de0fa81908095e95c2160d894823303b7b97cfe8a7ac9ded"
+    },
+    "src/tinycomplete/__init__.py": {
+      "bytes": 35,
+      "sha256": "5b090a9d68ccfe28de0fa81908095e95c2160d894823303b7b97cfe8a7ac9ded"
+    },
+    "src/tinycomplete/code_cpt/q25_fim_conversion.py": {
+      "bytes": 35,
+      "sha256": "5b090a9d68ccfe28de0fa81908095e95c2160d894823303b7b97cfe8a7ac9ded"
+    },
+    "src/tinycomplete/code_cpt/__init__.py": {
+      "bytes": 35,
+      "sha256": "5b090a9d68ccfe28de0fa81908095e95c2160d894823303b7b97cfe8a7ac9ded"
+    }
+  },
+  "monitor_query": "tc-q25-fim-q4-conversion-r2",
+  "monitor_result": "no_runs",
+  "production_hash_guard_preserved": true
+}
