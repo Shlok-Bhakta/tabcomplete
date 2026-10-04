@@ -1,0 +1,14 @@
+{
+  "binary_bytes": 9556176,
+  "binary_sha256": "d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074",
+  "nix_evaluation": "unavailable locally",
+  "python_appender": "identity, full vocabulary, tampering, caps, no sidecar PASS",
+  "python_appender_log_sha256": "77eb31b0a45c17a1e838450dd424fbf16257cc3c7fe1f4ffb5b14e9fc924c77d",
+  "real_model_inference": false,
+  "release_build": "passed",
+  "release_build_log_sha256": "33c024aa69a489851d3cb5e48e6ecd7d1855c36dede56be6ee7d37214a4c3f53",
+  "runtime_model_storage": "existing /proc/self/exe mmap loader; actual selected-model mapping not yet verified",
+  "rust_log_sha256": "ca820c6521d411892414a5b88ef6102cfeee4821148b02a6fddfc413baf0fb1e",
+  "rust_tests_passed": 40,
+  "schema": "q25-fim-embedded-source-verification-v1"
+}
