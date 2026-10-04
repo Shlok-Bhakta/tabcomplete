@@ -4400,7 +4400,7 @@ def _seed_cpu_failure_settlement(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
             "reference": job["reference"],
             "plan_sha256": job["plan_sha256"],
             "observed_at": "2026-10-04T09:03:00+00:00",
-            "status": 'has status "KernelWorkerStatus.ERROR"',
+            "status": f'{job["reference"]} has status "KernelWorkerStatus.ERROR"',
         },
     )
     campaign.save(
@@ -4458,7 +4458,19 @@ def test_cpu_failure_settlement_uses_terminal_interval_and_preserves_reservation
 
 
 @pytest.mark.parametrize(
-    "corruption", ["watch", "manifest", "path", "bound", "structure", "gpu", "duration"]
+    "corruption",
+    [
+        "watch",
+        "manifest",
+        "path",
+        "bound",
+        "structure",
+        "gpu",
+        "duration",
+        "status_substring",
+        "naive_time",
+        "time_order",
+    ],
 )
 def test_cpu_failure_settlement_rejects_unbound_or_unsafe_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corruption: str
@@ -4471,10 +4483,17 @@ def test_cpu_failure_settlement_rejects_unbound_or_unsafe_evidence(
         receipt["session_settlement"] = []
     elif corruption == "gpu":
         job["enable_gpu"] = True
-    elif corruption == "watch":
+    elif corruption in {"watch", "status_substring", "naive_time", "time_order"}:
         watch_path = report / "fim-conversion-watch-r2.json"
         watch = json.loads(watch_path.read_text())
-        watch["status"] = "KernelWorkerStatus.RUNNING"
+        if corruption == "watch":
+            watch["status"] = "KernelWorkerStatus.RUNNING"
+        elif corruption == "status_substring":
+            watch["status"] += " and KernelWorkerStatus.RUNNING"
+        else:
+            watch["observed_at"] = (
+                "2026-10-04T09:03:00" if corruption == "naive_time" else "2026-10-04T08:59:00+00:00"
+            )
         campaign.save(watch_path, watch)
         receipt["session_settlement"]["watch_sha256"] = campaign.digest(watch_path)
     else:

@@ -875,7 +875,7 @@ def _validated_cpu_failure_settlement(job_path: Path, job: dict[str, Any]) -> in
         or job.get("plan_sha256") != digest(plan_path)
         or watch.get("plan_sha256") != job["plan_sha256"]
         or watch.get("reference") != job["reference"]
-        or "KernelWorkerStatus.ERROR" not in str(watch.get("status"))
+        or watch.get("status") != f'{job["reference"]} has status "KernelWorkerStatus.ERROR"'
         or recorded < terminal
         or terminal < submitted
         or manifest.get("schema") != "q25-fim-q4-conversion-run-v1"
@@ -887,6 +887,7 @@ def _validated_cpu_failure_settlement(job_path: Path, job: dict[str, Any]) -> in
         or manifest.get("source_export_manifest_sha256")
         != plan["source"]["artifact_manifest_sha256"]
         or manifest.get("source_kernel_reference") != job.get("source_kernel_reference")
+        or job.get("source_kernel_reference") != plan["source"]["kernel_reference"]
         or not isinstance(worker_elapsed, (int, float))
         or isinstance(worker_elapsed, bool)
         or not math.isfinite(worker_elapsed)
