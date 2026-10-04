@@ -46,6 +46,12 @@ use std::{
 use tokio::sync::{mpsc, oneshot};
 use tokio_stream::wrappers::ReceiverStream;
 
+const Q25_FIM_TOKENIZER_SHA256: &str =
+    "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539";
+const Q25_NORMAL_EOG_ALIAS_ID: i32 = 128_247;
+const Q25_NORMAL_EOG_ALIAS_SPELLING: &str = "</s>";
+const FIM_RUNTIME_COMPATIBILITY_POLICY: &str = "q25-fim-pinned-hf-eos-normal-eog-alias-v1";
+
 #[derive(Parser, Clone, Serialize)]
 struct Args {
     #[arg(long)]
@@ -285,6 +291,55 @@ fn native_token_pieces(model: &LlamaModel, text: &str) -> Result<Vec<Vec<u8>>> {
         .collect()
 }
 
+fn is_documented_q25_normal_eog_alias(
+    tokenizer: &fim_v1::TokenizerProfile,
+    id: i32,
+    spelling: &str,
+    has_control_attribute: bool,
+    is_native_eog: bool,
+) -> bool {
+    tokenizer.tokenizer_sha256 == Q25_FIM_TOKENIZER_SHA256
+        && id == Q25_NORMAL_EOG_ALIAS_ID
+        && spelling == Q25_NORMAL_EOG_ALIAS_SPELLING
+        && tokenizer.tokenizer_vocab_ids.binary_search(&id).is_ok()
+        && !tokenizer
+            .special_tokens
+            .iter()
+            .any(|entry| entry.id == id || entry.spelling == spelling)
+        && has_control_attribute
+        && is_native_eog
+}
+
+fn special_token_inventory_matches(
+    expected: &[fim_v1::SpecialToken],
+    actual: &[fim_v1::SpecialToken],
+) -> bool {
+    actual == expected
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FimOutputTokenDisposition {
+    Eos,
+    DeclaredControl,
+    Body,
+    Unknown,
+}
+
+fn fim_output_token_disposition(
+    tokenizer: &fim_v1::TokenizerProfile,
+    id: i32,
+) -> FimOutputTokenDisposition {
+    if id == tokenizer.eos_id {
+        FimOutputTokenDisposition::Eos
+    } else if tokenizer.special_tokens.iter().any(|entry| entry.id == id) {
+        FimOutputTokenDisposition::DeclaredControl
+    } else if tokenizer.tokenizer_vocab_ids.binary_search(&id).is_ok() {
+        FimOutputTokenDisposition::Body
+    } else {
+        FimOutputTokenDisposition::Unknown
+    }
+}
+
 fn verify_fim_tokenizer(
     model: &LlamaModel,
     profile: &fim_v1::ServingProfile,
@@ -334,15 +389,24 @@ fn verify_fim_tokenizer(
             ));
         }
         if attributes.intersects(LlamaTokenAttr::Control | LlamaTokenAttr::UserDefined) {
-            actual.push(fim_v1::SpecialToken {
-                id,
-                spelling: special_token_piece(model, token).map_err(|_| {
-                    fim_tokenizer_failure(FimTokenizerFailureTag::SpecialTokenDecodeFailed)
-                })?,
-            });
+            let spelling = special_token_piece(model, token).map_err(|_| {
+                fim_tokenizer_failure(FimTokenizerFailureTag::SpecialTokenDecodeFailed)
+            })?;
+            let q25_normal_alias = attributes.intersects(LlamaTokenAttr::Control)
+                && !attributes.intersects(LlamaTokenAttr::UserDefined)
+                && is_documented_q25_normal_eog_alias(
+                    tokenizer,
+                    id,
+                    &spelling,
+                    true,
+                    model.is_eog_token(token),
+                );
+            if !q25_normal_alias {
+                actual.push(fim_v1::SpecialToken { id, spelling });
+            }
         }
     }
-    if actual != tokenizer.special_tokens {
+    if !special_token_inventory_matches(&tokenizer.special_tokens, &actual) {
         return Err(fim_tokenizer_failure(
             FimTokenizerFailureTag::SpecialTokenInventoryMismatch,
         ));
@@ -571,18 +635,28 @@ fn worker(
             if profile.protocol == fim_v1::WIRE_VERSION {
                 runtime_args.output_tokens = fim_v1::OUTPUT_TOKEN_CAP;
             }
+            let runtime_config_hash = if profile.protocol == fim_v1::WIRE_VERSION {
+                digest(&serde_json::to_vec(&(
+                    &runtime_args,
+                    &profile,
+                    FIM_RUNTIME_COMPATIBILITY_POLICY,
+                ))?)
+            } else {
+                digest(&serde_json::to_vec(&(&runtime_args, &profile))?)
+            };
             let mut identity = json!({"status":"ok","alias":alias,"model_sha256":profile.sha256,"model_protocol":profile.protocol,
                 "context_layout":context_layout,
                 "model_embedded":app.embedded_mode,"model_switch_supported":!app.embedded_mode,
                 "model_selection":if app.embedded_mode{"declarative"}else{"research-registry"},
                 "model_storage":if app.embedded_mode{"executable-mmap"}else{"external-file-mmap"},
                 "backend":"llama.cpp CPU via Rust","llama_cpp_2":"0.1.157","llama_cpp_sys_2":"0.1.158",
-                "runtime_config_hash":digest(&serde_json::to_vec(&(&runtime_args,&profile))?),"threads":args.threads,"prompt_threads":args.prompt_threads,
+                "runtime_config_hash":runtime_config_hash,"threads":args.threads,"prompt_threads":args.prompt_threads,
                 "context_size":args.context_size,"batch_size":args.batch_size,"microbatch_size":args.microbatch_size,"input_tokens":args.input_tokens,"output_tokens":output_limit(&args,&profile),
                 "cache_type":args.cache_type,"syntax_validation":args.syntax_validation,
                 "saved_contexts":0,"active_slots":1,"load_ms":load.elapsed().as_secs_f64()*1000.});
             if let Some(fim_profile) = &profile.fim_profile {
                 identity["fim_profile"] = json!(fim_profile);
+                identity["fim_tokenizer_runtime_policy"] = json!(FIM_RUNTIME_COMPATIBILITY_POLICY);
                 identity["completion_mode"] = json!(fim_v1::COMPLETION_MODE);
                 identity["tokenizer_id"] = json!(fim_profile.tokenizer.tokenizer_id);
                 identity["tokenizer_revision"] = json!(fim_profile.tokenizer.tokenizer_revision);
@@ -890,7 +964,17 @@ fn worker(
                                     return Ok(());
                                 }
                                 let token = sampler.sample(&ctx, -1);
-                                if model.is_eog_token(token) {
+                                let is_terminal = if is_fim {
+                                    profile.fim_profile.as_ref().is_some_and(|fim_profile| {
+                                        fim_output_token_disposition(
+                                            &fim_profile.tokenizer,
+                                            token.0,
+                                        ) == FimOutputTokenDisposition::Eos
+                                    })
+                                } else {
+                                    model.is_eog_token(token)
+                                };
+                                if is_terminal {
                                     eos = true;
                                     terminal_token_id = Some(token.0);
                                     break;
@@ -1523,6 +1607,118 @@ mod worker_guard_tests {
             artifact_manifest_sha256: "b".repeat(64),
             tokenizer,
         }
+    }
+
+    #[test]
+    fn q25_runtime_eog_alias_is_only_the_known_normal_token() {
+        let mut fim = synthetic_fim_profile().tokenizer;
+        fim.tokenizer_sha256 = Q25_FIM_TOKENIZER_SHA256.into();
+        let insert_at = fim
+            .tokenizer_vocab_ids
+            .binary_search(&Q25_NORMAL_EOG_ALIAS_ID)
+            .unwrap_err();
+        fim.tokenizer_vocab_ids
+            .insert(insert_at, Q25_NORMAL_EOG_ALIAS_ID);
+
+        assert!(is_documented_q25_normal_eog_alias(
+            &fim,
+            Q25_NORMAL_EOG_ALIAS_ID,
+            Q25_NORMAL_EOG_ALIAS_SPELLING,
+            true,
+            true,
+        ));
+        assert!(!is_documented_q25_normal_eog_alias(
+            &fim,
+            Q25_NORMAL_EOG_ALIAS_ID + 1,
+            Q25_NORMAL_EOG_ALIAS_SPELLING,
+            true,
+            true,
+        ));
+        assert!(!is_documented_q25_normal_eog_alias(
+            &fim,
+            Q25_NORMAL_EOG_ALIAS_ID,
+            "<|unexpected|>",
+            true,
+            true,
+        ));
+        assert!(!is_documented_q25_normal_eog_alias(
+            &fim,
+            Q25_NORMAL_EOG_ALIAS_ID,
+            Q25_NORMAL_EOG_ALIAS_SPELLING,
+            false,
+            true,
+        ));
+        assert!(!is_documented_q25_normal_eog_alias(
+            &fim,
+            Q25_NORMAL_EOG_ALIAS_ID,
+            Q25_NORMAL_EOG_ALIAS_SPELLING,
+            true,
+            false,
+        ));
+
+        let mut other_tokenizer = fim.clone();
+        other_tokenizer.tokenizer_sha256 = "d".repeat(64);
+        assert!(!is_documented_q25_normal_eog_alias(
+            &other_tokenizer,
+            Q25_NORMAL_EOG_ALIAS_ID,
+            Q25_NORMAL_EOG_ALIAS_SPELLING,
+            true,
+            true,
+        ));
+
+        let mut declared = fim.clone();
+        declared.special_tokens.push(fim_v1::SpecialToken {
+            id: Q25_NORMAL_EOG_ALIAS_ID,
+            spelling: Q25_NORMAL_EOG_ALIAS_SPELLING.into(),
+        });
+        assert!(!is_documented_q25_normal_eog_alias(
+            &declared,
+            Q25_NORMAL_EOG_ALIAS_ID,
+            Q25_NORMAL_EOG_ALIAS_SPELLING,
+            true,
+            true,
+        ));
+    }
+
+    #[test]
+    fn fim_eos_is_distinct_from_declared_controls_and_normal_eog_alias() {
+        let mut fim = synthetic_fim_profile().tokenizer;
+        let insert_at = fim
+            .tokenizer_vocab_ids
+            .binary_search(&Q25_NORMAL_EOG_ALIAS_ID)
+            .unwrap_err();
+        fim.tokenizer_vocab_ids
+            .insert(insert_at, Q25_NORMAL_EOG_ALIAS_ID);
+
+        assert_eq!(
+            fim_output_token_disposition(&fim, fim.eos_id),
+            FimOutputTokenDisposition::Eos
+        );
+        assert_eq!(
+            fim_output_token_disposition(&fim, fim.fim_prefix_id),
+            FimOutputTokenDisposition::DeclaredControl
+        );
+        assert_eq!(
+            fim_output_token_disposition(&fim, Q25_NORMAL_EOG_ALIAS_ID),
+            FimOutputTokenDisposition::Body
+        );
+        assert_eq!(
+            fim_output_token_disposition(&fim, Q25_NORMAL_EOG_ALIAS_ID + 1),
+            FimOutputTokenDisposition::Unknown
+        );
+    }
+
+    #[test]
+    fn native_special_inventory_stays_exact_after_the_one_runtime_alias() {
+        let expected = synthetic_fim_profile().tokenizer.special_tokens;
+        assert!(special_token_inventory_matches(&expected, &expected));
+
+        let mut unexpected = expected.clone();
+        unexpected.push(fim_v1::SpecialToken {
+            id: 128_248,
+            spelling: "<|unlisted-control|>".into(),
+        });
+        assert!(!special_token_inventory_matches(&expected, &unexpected));
     }
 
     fn synthetic_fim_payload(fim_profile: fim_v1::ServingProfile) -> embedded::Payload {
