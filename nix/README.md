@@ -92,6 +92,39 @@ collector and configurable acceptance/dismissal mappings. Automatic display
 requires opt-in and every edit requires acceptance. The dedicated persisted
 mode file preserves later manual, shadow, or off choices.
 
+## Opt-in research FIM candidate
+
+`fim-candidate.nix` is a separate function for a locally supplied, selected FIM
+GGUF and its matching profile. It is not imported by `default.nix`,
+`models.nix`, or Home Manager, so the Qwen default, Sweep alternative, and
+their closures remain unchanged. No weights are downloaded by this function.
+
+The profile JSON must use schema
+`tabcomplete-q25-fim-embedded-profile-v1`, contain the selected model's
+lowercase `model_sha256`, and include the full `serving_profile` from the paired
+artifact: artifact-manifest digest, tokenizer identity and revisions, tokenizer
+and contract digests, sorted known vocabulary IDs, FIM/EOS IDs, completion mode,
+and complete control-token inventory sorted by token ID. The appender verifies the profile
+contract and model-file digest before writing. The Rust executable verifies the
+footer, tokenizer contract, model digest, and actual GGUF vocabulary at startup.
+Footer metadata is capped at 2 MiB for this inventory.
+
+An explicit Nix caller can provide private local paths:
+
+```nix
+fimCandidate = import ./nix/fim-candidate.nix {
+  inherit pkgs;
+  fimModel = /path/to/selected-q25-fim.gguf;
+  fimProfile = /path/to/selected-q25-fim-profile.json;
+};
+```
+
+This returns a standalone `tabcomplete-q25-fim` executable containing one
+GGUF. It uses the existing `/proc/self/exe` mapping path; the runtime does not
+extract a model file or load another model. The function does not update a
+service, editor configuration, installed package, or Nix activation. Build and
+quality evaluation remain separate gates.
+
 With `automaticNormalMode`, normal-mode cursor movement, buffer entry, and edits
 use the same 250 ms debounce and single-request state machine. Visual, operator
 pending, replace, terminal, and command-line modes remain excluded. Cursor movement

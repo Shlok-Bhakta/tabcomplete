@@ -1,8 +1,7 @@
 mod context;
 mod embedded;
 mod syntax_guard;
-// The FIM adapter remains detached from runtime profiles until an evaluated
-// checkpoint supplies a frozen model digest and tokenizer inventory.
+// The research FIM profile is enabled only by an explicit selected artifact.
 #[allow(dead_code)]
 mod fim_v1;
 use anyhow::{Result, ensure};
@@ -143,12 +142,33 @@ fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 fn verify_model(profile: &Profile) -> Result<()> {
-    if profile.embedded.is_some() {
-        // The payload was bounded and streaming-hash verified before worker startup.
+    if let Some(payload) = &profile.embedded {
+        // The executable footer and appended GGUF were bounded and hash-verified
+        // before worker startup. The FIM profile is part of that same footer.
         ensure!(
-            profile.protocol != fim_v1::WIRE_VERSION && profile.fim_profile.is_none(),
-            "embedded models cannot use the research FIM profile"
+            profile.sha256 == payload.sha256 && profile.protocol == payload.protocol,
+            "embedded model identity mismatch"
         );
+        if profile.protocol == fim_v1::WIRE_VERSION {
+            let embedded_profile = payload
+                .fim_profile
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("embedded FIM profile is required"))?;
+            let selected_profile = profile
+                .fim_profile
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("FIM profile identity is required"))?;
+            ensure!(
+                selected_profile == embedded_profile,
+                "embedded FIM profile identity mismatch"
+            );
+            fim_v1::validate_serving_profile(selected_profile)?;
+        } else {
+            ensure!(
+                profile.fim_profile.is_none(),
+                "unexpected FIM profile identity"
+            );
+        }
         return Ok(());
     }
     ensure!(
@@ -1136,7 +1156,9 @@ async fn main() -> Result<()> {
                 .ok_or_else(|| anyhow::anyhow!("research model requires --model-sha256"))?
         },
         protocol: args.protocol.clone(),
-        fim_profile: None,
+        fim_profile: payload
+            .as_ref()
+            .and_then(|embedded| embedded.fim_profile.clone()),
         embedded: payload.clone(),
     };
     let mut registry: BTreeMap<String, Profile> = if let Some(path) = &args.model_registry {
@@ -1213,6 +1235,115 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod worker_guard_tests {
     use super::*;
+
+    fn synthetic_fim_profile() -> fim_v1::ServingProfile {
+        let tokenizer_vocab_ids = vec![
+            fim_v1::EOS_TOKEN_ID,
+            fim_v1::FIM_PREFIX_TOKEN_ID,
+            fim_v1::FIM_MIDDLE_TOKEN_ID,
+            fim_v1::FIM_SUFFIX_TOKEN_ID,
+        ];
+        let tokenizer_vocab_ids_sha256 = digest(
+            tokenizer_vocab_ids
+                .iter()
+                .map(|id| format!("{id}\n"))
+                .collect::<String>()
+                .as_bytes(),
+        );
+        let mut tokenizer = fim_v1::TokenizerProfile {
+            tokenizer_id: "synthetic/q25-fim".into(),
+            tokenizer_revision: "synthetic-revision".into(),
+            tokenizer_sha256: "a".repeat(64),
+            tokenizer_contract_sha256: String::new(),
+            tokenizer_vocab_size: tokenizer_vocab_ids.len(),
+            tokenizer_vocab_ids_sha256,
+            tokenizer_vocab_ids,
+            eos_id: fim_v1::EOS_TOKEN_ID,
+            fim_prefix_id: fim_v1::FIM_PREFIX_TOKEN_ID,
+            fim_suffix_id: fim_v1::FIM_SUFFIX_TOKEN_ID,
+            fim_middle_id: fim_v1::FIM_MIDDLE_TOKEN_ID,
+            completion_mode: fim_v1::COMPLETION_MODE.into(),
+            special_tokens: vec![
+                fim_v1::SpecialToken {
+                    id: fim_v1::EOS_TOKEN_ID,
+                    spelling: fim_v1::EOS_SPELLING.into(),
+                },
+                fim_v1::SpecialToken {
+                    id: fim_v1::FIM_PREFIX_TOKEN_ID,
+                    spelling: fim_v1::FIM_PREFIX.into(),
+                },
+                fim_v1::SpecialToken {
+                    id: fim_v1::FIM_MIDDLE_TOKEN_ID,
+                    spelling: fim_v1::FIM_MIDDLE.into(),
+                },
+                fim_v1::SpecialToken {
+                    id: fim_v1::FIM_SUFFIX_TOKEN_ID,
+                    spelling: fim_v1::FIM_SUFFIX.into(),
+                },
+            ],
+        };
+        tokenizer.tokenizer_contract_sha256 =
+            digest(&fim_v1::tokenizer_contract_bytes(&tokenizer).unwrap());
+        fim_v1::ServingProfile {
+            artifact_manifest_sha256: "b".repeat(64),
+            tokenizer,
+        }
+    }
+
+    fn synthetic_fim_payload(fim_profile: fim_v1::ServingProfile) -> embedded::Payload {
+        embedded::Payload {
+            version: 1,
+            offset: 4096,
+            length: 8,
+            sha256: "c".repeat(64),
+            alias: "q25-fim".into(),
+            protocol: fim_v1::WIRE_VERSION.into(),
+            output_tokens: fim_v1::OUTPUT_TOKEN_CAP,
+            context_size: 2304,
+            input_tokens: 1024,
+            batch_size: 256,
+            microbatch_size: 64,
+            threads: 4,
+            cache_type: "f16".into(),
+            context_layout: fim_v1::CONTEXT_LAYOUT.into(),
+            fim_profile: Some(fim_profile),
+        }
+    }
+
+    #[test]
+    fn embedded_fim_profile_must_match_the_verified_footer() {
+        let fim_profile = synthetic_fim_profile();
+        let payload = synthetic_fim_payload(fim_profile.clone());
+        let profile = Profile {
+            path: "/proc/self/exe".into(),
+            sha256: payload.sha256.clone(),
+            protocol: payload.protocol.clone(),
+            fim_profile: Some(fim_profile),
+            embedded: Some(payload.clone()),
+        };
+        assert!(verify_model(&profile).is_ok());
+
+        let mut mismatched = profile;
+        mismatched
+            .fim_profile
+            .as_mut()
+            .unwrap()
+            .artifact_manifest_sha256 = "d".repeat(64);
+        assert!(verify_model(&mismatched).is_err());
+
+        let mut wrong_model = Profile {
+            path: "/proc/self/exe".into(),
+            sha256: "e".repeat(64),
+            protocol: payload.protocol.clone(),
+            fim_profile: payload.fim_profile.clone(),
+            embedded: Some(payload),
+        };
+        assert!(verify_model(&wrong_model).is_err());
+        wrong_model.sha256 = "c".repeat(64);
+        wrong_model.protocol = "single-line-edit-v1".into();
+        assert!(verify_model(&wrong_model).is_err());
+    }
+
     #[test]
     fn only_fim_generation_renders_control_token_spellings() {
         assert!(generation_renders_special_tokens(fim_v1::WIRE_VERSION));
