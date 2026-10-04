@@ -78,10 +78,11 @@ The final training plan must bind the actual completed CPT artifact and runtime
 before either FIM allocation. Existing tests and CPU data checks are not evidence
 of a model improvement.
 
-The full training plan is now frozen at revision 2. Both actual initializer
+The full training plan is now frozen at revision 3. Both actual initializer
 preflights passed all 4,336 prepared states, with 1,776,908 total training input
 tokens and 34,405 supervised target/EOS tokens per arm, and 256 batches of 16.
-Revision 1 is preserved. CPU preflight found that Qwen's reserved FIM markers
+Revisions 1 and 2 are preserved. Revision 3 corrects the runtime report
+checksum before GPU allocation. CPU preflight found that Qwen's reserved FIM markers
 are ordinary added tokens, despite having fixed control IDs, and Transformers 5
 normalizes RoPE and disabled-window configuration fields. The corrected checks
 compare exact token IDs and canonical architecture meaning while preserving
