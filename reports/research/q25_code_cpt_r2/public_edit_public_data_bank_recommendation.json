@@ -1,0 +1,91 @@
+{
+  "as_of": "2026-10-03",
+  "audit_plan_sha256": "d8a472840b4a0f3df544280cccacbc385ab170654635baa25152c2da4924ba1e",
+  "recommendations": {
+    "best_immediately_usable_next_edit_corpus": {
+      "language_provenance": "TypeScript is the original data. Python, C, Rust, and Java variants were synthetically translated from the TypeScript examples with a self-hosted code model.",
+      "license_at_dataset_card": "Apache-2.0",
+      "limits": [
+        "The original edits come from one product team and their open-source work, not a broad sample of developers.",
+        "The training examples are filtered edit chunks, not a raw keypress/cursor/session trace.",
+        "The card lists messages but no author/session grouping field; check the actual train rows for reliable group identifiers before deriving train/dev examples.",
+        "This corpus was not downloaded or added to current training data during this audit."
+      ],
+      "name": "Continue Instinct data",
+      "recommended_use": "If selected later, pin this revision, prepare only official train splits, keep every official test split sealed, and audit cross-language/source-example duplication before assigning any additional validation split.",
+      "reported_download_size_bytes": 50615114,
+      "reported_logical_size_bytes": 196534039,
+      "repository": "continuedev/instinct-data",
+      "revision": "e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29",
+      "rows": {
+        "test_c": 106,
+        "test_java": 124,
+        "test_python": 129,
+        "test_rust": 114,
+        "test_typescript": 221,
+        "train_c": 894,
+        "train_java": 1040,
+        "train_python": 1093,
+        "train_rust": 952,
+        "train_typescript": 4371
+      },
+      "signal": "The authors describe over 4,000 real edits collected from the Continue team. They chunked edits with line- and timing-based rules, and examples carry recent edit history, context, editable region, and target change.",
+      "url": "https://huggingface.co/datasets/continuedev/instinct-data/tree/e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29"
+    },
+    "best_real_developer_edit_data_if_access_is_approved": {
+      "access": "Gated. The card requires manual approval and contact details, limits use to research, requires privacy protection, and prohibits re-identification.",
+      "current_audit_action": "No request, download, or use. Approval is not available in this audit.",
+      "handling_if_approved": "Group all rows from a user and completion trajectory together; order only by recorded edit timestamps; reserve complete users or trajectories for evaluation; do not infer keypresses or cursor events from snapshots.",
+      "languages": [
+        "Python",
+        "TypeScript",
+        "JavaScript"
+      ],
+      "license_status": "No standard open-source or Creative Commons license is visible on the access-gated card. Review the approved terms before any use.",
+      "name": "DECODE: Developer Edits of Code Dataset",
+      "paper": "https://arxiv.org/abs/2607.25130",
+      "reported_size": "53.6K edit rows, 114 MB",
+      "repository": "jtliang/decode",
+      "signal": "Observed in-IDE snapshots of edits to accepted AI completions; the card lists user IDs, completion/edit IDs, timestamps, and before/after code fields.",
+      "url": "https://huggingface.co/datasets/jtliang/decode"
+    },
+    "commit_derived_edit_pairs": {
+      "limits": [
+        "A Git commit records a submitted final change, not intermediate edits or cursor order.",
+        "Commit timestamps describe version-control metadata, not necessarily when the code was edited.",
+        "Multi-file commits can combine unrelated intent; merges, bots, copied patches, and squash commits need explicit handling.",
+        "A patch diff alone does not reveal why the author made the change or whether they later reverted it.",
+        "Do not label commit-derived pairs as real-time developer next-edit trajectories."
+      ],
+      "recipe": "For exact-pinned permissively licensed repositories, reconstruct single-parent commit transitions from parent tree to commit tree; retain source license and commit/repository identity per example.",
+      "split_policy": "For repository-generalization claims, split whole repositories. For within-repository chronological prediction, train only on earlier commits and evaluate on later commits, while keeping all files/near-duplicate examples from a commit together.",
+      "status": "Useful scale-up proxy, but not observed editing traces."
+    },
+    "small_real_trace_for_replay_and_edit_mechanics": {
+      "downloaded_bytes": 506053,
+      "license": "CC-BY-4.0, as stated for rustcode and sveltecomponent in the pinned README",
+      "limits": [
+        "Both files are attributed to Joseph Gentle, so they cannot support an author-held-out claim.",
+        "The Rust trace starts after much of its code was written; its first transaction inserts 42,493 codepoints.",
+        "The first Svelte transaction inserts 1,406 codepoints.",
+        "Each file has one 1970-01-01T00:00:00.000Z transaction time value with undocumented meaning.",
+        "Transaction timestamps have second-level precision and ties occur, so input order is the only within-time ordering evidence.",
+        "Patches do not encode explicit cursor selection, undo/redo, acceptance, or intent labels."
+      ],
+      "name": "josephg/editing-traces sequential Rust and Svelte traces",
+      "recommended_use": "Keep as a small parser/replay fixture or separate qualitative trace set. Do not use it as a representative split or broad next-edit training bank.",
+      "replay_summary_path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/public_edit_audit/replay_summary.json",
+      "revision": "762fa6c51605c88a05ebe5c4b9d4540caca30b97",
+      "signal": "Real ordered text-edit transactions captured with a VS Code tracker, suitable for validating Unicode-offset replay and transaction handling.",
+      "url": "https://github.com/josephg/editing-traces/tree/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces"
+    }
+  },
+  "schema": "public_edit_data_bank_recommendation_v1",
+  "source_urls": [
+    "https://github.com/josephg/editing-traces/blob/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/README.md",
+    "https://huggingface.co/datasets/continuedev/instinct-data/commit/e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29",
+    "https://blog.continue.dev/instinct/",
+    "https://huggingface.co/datasets/jtliang/decode",
+    "https://arxiv.org/abs/2607.25130"
+  ]
+}

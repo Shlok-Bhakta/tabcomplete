@@ -32,7 +32,7 @@ MODEL = (
 )
 DATASET = "shlokbhakta/tabcomplete-q25-code-cpt-r2-inputs"
 BASE_DATASET = "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-inputs"
-FIM_DATASET = "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3"
+FIM_DATASET = "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r4"
 CPT_INITIALIZER_DATASET = "shlokbhakta/tabcomplete-q25-cpt-r2-fim-initializer"
 FIM_ARMS = ("untouched_q25_to_fim", "completed_cpt_q25_to_fim")
 FIM_LINE_SOURCE = Path(
@@ -435,15 +435,22 @@ def freeze_fim_plan(cpt_plan: dict[str, Any], attempt: int) -> dict[str, Any]:
     base = cpt_plan["configuration"]["model"]
     plan = {
         "schema": "q25-fim-training-plan-v1",
-        "plan_revision": 3,
+        "plan_revision": 4,
         "revision_reason": (
-            "CPU preflight before all FIM generations corrected reserved FIM tokens "
-            "special=False handling and Transformers 5 semantic config normalization; "
-            "evaluation now explicitly rejects generated FIM control IDs. "
-            "Revision 3 corrects a CPU-detected source-requirements checksum typo "
-            "in the runtime report; resolved wheel lock and runtime versions are unchanged. "
-            "Training examples, weights, tokenizer IDs and fixtures are unchanged."
+            "Attempt 3 exhausted T4 memory during full-prompt FIM line evaluation. "
+            "Transformers enables native GQA, which PyTorch 2.11 supports only through "
+            "Flash or math SDPA; T4 cannot use Flash. Revision 4 repeats KV heads "
+            "explicitly and requires supported memory-efficient SDPA for evaluation. "
+            "Both matched arms rerun all evaluations. Model weights, tokenizer, full "
+            "prompts, source fixtures, scoring, training data and trainer are unchanged. "
+            "Kernel numerical differences make earlier evaluations historical."
         ),
+        "restart_after_zero_work": {
+            "previous_plan_sha256": (
+                "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8"
+            ),
+            "previous_plan_file": "fim_training_plan-r3.json",
+        },
         "gpu_execution_authorized": True,
         "preparation_plan_sha256": digest(REPORT / "fim_preparation_plan.json"),
         "parent_cpt_plan_sha256": digest(REPORT / "plan.json"),
@@ -508,6 +515,7 @@ def freeze_fim_plan(cpt_plan: dict[str, Any], attempt: int) -> dict[str, Any]:
             },
         },
         "evaluation": {
+            "attention_backend": "torch-efficient-sdpa-explicit-kv-repeat-v1",
             "source_syntax": {
                 "protocol": "q25-fim-source-syntax-v1",
                 "purpose": "descriptive original versus verbatim generated full-file parse",
@@ -757,6 +765,51 @@ def upload_cpt_initializer(plan: dict[str, Any]) -> dict[str, Any]:
     return verification
 
 
+def validate_fim_retry_plan(
+    plan: dict[str, Any], prior: dict[str, Any], verified: dict[str, Any]
+) -> None:
+    """A changed evaluator may restart only an explicitly verified zero-work arm."""
+    current_sha = digest(REPORT / "fim_training_plan.json")
+    if prior.get("plan_sha256") == current_sha:
+        return
+    transition = plan.get("restart_after_zero_work", {})
+    name = transition.get("previous_plan_file")
+    if (
+        verified.get("no_training_executed") is not True
+        or verified.get("training_status") != "no_training_executed"
+        or verified.get("processed_arm_input_tokens_conservative") != 0
+        or verified.get("own_discarded_tokens_for_resume") != 0
+        or prior.get("resume_source") is not None
+        or prior.get("resume_identity") is not None
+        or verified.get("carried_checkpoint_source") is not None
+        or verified.get("carried_checkpoint_identity") is not None
+        or verified.get("carried_checkpoint_verified") is not False
+        or transition.get("previous_plan_sha256") != prior.get("plan_sha256")
+        or not isinstance(name, str)
+        or Path(name).name != name
+        or name in (".", "..")
+    ):
+        raise ValueError("a changed FIM plan requires an explicit verified zero-work restart")
+    archived = REPORT / name
+    if not archived.is_file() or digest(archived) != prior["plan_sha256"]:
+        raise ValueError("historical FIM plan identity differs")
+    old = json.loads(archived.read_text())
+    excluded = {"evaluation", "plan_revision", "revision_reason", "restart_after_zero_work"}
+    old_evaluation = {
+        k: v for k, v in old.get("evaluation", {}).items() if k != "attention_backend"
+    }
+    new_evaluation = {
+        k: v for k, v in plan.get("evaluation", {}).items() if k != "attention_backend"
+    }
+    if (
+        {k: v for k, v in old.items() if k not in excluded}
+        != {k: v for k, v in plan.items() if k not in excluded}
+        or old_evaluation != new_evaluation
+        or int(plan.get("plan_revision", 0)) <= int(old.get("plan_revision", 0))
+    ):
+        raise ValueError("FIM zero-work revision changed the frozen training identity")
+
+
 def submit_fim(
     plan: dict[str, Any], *, arm: str, attempt: int, cpt_attempt: int, resume_source: str | None
 ) -> dict[str, Any]:
@@ -788,11 +841,12 @@ def submit_fim(
             or verified.get("reference") != prior["reference"]
             or verified.get("arm") != arm
             or verified.get("attempt") != attempt - 1
-            or verified.get("plan_sha256") != digest(REPORT / "fim_training_plan.json")
+            or verified.get("plan_sha256") != prior.get("plan_sha256")
             or verified.get("input_manifest_sha256") != prior.get("input_manifest_sha256")
             or verified.get("commit") != prior.get("commit")
         ):
             raise ValueError("FIM retry authorization lineage differs from its prior receipt")
+        validate_fim_retry_plan(plan, prior, verified)
         if verified.get("training_status") == "complete":
             raise ValueError("the frozen FIM pass is already complete")
         if verified.get("no_training_executed") is True:

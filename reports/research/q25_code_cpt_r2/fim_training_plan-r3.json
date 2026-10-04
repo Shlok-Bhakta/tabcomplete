@@ -77,7 +77,6 @@
     }
   },
   "evaluation": {
-    "attention_backend": "torch-efficient-sdpa-explicit-kv-repeat-v1",
     "development": "240 synthetic source states; EOS-only, greedy, 96 tokens",
     "fixtures": {
       "causal": {
@@ -213,13 +212,9 @@
     "transformers": "5.17.0",
     "world_size": 1
   },
-  "plan_revision": 4,
+  "plan_revision": 3,
   "preparation_plan_sha256": "460770a6bab77eeecd7b31eb2c8da278c5c29cea98cc872d8fbd36b22a6dc6de",
-  "restart_after_zero_work": {
-    "previous_plan_file": "fim_training_plan-r3.json",
-    "previous_plan_sha256": "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8"
-  },
-  "revision_reason": "Attempt 3 exhausted T4 memory during full-prompt FIM line evaluation. Transformers enables native GQA, which PyTorch 2.11 supports only through Flash or math SDPA; T4 cannot use Flash. Revision 4 repeats KV heads explicitly and requires supported memory-efficient SDPA for evaluation. Both matched arms rerun all evaluations. Model weights, tokenizer, full prompts, source fixtures, scoring, training data and trainer are unchanged. Kernel numerical differences make earlier evaluations historical.",
+  "revision_reason": "CPU preflight before all FIM generations corrected reserved FIM tokens special=False handling and Transformers 5 semantic config normalization; evaluation now explicitly rejects generated FIM control IDs. Revision 3 corrects a CPU-detected source-requirements checksum typo in the runtime report; resolved wheel lock and runtime versions are unchanged. Training examples, weights, tokenizer IDs and fixtures are unchanged.",
   "runtime_revision_reason": "CPT platform actually used Python 3.13.15; new matched arms pin Python 3.11.15 as required. Both arms share the same locked runtime.",
   "schema": "q25-fim-training-plan-v1"
 }

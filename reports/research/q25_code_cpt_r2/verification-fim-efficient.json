@@ -1,0 +1,111 @@
+{
+  "collector_bun": {
+    "failed": 0,
+    "passed": 59
+  },
+  "collector_typecheck": "passed",
+  "cuda_smoke": "not run locally; required before GPU baseline",
+  "gateway_bun": {
+    "failed": 0,
+    "passed": 16
+  },
+  "gateway_typecheck": "passed",
+  "independent_audit": {
+    "attention_prompt_max_tokens": 13699,
+    "blocking_findings": 0,
+    "development_prompt_max_tokens": 899,
+    "focused_tests_passed": 28,
+    "whole_model_gpu_memory_proof": false
+  },
+  "independent_pinned_cpu_verification": "fim_cpu_pinned_runtime_verification.json",
+  "logs": {
+    "collector-tests-fim-efficient.log": {
+      "bytes": 5418,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/collector-tests-fim-efficient.log",
+      "sha256": "ff8807e895b162610ce171d1f19d53dfcbdda5bb6441f31c1e2e7a45e1675361"
+    },
+    "collector-types-fim-efficient.log": {
+      "bytes": 15,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/collector-types-fim-efficient.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    "fim-efficient-focused-root.log": {
+      "bytes": 180,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim-efficient-focused-root.log",
+      "sha256": "fb3fe396dfc86606e2d99f037903477c3255d4c1d328fd6e032d8f13e01d1af3"
+    },
+    "full-pytest-fim-efficient.log": {
+      "bytes": 1769,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/full-pytest-fim-efficient.log",
+      "sha256": "e7cae6f580f53afc1b3efa31dbfc60ae6990d052e977c71cb8841d252ee13f66"
+    },
+    "gateway-tests-fim-efficient.log": {
+      "bytes": 1395,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/gateway-tests-fim-efficient.log",
+      "sha256": "5bb09045804ca618945359fc3e56b512bdffda8c53c91aff9ac5563ba6a0f749"
+    },
+    "gateway-types-fim-efficient.log": {
+      "bytes": 0,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/gateway-types-fim-efficient.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "mypy-fim-efficient.log": {
+      "bytes": 376,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/mypy-fim-efficient.log",
+      "sha256": "6680dadf20a3720dee511b5d5094d823d30a253ac5c1496e9b6510468649e989"
+    },
+    "ruff-fim-efficient.log": {
+      "bytes": 19,
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/ruff-fim-efficient.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  },
+  "mypy": {
+    "source_files": 92,
+    "status": "passed"
+  },
+  "observed_at": "2026-10-04T05:11:07.416029+00:00",
+  "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "pytest": {
+    "environment": "shared Python3.11 environment with existing CPU Torch2.14 via PYTHONPATH",
+    "passed": 1011,
+    "seconds": 91.57,
+    "warnings": 2
+  },
+  "root_focused": {
+    "passed": 140,
+    "seconds": 5.65
+  },
+  "ruff": "passed",
+  "schema": "q25-cpt-verification-v1",
+  "source_files": {
+    "kaggle/q25_code_cpt_r2/run_fim.py": {
+      "bytes": 89486,
+      "sha256": "9b8f35351a2ff5bc0ca87ec49ddec8997a42b3decb27a8020d1b9058b70fd330"
+    },
+    "scripts/evaluate_q25_fim.py": {
+      "bytes": 39011,
+      "sha256": "3b298162006fbc98c84936e95dbf9bda6e877f83d337bb969d7f2628ae1d6303"
+    },
+    "scripts/evaluate_q25_fim_regression.py": {
+      "bytes": 2902,
+      "sha256": "063e79edbd4129de436c11ac5a651272d230b75cdc976c44bff07d5d9b331833"
+    },
+    "src/tinycomplete/eval/q25_fim_attention.py": {
+      "bytes": 5479,
+      "sha256": "dc22ca7ca9eeadde817881bb78be84569a5bac44822b7f59790cd0e31fa14066"
+    },
+    "tests/test_evaluate_q25_fim_regression.py": {
+      "bytes": 3114,
+      "sha256": "e005759bfe106e8e9fb00a74b5b4100f2575b50b3ca843c6286414a18a6cc8a2"
+    },
+    "tests/test_q25_fim_attention.py": {
+      "bytes": 6573,
+      "sha256": "2b264be4567e1a6b10d636703857ef7f953d4dc90212d5b60918c8f8e8c7c0eb"
+    },
+    "tests/test_q25_fim_worker.py": {
+      "bytes": 42023,
+      "sha256": "b608037d527b73a1b039915203b6f778bf979303d7565bfb17e215f1880fce1a"
+    }
+  }
+}

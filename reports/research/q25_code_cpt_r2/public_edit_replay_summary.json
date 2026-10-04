@@ -1,0 +1,131 @@
+{
+  "attribution": "Joseph Gentle; recorded with the VS Code tracker, as stated in the pinned README",
+  "audit_plan_sha256": "d8a472840b4a0f3df544280cccacbc385ab170654635baa25152c2da4924ba1e",
+  "generalization_split_claim": false,
+  "limitations": [
+    "The README calls these real ordered editing traces and says they were recorded by Joseph Gentle with a VS Code tracker.",
+    "Both files use transaction key `time`; the README example labels that field `timestamp`.",
+    "The trace format has text patch offsets and transaction timestamps, not an explicit cursor/selection/undo/acceptance event stream.",
+    "Timestamps are second-resolution per the README; preserve supplied transaction order and do not infer ordering among actions within one timestamp.",
+    "The Rust file trace starts after much of that file was written, per the README.",
+    "Both trace groups share one named recorder, so file-level separation is not an author-held-out split.",
+    "A target patch can describe multi-cursor/refactoring operations and is not equivalent to one completion or one human intent label.",
+    "Each trace begins with one 1970-01-01T00:00:00.000Z time value; its meaning is undocumented, so the report treats it as a sentinel and excludes it from the reported non-sentinel time range."
+  ],
+  "schema": "public_edit_trace_replay_summary_v1",
+  "shared_recorder_across_groups": true,
+  "source_commit": "762fa6c51605c88a05ebe5c4b9d4540caca30b97",
+  "summaries": [
+    {
+      "actions": {
+        "delete": 4924,
+        "insert": 33025,
+        "replace": 2224
+      },
+      "adjacent_equal_timestamps": 25962,
+      "bytes_compressed": 358177,
+      "bytes_uncompressed": 2898995,
+      "deleted_codepoints": 457313,
+      "deleted_length_max": 69106,
+      "deleted_length_min": 0,
+      "distinct_timestamp_values": 11019,
+      "end_content_ascii_only": true,
+      "end_content_codepoints": 65218,
+      "epoch_sentinel_value_count": 1,
+      "exact_ordered_patch_replay_matches_end_content": true,
+      "first_transaction_deleted_codepoints": 0,
+      "first_transaction_inserted_codepoints": 42493,
+      "first_transaction_patch_count": 1,
+      "first_transaction_time_is_epoch_sentinel": true,
+      "inserted_codepoints": 522531,
+      "inserted_length_max": 69106,
+      "inserted_length_min": 0,
+      "max_intermediate_content_codepoints": 133324,
+      "max_patches_in_transaction": 84,
+      "max_transactions_with_same_timestamp": 14,
+      "multi_patch_transactions": 1048,
+      "non_ascii_inserted_codepoints": 12,
+      "observed_timestamp_field": "time",
+      "patches": 40173,
+      "path": "sequential_traces/rustcode.json.gz",
+      "readme_example_timestamp_field": "timestamp",
+      "recording_person_per_readme": "Joseph Gentle",
+      "sha256_compressed": "a13d472b5641dcad18d52882eff8c2d68ecbc27aa0f1e5a17eeb42f0f3130f38",
+      "source_group": "sequential_traces/rustcode.json.gz",
+      "start_content_codepoints": 0,
+      "timestamp_count_by_fractional_digits": {
+        "3": 36981
+      },
+      "timestamp_fraction_forms": {
+        "000Z": 36981
+      },
+      "timestamp_max_utc": "2020-09-28T02:47:49+00:00",
+      "timestamp_max_utc_excluding_epoch_sentinel": "2020-09-28T02:47:49+00:00",
+      "timestamp_min_utc": "1970-01-01T00:00:00+00:00",
+      "timestamp_min_utc_excluding_epoch_sentinel": "2020-09-10T04:23:15+00:00",
+      "timestamp_order_monotonic": true,
+      "timestamp_order_violations": 0,
+      "timestamp_parse_failures": 0,
+      "transactions": 36981
+    },
+    {
+      "actions": {
+        "delete": 1963,
+        "insert": 16522,
+        "replace": 1264
+      },
+      "adjacent_equal_timestamps": 13074,
+      "bytes_compressed": 137864,
+      "bytes_uncompressed": 1239194,
+      "deleted_codepoints": 75533,
+      "deleted_length_max": 12844,
+      "deleted_length_min": 0,
+      "distinct_timestamp_values": 5261,
+      "end_content_ascii_only": true,
+      "end_content_codepoints": 18451,
+      "epoch_sentinel_value_count": 1,
+      "exact_ordered_patch_replay_matches_end_content": true,
+      "first_transaction_deleted_codepoints": 0,
+      "first_transaction_inserted_codepoints": 1406,
+      "first_transaction_patch_count": 1,
+      "first_transaction_time_is_epoch_sentinel": true,
+      "inserted_codepoints": 93984,
+      "inserted_length_max": 14888,
+      "inserted_length_min": 0,
+      "max_intermediate_content_codepoints": 18628,
+      "max_patches_in_transaction": 68,
+      "max_transactions_with_same_timestamp": 15,
+      "multi_patch_transactions": 570,
+      "non_ascii_inserted_codepoints": 0,
+      "observed_timestamp_field": "time",
+      "patches": 19749,
+      "path": "sequential_traces/sveltecomponent.json.gz",
+      "readme_example_timestamp_field": "timestamp",
+      "recording_person_per_readme": "Joseph Gentle",
+      "sha256_compressed": "0393353a1ff0281f4a2adad080b0843bffa7988f9a4869ed04faf0984f78a234",
+      "source_group": "sequential_traces/sveltecomponent.json.gz",
+      "start_content_codepoints": 0,
+      "timestamp_count_by_fractional_digits": {
+        "3": 18335
+      },
+      "timestamp_fraction_forms": {
+        "000Z": 18335
+      },
+      "timestamp_max_utc": "2021-01-23T08:34:19+00:00",
+      "timestamp_max_utc_excluding_epoch_sentinel": "2021-01-23T08:34:19+00:00",
+      "timestamp_min_utc": "1970-01-01T00:00:00+00:00",
+      "timestamp_min_utc_excluding_epoch_sentinel": "2020-10-18T07:27:11+00:00",
+      "timestamp_order_monotonic": true,
+      "timestamp_order_violations": 0,
+      "timestamp_parse_failures": 0,
+      "transactions": 18335
+    }
+  ],
+  "trace_count": 2,
+  "trace_groups": [
+    "sequential_traces/rustcode.json.gz",
+    "sequential_traces/sveltecomponent.json.gz"
+  ],
+  "trace_license": "CC-BY-4.0",
+  "training_examples_created": 0
+}

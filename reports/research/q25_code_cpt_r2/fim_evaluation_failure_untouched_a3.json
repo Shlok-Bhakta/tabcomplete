@@ -1,0 +1,60 @@
+{
+  "attempted_allocation_gib": 9.79,
+  "cause": "Transformers SDPA enables GQA; pinned Torch2.11 restricts native GQA to Flash/math. T4 cannot use Flash, so long prefill falls back to quadratic math attention.",
+  "commit": "0dfedcbf986d93e14b708bf26a1692a2469ca8b6",
+  "completed_development_cases": 240,
+  "completed_line_cases_before_failure": 110,
+  "elapsed_worker_seconds": 674.292505004,
+  "failing_case": "rust/af541fc7d7054c4f6dc5",
+  "failure_reason": "fim_evaluation_failed",
+  "fix_policy": "Explicit equivalent KV-head repetition with supported memory-efficient SDPA. Preserve all prompts, fixtures, scoring, tokens and trainer. New evaluation plan; rerun both matched arms.",
+  "input_tokens": 13699,
+  "kernel": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "monitoring": {
+    "failure_query_state": "ok",
+    "failure_records": 2,
+    "offline_import": {
+      "bundle_sha256": "58cd4a3690d4b36e572c1e05a2e588cd9dbd2075ce737361074403a32474f0a3",
+      "duplicate": false,
+      "imported_spans": 1095,
+      "schema_version": 1
+    },
+    "run_id": "run-6cac47c4-e031-4c49-b911-b4e70bfcfc21",
+    "trace_id": "8cb16c27604e1a6230b02d2f57b83950"
+  },
+  "observed_at": "2026-10-04T04:51:39.688425+00:00",
+  "plan_sha256": "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8",
+  "primary_source": "https://docs.pytorch.org/docs/2.11/generated/torch.nn.functional.scaled_dot_product_attention.html",
+  "quality_outputs_exist_but_historical": true,
+  "raw_artifacts": {
+    "line-input-length-audit.json": {
+      "bytes": 14075,
+      "sha256": "075bd454bf8c55549d10c227299242a8b3689d29357303c348bc568da62e4894"
+    },
+    "monitoring-failures-a3.json": {
+      "bytes": 8256,
+      "sha256": "703c35e22a19592acb5aa25cebee7c28d05d413ff8accb401238d6698d1499aa"
+    },
+    "output-untouched_q25_to_fim-3/q25_fim_r2/logs/eval-before-line.log": {
+      "bytes": 7374,
+      "sha256": "9e27b892aae7b5afd0e9a49ea40554feb711f015007003efb5565efa71aa0f47"
+    },
+    "output-untouched_q25_to_fim-3/q25_fim_r2/worker-status.json": {
+      "bytes": 3543,
+      "sha256": "1145ef3ad2b2f09bcf3c2580dbed43e1ff24006fcb2fed138f47cb478a7a5841"
+    }
+  },
+  "runtime": {
+    "bitsandbytes": "0.50.2",
+    "cuda_runtime": "12.8",
+    "nvidia_shared_library_bytes_reused": 4353932793,
+    "python": "3.11.15",
+    "requirements_lock_sha256": "c84aeaafc81059b2bd4bafd7b8fe819dea93462a7f3423e38246f6e2eae699de",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0"
+  },
+  "schema": "q25-fim-evaluation-failure-v1",
+  "stable_editor_changed": false,
+  "training_input_tokens": 0,
+  "training_started": false
+}

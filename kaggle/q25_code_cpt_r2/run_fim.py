@@ -696,6 +696,7 @@ def verify_plan(plan: dict[str, Any], session: dict[str, Any], files: dict[str, 
     arm_limit = training.get("max_input_tokens")
     runtime = configuration.get("runtime")
     runtime_lock = configuration.get("runtime_lock")
+    attention_backend = evaluation.get("attention_backend")
     if (
         isinstance(max_campaign, bool)
         or not isinstance(max_campaign, int)
@@ -714,6 +715,7 @@ def verify_plan(plan: dict[str, Any], session: dict[str, Any], files: dict[str, 
         or runtime_setup_reserve != 1_800
         or runtime != EXPECTED_RUNTIME
         or not isinstance(runtime_lock, dict)
+        or attention_backend != "torch-efficient-sdpa-explicit-kv-repeat-v1"
         or not _is_sha256(runtime_lock.get("runtime_lock_sha256"))
         or not _is_sha256(runtime_lock.get("requirements_lock_sha256"))
         or runtime_lock.get("bootstrap_uv_version") != "0.12.3"
@@ -1056,6 +1058,34 @@ def _evaluation_command(
     ]
 
 
+def _attention_smoke_command(
+    *,
+    python: Path,
+    model: Path,
+    development: Path,
+    line_suite: Path,
+    output: Path,
+    plan: Path,
+) -> list[str]:
+    return [
+        str(python),
+        str(REPO / "scripts/evaluate_q25_fim.py"),
+        "--attention-smoke",
+        "--model",
+        str(model),
+        "--input",
+        str(development),
+        "--line-input",
+        str(line_suite),
+        "--output",
+        str(output),
+        "--plan",
+        str(plan),
+        "--mode",
+        "development",
+    ]
+
+
 def _regression_commands(
     *,
     python: Path,
@@ -1070,7 +1100,11 @@ def _regression_commands(
             "regression-causal",
             [
                 str(python),
-                str(REPO / "scripts/evaluate_q25_code_cpt.py"),
+                str(REPO / "scripts/evaluate_q25_fim_regression.py"),
+                "--kind",
+                "causal",
+                "--attention-backend",
+                "torch-efficient-sdpa-explicit-kv-repeat-v1",
                 "--model",
                 str(model),
                 "--suite",
@@ -1087,7 +1121,11 @@ def _regression_commands(
             "regression-line",
             [
                 str(python),
-                str(REPO / "scripts/evaluate_causal_line.py"),
+                str(REPO / "scripts/evaluate_q25_fim_regression.py"),
+                "--kind",
+                "line",
+                "--attention-backend",
+                "torch-efficient-sdpa-explicit-kv-repeat-v1",
                 "--model",
                 str(model),
                 "--suite",
@@ -1887,6 +1925,66 @@ class Worker:
                 != 0
             ):
                 raise WorkerError("trainer_preflight_failed")
+
+            smoke_output = self.out / "attention-smoke"
+            smoke_command = _attention_smoke_command(
+                python=self.python311,
+                model=model,
+                development=paths["development.jsonl"],
+                line_suite=paths["line180.jsonl"],
+                output=smoke_output,
+                plan=plan_path,
+            )
+            if (
+                self.run_stage(
+                    smoke_command,
+                    "attention-smoke",
+                    env=env,
+                    reserve_seconds=MINIMUM_FINAL_RESERVE_SECONDS,
+                )
+                != 0
+            ):
+                raise WorkerError("fim_attention_smoke_failed")
+            smoke_path = smoke_output / "attention-smoke.json"
+            smoke_report = _read_json(smoke_path, "fim_attention_smoke_report_invalid")
+            smoke_tokens = smoke_report.get("query_tokens")
+            smoke_peak_bytes = smoke_report.get("peak_allocated_bytes")
+            if (
+                smoke_report.get("schema") != "q25-fim-attention-smoke-v1"
+                or smoke_report.get("attention_backend")
+                != "torch-efficient-sdpa-explicit-kv-repeat-v1"
+                or smoke_report.get("key_value_head_expansion") != "explicit-repeat"
+                or smoke_report.get("plan_sha256") != self.session["plan_sha256"]
+                or smoke_report.get("success") is not True
+                or isinstance(smoke_tokens, bool)
+                or not isinstance(smoke_tokens, int)
+                or smoke_tokens < 1
+                or smoke_report.get("query_heads") != 14
+                or smoke_report.get("key_value_heads") != 2
+                or smoke_report.get("head_dim") != 64
+                or smoke_report.get("dtype") != "float16"
+                or not isinstance(smoke_report.get("cuda_device"), str)
+                or not smoke_report["cuda_device"]
+                or isinstance(smoke_peak_bytes, bool)
+                or not isinstance(smoke_peak_bytes, int)
+                or smoke_peak_bytes < 0
+                or smoke_report.get("dense_fp32_attention_score_bytes")
+                != smoke_tokens * smoke_tokens * 14 * 4
+            ):
+                raise WorkerError("fim_attention_smoke_evidence_mismatch")
+            self.status["attention_smoke"] = {
+                "sha256": sha256_file(smoke_path),
+                "query_tokens": smoke_tokens,
+                "query_heads": 14,
+                "key_value_heads": 2,
+                "head_dim": 64,
+                "key_value_head_expansion": "explicit-repeat",
+                "peak_allocated_bytes": smoke_peak_bytes,
+                "dense_fp32_attention_score_bytes": smoke_report[
+                    "dense_fp32_attention_score_bytes"
+                ],
+            }
+            self.save_status()
 
             alias = "untouched-q25" if arm == TRAIN_ARM else "completed-cpt-q25"
             before_started = time.monotonic()

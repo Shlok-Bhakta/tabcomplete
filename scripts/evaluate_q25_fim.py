@@ -24,6 +24,11 @@ from tinycomplete.eval.code_generation import (
     file_sha256,
     generate_predictions,
 )
+from tinycomplete.eval.q25_fim_attention import (
+    ATTENTION_BACKEND,
+    install_q25_fim_attention,
+    registered_sdpa_forward,
+)
 from tinycomplete.observability.bootstrap import current_runtime
 from tinycomplete.observability.context import RunContext
 from tinycomplete.observability.runs import run_scope
@@ -563,7 +568,15 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
 
 
 class StrictFimProvider(TransformersGenerationProvider):
-    def __init__(self, model_path: str, *, newline_stop: bool, evidence_path: Path) -> None:
+    def __init__(
+        self,
+        model_path: str,
+        *,
+        newline_stop: bool,
+        evidence_path: Path,
+        attention_backend: str,
+    ) -> None:
+        install_q25_fim_attention(attention_backend)
         super().__init__(model_path, device="cuda:0")
         self.newline_stop = newline_stop
         self.evidence: dict[str, dict[str, Any]] = {}
@@ -626,6 +639,94 @@ class StrictFimProvider(TransformersGenerationProvider):
         )
 
 
+def _attention_smoke(
+    *,
+    model_path: Path,
+    development_path: Path,
+    line_path: Path,
+    output_path: Path,
+    plan_sha256: str,
+) -> dict[str, Any]:
+    """Require the selected CUDA kernel on a synthetic tensor sized to real prompts."""
+    import torch
+    from transformers import AutoTokenizer
+
+    if not torch.cuda.is_available():
+        raise RuntimeError("FIM attention smoke requires CUDA")
+    if not model_path.is_dir() or not (model_path / "tokenizer.json").is_file():
+        raise ValueError("FIM attention smoke requires the attached local tokenizer")
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path,
+        trust_remote_code=False,
+        local_files_only=True,
+    )
+    development_rows = [
+        json.loads(line) for line in development_path.read_text().splitlines() if line.strip()
+    ]
+    line_rows = [json.loads(line) for line in line_path.read_text().splitlines() if line.strip()]
+    if not development_rows or not line_rows:
+        raise ValueError("FIM attention smoke fixtures must both be nonempty")
+    development_lengths = [int(row["prompt_tokens"]) for row in development_rows]
+    line_lengths = [
+        len(
+            tokenizer.encode(
+                format_psm(row["source_before"], row["source_after"]),
+                add_special_tokens=False,
+            )
+        )
+        for row in line_rows
+    ]
+    max_prompt_tokens = max(*development_lengths, *line_lengths)
+    if max_prompt_tokens < 1:
+        raise ValueError("FIM attention smoke found an empty prompt")
+
+    install_q25_fim_attention(ATTENTION_BACKEND)
+    device = torch.device("cuda:0")
+    torch.cuda.reset_peak_memory_stats(device)
+    query = torch.zeros((1, 14, max_prompt_tokens, 64), dtype=torch.float16, device=device)
+    key = torch.zeros((1, 2, max_prompt_tokens, 64), dtype=torch.float16, device=device)
+    value = torch.zeros_like(key)
+    output, weights = registered_sdpa_forward()(
+        SimpleNamespace(num_key_value_groups=7, is_causal=True),
+        query,
+        key,
+        value,
+        None,
+        dropout=0.0,
+        scaling=64**-0.5,
+        is_causal=True,
+    )
+    torch.cuda.synchronize(device)
+    expected_shape = (1, max_prompt_tokens, 14, 64)
+    if (
+        tuple(output.shape) != expected_shape
+        or weights is not None
+        or not bool(torch.isfinite(output).all().item())
+    ):
+        raise RuntimeError("FIM efficient SDPA smoke returned an unexpected result")
+    report = {
+        "schema": "q25-fim-attention-smoke-v1",
+        "attention_backend": ATTENTION_BACKEND,
+        "key_value_head_expansion": "explicit-repeat",
+        "plan_sha256": plan_sha256,
+        "success": True,
+        "query_tokens": max_prompt_tokens,
+        "query_heads": 14,
+        "key_value_heads": 2,
+        "head_dim": 64,
+        "dtype": "float16",
+        "cuda_device": torch.cuda.get_device_name(device),
+        "peak_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
+        "dense_fp32_attention_score_bytes": max_prompt_tokens * max_prompt_tokens * 14 * 4,
+        "development_cases": len(development_rows),
+        "line_cases": len(line_rows),
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path)
@@ -634,6 +735,8 @@ def main() -> None:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--alias")
     parser.add_argument("--mode", choices=("development", "line"), required=True)
+    parser.add_argument("--attention-smoke", action="store_true")
+    parser.add_argument("--line-input", type=Path)
     parser.add_argument("--source-syntax", action="store_true")
     parser.add_argument("--predictions", type=Path)
     parser.add_argument("--parent-cpt-plan", type=Path)
@@ -643,19 +746,38 @@ def main() -> None:
         print(json.dumps(summary, sort_keys=True))
         current_runtime().shutdown()
         return
-    if args.model is None or args.alias is None:
-        parser.error("GPU FIM evaluation requires --model and --alias")
-    if not args.model.is_dir() or not (args.model / "model.safetensors").is_file():
-        raise ValueError("FIM evaluation requires existing local weights; downloads are forbidden")
     plan = json.loads(args.plan.read_text())
     if plan.get("schema") != "q25-fim-training-plan-v1":
         raise ValueError("a frozen FIM training/evaluation plan is required")
+    evaluation = plan.get("evaluation")
+    if not isinstance(evaluation, dict) or evaluation.get("attention_backend") != ATTENTION_BACKEND:
+        raise ValueError("frozen FIM plan does not bind the supported attention backend")
     expected = (
         plan["data"]["development"]["sha256"] if args.mode == "development" else LINE_SUITE_SHA
     )
     if file_sha256(args.input) != expected:
         raise ValueError("FIM evaluation input identity differs")
     rows = [json.loads(line) for line in args.input.read_text().splitlines() if line.strip()]
+    if args.attention_smoke:
+        if args.mode != "development" or args.line_input is None or args.model is None:
+            parser.error("attention smoke requires development input, line input, and local model")
+        line_identity = evaluation.get("fixtures", {}).get("line", {}).get("sha256")
+        if file_sha256(args.line_input) != line_identity:
+            raise ValueError("FIM attention smoke line input identity differs")
+        report = _attention_smoke(
+            model_path=args.model,
+            development_path=args.input,
+            line_path=args.line_input,
+            output_path=args.output / "attention-smoke.json",
+            plan_sha256=file_sha256(args.plan),
+        )
+        print(json.dumps(report, sort_keys=True))
+        current_runtime().shutdown()
+        return
+    if args.model is None or args.alias is None:
+        parser.error("GPU FIM evaluation requires --model and --alias")
+    if not args.model.is_dir() or not (args.model / "model.safetensors").is_file():
+        raise ValueError("FIM evaluation requires existing local weights; downloads are forbidden")
     if args.mode == "line" and len(rows) != 180:
         raise ValueError("the unchanged line suite must contain 180 cases")
     if args.mode == "development" and len(rows) != plan["data"]["development"]["row_count"]:
@@ -664,6 +786,7 @@ def main() -> None:
         str(args.model),
         newline_stop=args.mode == "line",
         evidence_path=args.output / "token_evidence.jsonl",
+        attention_backend=ATTENTION_BACKEND,
     )
     if (
         type(provider.model).__name__ != "Qwen2ForCausalLM"
@@ -694,6 +817,9 @@ def main() -> None:
     metadata.update(
         plan_sha256=file_sha256(args.plan),
         tokenizer_sha256=file_sha256(args.model / "tokenizer.json"),
+        attention_backend=ATTENTION_BACKEND,
+        key_value_head_expansion="explicit-repeat",
+        attention_heads={"query": 14, "key_value": 2, "head_dim": 64},
         precision="fp16",
         runtime_revision=str(provider.torch.__version__),
         model_inventory={

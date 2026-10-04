@@ -203,10 +203,11 @@ def _write_bundle(
             }
         },
         "evaluation": {
+            "attention_backend": "torch-efficient-sdpa-explicit-kv-repeat-v1",
             "fixtures": {
                 "causal": {"sha256": hashes["causal200.jsonl"]},
                 "line": {"sha256": hashes["line180.jsonl"]},
-            }
+            },
         },
     }
     plan_bytes = json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
@@ -808,6 +809,28 @@ def test_frozen_bundle_accepts_bound_files_and_rejects_hash_mismatch(tmp_path: P
     assert error.value.reason == "input_file_hash_or_size_mismatch"
 
 
+def test_raw_regressions_use_the_fim_attention_wrapper() -> None:
+    module = _load_worker()
+    paths = {
+        "causal200.jsonl": Path("/frozen/causal200.jsonl"),
+        "line180.jsonl": Path("/frozen/line180.jsonl"),
+    }
+    commands = module._regression_commands(
+        python=Path("/runtime/python"),
+        model=Path("/model"),
+        paths=paths,
+        output=Path("/output"),
+        plan_sha256="a" * 64,
+        alias="untouched-q25-after-fim",
+    )
+    assert [name for name, _ in commands] == ["regression-causal", "regression-line"]
+    for _, command in commands:
+        assert command[1].endswith("evaluate_q25_fim_regression.py")
+        assert command[command.index("--attention-backend") + 1] == (
+            "torch-efficient-sdpa-explicit-kv-repeat-v1"
+        )
+
+
 @pytest.mark.parametrize(
     "mutation,expected_reason",
     [
@@ -983,6 +1006,29 @@ def test_execute_persists_training_boundary_and_forwards_global_token_carry(
             "tinycomplete.code_cpt.q25_fim",
         ]:
             startup_status = json.loads((output / "worker-status.json").read_text())
+        if "--attention-smoke" in command:
+            result_dir = Path(command[command.index("--output") + 1])
+            result_dir.mkdir(parents=True, exist_ok=True)
+            tokens = 77
+            smoke_report = {
+                "schema": "q25-fim-attention-smoke-v1",
+                "attention_backend": "torch-efficient-sdpa-explicit-kv-repeat-v1",
+                "key_value_head_expansion": "explicit-repeat",
+                "plan_sha256": session["plan_sha256"],
+                "success": True,
+                "query_tokens": tokens,
+                "query_heads": 14,
+                "key_value_heads": 2,
+                "head_dim": 64,
+                "dtype": "float16",
+                "cuda_device": "Mock T4",
+                "peak_allocated_bytes": 1024,
+                "dense_fp32_attention_score_bytes": tokens * tokens * 14 * 4,
+            }
+            (result_dir / "attention-smoke.json").write_text(
+                json.dumps(smoke_report) + "\n", encoding="utf-8"
+            )
+            return SimpleNamespace(returncode=0)
         if "--mode" in command and "--output" in command:
             result_dir = Path(command[command.index("--output") + 1])
             result_dir.mkdir(parents=True, exist_ok=True)
@@ -1002,6 +1048,7 @@ def test_execute_persists_training_boundary_and_forwards_global_token_carry(
     assert worker.status["commit"] == session["commit"]
     assert worker.status["attempt"] == session["attempt"]
     assert worker.status["training_started"] is training_expected
+    assert worker.status["attention_smoke"]["query_tokens"] == 77
     assert startup_status is not None
     assert startup_status["training_started"] is False
     assert startup_status["commit"] == session["commit"]

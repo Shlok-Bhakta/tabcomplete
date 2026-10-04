@@ -174,3 +174,46 @@ Its zero-work receipt is `fim-verified-untouched_q25_to_fim-2.json`; no FIM
 training occurred. Fix/test explicit native uv invocation before attempt 3.
 Use attempt 3 with `--resume-source shlokbhakta/tc-q25-fim-r2-0-a2`, not the
 older attempt. The inherited checkpoint source remains null.
+
+## FIM evaluator revision 4
+
+Attempt 3 reached the pinned Python 3.11.15 runtime and completed 240
+unadapted development cases. Full line case 111, Rust
+`rust/af541fc7d7054c4f6dc5`, has 13,699 input tokens. Native GQA made
+PyTorch 2.11 use math attention on the SM75 T4, materializing a 9.79 GiB
+FP32 score tensor and exhausting memory. The worker stopped after 674.293
+seconds with persisted `training_started=false`; no training tokens were spent.
+The failed run and trace were imported and queried in SigNoz. Details are in
+`fim_evaluation_failure_untouched_a3.json`.
+
+Revision 4 freezes explicit KV-head repetition plus supported memory-efficient
+SDPA for evaluation. It preserves full prompts, source fixtures, targets,
+scoring, model/tokenizer, ordered training examples and trainer settings.
+Earlier evaluation outputs remain historical; both arms rerun their comparisons.
+`fim_training_plan-r3.json` preserves the old plan. The private input dataset
+is now `shlokbhakta/tabcomplete-q25-fim-r2-inputs-r4`. Do not reuse the old
+input manifest or claim that a numerical backend change is identical execution.
+
+Attempt 4 must use `--resume-source shlokbhakta/tc-q25-fim-r2-0-a3` for
+authorization lineage, while the actual checkpoint source remains null. The
+runner permits this evaluator-only revision only after validating the exact
+archived plan and an explicit zero-work receipt. Changed training, prompts,
+fixtures, scoring, processed tokens or carried checkpoint state fail closed.
+Refresh live quota and run all gates before allocating. The three failed FIM
+allocations still reserve their full three-hour limits in the shared ledger.
+
+The detached completion preview prototype is commit `703fdf2` on
+`prototype/q25-fim-preview-r1`, in the separate preview worktree. Its Rust and
+Lua adapters are tested, but have no serving route or deployment. Actual
+terminal token ID 151643, complete special-token inventory and selected artifact
+identity must be bound before integration. Do not serve FIM weights as the old
+N/R next-edit protocol.
+
+The latest ThinkPad SSH attempt timed out. No new target deployment or hardware
+measurement was performed. Read-only feedback export observed 284 proposal
+records across 88 sessions, eight collection-gap intervals and zero defensible
+preference pairs. The private export stays outside Git. Counts mix synthetic
+and other records and do not establish human acceptance. Personalization stays
+disabled. Public single-recorder Rust/Svelte traces replayed exactly but lack
+cursor/intent evidence; use them as mechanics fixtures, not training-ready
+human preference data.

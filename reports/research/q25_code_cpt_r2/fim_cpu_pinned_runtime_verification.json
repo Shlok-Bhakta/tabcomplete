@@ -1,0 +1,61 @@
+{
+  "cuda_validation": false,
+  "fixture_model": "random tiny Qwen2 for implementation checks only",
+  "focused_tests_passed": 54,
+  "model_quality_evidence": false,
+  "new_model_downloads": false,
+  "observed_at": "2026-10-04T05:15:33.680617+00:00",
+  "runtime": {
+    "python": "3.11.15",
+    "torch": "2.11.0+cpu",
+    "transformers": "5.17.0"
+  },
+  "schema": "q25-fim-cpu-runtime-validation-v1",
+  "source_files": {
+    "kaggle/q25_code_cpt_r2/run_fim.py": {
+      "bytes": 89486,
+      "sha256": "9b8f35351a2ff5bc0ca87ec49ddec8997a42b3decb27a8020d1b9058b70fd330"
+    },
+    "scripts/evaluate_q25_fim.py": {
+      "bytes": 39011,
+      "sha256": "3b298162006fbc98c84936e95dbf9bda6e877f83d337bb969d7f2628ae1d6303"
+    },
+    "scripts/evaluate_q25_fim_regression.py": {
+      "bytes": 2902,
+      "sha256": "063e79edbd4129de436c11ac5a651272d230b75cdc976c44bff07d5d9b331833"
+    },
+    "src/tinycomplete/eval/q25_fim_attention.py": {
+      "bytes": 5479,
+      "sha256": "dc22ca7ca9eeadde817881bb78be84569a5bac44822b7f59790cd0e31fa14066"
+    },
+    "tests/test_evaluate_q25_fim_regression.py": {
+      "bytes": 3114,
+      "sha256": "e005759bfe106e8e9fb00a74b5b4100f2575b50b3ca843c6286414a18a6cc8a2"
+    },
+    "tests/test_q25_fim_attention.py": {
+      "bytes": 6573,
+      "sha256": "2b264be4567e1a6b10d636703857ef7f953d4dc90212d5b60918c8f8e8c7c0eb"
+    },
+    "tests/test_q25_fim_worker.py": {
+      "bytes": 42023,
+      "sha256": "b608037d527b73a1b039915203b6f778bf979303d7565bfb17e215f1880fce1a"
+    }
+  },
+  "temporary_runtime": {
+    "added_distributions": [
+      "torch",
+      "jinja2",
+      "markupsafe",
+      "mpmath",
+      "networkx",
+      "setuptools",
+      "sympy"
+    ],
+    "other_user_environments_models_checkpoints_preserved": true,
+    "regular_file_bytes": 742039091,
+    "remaining_worktree_venv_regular_bytes": 337554123,
+    "removed_same_seven_distributions": true,
+    "shared_caches_preserved": true,
+    "worktree_venv_torch_import_absent_after_cleanup": true
+  }
+}

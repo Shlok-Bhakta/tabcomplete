@@ -1,0 +1,47 @@
+{
+  "artifact_cap_bytes": 12884901888,
+  "completed_cpt_input_tokens": 7872512,
+  "completed_cpt_updates": 481,
+  "current_fim_attempt": 3,
+  "current_fim_input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
+  "current_fim_kernel": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "current_fim_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "current_fim_status": "ERROR before training; full line evaluation OOM",
+  "first_three_fim_attempts": "verified no_training_executed; zero training tokens",
+  "first_two_fim_attempts": "verified no_training_executed; zero training tokens",
+  "last_authenticated_quota": {
+    "observed_at": "2026-10-04T04:23:00.027759+00:00",
+    "remaining": 42.67,
+    "renewal": "2026-10-10T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "units": "Kaggle account GPU-hours"
+  },
+  "last_verification": {
+    "environment": "shared Python3.11 environment with existing CPU Torch2.14 via PYTHONPATH",
+    "passed": 1011,
+    "seconds": 91.57,
+    "warnings": 2
+  },
+  "local_artifact_bytes": 4409549561,
+  "next_attempt": 4,
+  "next_attempt_authorization_lineage": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "next_attempt_checkpoint_source": null,
+  "next_steps": [
+    "Freeze explicit memory-efficient evaluation revision; preserve all source fixtures and full prompts",
+    "Verify actual T4 backend before retry training",
+    "Complete matched arms and compare development + general code regression",
+    "Convert only a supported selected candidate"
+  ],
+  "observed_at": "2026-10-04T05:11:07.416852+00:00",
+  "personalization_enabled": false,
+  "schema": "q25-cpt-current-state-v1",
+  "stable_editor_modified_by_campaign": false,
+  "thinkpad_access": {
+    "attempted": true,
+    "configured_alias": "thinkpad",
+    "connected": false,
+    "new_installation": false,
+    "new_laptop_measurement": false,
+    "observed_at": "2026-10-04T05:02:17.362852+00:00"
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "arm": "untouched_q25_to_fim",
+  "attempt": 3,
+  "authorization_lineage_reference": "shlokbhakta/tc-q25-fim-r2-0-a2",
+  "commit": "0dfedcbf986d93e14b708bf26a1692a2469ca8b6",
+  "conservative_reserved_session_seconds": 10800,
+  "external_campaign_tokens": 7872512,
+  "input_manifest_sha256": "ce4fa9594748ad8f18ba7209906710b223df671946adfd2a3580b5abd5cdc8da",
+  "other_phase_tokens": 7872512,
+  "own_discarded_tokens": 0,
+  "plan_sha256": "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8",
+  "processed_arm_token_reservation": 6291456,
+  "quota": {
+    "active_jobs": [],
+    "job_statuses": [
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a2",
+        "status": "shlokbhakta/tc-q25-fim-r2-0-a2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a1",
+        "status": "shlokbhakta/tc-q25-fim-r2-0-a1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+        "status": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tc-public-functional-3e5-v2",
+        "status": "shlokbhakta/tc-public-functional-3e5-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tc-public-functional-1e5-v2",
+        "status": "shlokbhakta/tc-public-functional-1e5-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-disposable-fixture-v5",
+        "status": "shlokbhakta/tabcomplete-disposable-fixture-v5 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-disposable-fixture-v4",
+        "status": "shlokbhakta/tabcomplete-disposable-fixture-v4 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-disposable-fixture-v2",
+        "status": "shlokbhakta/tabcomplete-disposable-fixture-v2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-final has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1",
+        "status": "shlokbhakta/tabcomplete-sweep-comparison-r1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry",
+        "status": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1",
+        "status": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-r1-conversion has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-heldout",
+        "status": "shlokbhakta/tabcomplete-r1-heldout has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+        "status": "shlokbhakta/tabcomplete-r1-lfm-q4-retry has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening",
+        "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-context",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-context has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-evaluation",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-evaluation has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-filtered has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-standard has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+        "status": "shlokbhakta/tabcomplete-model-data-r2-baseline has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-long-context-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-campaign-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-resume-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-smoke-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare-r1 has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "shlokbhakta/tabcomplete-code-cpt-bench has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "unknown",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-10-04T04:23:35.656896+00:00"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "shlokbhakta/tabcomplete-code-cpt-stage1 has status \"KernelWorkerStatus.ERROR\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "shlokbhakta/tabcomplete-code-cpt-prepare has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "shlokbhakta/tabcomplete-code-cpt-access has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "shlokbhakta/tabcomplete-lora-smoke has status \"KernelWorkerStatus.COMPLETE\""
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/notebookd2edcfa65c",
+        "status": "unknown",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-10-04T04:23:35.656896+00:00"
+      }
+    ],
+    "observed_at": "2026-10-04T04:23:00.027759+00:00",
+    "remaining": 42.67,
+    "renewal": "2026-10-10T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 2.33
+  },
+  "reference": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "requested_reference": "shlokbhakta/tc-q25-fim-r2-0-a3",
+  "resume_identity": null,
+  "resume_source": null,
+  "session_seconds": 10800,
+  "status": "submitted",
+  "submission_response": "Kernel version 1 successfully pushed.  Please check progress at https://www.kaggle.com/code/shlokbhakta/tc-q25-fim-r2-0-a3",
+  "submitted_at": "2026-10-04T04:23:37.019634+00:00"
+}

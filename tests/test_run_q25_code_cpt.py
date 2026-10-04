@@ -1983,6 +1983,103 @@ def test_submit_fim_zero_work_retry_authorizes_prior_but_restarts_from_baseline(
     assert "'resume_source': None" in session_source
 
 
+def _retry_plan_revision(tmp_path, monkeypatch):
+    monkeypatch.setattr(campaign, "REPORT", tmp_path)
+    old = {
+        "plan_revision": 3,
+        "configuration": {"training": "unchanged"},
+        "evaluation": {"attention_backend": "automatic"},
+    }
+    campaign.save(tmp_path / "fim_training_plan-r3.json", old)
+    previous_sha = campaign.digest(tmp_path / "fim_training_plan-r3.json")
+    plan = {
+        **old,
+        "plan_revision": 4,
+        "evaluation": {"attention_backend": "memory-efficient"},
+        "restart_after_zero_work": {
+            "previous_plan_sha256": previous_sha,
+            "previous_plan_file": "fim_training_plan-r3.json",
+        },
+    }
+    campaign.save(tmp_path / "fim_training_plan.json", plan)
+    prior = {"plan_sha256": previous_sha, "resume_source": None, "resume_identity": None}
+    verified = {
+        "no_training_executed": True,
+        "training_status": "no_training_executed",
+        "processed_arm_input_tokens_conservative": 0,
+        "own_discarded_tokens_for_resume": 0,
+        "carried_checkpoint_source": None,
+        "carried_checkpoint_identity": None,
+        "carried_checkpoint_verified": False,
+    }
+    return plan, prior, verified
+
+
+def test_submit_fim_changed_evaluator_restarts_only_zero_work(tmp_path, monkeypatch):
+    plan, report, artifacts, _quota_calls, _cli_calls = _fim_submission_context(
+        tmp_path, monkeypatch
+    )
+    arm = campaign.FIM_ARMS[0]
+    old_sha = campaign.digest(report / "fim_training_plan.json")
+    campaign.save(report / "fim_training_plan-r3.json", plan)
+    prior = "owner/failed-old-evaluation"
+    _record_zero_work_retry(
+        report,
+        arm,
+        attempt=1,
+        reference=prior,
+        plan_sha=old_sha,
+        input_sha=campaign.digest(artifacts / "fim/input-bundle/input-manifest.json"),
+        commit="c" * 40,
+    )
+    plan.update(
+        {
+            "plan_revision": 4,
+            "evaluation": {"attention_backend": "memory-efficient"},
+            "restart_after_zero_work": {
+                "previous_plan_sha256": old_sha,
+                "previous_plan_file": "fim_training_plan-r3.json",
+            },
+        }
+    )
+    campaign.save(report / "fim_training_plan.json", plan)
+    job = campaign.submit_fim(plan, arm=arm, attempt=2, cpt_attempt=1, resume_source=prior)
+    assert job["plan_sha256"] == campaign.digest(report / "fim_training_plan.json")
+    assert job["plan_sha256"] != old_sha
+    assert job["authorization_lineage_reference"] == prior
+    assert job["resume_source"] is None
+    assert job["resume_identity"] is None
+    source = (artifacts / f"fim/kernel-{arm}-2/run.py").read_text()
+    assert "'resume_source': None" in source
+
+
+def test_fim_evaluation_revision_can_restart_verified_zero_work(tmp_path, monkeypatch):
+    plan, prior, verified = _retry_plan_revision(tmp_path, monkeypatch)
+    campaign.validate_fim_retry_plan(plan, prior, verified)
+
+
+@pytest.mark.parametrize(
+    "change", ["tokens", "checkpoint", "training", "history", "path", "prompt"]
+)
+def test_fim_evaluation_revision_cannot_resume_changed_training(tmp_path, monkeypatch, change):
+    plan, prior, verified = _retry_plan_revision(tmp_path, monkeypatch)
+    if change == "tokens":
+        verified["processed_arm_input_tokens_conservative"] = 1
+    elif change == "checkpoint":
+        prior["resume_source"] = "owner/checkpoint"
+    elif change == "training":
+        plan["configuration"] = {"training": "changed"}
+    elif change == "history":
+        (tmp_path / "fim_training_plan-r3.json").write_text("{}")
+    elif change == "prompt":
+        plan["evaluation"]["prompt"] = "different prompt"
+    else:
+        plan["restart_after_zero_work"]["previous_plan_file"] = "../outside.json"
+    campaign.save(tmp_path / "fim_training_plan.json", plan)
+    with pytest.raises(ValueError):
+        campaign.validate_fim_retry_plan(plan, prior, verified)
+
+
 def test_submit_fim_zero_work_retry_inherits_only_the_prior_verified_checkpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

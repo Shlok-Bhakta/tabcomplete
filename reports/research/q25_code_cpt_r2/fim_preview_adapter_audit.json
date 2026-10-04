@@ -1,0 +1,20 @@
+{
+  "author_verification": {
+    "lua_tests_passed": 84,
+    "rust_tests_passed": 27,
+    "rustfmt": "passed"
+  },
+  "branch": "prototype/q25-fim-preview-r1",
+  "commit": "703fdf2",
+  "independent_review": "No concrete Unicode, region, CRLF/LF/EOF, empty-buffer, cap or control-token decoder error found.",
+  "remaining_serving_requirements": [
+    "Bind actual selected weight SHA to Rust caller validation",
+    "Bind response to exact prepared prompt/context digest and request identity",
+    "Declare separate FIM profile allowing96 EOS-inclusive output steps rather than old64-token protocol",
+    "Use complete token inventory from the exact hashed tokenizer",
+    "Add SSE route, declarative variant and end-to-end actual selected-model tests only after measured selection"
+  ],
+  "schema": "q25-fim-preview-detached-audit-v1",
+  "stable_deployment_changed": false,
+  "status": "detached adapter tested; no serving integration or deployment"
+}

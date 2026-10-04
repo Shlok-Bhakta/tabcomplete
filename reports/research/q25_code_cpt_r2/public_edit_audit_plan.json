@@ -1,0 +1,64 @@
+{
+  "allowed_downloads": [
+    {
+      "bytes": 10012,
+      "git_blob_sha1": "47866c63dc73d978c3fe92e627e517fcc67116a9",
+      "path": "sequential_traces/README.md",
+      "purpose": "pinned format, provenance, and license documentation",
+      "url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/README.md"
+    },
+    {
+      "bytes": 358177,
+      "git_blob_sha1": "c19ecfd71ef5587ad672dcf3c4cb61d12bbc2f5e",
+      "path": "sequential_traces/rustcode.json.gz",
+      "purpose": "real sequential edit trace, Rust file",
+      "url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/rustcode.json.gz"
+    },
+    {
+      "bytes": 137864,
+      "git_blob_sha1": "9ccb0933516f04832725bfee4d66a89aa4bab04b",
+      "path": "sequential_traces/sveltecomponent.json.gz",
+      "purpose": "real sequential edit trace, Svelte component",
+      "url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/sveltecomponent.json.gz"
+    }
+  ],
+  "audit_method": {
+    "chronology": "preserve transaction order; parse available ISO timestamps; measure monotonicity and timestamp resolution without sorting or inventing within-second order",
+    "decode": "gzip-decompress within the per-trace cap; parse JSON in memory and never emit raw source text",
+    "grouping": "keep each source file as a distinct group; note both traces share the same named recorder/author; do not create train/dev/test splits or claim author-held-out evaluation",
+    "integrity": "verify exact byte count and Git blob SHA-1 before parsing; compute SHA-256 after download",
+    "replay": "start at startContent; apply txn patches in stored order using Unicode codepoint offsets; verify descending positions within multi-patch transactions and exact endContent reconstruction",
+    "summaries_only": [
+      "transaction counts",
+      "patch counts",
+      "insert/delete/replace counts and lengths",
+      "timestamp range and monotonicity",
+      "source and resulting codepoint counts",
+      "replay pass/fail"
+    ]
+  },
+  "decompressed_limit_per_trace_bytes": 33554432,
+  "download_limit_bytes": 506053,
+  "explicit_limits": [
+    "Do not infer cursor position, selection, hesitation, undo/redo, acceptance, or developer intent beyond the recorded text patches and timestamps.",
+    "A patch stream is an ordered text-edit trace, not a complete IDE event log or a model-ready next-edit benchmark.",
+    "Do not train, upload, or use these traces as evaluation examples in this audit.",
+    "Do not download any other repository files or dataset releases."
+  ],
+  "outputs": [
+    "audit_plan.json",
+    "audit_plan.sha256",
+    "integrity_manifest.json",
+    "replay_summary.json"
+  ],
+  "schema": "public_edit_trace_audit_plan_v1",
+  "source": {
+    "attribution": "Joseph Gentle; recorded with the VS Code tracker, as stated in the pinned README",
+    "commit": "762fa6c51605c88a05ebe5c4b9d4540caca30b97",
+    "commit_url": "https://github.com/josephg/editing-traces/tree/762fa6c51605c88a05ebe5c4b9d4540caca30b97",
+    "documentation_path": "sequential_traces/README.md",
+    "license_for_selected_traces": "CC-BY-4.0",
+    "readme_url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/README.md",
+    "repository": "josephg/editing-traces"
+  }
+}

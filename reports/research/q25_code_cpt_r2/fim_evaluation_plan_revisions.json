@@ -1,0 +1,15 @@
+[
+  {
+    "evaluation_numeric_backend_changed": true,
+    "new_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+    "observed_at": "2026-10-04T04:55:48.390971+00:00",
+    "previous_plan_sha256": "ce721f444b15346a2dc4bb1ffa3c80204f36a1934a9c040241475c8227c7d1d8",
+    "prior_development_and_partial_line_outputs_retained": true,
+    "reason": "Full 13699-token benchmark prefill exhausted memory under T4/native-GQA/math SDPA. Explicit KV repetition permits supported efficient attention without prompt truncation.",
+    "requires_fresh_evaluations_for_both_arms": true,
+    "reused_comparison_outputs": false,
+    "training_input_tokens_under_previous_plan": 0,
+    "training_model_tokenizer_examples_order_targets_fixtures_scoring_unchanged": true,
+    "training_started_under_previous_plan": false
+  }
+]

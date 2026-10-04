@@ -1,0 +1,80 @@
+{
+  "audit_mode": "read-only existing artifacts; no source text export, downloads, model calls or training",
+  "automatic_personalization_enabled": false,
+  "collector": {
+    "content_exported": false,
+    "defensible_pairs": 0,
+    "proposal_records": 284,
+    "sessions": 88
+  },
+  "decision": "Do not add another next-edit SFT from audited data; finish matched FIM first.",
+  "existing_q25_action_adaptation": {
+    "observed_editor_intent": false,
+    "synthetic_actions": {
+      "delete": 1024,
+      "insert": 1024,
+      "no_edit": 1024,
+      "replace": 1024
+    },
+    "synthetic_development": 1024,
+    "synthetic_heldout": 1024,
+    "train_input_tokens": 664948,
+    "train_states": 4096,
+    "updates": 256
+  },
+  "instinct_pilot": {
+    "converted_development_rows": 210,
+    "converted_train_rows": 720,
+    "dataset": "continuedev/instinct-data",
+    "dataset_card_license": "Apache-2.0",
+    "development_actions": {
+      "delete": 19,
+      "insert": 9,
+      "no_edit": 0,
+      "replace": 182
+    },
+    "development_paths": 20,
+    "intermediate_history_reconstruction_verified": false,
+    "native_test_split": "sealed, not fetched",
+    "previous_deletions_exact": 0,
+    "previous_development_denominator": 210,
+    "previous_development_exact": 9,
+    "previous_insertions_exact": 0,
+    "previous_keep_guard": {
+      "denominator": 4,
+      "exact": 0
+    },
+    "publisher_projects": 1,
+    "raw_typescript_train_rows": 4371,
+    "replay_valid_converted_rows": 930,
+    "revision": "e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29",
+    "session_commit_identity": "unknown",
+    "source_file_license_verified": false,
+    "student_visible_inferability_review_count": 0,
+    "train_actions": {
+      "delete": 53,
+      "insert": 20,
+      "no_edit": 0,
+      "replace": 647
+    },
+    "train_paths": 47
+  },
+  "missing_next_edit_training_evidence": [
+    "per-file source provenance",
+    "student-visible intent validated independently",
+    "repository/session/task-group splits",
+    "defensible no-edit examples",
+    "verified edit histories and corresponding deletion/edit targets"
+  ],
+  "observed_at": "2026-10-04T05:12:28.101030+00:00",
+  "schema": "q25-next-edit-data-readiness-audit-v1",
+  "sealed_data_used_for_training": false,
+  "source_reports": [
+    "reports/research/one_line_gpu_pilot_r1/plan.json",
+    "reports/research/one_line_gpu_pilot_r1/result_summary.json",
+    "reports/research/one_line_gpu_pilot_r1/HANDOFF.md",
+    "reports/research/one_line_r1/public_sequence_pilot_outcome.md",
+    "reports/research/one_line_r1/public_edit_corpus_followup.md",
+    "reports/research/one_line_r1/author_pilot_combined_plan11_review.md"
+  ]
+}

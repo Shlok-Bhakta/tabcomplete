@@ -279,3 +279,34 @@ Python/venv commands. A complete test chain installed a hash-locked small packag
 while a newer host uv shadowed PATH. Its temporary files were removed; the
 compact receipt records the checks and this raw-log limitation. No model, data,
 package version or decoding change accompanies the bootstrap fix.
+
+## Edit evidence preparation
+
+A read-only export from the existing collector reports 88 sessions containing
+events, 284 proposal records, eight sequence-gap intervals and zero defensible
+preference pairs. These counts mix scripted and other observations; 35 recorded
+acceptances are not a human-acceptance score. Personalization remains disabled.
+Only the aggregate/hash summary is committed; no private source text is exported
+into Git or sent to a teacher.
+
+The pinned Joseph Gentle Rust/Svelte CC BY 4.0 traces replayed 55,316 transactions
+and 59,922 patches exactly. They lack cursor, undo, acceptance and intent fields,
+and come from one recorder. Their timestamps have whole-second resolution plus
+an undocumented sentinel, so they cannot calibrate a 250 ms idle trigger. They
+are mechanics fixtures, not a representative training/evaluation bank. The
+audit froze its plan before downloads or derivations and fetched only 506,053
+bytes of README and two compressed traces. Training and uploads used none.
+
+Continue Instinct is an accessible open candidate for later edit adaptation;
+its original/synthetic groups and official test splits need preservation. DECODE
+has a larger real-edit bank but is gated by manual approval and research/privacy
+terms. No access request or download was made. See the committed public-edit
+audit/recommendation JSON for immutable revisions, primary sources and licenses.
+
+### FIM attempt 3 evaluation failure
+
+The pinned Python 3.11.15 runtime initialized correctly and completed all 240 development cases. Full line-suite case `rust/af541fc7d7054c4f6dc5` contains 13,699 input tokens and exhausted T4 memory at case 111. The recorded allocation request was 9.79 GiB. No training started. Actual failure run `run-6cac47c4-e031-4c49-b911-b4e70bfcfc21` and trace `8cb16c27604e1a6230b02d2f57b83950` were imported and queried in SigNoz.
+
+The repair preserves complete prompts and scoring. Explicit KV-head repetition permits supported memory-efficient SDPA instead of the pinned Torch 2.11 native-GQA math fallback. This changes numerical execution, so both arms rerun evaluation under a new frozen plan. Earlier outputs remain historical.
+
+The revised implementation passed 1,011 Python tests with two dependency warnings in 91.57 seconds, Ruff, and mypy across 92 source files. Gateway Bun tests passed 16 cases and collector Bun tests passed 59; both TypeScript checks passed. The actual T4 efficient-kernel smoke remains a required first-stage check in the next GPU allocation.

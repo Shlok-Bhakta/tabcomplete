@@ -1,0 +1,32 @@
+{
+  "downloaded_bytes": 506053,
+  "files": [
+    {
+      "bytes": 10012,
+      "git_blob_sha1": "47866c63dc73d978c3fe92e627e517fcc67116a9",
+      "license": "source documentation only",
+      "path": "sequential_traces/README.md",
+      "sha256": "5e554097caade2e2e36ec400d365783bb343252e393757f9d01da24650c69102",
+      "source_url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/README.md"
+    },
+    {
+      "bytes": 358177,
+      "git_blob_sha1": "c19ecfd71ef5587ad672dcf3c4cb61d12bbc2f5e",
+      "license": "CC-BY-4.0",
+      "path": "sequential_traces/rustcode.json.gz",
+      "sha256": "a13d472b5641dcad18d52882eff8c2d68ecbc27aa0f1e5a17eeb42f0f3130f38",
+      "source_url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/rustcode.json.gz"
+    },
+    {
+      "bytes": 137864,
+      "git_blob_sha1": "9ccb0933516f04832725bfee4d66a89aa4bab04b",
+      "license": "CC-BY-4.0",
+      "path": "sequential_traces/sveltecomponent.json.gz",
+      "sha256": "0393353a1ff0281f4a2adad080b0843bffa7988f9a4869ed04faf0984f78a234",
+      "source_url": "https://raw.githubusercontent.com/josephg/editing-traces/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/sveltecomponent.json.gz"
+    }
+  ],
+  "plan_sha256": "d8a472840b4a0f3df544280cccacbc385ab170654635baa25152c2da4924ba1e",
+  "schema": "public_edit_trace_integrity_manifest_v1",
+  "source_commit": "762fa6c51605c88a05ebe5c4b9d4540caca30b97"
+}

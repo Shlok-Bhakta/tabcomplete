@@ -1,0 +1,22 @@
+{
+  "allowed_format_ids": [
+    151643,
+    151659,
+    151660,
+    151661
+  ],
+  "result": {
+    "development": {
+      "cases_with_other_control_tokens": 0,
+      "control_ids": [],
+      "source_sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+    },
+    "train": {
+      "cases_with_other_control_tokens": 0,
+      "control_ids": [],
+      "source_sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690"
+    }
+  },
+  "schema": "q25-fim-control-token-audit-v1",
+  "scope": "Frozen inputs only; no fixture modification or candidate model inference"
+}
