@@ -75,16 +75,6 @@ return function(ok, assert_eq, assert_true)
 
     local inventory_fetches = 0
     local installed_identity = identity()
-    predict.setup({ backend = "rust-editor-v1", protocol_version = fim.WIRE_VERSION,
-      url = "http://127.0.0.1:19094", mode = "manual", synthetic = true,
-      allowed_models = { ["q25-fim-synthetic"] = model },
-      single_line_input_tokens = 1024 })
-    assert_eq(predict.status().protocol_version, fim.WIRE_VERSION)
-    assert_eq(predict.status().context_policy_version, fim.CONTEXT_POLICY_VERSION)
-    local aliases = predict.model_aliases()
-    assert_eq(#aliases, 1)
-    assert_eq(aliases[1], "q25-fim-synthetic")
-
     predict._backend_get_impl = function(path, callback)
       if path == "/health" then
         callback(true, identity())
@@ -102,6 +92,15 @@ return function(ok, assert_eq, assert_true)
       end
       return { kill = function() end }
     end
+    predict.setup({ backend = "rust-editor-v1", protocol_version = fim.WIRE_VERSION,
+      url = "http://127.0.0.1:19094", mode = "manual", synthetic = true,
+      allowed_models = { ["q25-fim-synthetic"] = model },
+      single_line_input_tokens = 1024 })
+    assert_eq(predict.status().protocol_version, fim.WIRE_VERSION)
+    assert_eq(predict.status().context_policy_version, fim.CONTEXT_POLICY_VERSION)
+    local aliases = predict.model_aliases()
+    assert_eq(#aliases, 1)
+    assert_eq(aliases[1], "q25-fim-synthetic")
 
     local refreshed
     assert_true(predict.refresh_model_identity(function(success, result)

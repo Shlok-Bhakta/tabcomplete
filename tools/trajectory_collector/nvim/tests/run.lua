@@ -1588,6 +1588,7 @@ dofile(tests_dir .. "/single_line_v1.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/fim_v1.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/predict_single_line_v1.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/predict_fim_v1.lua")(ok, assert_eq, assert_true)
+dofile(tests_dir .. "/predict_fim_identity_bootstrap.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/feedback_review.lua")
 
 print(("--\n%d passed, %d failed"):format(passed, failed))

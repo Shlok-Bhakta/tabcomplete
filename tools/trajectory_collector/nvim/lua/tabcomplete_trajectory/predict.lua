@@ -63,6 +63,22 @@ M._backend_get_impl = nil -- deterministic Rust health RPC seam
 M._confirm_impl = nil -- deterministic test seam; production uses vim.fn.confirm
 local model_identity_refresh_generation = 0
 local fim_tokenizer_cache = {}
+local setup_generation = 0
+local identity_refresh_inflight = false
+local identity_refresh_waiters = {}
+local identity_bootstrap_inflight = false
+local identity_bootstrap_serial = 0
+local identity_bootstrap_intent_generation = 0
+local identity_bootstrap_attempts = 0
+local identity_bootstrap_wanted = false
+local identity_bootstrap_explicit = false
+local identity_bootstrap_explicit_origin = nil
+local identity_bootstrap_automatic = false
+local identity_bootstrap_retry_timer = nil
+local identity_bootstrap_navigation_generation = 0
+local ensure_identity_bootstrap
+local clear_identity_retry_timer
+local debounce_changed
 
 local function now() return util.now_ms() end
 local function utf8_boundary(line, col)
@@ -1570,6 +1586,29 @@ function M.predict(options)
     local reason = ui_block_reason(not explicit and not opts.automatic_normal_mode)
     if reason then last_status = reason; return false, reason end
   end
+  if is_fim_protocol() then
+    local identity = opts.current_model_identity
+    if not identity or identity.model_protocol ~= fim_v1.WIRE_VERSION
+        or not identity._fim_token_contract then
+      local automatic = not explicit and (mode == "automatic" or mode == "shadow")
+      if explicit then
+        local bufnr = vim.api.nvim_get_current_buf()
+        local cursor = vim.api.nvim_win_get_cursor(0)
+        identity_bootstrap_explicit_origin = {
+          bufnr = bufnr,
+          changedtick = vim.api.nvim_buf_get_changedtick(bufnr),
+          cursor_row = cursor[1],
+          cursor_col = cursor[2],
+          navigation_generation = identity_bootstrap_navigation_generation,
+        }
+      end
+      if not ensure_identity_bootstrap(explicit, automatic) then
+        return false, last_status
+      end
+      latest_wanted = false
+      return true, last_status
+    end
+  end
   stop_timer(debounce)
   local state, err = buffer_state()
   if not state then last_status = err; latest_wanted = false; return false, err end
@@ -1708,17 +1747,36 @@ function M.review_last()
 end
 function M.set_mode(next_mode)
   if not allowed_modes[next_mode] then return false, "invalid mode" end
+  local previous_mode = mode
   if next_mode == "automatic" and not (opts.experimental_auto_opt_in or opts.automatic_quality_validated) then
     return false, "automatic mode requires explicit opt-in"
   end
   invalidate(next_mode == "off" and "mode_off" or "mode changed")
   mode = next_mode
   save_mode()
+  last_status = next_mode
   if mode == "off" then
+    identity_bootstrap_intent_generation = identity_bootstrap_intent_generation + 1
+    identity_bootstrap_wanted = false
+    identity_bootstrap_explicit = false
+    identity_bootstrap_explicit_origin = nil
+    identity_bootstrap_automatic = false
+    clear_identity_retry_timer()
     latest_wanted = false
     if pending and pending.process then pcall(pending.process.kill, pending.process, "sigterm") end
+  elseif previous_mode ~= mode and is_fim_protocol() then
+    if previous_mode == "off" then
+      identity_bootstrap_intent_generation = identity_bootstrap_intent_generation + 1
+      identity_bootstrap_attempts = 0
+      identity_bootstrap_explicit = false
+      identity_bootstrap_explicit_origin = nil
+    end
+    identity_bootstrap_automatic = mode == "automatic" or mode == "shadow"
+    if not opts.current_model_identity or not opts.current_model_identity._fim_token_contract then
+      identity_bootstrap_wanted = true
+      ensure_identity_bootstrap(false, identity_bootstrap_automatic)
+    end
   end
-  last_status = next_mode
   return true
 end
 function M.set_model(alias, callback)
@@ -1768,22 +1826,56 @@ function M.set_model(alias, callback)
   attempt()
   return true
 end
-function M.refresh_model_identity(callback)
-  if opts.backend ~= "rust-editor-v1" then return false, "model identity requires the Rust backend" end
-  model_identity_refresh_generation = model_identity_refresh_generation + 1
+local start_identity_refresh
+local function finish_identity_refresh(setup_id, ok, result)
+  identity_refresh_inflight = false
+  local deliver, waiting = {}, {}
+  for _, waiter in ipairs(identity_refresh_waiters) do
+    if waiter.setup_generation == setup_id then
+      deliver[#deliver + 1] = waiter.callback
+    else
+      waiting[#waiting + 1] = waiter
+    end
+  end
+  identity_refresh_waiters = waiting
+  for _, callback in ipairs(deliver) do
+    if callback then callback(ok, result) end
+  end
+  if #identity_refresh_waiters > 0 then
+    vim.schedule(start_identity_refresh)
+  end
+end
+
+start_identity_refresh = function()
+  if identity_refresh_inflight or opts.backend ~= "rust-editor-v1"
+      or #identity_refresh_waiters == 0 then
+    return
+  end
+  local request_setup = setup_generation
   local generation = model_identity_refresh_generation
+  identity_refresh_inflight = true
+  local function is_current()
+    return request_setup == setup_generation
+      and generation == model_identity_refresh_generation
+      and opts.backend == "rust-editor-v1"
+  end
   get_rust_json("/health", function(ok, identity)
-    if generation ~= model_identity_refresh_generation or opts.backend ~= "rust-editor-v1" then
-      if callback then callback(false, "model identity refresh became stale") end
+    if not is_current() then
+      finish_identity_refresh(request_setup, false, "model identity refresh became stale")
       return
     end
     if not ok then
-      if callback then callback(false, "cannot read the installed Rust model identity") end
+      finish_identity_refresh(request_setup, false,
+        "cannot read the installed Rust model identity")
       return
     end
     finish_model_identity(identity, function(valid, validated_or_error)
+      if not is_current() then
+        finish_identity_refresh(request_setup, false, "model identity refresh became stale")
+        return
+      end
       if not valid then
-        if callback then callback(false, validated_or_error) end
+        finish_identity_refresh(request_setup, false, validated_or_error)
         return
       end
       local validated = validated_or_error
@@ -1794,9 +1886,20 @@ function M.refresh_model_identity(callback)
       opts.runtime_config_hash = validated.runtime_config_hash
       local _, expected_policy = expected_context_layout(validated, model_spec(validated.alias))
       opts.context_policy_version = expected_policy
-      if callback then callback(true, validated) end
+      finish_identity_refresh(request_setup, true, validated)
     end)
   end)
+end
+
+function M.refresh_model_identity(callback)
+  if opts.backend ~= "rust-editor-v1" then
+    return false, "model identity requires the Rust backend"
+  end
+  identity_refresh_waiters[#identity_refresh_waiters + 1] = {
+    setup_generation = setup_generation,
+    callback = callback,
+  }
+  start_identity_refresh()
   return true
 end
 function M.model_aliases()
@@ -1857,7 +1960,7 @@ function M.status()
     collector_state = cs.last_ok_ms and "connected" or (cs.spool_files > 0 and "spooling" or "unverified"),
     collector_spool_files = cs.spool_files, counters = vim.deepcopy(counters) }
 end
-local function debounce_changed()
+debounce_changed = function()
   if not can_auto() then return end
   stop_timer(debounce)
   if not debounce then debounce = vim.uv.new_timer() end
@@ -1867,6 +1970,165 @@ local function debounce_changed()
       if can_auto() then M.predict() else phase = "idle" end
     end)
   end)
+end
+local function fim_identity_ready()
+  local identity = opts.current_model_identity
+  return identity ~= nil and identity.model_protocol == fim_v1.WIRE_VERSION
+    and type(identity._fim_token_contract) == "table"
+end
+local function identity_bootstrap_origin_is_current(origin)
+  if type(origin) ~= "table" or origin.navigation_generation ~= identity_bootstrap_navigation_generation
+      or not vim.api.nvim_buf_is_valid(origin.bufnr)
+      or vim.api.nvim_get_current_buf() ~= origin.bufnr then
+    return false
+  end
+  if vim.api.nvim_buf_get_changedtick(origin.bufnr) ~= origin.changedtick then return false end
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  return cursor[1] == origin.cursor_row and cursor[2] == origin.cursor_col
+end
+clear_identity_retry_timer = function()
+  if identity_bootstrap_retry_timer then
+    pcall(identity_bootstrap_retry_timer.stop, identity_bootstrap_retry_timer)
+    pcall(identity_bootstrap_retry_timer.close, identity_bootstrap_retry_timer)
+    identity_bootstrap_retry_timer = nil
+  end
+end
+local function identity_bootstrap_can_run()
+  return identity_bootstrap_wanted and mode ~= "off"
+    and opts.backend == "rust-editor-v1" and is_fim_protocol()
+end
+local function identity_bootstrap_failed(request_setup, request_intent)
+  if not identity_bootstrap_can_run() then
+    phase = "idle"
+    return
+  end
+  last_error = "model identity unavailable"
+  if identity_bootstrap_attempts >= 3 then
+    identity_bootstrap_wanted = false
+    identity_bootstrap_explicit = false
+    identity_bootstrap_explicit_origin = nil
+    identity_bootstrap_automatic = false
+    phase = "idle"
+    last_status = "model identity unavailable; press Alt+p to retry"
+    return
+  end
+  phase = "identity_retry_pending"
+  last_status = "model identity unavailable; retrying"
+  local delay_ms = identity_bootstrap_attempts == 1 and 250 or 500
+  local timer = vim.uv.new_timer()
+  identity_bootstrap_retry_timer = timer
+  timer:start(delay_ms, 0, function()
+    pcall(timer.stop, timer)
+    pcall(timer.close, timer)
+    vim.schedule(function()
+      if identity_bootstrap_retry_timer == timer then
+        identity_bootstrap_retry_timer = nil
+      end
+      if request_setup == setup_generation
+          and request_intent == identity_bootstrap_intent_generation
+          and identity_bootstrap_can_run() then
+        ensure_identity_bootstrap(false, identity_bootstrap_automatic)
+      end
+    end)
+  end)
+end
+ensure_identity_bootstrap = function(explicit, automatic)
+  if not is_fim_protocol() or opts.backend ~= "rust-editor-v1" or mode == "off" then
+    return false
+  end
+  if fim_identity_ready() then return true end
+  if explicit then
+    identity_bootstrap_explicit = true
+    if identity_bootstrap_attempts >= 3 and not identity_bootstrap_inflight then
+      identity_bootstrap_attempts = 0
+    end
+    clear_identity_retry_timer()
+  end
+  if automatic and (mode == "automatic" or mode == "shadow") then
+    identity_bootstrap_automatic = true
+  end
+  identity_bootstrap_wanted = true
+  if identity_bootstrap_inflight or identity_bootstrap_retry_timer then
+    last_status = "waiting for selected FIM tokenizer identity"
+    phase = identity_bootstrap_retry_timer and "identity_retry_pending" or "identity_refresh_pending"
+    return true
+  end
+  if identity_bootstrap_attempts >= 3 then
+    last_status = "model identity unavailable; press Alt+p to retry"
+    phase = "idle"
+    return false
+  end
+
+  identity_bootstrap_inflight = true
+  identity_bootstrap_serial = identity_bootstrap_serial + 1
+  local serial = identity_bootstrap_serial
+  local request_setup = setup_generation
+  local request_intent = identity_bootstrap_intent_generation
+  identity_bootstrap_attempts = identity_bootstrap_attempts + 1
+  phase = "identity_refresh_pending"
+  last_status = "loading selected FIM tokenizer identity"
+  local started = M.refresh_model_identity(function(ok, identity_or_error)
+    if serial ~= identity_bootstrap_serial then return end
+    identity_bootstrap_inflight = false
+    if request_setup ~= setup_generation or request_intent ~= identity_bootstrap_intent_generation then
+      if identity_bootstrap_can_run() then
+        ensure_identity_bootstrap(false, identity_bootstrap_automatic)
+      end
+      return
+    end
+    if not identity_bootstrap_can_run() then
+      phase = "idle"
+      return
+    end
+    if not ok or not fim_identity_ready() then
+      identity_bootstrap_failed(request_setup, request_intent)
+      return
+    end
+
+    identity_bootstrap_attempts = 0
+    identity_bootstrap_wanted = false
+    last_error = nil
+    phase = "idle"
+    last_status = "selected FIM tokenizer identity ready"
+    local run_explicit = identity_bootstrap_explicit and mode ~= "off"
+    local explicit_origin = identity_bootstrap_explicit_origin
+    local run_automatic = identity_bootstrap_automatic
+      and (mode == "automatic" or mode == "shadow")
+    identity_bootstrap_explicit = false
+    identity_bootstrap_explicit_origin = nil
+    identity_bootstrap_automatic = false
+    if run_explicit then
+      vim.schedule(function()
+        if request_setup == setup_generation
+            and request_intent == identity_bootstrap_intent_generation
+            and mode ~= "off" and fim_identity_ready()
+            and identity_bootstrap_origin_is_current(explicit_origin) then
+          M.predict({ explicit = true })
+        elseif run_automatic and request_setup == setup_generation
+            and request_intent == identity_bootstrap_intent_generation
+            and mode ~= "off" and fim_identity_ready() then
+          debounce_changed()
+        elseif request_setup == setup_generation
+            and request_intent == identity_bootstrap_intent_generation then
+          last_status = "explicit request canceled after editor navigation"
+        end
+      end)
+    elseif run_automatic then
+      vim.schedule(function()
+        if request_setup == setup_generation
+            and request_intent == identity_bootstrap_intent_generation
+            and mode ~= "off" and fim_identity_ready() then
+          debounce_changed()
+        end
+      end)
+    end
+  end)
+  if not started then
+    identity_bootstrap_inflight = false
+    identity_bootstrap_failed(request_setup, request_intent)
+    return false
+  end
+  return true
 end
 local function install_mapping()
   if not mapping_key then
@@ -1934,6 +2196,14 @@ function M.setup(options)
   local previous_protocol = opts.protocol_version
   local requested_protocol = options and options.protocol_version
   opts = vim.tbl_deep_extend("force", opts, options or {})
+  setup_generation = setup_generation + 1
+  identity_bootstrap_intent_generation = identity_bootstrap_intent_generation + 1
+  identity_bootstrap_attempts = 0
+  identity_bootstrap_wanted = false
+  identity_bootstrap_explicit = false
+  identity_bootstrap_explicit_origin = nil
+  identity_bootstrap_automatic = false
+  clear_identity_retry_timer()
   model_identity_refresh_generation = model_identity_refresh_generation + 1
   if opts.backend ~= previous_backend or opts.protocol_version ~= previous_protocol then
     opts.current_model_identity = nil
@@ -2045,6 +2315,9 @@ function M.setup(options)
   vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout", "FocusLost", "InsertLeave" }, {
     group = group, callback = function(args)
       if applying then return end
+      if args.event == "BufLeave" or args.event == "FocusLost" then
+        identity_bootstrap_navigation_generation = identity_bootstrap_navigation_generation + 1
+      end
       -- Scratch buffers used for exact edit validation are unrelated to the
       -- source proposal. Their removal must not close its feedback outcome.
       if args.event == "BufWipeout" and args.buf ~= vim.api.nvim_get_current_buf()
@@ -2079,6 +2352,13 @@ function M.setup(options)
   save_mode()
   phase = "idle"
   last_status = mode == "automatic" and "automatic experimental" or mode
+  if is_fim_protocol() and mode ~= "off"
+      and (not opts.current_model_identity
+        or not opts.current_model_identity._fim_token_contract) then
+    identity_bootstrap_wanted = true
+    identity_bootstrap_automatic = mode == "automatic" or mode == "shadow"
+    ensure_identity_bootstrap(false, identity_bootstrap_automatic)
+  end
   if opts.automatic_normal_mode then vim.schedule(debounce_changed) end
   return M
 end
