@@ -288,7 +288,13 @@ def _native_fim_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
     }
 
 
-def _native_health(inputs: dict, runtime_hash: str = "d" * 64) -> dict:
+def _native_health(
+    inputs: dict,
+    runtime_hash: str = "d" * 64,
+    *,
+    threads: int = 4,
+    prompt_threads: int = 4,
+) -> dict:
     spec = inputs["spec"]
     tokenizer = spec["fim_profile"]["tokenizer"]
     return {
@@ -304,8 +310,8 @@ def _native_health(inputs: dict, runtime_hash: str = "d" * 64) -> dict:
         "context_size": 2304,
         "input_tokens": 1024,
         "output_tokens": 96,
-        "threads": 4,
-        "prompt_threads": 4,
+        "threads": threads,
+        "prompt_threads": prompt_threads,
         "batch_size": 256,
         "microbatch_size": 64,
         "cache_type": "f16",
@@ -324,7 +330,15 @@ def _native_health(inputs: dict, runtime_hash: str = "d" * 64) -> dict:
     }
 
 
-def _native_fim_installer(config: Path, unit: Path, inputs: dict, *, dry_run: bool):
+def _native_fim_installer(
+    config: Path,
+    unit: Path,
+    inputs: dict,
+    *,
+    dry_run: bool,
+    native_threads: int = 4,
+    native_prompt_threads: int = 4,
+):
     return installer.install_native_fim(
         config,
         unit,
@@ -335,6 +349,8 @@ def _native_fim_installer(config: Path, unit: Path, inputs: dict, *, dry_run: bo
         installer.sha(inputs["runtime"]),
         inputs["model"].stat().st_size,
         dry_run=dry_run,
+        native_threads=native_threads,
+        native_prompt_threads=native_prompt_threads,
     )
 
 
@@ -353,6 +369,8 @@ def test_native_fim_dry_run_returns_concrete_plan_without_activation(tmp_path, m
     assert result["memory_max_bytes"] == 1500 * 1024 * 1024
     assert "--host 127.0.0.1 --port 19093" in result["unit_content"]
     assert "--threads 4 --prompt-threads 4 --context-size 2304" in result["unit_content"]
+    assert result["native_threads"] == 4
+    assert result["native_prompt_threads"] == 4
     assert "--input-tokens 1024 --batch-size 256 --microbatch-size 64" in result["unit_content"]
     assert "--output-tokens 96 --cache-type f16 --syntax-validation false" in result["unit_content"]
     assert "MemoryMax=1500M" in result["unit_content"]
@@ -393,6 +411,10 @@ def test_native_fim_cli_dry_run_is_explicit_and_json(tmp_path, monkeypatch):
         installer.sha(inputs["runtime"]),
         "--editor-model-spec",
         str(inputs["editor_model"]),
+        "--native-threads",
+        "2",
+        "--native-prompt-threads",
+        "4",
         "--config",
         str(config),
         "--unit",
@@ -407,7 +429,49 @@ def test_native_fim_cli_dry_run_is_explicit_and_json(tmp_path, monkeypatch):
     assert output["dry_run"] is True
     assert output["model_sha256"] == installer.sha(inputs["model"])
     assert output["unit_sha256"] == hashlib.sha256(output["unit_content"].encode()).hexdigest()
+    assert output["native_threads"] == 2
+    assert output["native_prompt_threads"] == 4
+    assert "--threads 2 --prompt-threads 4 --context-size 2304" in output["unit_content"]
     assert not unit.exists()
+
+
+@pytest.mark.parametrize(("threads", "prompt_threads"), [(2, 2), (2, 4), (4, 2), (4, 4)])
+def test_native_fim_service_renders_declared_thread_pair(threads, prompt_threads):
+    service = installer.render_native_fim_service(
+        Path("/tmp/synthetic-fim-server"),
+        native_threads=threads,
+        native_prompt_threads=prompt_threads,
+    )
+    assert f"--threads {threads} --prompt-threads {prompt_threads}" in service
+
+
+def test_native_fim_rejects_thread_counts_outside_supported_choices():
+    with pytest.raises(ValueError, match="must be 2 or 4"):
+        installer.render_native_fim_service(Path("/tmp/synthetic-fim-server"), native_threads=3)
+
+
+def test_native_fim_cli_rejects_thread_counts_outside_supported_choices(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [str(SCRIPT), "--model", "synthetic.gguf", "--native-prompt-threads", "8"],
+    )
+    with pytest.raises(SystemExit) as error:
+        installer.main()
+    assert error.value.code == 2
+
+
+def test_native_fim_health_rejects_a_different_declared_thread_pair(tmp_path, monkeypatch):
+    inputs = _native_fim_inputs(tmp_path, monkeypatch)
+    health = _native_health(inputs, threads=4, prompt_threads=4)
+    with pytest.raises(ValueError, match="health identity"):
+        installer._verify_native_health(
+            health,
+            inputs["spec"],
+            installer.sha(inputs["model"]),
+            native_threads=2,
+            native_prompt_threads=4,
+        )
 
 
 def test_native_fim_success_verifies_health_process_slots_and_commits_actual_runtime_hash(
@@ -440,12 +504,19 @@ def test_native_fim_success_verifies_health_process_slots_and_commits_actual_run
         installer,
         "_local_json",
         lambda path: {
-            "/health": _native_health(inputs),
+            "/health": _native_health(inputs, threads=2, prompt_threads=4),
             "/slots": [{"id": 0, "is_processing": False}],
         }[path],
     )
     monkeypatch.setattr(installer, "_process_executable", lambda _pid: inputs["runtime"])
-    result = _native_fim_installer(config, unit, inputs, dry_run=False)
+    result = _native_fim_installer(
+        config,
+        unit,
+        inputs,
+        dry_run=False,
+        native_threads=2,
+        native_prompt_threads=4,
+    )
     assert result["activated"] is True
     assert result["runtime_config_hash"] == "d" * 64
     assert result["runtime_config_hash"] != result["unit_sha256"]
@@ -455,6 +526,7 @@ def test_native_fim_success_verifies_health_process_slots_and_commits_actual_run
     assert 'server_url = "http://127.0.0.1:8787"' in config.read_text()
     assert 'vim.keymap.set("i", "<Tab>", existing_completion)' in config.read_text()
     assert f"ExecStart={inputs['runtime']}" in unit.read_text()
+    assert "--threads 2 --prompt-threads 4 --context-size 2304" in unit.read_text()
     assert installer.sha(unit) == result["unit_sha256"]
     assert len([call for call in process_calls if call[0] == "restart"]) == 1
     assert result["config_backup"]

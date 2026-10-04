@@ -409,14 +409,23 @@ def render_native_fim_config(
     return updated, setup.strip()
 
 
-def render_native_fim_service(runtime: Path) -> str:
+def _validate_native_thread_counts(threads: int, prompt_threads: int) -> None:
+    if any(type(value) is not int or value not in (2, 4) for value in (threads, prompt_threads)):
+        raise ValueError("native FIM thread counts must be 2 or 4")
+
+
+def render_native_fim_service(
+    runtime: Path, *, native_threads: int = 4, native_prompt_threads: int = 4
+) -> str:
+    _validate_native_thread_counts(native_threads, native_prompt_threads)
     if any(char.isspace() for char in str(runtime)):
         raise ValueError("native FIM executable path must not contain whitespace")
     return (
         "[Unit]\nDescription=TabComplete experimental Q25 FIM predictor\n"
         "After=network.target\n\n[Service]\nType=simple\n"
-        f"ExecStart={runtime} --host 127.0.0.1 --port {FIM_PORT} --threads 4 "
-        "--prompt-threads 4 --context-size 2304 --context-layout cursor-last-v1 "
+        f"ExecStart={runtime} --host 127.0.0.1 --port {FIM_PORT} "
+        f"--threads {native_threads} --prompt-threads {native_prompt_threads} "
+        "--context-size 2304 --context-layout cursor-last-v1 "
         "--input-tokens 1024 --batch-size 256 --microbatch-size 64 "
         "--output-tokens 96 --cache-type f16 --syntax-validation false\n"
         "Restart=on-failure\nRestartSec=3\nTimeoutStopSec=10\n"
@@ -446,7 +455,15 @@ def _local_json(path: str) -> dict | list:
         raise RuntimeError("native FIM health endpoint is unavailable") from None
 
 
-def _verify_native_health(identity: dict, spec: dict, model_sha: str) -> str:
+def _verify_native_health(
+    identity: dict,
+    spec: dict,
+    model_sha: str,
+    *,
+    native_threads: int = 4,
+    native_prompt_threads: int = 4,
+) -> str:
+    _validate_native_thread_counts(native_threads, native_prompt_threads)
     tokenizer = spec["fim_profile"]["tokenizer"]
     expected = {
         "status": "ok",
@@ -461,8 +478,8 @@ def _verify_native_health(identity: dict, spec: dict, model_sha: str) -> str:
         "context_size": 2304,
         "input_tokens": 1024,
         "output_tokens": 96,
-        "threads": 4,
-        "prompt_threads": 4,
+        "threads": native_threads,
+        "prompt_threads": native_prompt_threads,
         "batch_size": 256,
         "microbatch_size": 64,
         "cache_type": "f16",
@@ -588,7 +605,10 @@ def install_native_fim(
     expected_model_bytes: int,
     *,
     dry_run: bool,
+    native_threads: int = 4,
+    native_prompt_threads: int = 4,
 ) -> dict:
+    _validate_native_thread_counts(native_threads, native_prompt_threads)
     if owned_by_nix(config) or owned_by_nix(unit):
         raise RuntimeError("Nix/Home Manager owns this path; edit its source configuration")
     if (
@@ -614,7 +634,11 @@ def install_native_fim(
         raise ValueError("native FIM service path must be a regular file")
     unit_existed = unit.is_file()
     original_unit = unit.read_bytes() if unit_existed else None
-    service = render_native_fim_service(runtime.resolve())
+    service = render_native_fim_service(
+        runtime.resolve(),
+        native_threads=native_threads,
+        native_prompt_threads=native_prompt_threads,
+    )
     preview, setup = render_native_fim_config(original_text, spec)
     if dry_run:
         return {
@@ -633,6 +657,8 @@ def install_native_fim(
             "editor_model_sha256": spec_sha,
             "model_bytes": expected_model_bytes,
             "memory_max_bytes": FIM_MEMORY_MAX,
+            "native_threads": native_threads,
+            "native_prompt_threads": native_prompt_threads,
         }
     if not unit.name.endswith(".service") or not config.is_file():
         raise ValueError("native FIM install requires an existing editor config and service unit")
@@ -666,7 +692,13 @@ def install_native_fim(
                 time.sleep(0.25)
         if not isinstance(health, dict):
             raise RuntimeError("native FIM health verification timed out")
-        runtime_config_hash = _verify_native_health(health, spec, expected_model_sha)
+        runtime_config_hash = _verify_native_health(
+            health,
+            spec,
+            expected_model_sha,
+            native_threads=native_threads,
+            native_prompt_threads=native_prompt_threads,
+        )
         slots = _local_json("/slots")
         if slots != [{"id": 0, "is_processing": False}]:
             raise ValueError("native FIM worker slot is not idle and singular")
@@ -704,6 +736,8 @@ def install_native_fim(
         "editor_model_sha256": spec_sha,
         "model_bytes": expected_model_bytes,
         "memory_max_bytes": FIM_MEMORY_MAX,
+        "native_threads": native_threads,
+        "native_prompt_threads": native_prompt_threads,
     }
 
 
@@ -816,6 +850,8 @@ def main() -> None:
     parser.add_argument("--model-alias")
     parser.add_argument("--prepare-native-fim-profile", action="store_true")
     parser.add_argument("--install-native-fim", action="store_true")
+    parser.add_argument("--native-threads", type=int, choices=(2, 4), default=4)
+    parser.add_argument("--native-prompt-threads", type=int, choices=(2, 4), default=4)
     parser.add_argument("--tokenizer", type=Path)
     parser.add_argument("--conversion", type=Path)
     parser.add_argument("--profile-output", type=Path)
@@ -866,6 +902,8 @@ def main() -> None:
             args.runtime_sha256,
             args.model_bytes,
             dry_run=args.dry_run,
+            native_threads=args.native_threads,
+            native_prompt_threads=args.native_prompt_threads,
         )
         print(json.dumps(result, sort_keys=True))
         return
