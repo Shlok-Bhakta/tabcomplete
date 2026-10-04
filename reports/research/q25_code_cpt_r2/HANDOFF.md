@@ -38,6 +38,43 @@ up unit/config, restarts and verifies actual process, keeps training disabled.
 ThinkPad known alias again timed out; no laptop installation or measurements.
 Continue through actual native and safe experimental desktop verification.
 
+## Actual export and native startup at 2026-10-04 10:53 UTC
+
+R4 completed CPU conversion in508.954worker seconds. SelectedQ4 is491399808B,
+SHA ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682.
+CompletedmanifestSHA c647bd05cd6f62c6da9760fddd78554cd7490b9346771fb3ba08738c639fe817.
+Collectionverified after correcting Kaggle's nested output path assumption;
+176collection/controllertests passed,1Torch-dependent skip in non-Torch focusedenv.
+Fullvocab profile compactserializer preserves2MiB ceiling,24installer tests pass.
+Changes/source/receipts committedcc67253. No newtraining/reconversion/weights.
+Embeddedselectedbinary is fim/native/tabcomplete-q25-fim,501912425B. Genericd991
+engine was used; actual startupFAILED at modelinitialization in both embedded
+and bounded externalfile modes. No actualoutput/qualityclaim. Oldpredictor
+restored in finally, currentservice active. ExactGGUF22controls/types/strings
+matchprofile. Trainer auditagent is implementing safe initializationstage
+labels/tests in isolatedRustworktree; awaitcommit, merge,rebuild,thenreembed
+withoutchangingweights. Artifacttotal12.447GB under12.885GB cap; avoid extra
+embeddedbinaries/FP16copies. ExistingfailedELF can be preserved by hash before
+replacing only owned derivedELF; do notdelete checkpoints.
+
+Collectorhealth/portwasbroken despite stale internalhealthy. SQLiteconsistent
+backup integrityok, samehasha545...77c as earlier. Usermanagerprivatecontrolsocket
+wasunserved; campaignagent root-approveddaemon-reexec restoredlistener while
+all52runninguserservices retainedsamePIDs. Existingcollector nowstuckstopping
+withdeadPIDs, supportedstop/cleanup/syncdidnotfixmetadata. Agent hasrootapproval
+for exacttwo-argument Podmanclone usingcachedimage/noimagearg/no-run, internal
+Env/config/mount/networkidentitychecks, preserveoldrenamedcontainer, startclone
+with SAMEexistingDBmount/port/API onlyifconfigmatches. NoDBwipe/migration/newDB.
+Waitownerconfirmationbeforecontainerexec. Dataagent readydeployedimage/rawFIM
+and actualSQLiteaudit; no actual editorfeedbackrows yet.
+
+Continue nativeverification script fim/native/run-native-verification.py after
+startupfix. It stops onlyownedrollbackservice, loads oneCPUselectedmodel at19104,
+freezes/runs240quality then144replayrequestst4andoptional t2, restoresoldfinally.
+Guardalloutputs/fingerprints; failedstartupcreatednonequalityplans. Theninstall
+safeexperimentalautomaticdesktopviaexistinginstaller and actualsyntheticE2E,
+retryknownThinkPadalias/declarative only. Do notendafterconversion.
+
 ## Matched completion follow-up
 
 Keep the active CPT trainer and shared training/evaluation helpers unchanged while
@@ -377,3 +414,23 @@ replay and real synthetic editor/collector smoke. Temporarily stop only the owne
 old predictor before loading the candidate and restore it on exit. ThinkPad's
 known SSH alias still times out; don't claim installation there. Automatic
 personalization remains disabled.
+
+## Native compatibility correction at 2026-10-04 11:24 UTC
+
+Root merged the isolated audited fix4cb1473. The exact pinned HF tokenizer marks
+128247 `</s>` as normal, while llama.cpp infers it as Control/EOG. Only that
+known ID/spelling under the pinned tokenizerSHA and native Control/EOG checks is
+excluded from the added-control inventory. All other controls compare exactly.
+FIM termination now uses declared EOS151643; legacy protocols are unchanged.
+The compatibility policy is included in FIM health and runtime configuration hash.
+45 Rust tests pass and release rebuilt. Only the owned regenerable failed ELF was
+replaced; selected Q4 and research checkpoints are unchanged. New embedded SHA
+9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a,501920617B.
+Native quality and replay plans will freeze this corrected engine before outputs.
+
+The recovered collector is healthy at the original endpoint. Deployed image code
+for types/index/projection/migrations/schema matches this worktree byte-for-byte.
+SQLite migration versions1/2/3 and quick_check pass. FIM action/context/tokenizer
+identities are retained in raw event JSON; projectionv3 supports its existing
+action/context/model/runtime/outcome fields without destructive migration.
+No actual candidate editor records yet. Automatic personalization stays disabled.

@@ -15,16 +15,58 @@
       "stage": "embedding",
       "tests_passed": 24,
       "weights_changed": false
+    },
+    {
+      "fix": "pinned HF normal token128247 native alias exception plus declared EOS",
+      "rust_tests_passed": 45,
+      "stage": "native_tokenizer_compatibility",
+      "suite_revision": "native plans frozen only after fix",
+      "training_data_changed": false,
+      "weights_changed": false
     }
   ],
   "compact_profile_bytes": 952319,
   "compact_profile_sha256": "39f043a548e7274cd868d12889f749f1cf969368aaa57f7a54c29d0fc40f11a3",
   "executable": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/tabcomplete-q25-fim",
-  "executable_bytes": 501912425,
-  "executable_sha256": "4d5724a3c09cd5bc031ecd2d02250bede4c34fa432d67ec1c6b9f4cf5bc291df",
-  "generic_engine_sha256": "d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074",
+  "executable_bytes": 501920617,
+  "executable_sha256": "9639694abb385ace116a659602b70f0d79a19e868b746641afda42278d69543a",
+  "generic_engine_sha256": "a6334afc2f612f823e8ccc3913ecfd64c0a21cb473a3edb837b7d9caccc424da",
   "gguf_bytes": 491399808,
   "gguf_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
-  "observed_at": "2026-10-04T10:45:05.583439+00:00",
-  "schema": "q25-fim-native-packaging-v1"
+  "observed_at": "2026-10-04T11:23:36.816969+00:00",
+  "prior_failed_executable_sha256": "4d5724a3c09cd5bc031ecd2d02250bede4c34fa432d67ec1c6b9f4cf5bc291df",
+  "schema": "q25-fim-native-packaging-v1",
+  "source_commit": "4cb1473",
+  "startup_diagnostic": {
+    "actual_cause": "llama.cpp infers native Control/EOG for ordinary HF token128247 </s>",
+    "confirmed_failure_code": "fim_special_token_inventory_mismatch",
+    "confirmed_failure_stage": "fim_tokenizer_verify",
+    "control_inventory_count": 22,
+    "embedded_startup": "failed model initialization",
+    "external_file_same_engine_startup": "failed model initialization",
+    "fix": "exact pinned tokenizer native alias exception; FIM stops only on declared EOS; strict other controls and legacy EOS behavior preserved",
+    "fix_pending": false,
+    "gguf_control_inventory_matches_profile": true,
+    "gguf_load_and_other_tokenizer_checks_passed": true,
+    "inference_generated": false,
+    "observability_query": "runs --since 1h returned no_runs; no startup trace claimed",
+    "observed_at": "2026-10-04T10:52:50.032295+00:00",
+    "rollback_predictor_restored": true,
+    "runtime_inferred_control_candidate": {
+      "gguf_type": 1,
+      "hf_added_control": false,
+      "id": 128247,
+      "library_source": "llama-vocab.cpp automatically adds this string to control/EOG inventory",
+      "spelling": "</s>"
+    },
+    "runtime_pre_tokenizer": "qwen2",
+    "selected_gguf_existing_llama_server_smoke": {
+      "generated": true,
+      "healthy": true,
+      "output_bytes": 6,
+      "purpose": "bounded compatibility only, not Rust quality",
+      "stop_type": "eos"
+    },
+    "startup_reverification_pending": true
+  }
 }
