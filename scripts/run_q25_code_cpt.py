@@ -18,6 +18,8 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -66,6 +68,24 @@ CONVERSION_WATCH_FILE = REPORT / "fim-conversion-watch.json"
 CONVERSION_HISTORY_ROOT = REPORT / "fim/conversion/history"
 CONVERSION_SUBMISSION_FILE = REPORT / "fim-conversion-dataset-submission.json"
 CONVERSION_OUTPUT = ARTIFACTS / "fim/conversion/output"
+CONVERSION_REVISION = 1
+CONVERSION_PLAN_REVISION = 1
+CONVERSION_JOB_GLOB = "fim-conversion-job*.json"
+CONVERSION_FAILED_FILE = REPORT / "fim-conversion-failed-1.json"
+CONVERSION_QUOTA_FILE = REPORT / "fim-conversion-quota.json"
+CONVERSION_VERIFIED_FILE = REPORT / "fim-conversion-verified.json"
+CONVERSION_OUTPUT_SLUG = "q25_fim_conversion_r1"
+CONVERSION_REFERENCE_R1 = CONVERSION_KERNEL_REFERENCE
+CONVERSION_REFERENCE_R2 = "shlokbhakta/tc-q25-fim-q4-conversion-r2"
+CONVERSION_R2_PLAN = REPORT / "fim_conversion_r2_plan.json"
+CONVERSION_R2_KERNEL_ROOT = ARTIFACTS / "fim/conversion-kernel-r2"
+CONVERSION_R2_JOB_FILE = REPORT / "fim-conversion-job-r2.json"
+CONVERSION_R2_WATCH_FILE = REPORT / "fim-conversion-watch-r2.json"
+CONVERSION_R2_HISTORY_ROOT = REPORT / "fim/conversion/history-r2"
+CONVERSION_R2_OUTPUT = ARTIFACTS / "fim/conversion/output-r2"
+CONVERSION_R2_QUOTA_FILE = REPORT / "fim-conversion-quota-r2.json"
+CONVERSION_R2_VERIFIED_FILE = REPORT / "fim-conversion-verified-r2.json"
+CONVERSION_R2_FAILED_FILE = REPORT / "fim-conversion-failed-r2-1.json"
 FIM_ARMS = ("untouched_q25_to_fim", "completed_cpt_q25_to_fim")
 FIM_LINE_SOURCE = Path(
     "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl"
@@ -73,16 +93,88 @@ FIM_LINE_SOURCE = Path(
 
 
 def _conversion_reference(attempt: int) -> str:
-    if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt not in {1, 2}:
+    if not isinstance(attempt, int) or isinstance(attempt, bool):
+        if CONVERSION_REVISION == 1:
+            raise ValueError("CPU conversion supports only explicitly bounded attempts 1 and 2")
+        raise ValueError("CPU conversion attempt must be an integer")
+    if CONVERSION_REVISION == 2:
+        if attempt != 1:
+            raise ValueError("CPU conversion revision 2 permits one explicit first attempt")
+        return CONVERSION_REFERENCE_R2
+    if attempt not in {1, 2}:
         raise ValueError("CPU conversion supports only explicitly bounded attempts 1 and 2")
     return CONVERSION_KERNEL_REFERENCE if attempt == 1 else f"{CONVERSION_KERNEL_REFERENCE}-a2"
 
 
 def _conversion_kernel_root(attempt: int) -> Path:
     _conversion_reference(attempt)
+    if CONVERSION_REVISION == 2:
+        return CONVERSION_KERNEL_ROOT
     if attempt == 1:
         return CONVERSION_KERNEL_ROOT
     return CONVERSION_KERNEL_ROOT.with_name(f"{CONVERSION_KERNEL_ROOT.name}-attempt-{attempt}")
+
+
+@contextmanager
+def _conversion_revision_scope(revision: int) -> Iterator[None]:
+    """Temporarily select isolated CPU conversion revision paths for one CLI action."""
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision not in {1, 2}:
+        raise ValueError("unsupported CPU conversion plan revision")
+    names = (
+        "CONVERSION_REVISION",
+        "CONVERSION_PLAN_REVISION",
+        "CONVERSION_KERNEL_REFERENCE",
+        "CONVERSION_PLAN",
+        "CONVERSION_KERNEL_ROOT",
+        "CONVERSION_JOB_FILE",
+        "CONVERSION_WATCH_FILE",
+        "CONVERSION_HISTORY_ROOT",
+        "CONVERSION_OUTPUT",
+        "CONVERSION_JOB_GLOB",
+        "CONVERSION_FAILED_FILE",
+        "CONVERSION_QUOTA_FILE",
+        "CONVERSION_VERIFIED_FILE",
+        "CONVERSION_OUTPUT_SLUG",
+    )
+    previous = {name: globals()[name] for name in names}
+    try:
+        if revision == 2:
+            globals().update(
+                CONVERSION_REVISION=2,
+                CONVERSION_PLAN_REVISION=2,
+                CONVERSION_KERNEL_REFERENCE=CONVERSION_REFERENCE_R2,
+                CONVERSION_PLAN=REPORT / "fim_conversion_r2_plan.json",
+                CONVERSION_KERNEL_ROOT=ARTIFACTS / "fim/conversion-kernel-r2",
+                CONVERSION_JOB_FILE=REPORT / "fim-conversion-job-r2.json",
+                CONVERSION_WATCH_FILE=REPORT / "fim-conversion-watch-r2.json",
+                CONVERSION_HISTORY_ROOT=REPORT / "fim/conversion/history-r2",
+                CONVERSION_OUTPUT=ARTIFACTS / "fim/conversion/output-r2",
+                CONVERSION_JOB_GLOB="fim-conversion-job-r2*.json",
+                CONVERSION_FAILED_FILE=REPORT / "fim-conversion-failed-r2-1.json",
+                CONVERSION_QUOTA_FILE=REPORT / "fim-conversion-quota-r2.json",
+                CONVERSION_VERIFIED_FILE=REPORT / "fim-conversion-verified-r2.json",
+                CONVERSION_OUTPUT_SLUG="q25_fim_conversion_r2",
+            )
+        else:
+            globals().update(
+                CONVERSION_REVISION=1,
+                CONVERSION_PLAN_REVISION=1,
+                CONVERSION_KERNEL_REFERENCE=CONVERSION_REFERENCE_R1,
+                CONVERSION_PLAN=REPORT / "fim_conversion_plan.json",
+                CONVERSION_KERNEL_ROOT=ARTIFACTS / "fim/conversion-kernel",
+                CONVERSION_JOB_FILE=REPORT / "fim-conversion-job.json",
+                CONVERSION_WATCH_FILE=REPORT / "fim-conversion-watch.json",
+                CONVERSION_HISTORY_ROOT=REPORT / "fim/conversion/history",
+                CONVERSION_OUTPUT=ARTIFACTS / "fim/conversion/output",
+                CONVERSION_JOB_GLOB="fim-conversion-job*.json",
+                CONVERSION_FAILED_FILE=REPORT / "fim-conversion-failed-1.json",
+                CONVERSION_QUOTA_FILE=REPORT / "fim-conversion-quota.json",
+                CONVERSION_VERIFIED_FILE=REPORT / "fim-conversion-verified.json",
+                CONVERSION_OUTPUT_SLUG="q25_fim_conversion_r1",
+            )
+        yield
+    finally:
+        globals().update(previous)
 
 
 def digest(path: Path) -> str:
@@ -750,19 +842,31 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
         gpu_reserved += job_reservation
     # A CPU conversion kernel consumes the aggregate Kaggle session window but
     # does not consume account GPU-hours. Keep these units separate.
+    r1_history_root = REPORT / "fim/conversion/history"
+    r2_history_root = REPORT / "fim/conversion/history-r2"
+    conversion_history_roots = (r1_history_root, r2_history_root)
     if any(
         path.is_symlink()
         for path in (
             REPORT / "fim",
             REPORT / "fim/conversion",
-            CONVERSION_HISTORY_ROOT,
+            *conversion_history_roots,
         )
     ):
         raise ValueError("CPU conversion history root is unsafe")
     conversion_job_paths = [
         *REPORT.glob("fim-conversion-job*.json"),
-        *CONVERSION_HISTORY_ROOT.glob("attempt-*/job.json"),
+        *(
+            path
+            for history_root in conversion_history_roots
+            for path in history_root.glob("attempt-*/job.json")
+        ),
     ]
+    allowed_conversion_references = {
+        CONVERSION_REFERENCE_R1,
+        f"{CONVERSION_REFERENCE_R1}-a2",
+        CONVERSION_REFERENCE_R2,
+    }
     conversion_references: dict[str, str] = {}
     for job_path in conversion_job_paths:
         if job_path.is_symlink() or not job_path.is_file():
@@ -774,7 +878,11 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
             not isinstance(reference, str)
             or not isinstance(attempt, int)
             or isinstance(attempt, bool)
-            or reference != _conversion_reference(attempt)
+            or reference not in allowed_conversion_references
+            or (reference == CONVERSION_REFERENCE_R2 and attempt != 1)
+            or (reference == CONVERSION_REFERENCE_R2 and job.get("plan_revision") != 2)
+            or (reference == CONVERSION_REFERENCE_R1 and attempt != 1)
+            or (reference == f"{CONVERSION_REFERENCE_R1}-a2" and attempt != 2)
         ):
             raise ValueError("CPU conversion history has an invalid job identity")
         receipt_hash = digest(job_path)
@@ -2552,7 +2660,7 @@ def freeze_fim_conversion(selection_path: Path = CONVERSION_SELECTION) -> dict[s
         raise FileNotFoundError("pinned CPU conversion source files are incomplete")
     plan = {
         "schema": "q25-fim-q4-conversion-plan-v1",
-        "plan_revision": 1,
+        "plan_revision": CONVERSION_PLAN_REVISION,
         "selection_path": source["selection_path"],
         "selection_sha256": source["selection_sha256"],
         "paired_quality_report_sha256": source["source"]["paired_quality_report_sha256"],
@@ -2587,7 +2695,7 @@ def _load_conversion_plan() -> dict[str, Any]:
     execution = plan.get("execution", {})
     if (
         plan.get("schema") != "q25-fim-q4-conversion-plan-v1"
-        or plan.get("plan_revision") != 1
+        or plan.get("plan_revision") != CONVERSION_PLAN_REVISION
         or not isinstance(execution, dict)
         or execution.get("session_seconds") != CONVERSION_SESSION_SECONDS
         or execution.get("finalization_reserve_seconds") != CONVERSION_FINALIZATION_RESERVE_SECONDS
@@ -3023,16 +3131,18 @@ sys.argv = [str(worker),
     "--code-root", str(CODE_ROOT),
     "--source-root", str(source_root),
     "--source-kernel-reference", SESSION["source_kernel_reference"],
-    "--output-root", "/kaggle/working/q25_fim_conversion_r1",
-    "--runtime-root", "/kaggle/temp/q25_fim_conversion_r1",
+    "--output-root", "/kaggle/working/__OUTPUT_SLUG__",
+    "--runtime-root", "/kaggle/temp/__OUTPUT_SLUG__",
     "--session-seconds", str(SESSION["session_seconds"]),
     "--reserve-seconds", str(SESSION["finalization_reserve_seconds"])]
 runpy.run_path(str(worker), run_name="__main__")
 """
     template = template.replace("__SESSION_JSON__", embedded)
-    template = template.replace(
-        "__SOURCE_LIMIT__", str(CONVERSION_EMBEDDED_SOURCE_MAX_BYTES)
-    ).replace("__REQUIRED_PATHS__", required_paths)
+    template = (
+        template.replace("__SOURCE_LIMIT__", str(CONVERSION_EMBEDDED_SOURCE_MAX_BYTES))
+        .replace("__REQUIRED_PATHS__", required_paths)
+        .replace("__OUTPUT_SLUG__", str(session.get("output_slug")))
+    )
     if len(template.encode("utf-8")) > CONVERSION_LAUNCHER_MAX_BYTES:
         raise OSError("self-contained conversion launcher exceeds its source-size bound")
     return template
@@ -3055,6 +3165,8 @@ def build_fim_conversion_kernel(plan: dict[str, Any], commit: str, *, attempt: i
             raise ValueError("conversion kernel staging contains an unapproved file")
     session = {
         "attempt": attempt,
+        "plan_revision": CONVERSION_PLAN_REVISION,
+        "output_slug": CONVERSION_OUTPUT_SLUG,
         "commit": commit,
         "plan_sha256": digest(CONVERSION_PLAN),
         "input_manifest_sha256": input_manifest_sha,
@@ -3108,9 +3220,9 @@ def build_fim_conversion_kernel(plan: dict[str, Any], commit: str, *, attempt: i
     metadata = {
         "id": reference,
         "title": (
-            "tc q25 fim q4 conversion r1"
+            f"tc q25 fim q4 conversion r{CONVERSION_PLAN_REVISION}"
             if attempt == 1
-            else f"tc q25 fim q4 conversion r1 a{attempt}"
+            else f"tc q25 fim q4 conversion r{CONVERSION_PLAN_REVISION} a{attempt}"
         ),
         "code_file": "run.py",
         "language": "python",
@@ -3364,6 +3476,8 @@ def submit_fim_conversion(
     resume_source: str | None = None,
 ) -> dict[str, Any]:
     reference = _conversion_reference(attempt)
+    if CONVERSION_REVISION == 2 and (attempt != 1 or resume_source is not None):
+        raise ValueError("conversion revision 2 permits one explicit first attempt only")
     plan = _load_conversion_plan() if plan is None else plan
     if plan != _load_conversion_plan():
         raise ValueError("conversion plan differs from its frozen report")
@@ -3426,6 +3540,7 @@ def submit_fim_conversion(
         _archive_conversion_retry_evidence(retry_evidence)
     job = {
         "reference": reference,
+        "plan_revision": CONVERSION_PLAN_REVISION,
         "source_kernel_reference": plan["source"]["kernel_reference"],
         "selected_arm": plan["source"]["arm"],
         "attempt": attempt,
@@ -3446,7 +3561,7 @@ def submit_fim_conversion(
         "submitted_at": datetime.now(UTC).isoformat(),
         "automatic_allocation": False,
     }
-    save(REPORT / "fim-conversion-quota.json", observation)
+    save(CONVERSION_QUOTA_FILE, observation)
     save(CONVERSION_JOB_FILE, job)
     if attempt == 2:
         save(
@@ -3507,6 +3622,8 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         or job.get("source_kernel_reference") != plan["source"]["kernel_reference"]
         or job.get("enable_gpu") is not False
         or job.get("automatic_allocation") is not False
+        or (CONVERSION_REVISION == 2 and job.get("plan_revision") != 2)
+        or job.get("reference") != _conversion_reference(job.get("attempt"))
     ):
         raise ValueError("conversion job belongs to another plan or source kernel")
     status = cli("kaggle", "kernels", "status", job["reference"])
@@ -3526,7 +3643,7 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         str(CONVERSION_OUTPUT),
         "-q",
         "--file-pattern",
-        r"q25_fim_conversion_r1/conversion\.json$",
+        rf"{re.escape(CONVERSION_OUTPUT_SLUG)}/conversion\.json$",
         timeout=300,
     )
     manifests = list(CONVERSION_OUTPUT.glob("**/conversion.json"))
@@ -3628,7 +3745,7 @@ def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]
         "collected_at": datetime.now(UTC).isoformat(),
         "source_weight_or_checkpoint_retrieval": False,
     }
-    save(REPORT / "fim-conversion-verified.json", record)
+    save(CONVERSION_VERIFIED_FILE, record)
     save(result_path.with_name("conversion-receipt.json"), record)
     return record
 
@@ -3640,7 +3757,12 @@ def watch_fim_conversion(
     if not CONVERSION_JOB_FILE.is_file():
         raise FileNotFoundError("conversion observer requires one submitted job receipt")
     job = json.loads(CONVERSION_JOB_FILE.read_text())
-    if job.get("plan_sha256") != digest(CONVERSION_PLAN) or job.get("enable_gpu") is not False:
+    if (
+        job.get("plan_sha256") != digest(CONVERSION_PLAN)
+        or job.get("enable_gpu") is not False
+        or (CONVERSION_REVISION == 2 and job.get("plan_revision") != 2)
+        or job.get("reference") != _conversion_reference(job.get("attempt"))
+    ):
         raise ValueError("conversion observer identity differs from the CPU plan")
     if (
         not isinstance(poll_seconds, (int, float))
@@ -3734,6 +3856,7 @@ def main() -> None:
     parser.add_argument("--execute-conversion", action="store_true")
     parser.add_argument("--collect-conversion", action="store_true")
     parser.add_argument("--watch-conversion", action="store_true")
+    parser.add_argument("--conversion-revision2", action="store_true")
     parser.add_argument("--conversion-selection", type=Path, default=CONVERSION_SELECTION)
     parser.add_argument("--settle-sessions", action="store_true")
     parser.add_argument("--cpt-attempt", type=int, default=1)
@@ -3753,6 +3876,8 @@ def main() -> None:
     selected_conversion_actions = [
         name for name, selected in conversion_actions.items() if selected
     ]
+    if args.conversion_revision2 and not selected_conversion_actions:
+        parser.error("--conversion-revision2 applies only to conversion actions")
     if selected_conversion_actions:
         if (
             len(selected_conversion_actions) != 1
@@ -3771,28 +3896,34 @@ def main() -> None:
         ):
             parser.error("conversion actions must run alone, one at a time")
         action = selected_conversion_actions[0]
-        if action == "freeze":
-            result = {"fim_conversion_plan": freeze_fim_conversion(args.conversion_selection)}
-        else:
-            if args.conversion_selection != CONVERSION_SELECTION:
-                parser.error("--conversion-selection applies only to --freeze-conversion")
-            conversion_plan = _load_conversion_plan()
-            if action == "bundle":
-                result = {"conversion_bundle": str(build_fim_conversion_bundle(conversion_plan))}
-            elif action == "upload":
-                result = {"conversion_dataset": upload_fim_conversion_bundle(conversion_plan)}
-            elif action == "execute":
-                result = {
-                    "conversion_job": submit_fim_conversion(
-                        conversion_plan,
-                        attempt=args.attempt,
-                        resume_source=args.resume_source,
-                    )
-                }
-            elif action == "collect":
-                result = {"conversion_output": collect_fim_conversion(conversion_plan)}
+        revision = 2 if args.conversion_revision2 else 1
+        if revision == 2 and (args.attempt != 1 or args.resume_source is not None):
+            parser.error("revision 2 permits only one explicit first conversion attempt")
+        with _conversion_revision_scope(revision):
+            if action == "freeze":
+                result = {"fim_conversion_plan": freeze_fim_conversion(args.conversion_selection)}
             else:
-                result = {"conversion_output": watch_fim_conversion(conversion_plan)}
+                if args.conversion_selection != CONVERSION_SELECTION:
+                    parser.error("--conversion-selection applies only to --freeze-conversion")
+                conversion_plan = _load_conversion_plan()
+                if action == "bundle":
+                    result = {
+                        "conversion_bundle": str(build_fim_conversion_bundle(conversion_plan))
+                    }
+                elif action == "upload":
+                    result = {"conversion_dataset": upload_fim_conversion_bundle(conversion_plan)}
+                elif action == "execute":
+                    result = {
+                        "conversion_job": submit_fim_conversion(
+                            conversion_plan,
+                            attempt=args.attempt,
+                            resume_source=args.resume_source,
+                        )
+                    }
+                elif action == "collect":
+                    result = {"conversion_output": collect_fim_conversion(conversion_plan)}
+                else:
+                    result = {"conversion_output": watch_fim_conversion(conversion_plan)}
         print(json.dumps(result, sort_keys=True))
         return
     if args.settle_sessions:

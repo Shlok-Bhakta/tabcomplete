@@ -3075,6 +3075,11 @@ def _fim_conversion_context(
         campaign, "CONVERSION_SUBMISSION_FILE", report / "fim-conversion-dataset-submission.json"
     )
     monkeypatch.setattr(campaign, "CONVERSION_OUTPUT", artifacts / "fim/conversion/output")
+    monkeypatch.setattr(campaign, "CONVERSION_FAILED_FILE", report / "fim-conversion-failed-1.json")
+    monkeypatch.setattr(campaign, "CONVERSION_QUOTA_FILE", report / "fim-conversion-quota.json")
+    monkeypatch.setattr(
+        campaign, "CONVERSION_VERIFIED_FILE", report / "fim-conversion-verified.json"
+    )
     monkeypatch.setattr(campaign, "_conversion_code_files", lambda: code_sources)
     monkeypatch.setattr(
         campaign.shutil, "disk_usage", lambda _path: SimpleNamespace(free=64 * 1024**3)
@@ -3990,6 +3995,151 @@ def test_conversion_cli_forwards_explicit_retry_lineage(
     }
 
 
+def test_conversion_revision2_freeze_uses_separate_plan_and_preserves_r1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    original = campaign.freeze_fim_conversion(selection_path)
+    original_bytes = campaign.CONVERSION_PLAN.read_bytes()
+
+    with campaign._conversion_revision_scope(2):
+        revised = campaign.freeze_fim_conversion(selection_path)
+        assert revised["plan_revision"] == 2
+        assert campaign.CONVERSION_PLAN == report / "fim_conversion_r2_plan.json"
+        assert campaign.CONVERSION_KERNEL_REFERENCE == campaign.CONVERSION_REFERENCE_R2
+        assert campaign._conversion_reference(1) == campaign.CONVERSION_REFERENCE_R2
+        with pytest.raises(ValueError, match="revision 2"):
+            campaign._conversion_reference(2)
+        assert revised["selection_sha256"] == original["selection_sha256"]
+        assert revised["training_plan_sha256"] == original["training_plan_sha256"]
+        assert revised["source"] == original["source"]
+        assert revised["source_code"] == original["source_code"]
+
+    assert campaign.CONVERSION_PLAN == report / "fim_conversion_plan.json"
+    assert campaign.CONVERSION_PLAN.read_bytes() == original_bytes
+    assert (report / "fim_conversion_r2_plan.json").is_file()
+
+
+def test_conversion_revision2_kernel_has_separate_reference_output_and_receipts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    with campaign._conversion_revision_scope(2):
+        plan = campaign.freeze_fim_conversion(selection_path)
+        kernel = campaign.build_fim_conversion_kernel(plan, "f" * 40)
+
+        metadata = json.loads((kernel / "kernel-metadata.json").read_text())
+        launcher = (kernel / "run.py").read_text()
+        assert kernel == artifacts / "fim/conversion-kernel-r2"
+        assert metadata["id"] == "shlokbhakta/tc-q25-fim-q4-conversion-r2"
+        assert metadata["enable_gpu"] is False
+        assert '"/kaggle/working/q25_fim_conversion_r2"' in launcher
+        assert '"/kaggle/temp/q25_fim_conversion_r2"' in launcher
+        assert '"/kaggle/working/q25_fim_conversion_r1"' not in launcher
+        assert campaign.CONVERSION_JOB_FILE == report / "fim-conversion-job-r2.json"
+        assert campaign.CONVERSION_WATCH_FILE == report / "fim-conversion-watch-r2.json"
+        assert campaign.CONVERSION_OUTPUT == artifacts / "fim/conversion/output-r2"
+
+    assert not (report / "fim-conversion-job.json").exists()
+    assert not (artifacts / "fim/conversion-kernel").exists()
+
+
+def test_shared_conversion_budget_counts_r1_and_revision2_history(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _selection, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    for fim_job in report.glob("fim-job-*.json"):
+        fim_job.unlink()
+    reservation = campaign.CONVERSION_SESSION_SECONDS
+    campaign.save(
+        report / "fim-conversion-job.json",
+        {
+            "reference": campaign.CONVERSION_REFERENCE_R1,
+            "attempt": 1,
+            "conservative_reserved_session_seconds": reservation,
+            "enable_gpu": False,
+        },
+    )
+    archived = report / "fim/conversion/history-r2/attempt-1/job.json"
+    campaign.save(
+        archived,
+        {
+            "reference": campaign.CONVERSION_REFERENCE_R2,
+            "plan_revision": 2,
+            "attempt": 1,
+            "conservative_reserved_session_seconds": reservation,
+            "enable_gpu": False,
+        },
+    )
+    limits = {
+        "shared_limits": {
+            "aggregate_reserved_session_seconds": reservation * 3,
+            "minimum_reserved_future_fim_session_seconds": 0,
+            "conservative_account_gpu_hours": 40,
+        }
+    }
+    campaign.save(report / "campaign_budget.json", limits)
+
+    campaign.check_shared_allocation_budget(reservation, phase="conversion")
+
+    limits["shared_limits"]["aggregate_reserved_session_seconds"] = reservation * 3 - 1
+    campaign.save(report / "campaign_budget.json", limits)
+    with pytest.raises(RuntimeError, match="session reservation exhausted"):
+        campaign.check_shared_allocation_budget(reservation, phase="conversion")
+
+
+def test_conversion_revision2_cli_flag_is_limited_to_conversion_action(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["run_q25_code_cpt.py", "--freeze-conversion", "--conversion-revision2"],
+    )
+    seen: dict[str, Any] = {}
+
+    def fake_freeze(selection_path: Path) -> dict[str, Any]:
+        seen.update(
+            selection_path=selection_path,
+            revision=campaign.CONVERSION_PLAN_REVISION,
+            plan_path=campaign.CONVERSION_PLAN,
+        )
+        return {"plan_revision": campaign.CONVERSION_PLAN_REVISION}
+
+    monkeypatch.setattr(campaign, "freeze_fim_conversion", fake_freeze)
+    campaign.main()
+    assert seen == {
+        "selection_path": campaign.CONVERSION_SELECTION,
+        "revision": 2,
+        "plan_path": campaign.CONVERSION_R2_PLAN,
+    }
+    assert json.loads(capsys.readouterr().out) == {"fim_conversion_plan": {"plan_revision": 2}}
+
+    monkeypatch.setattr(sys, "argv", ["run_q25_code_cpt.py", "--conversion-revision2"])
+    with pytest.raises(SystemExit):
+        campaign.main()
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_q25_code_cpt.py",
+            "--execute-conversion",
+            "--conversion-revision2",
+            "--attempt",
+            "2",
+        ],
+    )
+    with pytest.raises(SystemExit):
+        campaign.main()
+
+
 @pytest.mark.parametrize("tamper", [None, "worker_hash", "storage_cap"])
 def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str | None
@@ -4002,6 +4152,7 @@ def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
         campaign.CONVERSION_JOB_FILE,
         {
             "reference": campaign.CONVERSION_KERNEL_REFERENCE,
+            "attempt": 1,
             "source_kernel_reference": plan["source"]["kernel_reference"],
             "plan_sha256": campaign.digest(campaign.CONVERSION_PLAN),
             "selection_sha256": plan["selection_sha256"],
