@@ -9,11 +9,13 @@ import math
 import os
 import platform
 import shlex
+import signal
 import socket
 import subprocess
 import threading
 import time
-from contextlib import nullcontext
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -43,6 +45,33 @@ FIM_REPLAY_SOURCE_FILES = (
     "tools/tabcomplete_engine/src/context.rs",
     "tools/tabcomplete_engine/Cargo.lock",
 )
+
+
+@contextmanager
+def _hard_wallclock_deadline(deadline: float) -> Iterator[None]:
+    """Bound a replay with SIGALRM and restore the caller's signal state."""
+    if threading.current_thread() is not threading.main_thread():
+        raise ValueError("FIM replay deadline requires the main thread")
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    previous_delay, previous_interval = signal.getitimer(signal.ITIMER_REAL)
+    if previous_delay > 0 or previous_interval > 0:
+        raise ValueError("FIM replay cannot replace an active real-time alarm")
+
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("FIM latency replay reached its 20-minute deadline")
+
+    def on_alarm(_signum, _frame) -> None:
+        raise TimeoutError("FIM latency replay reached its 20-minute deadline")
+
+    signal.signal(signal.SIGALRM, on_alarm)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0.0, 0.0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        signal.setitimer(signal.ITIMER_REAL, previous_delay, previous_interval)
 
 
 def sha(data: bytes) -> str:
@@ -483,7 +512,12 @@ class LocalProcessSampler:
         self.first_sample = threading.Event()
         self.reader = threading.Thread(target=self._read, daemon=True)
         self.reader.start()
-        if not self.first_sample.wait(15):
+        try:
+            started = self.first_sample.wait(15)
+        except BaseException:
+            self.stop()
+            raise
+        if not started:
             self.stop()
             raise ValueError("owned FIM service resource sampler did not start")
 
@@ -502,19 +536,94 @@ class LocalProcessSampler:
         with self.lock:
             return list(self.rows)
 
-    def stop(self) -> None:
-        if self.process.poll() is None and self.process.stdin is not None:
-            try:
-                self.process.stdin.write("stop\n")
-                self.process.stdin.flush()
-                self.process.stdin.close()
-            except OSError:
-                pass
+    def stop(self) -> int | None:
+        if self.process.poll() is None:
+            if self.process.stdin is not None:
+                try:
+                    self.process.stdin.write("stop\n")
+                    self.process.stdin.flush()
+                except OSError:
+                    pass
+                try:
+                    self.process.stdin.close()
+                except OSError:
+                    pass
             try:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 self.process.terminate()
+                try:
+                    self.process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=2)
         self.reader.join(timeout=2)
+        return self.process.poll()
+
+
+def _validate_sampler_coverage(
+    rows: list[dict],
+    *,
+    pid: int,
+    started_monotonic: float,
+    stopped_monotonic: float,
+    returncode: int | None,
+    interval_seconds: float = 0.5,
+) -> dict:
+    if returncode != 0:
+        raise ValueError("FIM resource sampler did not exit normally")
+    if pid <= 1 or interval_seconds != 0.5:
+        raise ValueError("FIM resource sampler identity or interval is invalid")
+    if (
+        not math.isfinite(started_monotonic)
+        or not math.isfinite(stopped_monotonic)
+        or stopped_monotonic <= started_monotonic
+    ):
+        raise ValueError("FIM resource sampler window is invalid")
+    if len(rows) < 2:
+        raise ValueError("FIM resource sampler did not cover its full window")
+
+    timestamps: list[float] = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get("pid") != pid:
+            raise ValueError("FIM resource samples include a different process")
+        value = row.get("monotonic_s")
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(float(value))
+        ):
+            raise ValueError("FIM resource sample timestamp is invalid")
+        timestamps.append(float(value))
+    if any(
+        current <= previous
+        for previous, current in zip(timestamps[:-1], timestamps[1:], strict=True)
+    ):
+        raise ValueError("FIM resource sample timestamps are not strictly monotonic")
+
+    endpoint_tolerance = interval_seconds * 2
+    gaps = [
+        current - previous
+        for previous, current in zip(timestamps[:-1], timestamps[1:], strict=True)
+    ]
+    if (
+        timestamps[0] < started_monotonic - 0.05
+        or timestamps[0] > started_monotonic + endpoint_tolerance
+        or timestamps[-1] < stopped_monotonic - endpoint_tolerance
+        or timestamps[-1] > stopped_monotonic + 0.05
+        or max(gaps, default=0.0) > endpoint_tolerance + 1e-6
+    ):
+        raise ValueError("FIM resource samples do not cover the full 500 ms window")
+    return {
+        "sample_count": len(rows),
+        "sampler_exit_code": returncode,
+        "window_seconds": round(stopped_monotonic - started_monotonic, 6),
+        "covered_seconds": round(timestamps[-1] - timestamps[0], 6),
+        "first_sample_monotonic_s": timestamps[0],
+        "last_sample_monotonic_s": timestamps[-1],
+        "max_sample_gap_seconds": round(max(gaps), 6),
+        "sampling_interval_seconds": interval_seconds,
+    }
 
 
 def _fim_runtime_identity(args, tokenizer, training_plan: dict, conversion: dict) -> dict:
@@ -810,6 +919,7 @@ def freeze_fim_native_replay(args) -> dict:
             "changed_editor_state_cache_on": 48,
             "identical_prompt_repeat_cache_on": 48,
         },
+        "cache_initialization": _fim_cache_initialization_contract(states),
         "request_count": 144,
         "deadline_seconds": FIM_REPLAY_SESSION_SECONDS,
         "rss_limit_bytes": FIM_REPLAY_RSS_LIMIT_BYTES,
@@ -901,7 +1011,58 @@ def fim_replay_schedule(rows: list[dict]) -> list[tuple[int, dict, str, bool]]:
     return schedule
 
 
+def _fim_cache_initialization_contract(rows: list[dict]) -> dict:
+    if len(rows) != 24:
+        raise ValueError("FIM cache contract requires exactly 24 frozen states")
+    initial_cache_state = rows[-1]
+    first_cache_state = rows[0]
+    required_text_fields = (
+        initial_cache_state.get("id"),
+        initial_cache_state.get("source_sha256"),
+        initial_cache_state.get("prompt_sha256"),
+        initial_cache_state.get("repository"),
+        first_cache_state.get("id"),
+        first_cache_state.get("source_sha256"),
+        first_cache_state.get("prompt_sha256"),
+        first_cache_state.get("repository"),
+    )
+    if any(not isinstance(value, str) or not value for value in required_text_fields):
+        raise ValueError("FIM cache contract state identity is incomplete")
+    return {
+        "fresh_cache_off_policy": "clear_before_prefill_then_leave_prompt_kv_resident",
+        "first_cache_on_request_state": {
+            "id": first_cache_state["id"],
+            "source_sha256": first_cache_state["source_sha256"],
+            "prompt_sha256": first_cache_state["prompt_sha256"],
+            "repository_identity": first_cache_state["repository"],
+        },
+        "first_cache_on_prior_resident_state": {
+            "id": initial_cache_state["id"],
+            "source_sha256": initial_cache_state["source_sha256"],
+            "prompt_sha256": initial_cache_state["prompt_sha256"],
+            "repository_identity": initial_cache_state["repository"],
+        },
+        "cache_on_trajectory_policy": "two_continuous_warm_48_request_trajectories",
+        "second_trajectory_prior_resident_state": {
+            "id": initial_cache_state["id"],
+            "source_sha256": initial_cache_state["source_sha256"],
+            "prompt_sha256": initial_cache_state["prompt_sha256"],
+            "repository_identity": initial_cache_state["repository"],
+        },
+        "cache_clear_between_trajectories": False,
+        "cold_start_claim": False,
+        "observed_cache_count_field": "server_timings.cache_n",
+    }
+
+
 def replay_fim_native(args) -> dict:
+    started = time.monotonic()
+    deadline = started + FIM_REPLAY_SESSION_SECONDS
+    with _hard_wallclock_deadline(deadline):
+        return _replay_fim_native(args, started=started, deadline=deadline)
+
+
+def _replay_fim_native(args, *, started: float, deadline: float) -> dict:
     from evaluate_q25_fim_native import (
         TOKENIZER_SHA,
         load_tokenizer,
@@ -961,8 +1122,6 @@ def replay_fim_native(args) -> dict:
         raise ValueError(
             "FIM replay inputs and results must share one non-symlink output directory"
         )
-    started = time.monotonic()
-    deadline = started + FIM_REPLAY_SESSION_SECONDS
     if not args.plan.is_file() or not args.states.is_file():
         raise FileNotFoundError("frozen FIM latency plan or states are missing")
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
@@ -996,6 +1155,8 @@ def replay_fim_native(args) -> dict:
         or plan.get("sampling_interval_seconds") != 0.5
         or plan.get("quality_claim") is not False
         or plan.get("content_recorded") is not False
+        or plan.get("cache_initialization")
+        != _fim_cache_initialization_contract(_jsonl_rows(args.states))
         or plan.get("source_sha256") != _fim_source_hashes()
     ):
         raise ValueError("FIM latency schedule differs from its fixed bounded protocol")
@@ -1054,6 +1215,7 @@ def replay_fim_native(args) -> dict:
     before_pressure = pressure()
     provider = NativeProvider(args.fim_url, args.alias)
     provider.timeout_seconds = min(60, FIM_REPLAY_SESSION_SECONDS)
+    sampler_started = time.monotonic()
     sampler = LocalProcessSampler(args.pid, 0.5)
     records: list[dict] = []
     schedule = fim_replay_schedule(state_rows)
@@ -1271,12 +1433,17 @@ def replay_fim_native(args) -> dict:
                             handle.write(json.dumps(row_result, sort_keys=True) + "\n")
                         records.append(row_result)
     finally:
-        sampler.stop()
+        sampler_exit_code = sampler.stop()
+        sampler_stopped = time.monotonic()
     resource_samples = sampler.copy_rows()
-    if not resource_samples:
-        raise ValueError("FIM latency replay produced no 500 ms process samples")
-    if any(sample.get("pid") != args.pid for sample in resource_samples):
-        raise ValueError("FIM resource samples include a different process")
+    sampler_coverage = _validate_sampler_coverage(
+        resource_samples,
+        pid=args.pid,
+        started_monotonic=sampler_started,
+        stopped_monotonic=sampler_stopped,
+        returncode=sampler_exit_code,
+        interval_seconds=0.5,
+    )
     sampled_rss = _rss_from_sampler_rows(resource_samples)
     if sampled_rss is not None and sampled_rss > FIM_REPLAY_RSS_LIMIT_BYTES:
         raise ValueError("sampled FIM service exceeded the 1.5 GiB RSS limit")
@@ -1328,6 +1495,8 @@ def replay_fim_native(args) -> dict:
         "runtime_config_hash": runtime["health"]["runtime_config_hash"],
         "resource_summary": cgroup_summary(resource_samples),
         "resource_sample_count": len(resource_samples),
+        "resource_sampler_coverage": sampler_coverage,
+        "cache_initialization": _fim_cache_initialization_contract(state_rows),
         "vmstat_delta": {
             key: after_vmstat[key] - before_vmstat.get(key, after_vmstat[key])
             for key in after_vmstat

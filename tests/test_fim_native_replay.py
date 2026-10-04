@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import signal
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -10,10 +12,17 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from replay_small_model import (
+    _fim_cache_initialization_contract,
     _fim_recording_hashes,
+    _hard_wallclock_deadline,
+    _validate_sampler_coverage,
     build_fim_latency_states,
     fim_replay_schedule,
 )
+
+
+def _sentinel_alarm_handler(_signum, _frame):
+    return None
 
 
 class FIMCharTokenizer:
@@ -188,3 +197,99 @@ def test_recording_hashes_use_bytes_and_never_return_generated_content():
     }
     assert response not in recorded.values()
     assert _fim_recording_hashes(None, token_ids, response)["canonical_action_sha256"] is None
+
+
+def test_cache_contract_binds_the_warm_start_and_rejects_cold_claims(latency_states):
+    contract = _fim_cache_initialization_contract(latency_states)
+
+    assert contract["first_cache_on_prior_resident_state"] == {
+        "id": latency_states[-1]["id"],
+        "source_sha256": latency_states[-1]["source_sha256"],
+        "prompt_sha256": latency_states[-1]["prompt_sha256"],
+        "repository_identity": latency_states[-1]["repository"],
+    }
+    assert contract["first_cache_on_request_state"]["id"] == latency_states[0]["id"]
+    assert contract["cache_on_trajectory_policy"] == "two_continuous_warm_48_request_trajectories"
+    assert contract["cache_clear_between_trajectories"] is False
+    assert contract["cold_start_claim"] is False
+    assert contract["observed_cache_count_field"] == "server_timings.cache_n"
+
+
+def test_hard_deadline_interrupts_and_restores_prior_signal_state():
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    previous_timer = signal.getitimer(signal.ITIMER_REAL)
+    assert previous_timer == (0.0, 0.0)
+    sentinel_handler = _sentinel_alarm_handler
+    signal.signal(signal.SIGALRM, sentinel_handler)
+    try:
+        with pytest.raises(TimeoutError, match="20-minute deadline"):
+            with _hard_wallclock_deadline(time.monotonic() + 0.02):
+                time.sleep(0.1)
+        assert signal.getsignal(signal.SIGALRM) is sentinel_handler
+        assert signal.getitimer(signal.ITIMER_REAL) == (0.0, 0.0)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0.0, 0.0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        signal.setitimer(signal.ITIMER_REAL, *previous_timer)
+
+
+def test_hard_deadline_preserves_an_existing_timer_and_handler():
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    previous_timer = signal.getitimer(signal.ITIMER_REAL)
+    assert previous_timer == (0.0, 0.0)
+    sentinel_handler = _sentinel_alarm_handler
+    signal.signal(signal.SIGALRM, sentinel_handler)
+    signal.setitimer(signal.ITIMER_REAL, 60.0)
+    try:
+        with pytest.raises(ValueError, match="active real-time alarm"):
+            with _hard_wallclock_deadline(time.monotonic() + 1):
+                pass
+        assert signal.getsignal(signal.SIGALRM) is sentinel_handler
+        assert signal.getitimer(signal.ITIMER_REAL)[0] > 0
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0.0, 0.0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        signal.setitimer(signal.ITIMER_REAL, *previous_timer)
+
+
+def test_sampler_coverage_requires_normal_exit_and_full_monotonic_window():
+    rows = [{"pid": 4242, "monotonic_s": value} for value in (10.0, 10.5, 11.0)]
+
+    coverage = _validate_sampler_coverage(
+        rows,
+        pid=4242,
+        started_monotonic=10.0,
+        stopped_monotonic=11.0,
+        returncode=0,
+    )
+
+    assert coverage["sample_count"] == 3
+    assert coverage["covered_seconds"] == 1.0
+    assert coverage["sampler_exit_code"] == 0
+    with pytest.raises(ValueError, match="exit normally"):
+        _validate_sampler_coverage(
+            rows,
+            pid=4242,
+            started_monotonic=10.0,
+            stopped_monotonic=11.0,
+            returncode=-15,
+        )
+
+
+def test_sampler_coverage_rejects_single_sample_and_gaps():
+    arguments = {
+        "pid": 4242,
+        "started_monotonic": 10.0,
+        "stopped_monotonic": 12.0,
+        "returncode": 0,
+    }
+    with pytest.raises(ValueError, match="full window"):
+        _validate_sampler_coverage([{"pid": 4242, "monotonic_s": 10.0}], **arguments)
+    gap_rows = [
+        {"pid": 4242, "monotonic_s": 10.0},
+        {"pid": 4242, "monotonic_s": 10.5},
+        {"pid": 4242, "monotonic_s": 11.6},
+        {"pid": 4242, "monotonic_s": 12.0},
+    ]
+    with pytest.raises(ValueError, match="full 500 ms window"):
+        _validate_sampler_coverage(gap_rows, **arguments)
