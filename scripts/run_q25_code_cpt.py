@@ -980,9 +980,9 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
             raise ValueError("CPU conversion job has an invalid session reservation")
         if job.get("enable_gpu") is not False:
             raise ValueError("conversion reservation unexpectedly enables a GPU")
-        settlement = _validated_cpu_failure_settlement(job_path, job)
-        if settlement is not None:
-            reservation = settlement
+        cpu_settlement = _validated_cpu_failure_settlement(job_path, job)
+        if cpu_settlement is not None:
+            reservation = cpu_settlement
         wall_reserved += reservation
     future_reserve = (
         int(shared["minimum_reserved_future_fim_session_seconds"]) if phase == "cpt" else 0
