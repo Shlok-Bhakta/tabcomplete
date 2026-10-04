@@ -1,0 +1,42 @@
+{
+  "files": {
+    "chat_template.jinja": {
+      "bytes": 2427,
+      "sha256": "44d5f08f3f72b837eaad09f13a54c1f9f4eb58d75240334548b7fd52a5437fa5"
+    },
+    "config.json": {
+      "bytes": 1284,
+      "sha256": "32f65bf9489178e70fff5ba7da6138c7df5092b14740e9f90c7dfa927b9e8802"
+    },
+    "generation_config.json": {
+      "bytes": 139,
+      "sha256": "689c1e2b6769259cc773777319bae6f2bd6020ea1aa432b437578da46c994e8a"
+    },
+    "model.safetensors": {
+      "bytes": 1260367152,
+      "sha256": "15df09d25a5c39610e6c15148850a02295a32d228e1674871e13beddb25a8ccb"
+    },
+    "tokenizer.json": {
+      "bytes": 11421892,
+      "sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8"
+    },
+    "tokenizer_config.json": {
+      "bytes": 694,
+      "sha256": "31f3ca2a2b90487393bdc778c41bfc6dab379646865aeef19068e726804126f1"
+    }
+  },
+  "fingerprint": "963fa4f3a547665e5e9ebb626a0dde9d23a6a45198a93b51516fad7712739a18",
+  "manifest_sha256": "d510a83246606cd7abe38809142a6c39e275aa772838e04ec1c06228581d566b",
+  "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/output-attempt-1/q25_code_cpt_r2/training/inference-f16",
+  "process_exit_reload_evaluation": "inspect worker candidate evaluation evidence",
+  "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+  "training_cursor": {
+    "attempted_updates": 481,
+    "completed_updates": 481,
+    "epoch": 1,
+    "next_example_index": 7688,
+    "skipped_updates": 0,
+    "supervised_target_tokens": 7864824,
+    "training_input_tokens": 7872512
+  }
+}

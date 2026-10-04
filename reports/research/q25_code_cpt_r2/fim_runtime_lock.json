@@ -1,0 +1,72 @@
+{
+  "schema": "q25-fim-python-runtime-lock-v1",
+  "expected_versions": {
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0",
+    "bitsandbytes": "0.50.2",
+    "cuda_runtime": "12.8"
+  },
+  "requirements_lock": {
+    "repo_relative_path": "reports/research/q25_code_cpt_r2/fim_runtime_requirements.lock",
+    "sha256": "c84aeaafc81059b2bd4bafd7b8fe819dea93462a7f3423e38246f6e2eae699de",
+    "bytes": 60777,
+    "package_count": 71,
+    "wheel_only": true,
+    "python_target": "3.11",
+    "platform_target": "x86_64-manylinux_2_35",
+    "resolver": "uv 0.12.3",
+    "resolver_command": "uv pip compile --no-cache --generate-hashes --only-binary=:all: --python-version 3.11 --python-platform x86_64-manylinux_2_35 --torch-backend cu128 --index-strategy first-index --emit-index-url"
+  },
+  "bootstrap_uv_version": "0.12.3",
+  "bootstrap_uv_wheel_filename": "uv-0.12.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+  "bootstrap_uv_wheel_sha256": "1482d1462b1aecd18ee33627363fe1c63d6a194f12d40d37efc446d9e0d800a1",
+  "bootstrap_uv_wheel_bytes": 22346263,
+  "platform": {
+    "os": "linux",
+    "architecture": "x86_64",
+    "glibc_minimum": "2.35",
+    "python_abi": "cp311"
+  },
+  "wheel_footprint": {
+    "method": "Compatible wheel sizes from PyPI release metadata and the official PyTorch cu128 index; source wheels are not vendored.",
+    "all_locked_wheels_bytes": 4047173817,
+    "all_locked_wheels_gib": 3.769,
+    "nvidia_wheels_bytes": 2927580737,
+    "nvidia_wheels_gib": 2.727,
+    "nvidia_distribution_count": 15,
+    "torch_cp311_wheel_bytes": 820214272,
+    "triton_cp311_wheel_bytes": 188214640,
+    "note": "These are compressed download sizes, not installed-size guarantees. Fresh installation is too close to the 12 GiB campaign cap and requires verified reuse of existing compatible NVIDIA shared libraries."
+  },
+  "nvidia_reuse_policy": {
+    "allowed_only_when": [
+      "all 15 NVIDIA distributions are present in the bootstrap host interpreter",
+      "each distribution version exactly matches the corresponding hashed lock entry",
+      "the installed package inventory resolves only to x86_64 Linux shared-library files and pure Python namespace metadata",
+      "every shared object is verified as x86_64 ELF before it is symlinked into the owned CPython 3.11 venv"
+    ],
+    "otherwise": "fail closed before training and write a bounded runtime inventory; never silently install another CUDA version",
+    "python_extension_reuse": false,
+    "host_distribution_files_are_modified": false
+  },
+  "bootstrap_policy": {
+    "runtime_root": "/kaggle/temp/tabcomplete-q25-code-cpt-r2-python311",
+    "deadline_includes_setup": true,
+    "maximum_setup_seconds": 1800,
+    "minimum_finalization_reserve_seconds": 1800,
+    "pip_uv_cache": false,
+    "model_weight_downloads": false,
+    "fallback_to_host_python": false,
+    "bytecode_writes": false
+  },
+  "source_requirements": {
+    "repo_relative_path": "reports/research/q25_code_cpt_r2/fim_runtime_requirements.in",
+    "sha256": "2a08c766bffbb9701bf6af074e4857107d994b5049366bbc6f2c9903b90b93a0",
+    "bytes": 354
+  },
+  "verified_sources": {
+    "uv_python_management": "https://docs.astral.sh/uv/concepts/python-versions/",
+    "pytorch_cu128_wheel_index": "https://download.pytorch.org/whl/cu128/torch/"
+  }
+}

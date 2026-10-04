@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import itertools
 import json
+import platform
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -173,10 +174,18 @@ def _write_bundle(
                 "session_seconds": 10_800,
                 "new_artifact_bytes_cap": 4 * 1024**3,
                 "minimum_free_bytes": 0,
+                "runtime_setup_reserve_seconds": 1_800,
                 "paid_compute": False,
                 "automatic_renewal_use": False,
             },
             "training": {"max_input_tokens": 1_000_000},
+            "runtime": module.EXPECTED_RUNTIME,
+            "runtime_lock": {
+                "runtime_lock_sha256": _sha(b"runtime lock"),
+                "requirements_lock_sha256": _sha(b"requirements lock"),
+                "bootstrap_uv_version": "0.12.3",
+                "bootstrap_uv_wheel_sha256": module.UV_WHEEL_SHA256,
+            },
         },
         "data": {
             "corpus_metadata_sha256": hashes["corpus_metadata.json"],
@@ -224,6 +233,299 @@ def _write_bundle(
         external_campaign_tokens=external_campaign_tokens,
     )
     return input_root, bundle, session, plan
+
+
+def _write_nvidia_inventory(host_site: Path, *, version_override: int | None = None) -> Path:
+    host_site.mkdir(parents=True)
+    requirements = host_site.parent / "requirements.lock"
+    lines: list[str] = []
+    for index in range(15):
+        name = f"nvidia-cuda-{index:03d}"
+        lines.extend((f"{name}==1.0 \\", "    --hash=sha256:" + "a" * 64))
+        component = f"cuda_{index:03d}"
+        library = Path("nvidia") / component / "lib" / f"libnvidia_test_{index:03d}.so"
+        library_path = host_site / library
+        library_path.parent.mkdir(parents=True, exist_ok=True)
+        elf = bytearray(20)
+        elf[:6] = b"\x7fELF\x02\x01"
+        elf[18:20] = (62).to_bytes(2, "little")
+        library_path.write_bytes(elf)
+        pycache = library_path.parent.parent / "__pycache__"
+        pycache.mkdir()
+        (pycache / "test.cpython-313.pyc").write_bytes(b"host bytecode")
+
+        dist_info_name = f"{name.replace('-', '_')}-1.0.dist-info"
+        dist_info = host_site / dist_info_name
+        dist_info.mkdir()
+        actual_version = "2.0" if version_override == index else "1.0"
+        (dist_info / "METADATA").write_text(
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: {actual_version}\n\n",
+            encoding="utf-8",
+        )
+        record = "\n".join(
+            (
+                f"{library.as_posix()},,",
+                f"{dist_info_name}/METADATA,,",
+                f"{dist_info_name}/RECORD,,",
+                "",
+            )
+        )
+        (dist_info / "RECORD").write_text(record, encoding="utf-8")
+    requirements.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return requirements
+
+
+def test_runtime_lock_verifies_report_sources_and_requirements_hashes() -> None:
+    module = _load_worker()
+    report_path = ROOT / module.RUNTIME_LOCK_RELATIVE
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    requirements = ROOT / report["requirements_lock"]["repo_relative_path"]
+    plan = {
+        "configuration": {
+            "runtime": module.EXPECTED_RUNTIME,
+            "runtime_lock": {
+                "runtime_lock_sha256": _sha(report_path.read_bytes()),
+                "requirements_lock_sha256": _sha(requirements.read_bytes()),
+                "bootstrap_uv_version": report["bootstrap_uv_version"],
+                "bootstrap_uv_wheel_sha256": report["bootstrap_uv_wheel_sha256"],
+            },
+        }
+    }
+
+    resolved_report, resolved_requirements = module.verify_runtime_lock_files(ROOT, plan)
+    assert resolved_report == report
+    assert resolved_requirements == requirements
+    assert len(module.parse_pinned_requirements(resolved_requirements)) == 71
+
+    mismatched = json.loads(json.dumps(plan))
+    mismatched["configuration"]["runtime_lock"]["requirements_lock_sha256"] = _sha(b"wrong")
+    with pytest.raises(module.WorkerError, match="runtime_requirements_lock_identity_invalid"):
+        module.verify_runtime_lock_files(ROOT, mismatched)
+
+
+def test_hashed_lock_filter_removes_exactly_verified_nvidia_packages(tmp_path: Path) -> None:
+    module = _load_worker()
+    source = ROOT / "reports/research/q25_code_cpt_r2/fim_runtime_requirements.lock"
+    output = tmp_path / "requirements-without-nvidia.lock"
+    source_versions = module.parse_pinned_requirements(source)
+
+    removed = module.requirements_without_nvidia(source, output)
+    filtered_versions = module.parse_pinned_requirements(output)
+    assert len(removed) == 15
+    assert removed == {name for name in source_versions if name.startswith("nvidia-")}
+    assert filtered_versions == {
+        name: version for name, version in source_versions.items() if name not in removed
+    }
+    filtered_text = output.read_text(encoding="utf-8")
+    assert "--index-url https://pypi.org/simple" in filtered_text
+    assert "--extra-index-url https://download.pytorch.org/whl/cu128" in filtered_text
+
+
+def test_nvidia_inventory_links_only_exact_host_wheels(tmp_path: Path) -> None:
+    module = _load_worker()
+    host_site = tmp_path / "host-site"
+    requirements = _write_nvidia_inventory(host_site)
+    venv_site = tmp_path / "venv-site"
+    venv_site.mkdir()
+    inventory_path = tmp_path / "runtime_inventory.json"
+
+    inventory = module.link_verified_nvidia_libraries(
+        requirements,
+        host_site,
+        venv_site,
+        inventory_path,
+        host_python="3.13.15",
+    )
+    assert inventory["status"] == "verified_and_linked"
+    assert inventory["expected_distribution_count"] == 15
+    assert inventory["shared_library_bytes_reused"] == 15 * 20
+    assert all(record["status"] == "verified" for record in inventory["distributions"])
+    assert (venv_site / "nvidia/cuda_000/lib/libnvidia_test_000.so").is_symlink()
+    assert not (venv_site / "nvidia/cuda_000/__pycache__").exists()
+    metadata_file = venv_site / "nvidia_cuda_000-1.0.dist-info/METADATA"
+    assert metadata_file.is_symlink()
+    assert json.loads(inventory_path.read_text(encoding="utf-8")) == inventory
+    assert module._runtime_regular_bytes(venv_site) == 0
+
+
+def test_nvidia_version_mismatch_writes_inventory_and_fails_before_linking(
+    tmp_path: Path,
+) -> None:
+    module = _load_worker()
+    host_site = tmp_path / "host-site"
+    requirements = _write_nvidia_inventory(host_site, version_override=4)
+    venv_site = tmp_path / "venv-site"
+    venv_site.mkdir()
+    inventory_path = tmp_path / "runtime_inventory.json"
+
+    with pytest.raises(module.WorkerError, match="runtime_nvidia_host_version_mismatch"):
+        module.link_verified_nvidia_libraries(
+            requirements,
+            host_site,
+            venv_site,
+            inventory_path,
+            host_python="3.13.15",
+        )
+
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    assert inventory["status"] == "rejected"
+    assert inventory["failure_reason"] == "runtime_nvidia_host_version_mismatch"
+    assert not (venv_site / "nvidia").exists()
+
+
+def test_venv_interpreter_must_resolve_under_owned_managed_python(tmp_path: Path) -> None:
+    module = _load_worker()
+    managed_root = tmp_path / "managed-python"
+    target = managed_root / "cpython-3.11.15/bin/python3.11"
+    target.parent.mkdir(parents=True)
+    target.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    target.chmod(0o755)
+    interpreter_link = tmp_path / "venv/bin/python"
+    interpreter_link.parent.mkdir(parents=True)
+    interpreter_link.symlink_to(target)
+    site_packages = tmp_path / "venv/lib/python3.11/site-packages"
+    site_packages.mkdir(parents=True)
+
+    assert (
+        module.verified_managed_python311(interpreter_link, managed_root, site_packages) == target
+    )
+
+    external_interpreter = tmp_path / "host-python"
+    external_interpreter.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    external_interpreter.chmod(0o755)
+    interpreter_link.unlink()
+    interpreter_link.symlink_to(external_interpreter)
+    with pytest.raises(module.WorkerError, match="python311_venv_interpreter_not_owned"):
+        module.verified_managed_python311(interpreter_link, managed_root, site_packages)
+
+
+def test_runtime_probe_writes_parseable_identity_with_selected_interpreter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load_worker()
+    expected = {
+        "python": platform.python_version(),
+        "torch": "mocktorch-cpu-test",
+        "transformers": "mock-transformers",
+        "bitsandbytes": "mock-bitsandbytes",
+        "cuda_runtime": "12.8",
+    }
+    monkeypatch.setattr(module, "EXPECTED_RUNTIME", expected)
+    monkeypatch.setattr(module, "_version_tuple", lambda _value: (2, 35))
+    runtime_root = tmp_path / "runtime"
+    runtime_root.mkdir()
+    output = tmp_path / "output"
+    output.mkdir()
+    monkeypatch.setattr(module, "RUNTIME_ROOT", runtime_root)
+
+    fake_site = tmp_path / "site"
+    fake_site.mkdir()
+    (fake_site / "torch.py").write_text(
+        "__version__ = 'mocktorch-cpu-test'\n"
+        "class _Version:\n    cuda = '12.8'\n"
+        "class _Cuda:\n"
+        "    def is_available(self): return True\n"
+        "    def get_device_name(self, index): return 'Tesla T4 (mocked)'\n"
+        "version = _Version()\ncuda = _Cuda()\n",
+        encoding="utf-8",
+    )
+    for name, version in (
+        ("transformers", expected["transformers"]),
+        ("bitsandbytes", expected["bitsandbytes"]),
+    ):
+        info = fake_site / f"{name}-{version}.dist-info"
+        info.mkdir()
+        (info / "METADATA").write_text(
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n\n",
+            encoding="utf-8",
+        )
+    requirements = tmp_path / "runtime.lock"
+    nvidia_names = [f"nvidia-cuda-{index:03d}" for index in range(15)]
+    requirements.write_text(
+        "".join(f"{name}==1.0 \\\n    --hash=sha256:{'a' * 64}\n" for name in nvidia_names),
+        encoding="utf-8",
+    )
+    for name in nvidia_names:
+        info = fake_site / f"{name.replace('-', '_')}-1.0.dist-info"
+        info.mkdir()
+        (info / "METADATA").write_text(
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: 1.0\n\n",
+            encoding="utf-8",
+        )
+
+    session = _session(
+        plan_sha256=_sha(b"plan"),
+        input_manifest_sha256=_sha(b"inputs"),
+        arm=module.TRAIN_ARM,
+    )
+    worker = module.Worker(session)
+    worker.out = output
+    worker.python311 = Path(sys.executable)
+    worker.runtime_requirements = requirements
+    monkeypatch.setattr(worker, "check_storage", lambda **_kwargs: None)
+
+    identity = worker._verify_python311_runtime(
+        {},
+        {
+            **dict(__import__("os").environ),
+            "PYTHONPATH": str(fake_site),
+            "PYTHONNOUSERSITE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        },
+    )
+    identity_path = output / "runtime-identity.json"
+    assert identity_path.read_bytes().endswith(b"\n")
+    assert identity["python"] == expected["python"]
+    assert identity["torch"] == expected["torch"]
+    assert identity["nvidia"] == dict.fromkeys(nvidia_names, "1.0")
+
+
+def test_initializer_probe_uses_selected_interpreter_and_emits_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load_worker()
+    runtime_root = tmp_path / "runtime"
+    runtime_root.mkdir()
+    output = tmp_path / "output"
+    output.mkdir()
+    package_root = tmp_path / "packages/tinycomplete"
+    (package_root / "code_cpt").mkdir(parents=True)
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    (package_root / "code_cpt/__init__.py").write_text("", encoding="utf-8")
+    (package_root / "code_cpt/q25_fim.py").write_text(
+        "def verify_initializer(model, *, arm, entry):\n"
+        "    return {'model': str(model), 'arm': arm, 'kind': entry['kind']}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(module, "RUNTIME_ROOT", runtime_root)
+    worker = module.Worker(
+        _session(
+            plan_sha256=_sha(b"plan"),
+            input_manifest_sha256=_sha(b"inputs"),
+            arm=module.TRAIN_ARM,
+        )
+    )
+    worker.out = output
+    worker.python311 = Path(sys.executable)
+    model = tmp_path / "initializer"
+    env = {
+        **dict(__import__("os").environ),
+        "PYTHONPATH": str(tmp_path / "packages"),
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
+
+    identity = worker._verify_initializer(
+        model,
+        arm=module.TRAIN_ARM,
+        entry={"kind": "untouched_pretrained"},
+        env=env,
+    )
+    assert identity == {
+        "model": str(model),
+        "arm": module.TRAIN_ARM,
+        "kind": "untouched_pretrained",
+    }
 
 
 def test_baseline_is_carried_through_two_successive_resumes(
@@ -532,46 +834,48 @@ def test_execute_persists_training_boundary_and_forwards_global_token_carry(
     monkeypatch.setattr(module, "OUT", output)
     monkeypatch.setattr(module, "REPO", repo)
 
-    for name in (
-        "HF_HUB_OFFLINE",
-        "TRANSFORMERS_OFFLINE",
-        "HF_DATASETS_OFFLINE",
-        "HF_HUB_DISABLE_TELEMETRY",
-        "TOKENIZERS_PARALLELISM",
-    ):
-        monkeypatch.setenv(name, "")
+    runtime_root = tmp_path / "runtime"
+    runtime_root.mkdir()
+    monkeypatch.setattr(module, "RUNTIME_ROOT", runtime_root)
+    fake_python = runtime_root / "venv/bin/python"
 
-    torch = ModuleType("torch")
-    setattr(torch, "__version__", "mock-cpu-test")  # noqa: B010
-    cuda_attribute = "cuda"
-    setattr(
-        torch,
-        cuda_attribute,
-        SimpleNamespace(
-            is_available=lambda: True,
-            get_device_name=lambda _index: "Tesla T4 (mocked, no GPU used)",
-            device_count=lambda: 1,
-        ),
-    )
-    tinycomplete = ModuleType("tinycomplete")
-    tinycomplete.__path__ = []
-    code_cpt = ModuleType("tinycomplete.code_cpt")
-    code_cpt.__path__ = []
-    q25_fim = ModuleType("tinycomplete.code_cpt.q25_fim")
+    def mock_checkout(_worker: Any, _plan: dict[str, Any]) -> None:
+        return None
 
-    def mock_verify_initializer(_model: Path, *, arm: str, entry: dict[str, Any]) -> dict[str, Any]:
+    def mock_prepare(
+        worker: Any, _plan: dict[str, Any], _report: dict[str, Any], _requirements: Path
+    ) -> None:
+        worker.python311 = fake_python
+        worker.runtime_requirements = tmp_path / "requirements.lock"
+        worker.runtime_inventory = {"shared_library_bytes_reused": 0}
+
+    def mock_runtime_probe(
+        worker: Any, _plan: dict[str, Any], _env: dict[str, str]
+    ) -> dict[str, Any]:
+        worker.status["hardware"] = {
+            "torch": module.EXPECTED_RUNTIME["torch"],
+            "cuda_devices_visible": 1,
+            "training_device": "Tesla T4 (mocked, no GPU used)",
+            "world_size": 1,
+            "other_devices_unused": True,
+        }
+        return {}
+
+    def mock_initializer(
+        _worker: Any, _model: Path, *, arm: str, entry: dict[str, Any], env: dict[str, str]
+    ) -> dict[str, Any]:
+        del env
         return {"arm": arm, "kind": entry["kind"], "files": entry["files"]}
 
-    setattr(q25_fim, "verify_initializer", mock_verify_initializer)  # noqa: B010
-    setattr(tinycomplete, "code_cpt", code_cpt)  # noqa: B010
-    setattr(code_cpt, "q25_fim", q25_fim)  # noqa: B010
-    for name, module_value in (
-        ("torch", torch),
-        ("tinycomplete", tinycomplete),
-        ("tinycomplete.code_cpt", code_cpt),
-        ("tinycomplete.code_cpt.q25_fim", q25_fim),
-    ):
-        monkeypatch.setitem(sys.modules, name, module_value)
+    monkeypatch.setattr(module.Worker, "_checkout_repository", mock_checkout)
+    monkeypatch.setattr(module.Worker, "_prepare_python311", mock_prepare)
+    monkeypatch.setattr(module.Worker, "_verify_python311_runtime", mock_runtime_probe)
+    monkeypatch.setattr(module.Worker, "_verify_initializer", mock_initializer)
+    monkeypatch.setattr(
+        module,
+        "verify_runtime_lock_files",
+        lambda _repo, _plan: ({}, tmp_path / "requirements.lock"),
+    )
 
     calls: list[list[str]] = []
     training_started_at_launch: bool | None = None
@@ -580,10 +884,12 @@ def test_execute_persists_training_boundary_and_forwards_global_token_carry(
     def fake_run(command: list[str], **_kwargs: Any) -> SimpleNamespace:
         nonlocal startup_status, training_started_at_launch
         calls.append(command)
-        if command[1:3] == ["-m", "pip"]:
+        if startup_status is None and command[:3] == [
+            str(fake_python),
+            "-m",
+            "tinycomplete.code_cpt.q25_fim",
+        ]:
             startup_status = json.loads((output / "worker-status.json").read_text())
-        if command[:3] == ["git", "-C", str(repo)] and command[-2:] == ["rev-parse", "HEAD"]:
-            return SimpleNamespace(returncode=0, stdout=session["commit"] + "\n")
         if "--mode" in command and "--output" in command:
             result_dir = Path(command[command.index("--output") + 1])
             result_dir.mkdir(parents=True, exist_ok=True)
@@ -596,13 +902,8 @@ def test_execute_persists_training_boundary_and_forwards_global_token_carry(
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(module.subprocess, "run", fake_run)
-    inserted_source = str(repo / "src")
-    try:
-        worker = module.Worker(session)
-        assert worker.execute() == 0
-    finally:
-        while inserted_source in sys.path:
-            sys.path.remove(inserted_source)
+    worker = module.Worker(session)
+    assert worker.execute() == 0
 
     assert worker.status["state"] == expected_state
     assert worker.status["commit"] == session["commit"]
@@ -631,5 +932,6 @@ def test_execute_persists_training_boundary_and_forwards_global_token_carry(
         assert not any("--execute" in command for command in calls)
         assert training_started_at_launch is None
     for command in commands_to_check:
+        assert command[0] == str(fake_python)
         token_flag = command.index("--external-campaign-tokens")
         assert command[token_flag + 1] == str(carry_tokens)

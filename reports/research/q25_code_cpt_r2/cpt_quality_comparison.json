@@ -1,0 +1,271 @@
+{
+  "causal_200": {
+    "compile_pass": {
+      "cpt_losses": 5,
+      "cpt_successes": 20,
+      "cpt_wins": 12,
+      "denominator": 200,
+      "exact_two_sided_mcnemar_p_unadjusted": 0.143463134765625,
+      "paired_bootstrap_95_percentile_ci": [
+        -0.005,
+        0.075
+      ],
+      "paired_rate_delta": 0.035,
+      "ties": 183,
+      "untouched_successes": 13
+    },
+    "exact_match": {
+      "cpt_losses": 1,
+      "cpt_successes": 0,
+      "cpt_wins": 0,
+      "denominator": 200,
+      "exact_two_sided_mcnemar_p_unadjusted": 1.0,
+      "paired_bootstrap_95_percentile_ci": [
+        -0.015,
+        0.0
+      ],
+      "paired_rate_delta": -0.005,
+      "ties": 199,
+      "untouched_successes": 1
+    },
+    "parse_pass": {
+      "cpt_losses": 14,
+      "cpt_successes": 26,
+      "cpt_wins": 13,
+      "denominator": 200,
+      "exact_two_sided_mcnemar_p_unadjusted": 1.0,
+      "paired_bootstrap_95_percentile_ci": [
+        -0.055,
+        0.045
+      ],
+      "paired_rate_delta": -0.005,
+      "ties": 173,
+      "untouched_successes": 27
+    },
+    "test_pass": {
+      "cpt_losses": 4,
+      "cpt_successes": 10,
+      "cpt_wins": 4,
+      "denominator": 200,
+      "exact_two_sided_mcnemar_p_unadjusted": 1.0,
+      "paired_bootstrap_95_percentile_ci": [
+        -0.03,
+        0.03
+      ],
+      "paired_rate_delta": 0.0,
+      "ties": 192,
+      "untouched_successes": 10
+    }
+  },
+  "comparability": {
+    "causal_case_count": 200,
+    "causal_case_ids_unique_and_paired": true,
+    "causal_fixture_sha256_matches_environment": true,
+    "causal_fixture_sha256_matches_frozen_plan": true,
+    "line_case_count": 180,
+    "line_case_ids_unique_and_paired": true,
+    "line_fixture_sha256_matches_frozen_plan": true,
+    "line_fixture_sha256_matches_summaries": true,
+    "same_scoring_protocol_plan_and_generation_limit": {
+      "causal_fields_equal": {
+        "case_count": true,
+        "decoding": true,
+        "max_new_tokens": true,
+        "plan_sha256": true,
+        "protocol": true,
+        "protocol_version": true,
+        "provider": true,
+        "suite_sha256": true,
+        "workers": true
+      },
+      "line_fields_equal": {
+        "case_count": true,
+        "decoding": true,
+        "max_new_tokens": true,
+        "plan_sha256": true,
+        "protocol": true,
+        "provider": true,
+        "suite_sha256": true,
+        "workers": true
+      }
+    },
+    "tokenizer_serialization_hashes_differ_but_local_id_checks_match": {
+      "caveat": "Original generated token ID sequences were not retained.",
+      "cpt_sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8",
+      "generated_text_token_id_differences": 0,
+      "generated_texts_checked": 760,
+      "local_transformers_version": "5.17.0",
+      "prompt_cases_checked": 380,
+      "prompt_token_id_differences": 0,
+      "untouched_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+    }
+  },
+  "cpt": {
+    "campaign_commit": "fce293d0074d38817810434d74051da243d30e2d",
+    "completed_updates": 481,
+    "development_causal_next_token_nll": {
+      "after": 1.1302637005131966,
+      "before": 1.154487796309873,
+      "delta": -0.024224095796676393,
+      "scored_tokens_each": 130944
+    },
+    "fingerprint": "963fa4f3a547665e5e9ebb626a0dde9d23a6a45198a93b51516fad7712739a18",
+    "frozen_plan_sha256": "1aaff2ee4f4e0adeeafb87e616f99e657f7ff0be4fa438f40ecbb1150aeed1f9",
+    "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+    "skipped_updates": 0,
+    "training_input_tokens": 7872512,
+    "untouched_model_tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "untouched_model_weights_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+  },
+  "docker_environment": {
+    "all_eight_current_local_images_match_frozen_digests": true,
+    "image_digests": {
+      "docker.io/library/eclipse-temurin:21-jdk": {
+        "frozen": "f5699e5c9724cd5bc9f639ba77608e169e8fb5675e230882683bc691dfc44622",
+        "match": true,
+        "observed": "f5699e5c9724cd5bc9f639ba77608e169e8fb5675e230882683bc691dfc44622"
+      },
+      "docker.io/library/gcc:14": {
+        "frozen": "69d01b59a6f7e74c94828b6c7e02a334cf56e5b837ec5d88b74eb2be54e8c4b1",
+        "match": true,
+        "observed": "69d01b59a6f7e74c94828b6c7e02a334cf56e5b837ec5d88b74eb2be54e8c4b1"
+      },
+      "docker.io/library/golang:1.24-bookworm": {
+        "frozen": "e0cffc405270b9114fac7706d07c373727d1b42b0e47c525b9cd1ab1097779ff",
+        "match": true,
+        "observed": "e0cffc405270b9114fac7706d07c373727d1b42b0e47c525b9cd1ab1097779ff"
+      },
+      "docker.io/library/node:22-bookworm-slim": {
+        "frozen": "c72861c6705868ed7f08e1cf22ef4f7ba07a82c19a54ba65d931c442d3575889",
+        "match": true,
+        "observed": "c72861c6705868ed7f08e1cf22ef4f7ba07a82c19a54ba65d931c442d3575889"
+      },
+      "docker.io/library/python:3.12-slim": {
+        "frozen": "9e87977b867847e186d066f531ef783b006d582a985c341c269446088d90f2c4",
+        "match": true,
+        "observed": "9e87977b867847e186d066f531ef783b006d582a985c341c269446088d90f2c4"
+      },
+      "docker.io/library/rust:1.85-slim": {
+        "frozen": "8573a005bfcb44d5f462a33f6ad6e85d231f51e759b60c8061777422becfcb94",
+        "match": true,
+        "observed": "8573a005bfcb44d5f462a33f6ad6e85d231f51e759b60c8061777422becfcb94"
+      },
+      "localhost/tabcomplete-typescript-bench:5.9.2": {
+        "frozen": "35192dd4199bbe26b6af09944bb7eb9024f1280c17a3d1dc572f54da1624f83f",
+        "match": true,
+        "observed": "35192dd4199bbe26b6af09944bb7eb9024f1280c17a3d1dc572f54da1624f83f"
+      },
+      "mcr.microsoft.com/dotnet/sdk:9.0": {
+        "frozen": "956d89d4479d7fa25091073fe562026107ccf49eb69347a2673baf6b7d44ed6f",
+        "match": true,
+        "observed": "956d89d4479d7fa25091073fe562026107ccf49eb69347a2673baf6b7d44ed6f"
+      }
+    }
+  },
+  "export_parameter_tally": {
+    "config_tie_word_embeddings": true,
+    "logical_model_parameters": 494032768,
+    "model_safetensors_bytes": 1260367152,
+    "note": "Safetensors header has both lm_head.weight and model.embed_tokens.weight. The config ties these weights; the tensors are equal, and the extra stored elements are exactly one embedding matrix.",
+    "safetensors_tensor_count": 291,
+    "stored_minus_logical_exactly_one_embedding_matrix": true,
+    "stored_safetensor_elements": 630167424,
+    "tied_embedding_elements_serialized_twice": 136134656,
+    "tied_embedding_tensor_sha256": "51891bfaedc8a185b60de7adb93d4f6667976d5562beafb407bee16449e9b050",
+    "tied_embedding_tensor_values_equal": true
+  },
+  "interpretation": {
+    "causal_200": "Mixed small changes: exact match 1\u21920, parse pass 27\u219226, compile pass 13\u219220, functional test pass 10\u219210. The paired compile gain interval crosses zero.",
+    "line_180": "Exact match 16\u219217; syntax pass 146\u2192155 (10 CPT wins, 1 loss; unadjusted p=0.0117); normalized prefix fraction changes by +0.0004 with an interval spanning zero. Treat the syntax result as exploratory across multiple endpoints."
+  },
+  "limitations": [
+    "Case-level bootstrap intervals and exact paired McNemar tests describe these fixed suites; synthetic cases may share construction patterns and are not a population sample.",
+    "Paired test p values are unadjusted across multiple endpoints.",
+    "These diagnostic scores do not establish next-edit preference or deployment quality.",
+    "Tokenizer artifact hashes differ; local token IDs matched all frozen prompts and returned texts, but original generation token-ID sequences were not saved."
+  ],
+  "line_180": {
+    "exact": {
+      "cpt_losses": 1,
+      "cpt_successes": 17,
+      "cpt_wins": 2,
+      "denominator": 180,
+      "exact_two_sided_mcnemar_p_unadjusted": 1.0,
+      "paired_bootstrap_95_percentile_ci": [
+        -0.011111111111111112,
+        0.027777777777777776
+      ],
+      "paired_rate_delta": 0.005555555555555556,
+      "ties": 177,
+      "untouched_successes": 16
+    },
+    "normalized_longest_exact_prefix": {
+      "cpt_case_losses": 3,
+      "cpt_case_wins": 5,
+      "cpt_mean_prefix_fraction": 0.1601108466535305,
+      "denominator": 180,
+      "paired_bootstrap_95_percentile_ci": [
+        -0.01601331036113645,
+        0.01644996978330312
+      ],
+      "paired_mean_delta": 0.0003990774054179842,
+      "ties": 172,
+      "untouched_mean_prefix_fraction": 0.15971176924811253
+    },
+    "syntax_pass": {
+      "cpt_losses": 1,
+      "cpt_successes": 155,
+      "cpt_wins": 10,
+      "denominator": 180,
+      "exact_two_sided_mcnemar_p_unadjusted": 0.01171875,
+      "paired_bootstrap_95_percentile_ci": [
+        0.016666666666666666,
+        0.08888888888888889
+      ],
+      "paired_rate_delta": 0.05,
+      "ties": 169,
+      "untouched_successes": 146
+    }
+  },
+  "observed_at": "2026-10-04T03:05:38.909449+00:00",
+  "schema": "q25-cpt-paired-quality-comparison-v1",
+  "source_sha256": {
+    "causal_cpt_prediction_metadata": "69acce32e02ebfbd34062716105e096f6511be6eb12f11afe5f66baa22fb1d1b",
+    "causal_cpt_results": "69ffad34db1a109bc06a9d19ea6263120bbcedc726ec76af387b0f4610e017e8",
+    "causal_cpt_summary": "cddd4e4b4e2803dd8f78c21a77b4571bda0358709f664ff2bcd92213df011255",
+    "causal_fixture": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+    "causal_untouched_prediction_metadata": "538dbd053341f3e4de4bb58c7783f4190f96a50ef25635498cf200fe9105c40a",
+    "causal_untouched_results": "a90f8c4a819ea8652949f0c6c90dfbd6e51a15958b48639a6f42a520544dca23",
+    "causal_untouched_summary": "bd9a3f6a0ebcd78a990ca5a3af93d94f937809b2323434c1aa5a8588ec8cada2",
+    "code_benchmark_source": "a30f50b6f0c87cfd9a733a6f7eb7a5a1b2553ba272d04245451a2141718a7b66",
+    "code_generation_source": "bd1b967181e65ee53a4aa2e927f8aacd58e44ba8a2498cff6a197be0e6d5ac0a",
+    "cpt_export_manifest": "d510a83246606cd7abe38809142a6c39e275aa772838e04ec1c06228581d566b",
+    "cpt_export_weights": "15df09d25a5c39610e6c15148850a02295a32d228e1674871e13beddb25a8ccb",
+    "cpt_run_result": "e3887ec82f929815fed5d8f375e63e5d6f94f0f669fec3b1ce560cbeb4f56532",
+    "evaluate_causal_line_source": "375358ed2519db167fe6e028b716fbd0dc68042addf001824f04b1a86845e800",
+    "evaluate_q25_code_cpt_source": "6645109e79928e6860ab5fcce36fcd3b701ce64c67a6c787bd33642b661ff11e",
+    "evaluation_environment": "98f4c91ecb8c3c806e1035e03f4a48e2af67a54932fb4b119f2b67894a774b55",
+    "line_cpt_prediction_metadata": "860308040c85054e276a5abec683b53a888d51e909281c6c69d7f881bb1817ec",
+    "line_cpt_results": "aa58945eb94416813f89a11b6e481c3eda815cd1bc5d4787a0ee758aa815576f",
+    "line_cpt_summary": "3864f9a4b8fd7b245b1d6d7585d602e86614bd5a16a1f1744eee3c0f6b75227e",
+    "line_fixture": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+    "line_untouched_prediction_metadata": "9bda7ab45dab66fbd6002ed09e0c1f6e92bbc1f77cd6029a9bc61693c54bb404",
+    "line_untouched_results": "45e074d74119d7ce8a20f71b328b91a72e30eaf7b01bb0e6301135223d5bc1b4",
+    "line_untouched_summary": "9d866087d7162a0ff9eed7d954d4da9033e44ca583347dfcdfcb69b27f9139e6",
+    "score_causal_line_source": "41bf65fbbd2bc12bee5958a045be3e79bea19836c7019a481322e6b707e860c2",
+    "untouched_model_weights": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+  },
+  "statistical_method": {
+    "binary_p_value": "Exact two-sided McNemar/sign test on discordant paired outcomes; p values unadjusted.",
+    "bootstrap_seed_by_metric": {
+      "causal_200.compile_pass": 314162,
+      "causal_200.exact_match": 314160,
+      "causal_200.parse_pass": 314161,
+      "causal_200.test_pass": 314163,
+      "line_180.exact": 314170,
+      "line_180.normalized_longest_exact_prefix": 314172,
+      "line_180.syntax_pass": 314171
+    },
+    "paired_bootstrap": "20,000 resamples of matched case rows; percentile 95% interval on per-case paired difference"
+  }
+}

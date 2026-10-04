@@ -1,0 +1,14 @@
+{
+  "schema": "q25-fim-plan-revision-v1",
+  "old_plan_sha256": "799e62913d4d7786f1980fde54a1c92b4181ded085e8a234199c9ec9ec89a4a2",
+  "new_plan_revision": 2,
+  "old_private_dataset": "shlokbhakta/tabcomplete-q25-fim-r2-inputs",
+  "new_private_dataset": "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r2",
+  "reason": "CPU preflight caught incorrect special-token membership and strict raw-config assumptions. Reserved FIM marker IDs are ordinary added tokens; Transformers5 normalizes RoPE and inactive windowing. Evaluator now rejects FIM control IDs explicitly.",
+  "fixtures_changed": false,
+  "training_examples_changed": false,
+  "model_weights_changed": false,
+  "model_outputs_before_revision": 0,
+  "gpu_allocations_before_revision": 0,
+  "prior_staging_preserved_at": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/history/plan-r1"
+}

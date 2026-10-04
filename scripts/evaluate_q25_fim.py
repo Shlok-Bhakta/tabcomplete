@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
 from collections import Counter
+from collections.abc import Callable, Iterable
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, TypeGuard
 
 from evaluate_causal_line import score_line
 
 from tinycomplete.data.fim import format_psm
+from tinycomplete.eval.code_benchmark import _parse
 from tinycomplete.eval.code_generation import (
     DetailedGeneration,
     TransformersGenerationProvider,
@@ -21,8 +25,16 @@ from tinycomplete.eval.code_generation import (
     generate_predictions,
 )
 from tinycomplete.observability.bootstrap import current_runtime
+from tinycomplete.observability.context import RunContext
+from tinycomplete.observability.runs import run_scope
+from tinycomplete.observability.spans import operation
 
 LINE_SUITE_SHA = "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
+SOURCE_SYNTAX_PROTOCOL = "q25-fim-source-syntax-v1"
+FIM_PREPARATION_PLAN = (
+    Path(__file__).resolve().parents[1]
+    / "reports/research/q25_code_cpt_r2/fim_preparation_plan.json"
+)
 
 
 def paired_development(
@@ -119,9 +131,21 @@ def decoded_completion(
     eos = tokenizer.eos_token_id
     ended_by_eos = bool(token_ids) and token_ids[-1] == eos
     content_ids = token_ids[:-1] if ended_by_eos else token_ids
-    known_ids = set(tokenizer.get_vocab().values())
+    vocabulary = tokenizer.get_vocab()
+    known_ids = set(vocabulary.values())
     unknown = [value for value in content_ids if value not in known_ids]
-    unexpected = [value for value in content_ids if value in tokenizer.all_special_ids]
+    # Qwen's FIM control markers are added tokens with special=False. The HF
+    # special-token list alone does not classify them as invalid response text.
+    control_ids = (
+        set(tokenizer.all_special_ids)
+        | set(getattr(tokenizer, "added_tokens_decoder", {}))
+        | {
+            vocabulary[token]
+            for token in ("<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>")
+            if token in vocabulary
+        }
+    )
+    unexpected = [value for value in content_ids if value in control_ids]
     text = tokenizer.decode(
         content_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
     )
@@ -142,11 +166,400 @@ def decoded_completion(
             "output_token_ids": token_ids,
             "ended_by_eos": ended_by_eos,
             "unexpected_special_token_ids": unexpected,
+            "unexpected_control_token_ids": unexpected,
             "unknown_token_ids": unknown,
             "reached_token_ceiling": len(token_ids) >= ceiling,
             "truncated": reason == "length",
         },
     )
+
+
+def _read_json(path: Path, description: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        raise ValueError(f"{description} is unreadable") from None
+    if not isinstance(value, dict):
+        raise ValueError(f"{description} is invalid")
+    return value
+
+
+def _read_jsonl(path: Path, description: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    raise ValueError(f"{description} contains a blank row")
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise ValueError(f"{description} contains an invalid row")
+                rows.append(row)
+    except (OSError, json.JSONDecodeError, UnicodeError):
+        raise ValueError(f"{description} is unreadable") from None
+    return rows
+
+
+def _valid_sha256(value: Any) -> TypeGuard[str]:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _parser_version() -> str | None:
+    try:
+        return importlib.metadata.version("tree-sitter-language-pack")
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def _parse_status(source: str, language: str, role: str) -> str:
+    with operation(
+        "eval.parse",
+        attributes={
+            "tabcomplete.task": SOURCE_SYNTAX_PROTOCOL,
+            "tabcomplete.language": language,
+            "tabcomplete.parse.source_role": role,
+        },
+    ) as span:
+        result = _parse(source, language)
+        span.set_attribute("tabcomplete.check.status", result.status)
+    return result.status
+
+
+def _source_syntax_rows(
+    development_rows: list[dict[str, Any]],
+    prediction_rows: list[dict[str, Any]],
+    development_documents: Iterable[Any],
+    *,
+    parse_status: Callable[[str, str, str], str] = _parse_status,
+    run: RunContext | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Parse original and generated full sources without persisting their text."""
+    documents: dict[str, Any] = {}
+    for document in development_documents:
+        content_hash = getattr(document, "content_sha256", None)
+        if not _valid_sha256(content_hash) or content_hash in documents:
+            raise ValueError("pinned development source identity is invalid or duplicated")
+        documents[content_hash] = document
+
+    predictions: dict[str, dict[str, Any]] = {}
+    for prediction in prediction_rows:
+        case_id = prediction.get("case_id")
+        if not isinstance(case_id, str) or not case_id or case_id in predictions:
+            raise ValueError("FIM result case identities are invalid or duplicated")
+        predictions[case_id] = prediction
+
+    expected_ids = {
+        f"fim-development-{row.get('id')}"
+        for row in development_rows
+        if isinstance(row.get("id"), int) and not isinstance(row.get("id"), bool)
+    }
+    if len(expected_ids) != len(development_rows) or set(predictions) != expected_ids:
+        raise ValueError("FIM result case identities differ from development inputs")
+
+    result_rows: list[dict[str, Any]] = []
+    original_counts: Counter[str] = Counter()
+    generated_counts: Counter[str] = Counter()
+    regression_cases = 0
+    regression_denominator = 0
+    baseline_pass_cases = 0
+    generated_unavailable_after_baseline_pass = 0
+
+    for row in development_rows:
+        identifier = row.get("id")
+        case_id = f"fim-development-{identifier}"
+        content_hash = row.get("source_content_sha256")
+        repository_hash = row.get("repository_identity_sha256")
+        language = row.get("language")
+        source_path = row.get("source_path")
+        region_start = row.get("region_start")
+        region_end = row.get("region_end")
+        target_hash = row.get("target_sha256")
+        prompt_hash = row.get("prompt_sha256")
+        if (
+            not _valid_sha256(content_hash)
+            or not _valid_sha256(repository_hash)
+            or not _valid_sha256(target_hash)
+            or not _valid_sha256(prompt_hash)
+            or row.get("split") != "development"
+            or row.get("prompt_format") != "psm"
+            or row.get("mode")
+            not in {"whole_logical_line", "remaining_logical_line_after_utf8_cursor"}
+            or not isinstance(language, str)
+            or not isinstance(source_path, str)
+        ):
+            raise ValueError("FIM source, repository, language, or context identity differs")
+        document = documents.get(content_hash)
+        prediction = predictions[case_id]
+        if (
+            document is None
+            or getattr(document, "language", None) != language
+            or getattr(document, "path", None) != source_path
+            or getattr(document, "repository_identity_sha256", None) != repository_hash
+            or prediction.get("repository") != repository_hash
+            or prediction.get("context_sha256") != prompt_hash
+            or prediction.get("language") != language
+        ):
+            raise ValueError("FIM source, repository, language, or context identity differs")
+        aliases = row.get("repository_alias_sha256")
+        document_aliases = getattr(document, "repository_alias_sha256", None)
+        if (
+            not isinstance(aliases, list)
+            or any(not _valid_sha256(alias) for alias in aliases)
+            or sorted(aliases) != sorted(document_aliases or ())
+        ):
+            raise ValueError("FIM source repository aliases differ from the pinned pool")
+        if (
+            not isinstance(region_start, int)
+            or isinstance(region_start, bool)
+            or not isinstance(region_end, int)
+            or isinstance(region_end, bool)
+            or region_start < 0
+            or region_end <= region_start
+        ):
+            raise ValueError("FIM source byte region is invalid")
+        completion = prediction.get("raw_response")
+        if not isinstance(completion, str):
+            raise ValueError("FIM result is missing the verbatim generated text")
+        completion_bytes = completion.encode("utf-8")
+        completion_hash = hashlib.sha256(completion_bytes).hexdigest()
+        recorded_completion_hash = prediction.get("completion_sha256")
+        if (
+            not _valid_sha256(recorded_completion_hash)
+            or recorded_completion_hash != completion_hash
+        ):
+            raise ValueError("FIM generated-text hash differs from saved token evidence")
+
+        source_bytes = document.content.encode("utf-8")
+        if (
+            hashlib.sha256(source_bytes).hexdigest() != content_hash
+            or getattr(document, "content_sha256", None) != content_hash
+            or region_end > len(source_bytes)
+        ):
+            raise ValueError("pinned source hash or FIM byte region differs")
+        try:
+            prefix = source_bytes[:region_start].decode("utf-8")
+            target = source_bytes[region_start:region_end].decode("utf-8")
+            suffix = source_bytes[region_end:].decode("utf-8")
+            completed_source = (
+                source_bytes[:region_start] + completion_bytes + source_bytes[region_end:]
+            ).decode("utf-8")
+        except UnicodeDecodeError:
+            raise ValueError("FIM source region is not aligned to UTF-8 boundaries") from None
+        if hashlib.sha256(target.encode("utf-8")).hexdigest() != target_hash:
+            raise ValueError("FIM target hash differs from the pinned source region")
+        if prefix + target + suffix != document.content:
+            raise ValueError("FIM byte region does not reconstruct the pinned source")
+
+        parser_grammar = (
+            "tsx"
+            if language == "typescript" and Path(source_path).suffix.lower() == ".tsx"
+            else language
+        )
+        context = run.for_case(case_id) if run is not None else None
+        activation = context.activate() if context is not None else nullcontext()
+        with activation:
+            original_status = parse_status(document.content, parser_grammar, "original")
+            generated_status = parse_status(completed_source, parser_grammar, "generated")
+        if original_status not in {"pass", "fail", "unavailable"} or generated_status not in {
+            "pass",
+            "fail",
+            "unavailable",
+        }:
+            raise ValueError("source parser returned an unsupported status")
+        original_counts[original_status] += 1
+        generated_counts[generated_status] += 1
+        if original_status == "pass":
+            baseline_pass_cases += 1
+            if generated_status in {"pass", "fail"}:
+                regression_denominator += 1
+                regression_cases += generated_status == "fail"
+            else:
+                generated_unavailable_after_baseline_pass += 1
+
+        result_rows.append(
+            {
+                "case_id": case_id,
+                "language": language,
+                "parser_grammar": parser_grammar,
+                "mode": row.get("mode"),
+                "variant": row.get("variant"),
+                "source_content_sha256": content_hash,
+                "repository_identity_sha256": repository_hash,
+                "context_sha256": prompt_hash,
+                "target_sha256": target_hash,
+                "prediction_sha256": completion_hash,
+                "original_source_parse_status": original_status,
+                "generated_source_parse_status": generated_status,
+                "parser_regression": (
+                    generated_status == "fail" if original_status == "pass" else None
+                ),
+            }
+        )
+
+    summary = {
+        "schema": "q25-fim-source-syntax-diagnostic-v1",
+        "protocol": SOURCE_SYNTAX_PROTOCOL,
+        "cases": len(result_rows),
+        "original_source_parse_status_counts": dict(sorted(original_counts.items())),
+        "generated_source_parse_status_counts": dict(sorted(generated_counts.items())),
+        "original_parse_pass_cases": baseline_pass_cases,
+        "parser_regression_cases": regression_cases,
+        "parser_regression_denominator": regression_denominator,
+        "generated_parse_unavailable_after_original_pass": (
+            generated_unavailable_after_baseline_pass
+        ),
+        "parser_regression_rate": (
+            regression_cases / regression_denominator if regression_denominator else None
+        ),
+        "regression_definition": (
+            "Generated full source fails Tree-sitter after the original full source passes; "
+            "denominator requires both parses to return pass/fail."
+        ),
+        "interpretation": (
+            "Descriptive whole-source parser outcome only. Original-source status is the control. "
+            "This is not compilation, functional behavior, observed edit intent, or a display gate."
+        ),
+    }
+    return result_rows, summary
+
+
+def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
+    """Validate frozen inputs and score a saved GPU development result on CPU."""
+    if args.mode != "development" or args.model is not None or args.alias is not None:
+        raise ValueError("source-syntax mode requires development inputs and no model alias")
+    if args.predictions is None or args.parent_cpt_plan is None:
+        raise ValueError("source-syntax mode requires saved FIM results and the parent CPT plan")
+    plan = _read_json(args.plan, "FIM plan")
+    if (
+        plan.get("schema") != "q25-fim-training-plan-v1"
+        or plan.get("gpu_execution_authorized") is not True
+    ):
+        raise ValueError("source-syntax mode requires the frozen full FIM plan")
+    evaluation = plan.get("evaluation")
+    source_registration = evaluation.get("source_syntax") if isinstance(evaluation, dict) else None
+    if (
+        not isinstance(source_registration, dict)
+        or source_registration.get("protocol") != SOURCE_SYNTAX_PROTOCOL
+    ):
+        raise ValueError("full FIM plan does not register this source-syntax diagnostic")
+
+    parent_sha = file_sha256(args.parent_cpt_plan)
+    if plan.get("parent_cpt_plan_sha256") != parent_sha:
+        raise ValueError("parent CPT plan hash differs from the frozen FIM plan")
+    _read_json(args.parent_cpt_plan, "parent CPT plan")
+    preparation_sha = file_sha256(FIM_PREPARATION_PLAN)
+    if plan.get("preparation_plan_sha256") != preparation_sha:
+        raise ValueError("FIM preparation plan hash differs from the frozen full plan")
+    preparation = _read_json(FIM_PREPARATION_PLAN, "FIM preparation plan")
+    if preparation.get("parent_cpt_plan_sha256") != parent_sha:
+        raise ValueError("parent CPT identity differs from the FIM preparation plan")
+
+    data_plan = plan.get("data")
+    if not isinstance(data_plan, dict):
+        raise ValueError("full FIM plan has no development data identity")
+    development_plan = data_plan.get("development")
+    if not isinstance(development_plan, dict):
+        raise ValueError("full FIM plan has no development data identity")
+    development_sha = development_plan.get("sha256")
+    expected_rows = development_plan.get("row_count")
+    expected_bytes = development_plan.get("bytes")
+    if (
+        not _valid_sha256(development_sha)
+        or not isinstance(expected_rows, int)
+        or isinstance(expected_rows, bool)
+        or expected_rows < 1
+        or not isinstance(expected_bytes, int)
+        or isinstance(expected_bytes, bool)
+        or expected_bytes < 1
+        or args.input.stat().st_size != expected_bytes
+        or file_sha256(args.input) != development_sha
+    ):
+        raise ValueError("development input file differs from the frozen FIM plan")
+    development_rows = _read_jsonl(args.input, "FIM development input")
+    if len(development_rows) != expected_rows:
+        raise ValueError("development row count differs from the frozen FIM plan")
+
+    metadata_path = args.input.parent / "corpus_metadata.json"
+    if file_sha256(metadata_path) != data_plan.get("corpus_metadata_sha256"):
+        raise ValueError("FIM corpus metadata hash differs from the frozen plan")
+    metadata = _read_json(metadata_path, "FIM corpus metadata")
+    metadata_splits = metadata.get("splits")
+    metadata_files = metadata.get("files")
+    metadata_split = (
+        metadata_splits.get("development") if isinstance(metadata_splits, dict) else None
+    )
+    metadata_file = (
+        metadata_files.get(args.input.name) if isinstance(metadata_files, dict) else None
+    )
+    if (
+        metadata.get("preparation_plan_sha256") != preparation_sha
+        or metadata.get("parent_cpt_plan_sha256") != parent_sha
+        or not isinstance(metadata_split, dict)
+        or not isinstance(metadata_file, dict)
+        or metadata_split.get("file") != args.input.name
+        or metadata_split.get("sha256") != development_sha
+        or metadata_split.get("row_count") != expected_rows
+        or metadata_file.get("sha256") != development_sha
+        or metadata_file.get("bytes") != expected_bytes
+    ):
+        raise ValueError("FIM corpus metadata does not match the frozen development inputs")
+
+    from prepare_q25_fim import _load_pinned_inputs
+
+    _, preparation_inputs, _, development_documents = _load_pinned_inputs(FIM_PREPARATION_PLAN)
+    pool_hashes = preparation_inputs.get("pool_hashes")
+    if not isinstance(pool_hashes, dict):
+        raise ValueError("pinned original source-pool identities are missing")
+    source_pool_identities = {
+        language: {
+            "sha256": pool_hashes[language]["sha256"],
+            "sidecar_sha256": pool_hashes[language]["sidecar_sha256"],
+        }
+        for language in sorted(pool_hashes)
+    }
+
+    prediction_rows = _read_jsonl(args.predictions, "FIM GPU result file")
+    result_path = args.predictions.parent / "summary.json"
+    result_summary = _read_json(result_path, "FIM GPU summary")
+    if (
+        result_summary.get("plan_sha256") != file_sha256(args.plan)
+        or result_summary.get("cases") != expected_rows
+        or not _valid_sha256(result_summary.get("model_sha256"))
+    ):
+        raise ValueError("FIM GPU results do not match the frozen plan or development count")
+
+    args.output.mkdir(parents=True, exist_ok=True)
+    with run_scope(args.output / "observability-run.json", "q25-fim-source-syntax") as run:
+        result_rows, summary = _source_syntax_rows(
+            development_rows,
+            prediction_rows,
+            development_documents,
+            run=run if isinstance(run, RunContext) else None,
+        )
+    summary.update(
+        plan_sha256=file_sha256(args.plan),
+        parent_cpt_plan_sha256=parent_sha,
+        preparation_plan_sha256=preparation_sha,
+        development_sha256=development_sha,
+        development_row_count=expected_rows,
+        gpu_results_sha256=file_sha256(args.predictions),
+        model_sha256=result_summary["model_sha256"],
+        parser="tree-sitter-language-pack",
+        parser_version=_parser_version(),
+        raw_source_pool_file_hashes=source_pool_identities,
+    )
+    (args.output / "source-syntax-results.jsonl").write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in result_rows),
+        encoding="utf-8",
+    )
+    (args.output / "source-syntax-summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return summary
 
 
 class StrictFimProvider(TransformersGenerationProvider):
@@ -215,13 +628,23 @@ class StrictFimProvider(TransformersGenerationProvider):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--model", type=Path)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--plan", type=Path, required=True)
-    parser.add_argument("--alias", required=True)
+    parser.add_argument("--alias")
     parser.add_argument("--mode", choices=("development", "line"), required=True)
+    parser.add_argument("--source-syntax", action="store_true")
+    parser.add_argument("--predictions", type=Path)
+    parser.add_argument("--parent-cpt-plan", type=Path)
     args = parser.parse_args()
+    if args.source_syntax:
+        summary = run_source_syntax_diagnostic(args)
+        print(json.dumps(summary, sort_keys=True))
+        current_runtime().shutdown()
+        return
+    if args.model is None or args.alias is None:
+        parser.error("GPU FIM evaluation requires --model and --alias")
     if not args.model.is_dir() or not (args.model / "model.safetensors").is_file():
         raise ValueError("FIM evaluation requires existing local weights; downloads are forbidden")
     plan = json.loads(args.plan.read_text())

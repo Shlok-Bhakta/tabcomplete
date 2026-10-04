@@ -1,0 +1,56 @@
+{
+  "schema": "q25-cpt-completed-run-summary-v1",
+  "observed_terminal_at": "2026-10-04T02:43:28+00:00",
+  "kernel_reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+  "source_commit": "fce293d0074d38817810434d74051da243d30e2d",
+  "status": "complete",
+  "input_tokens": 7872512,
+  "supervised_target_tokens": 7864824,
+  "updates_completed": 481,
+  "updates_skipped": 0,
+  "worker_wall_seconds": 8323.956713175001,
+  "training_wall_seconds": 7187.948011244001,
+  "max_checkpoint_save_seconds": 12.464510039999368,
+  "source_nll": {
+    "before": 1.154487796309873,
+    "after": 1.1302637005131966,
+    "scored_tokens": 130944,
+    "tokenizer_fixed": true,
+    "quality_claim": "descriptive source-modeling result; does not establish next-edit quality"
+  },
+  "runtime": {
+    "attention": "sdpa",
+    "bitsandbytes": "0.50.2",
+    "compute": "fp16",
+    "cuda_runtime": "12.8",
+    "device": "Tesla T4",
+    "device_capability": [
+      7,
+      5
+    ],
+    "device_memory_bytes": 15636037632,
+    "device_multiprocessors": 40,
+    "gradient_checkpointing": true,
+    "initial_loss_scale": 128.0,
+    "master_weights": "fp32",
+    "numpy": "2.1.3",
+    "python": "3.13.15",
+    "source_sha256": {
+      "causal_loss": "2f211ab99604862ddc55ed4ffd96204ac51aac25498fd7aa754ee8036d8ba5e3",
+      "one_line_training": "7d4c619f0263a0f626afe170114ef11205f517213858064d17ea1ff52e60f328",
+      "q25_training": "a0e06b56e3122a37b564f499942882b299c20c357f5c6ba9fc266f41bcf66ecc"
+    },
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0",
+    "world_size": 1
+  },
+  "storage": {
+    "aggregate_cap_bytes": 12884901888,
+    "checkpoint_estimate_bytes": 4019500160,
+    "input_artifact_bytes_including_resume": 1027144720,
+    "output_bytes": 4252470891,
+    "output_cap_bytes": 10737418240
+  },
+  "stable_editor_changed": false,
+  "automatic_personalization_enabled": false
+}

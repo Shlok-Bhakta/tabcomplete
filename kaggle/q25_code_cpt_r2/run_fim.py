@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import json
 import os
+import platform
+import re
 import shutil
+import struct
 import subprocess
 import sys
+import sysconfig
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +23,27 @@ INPUT_ROOT = Path("/kaggle/input")
 WORK_ROOT = Path("/kaggle/working")
 OUT = WORK_ROOT / "q25_fim_r2"
 REPO = Path("/kaggle/temp/tabcomplete-q25-code-cpt-r2")
+RUNTIME_ROOT = Path("/kaggle/temp/tabcomplete-q25-code-cpt-r2-python311")
+RUNTIME_LOCK_RELATIVE = Path("reports/research/q25_code_cpt_r2/fim_runtime_lock.json")
+RUNTIME_REQUIREMENTS_RELATIVE = Path(
+    "reports/research/q25_code_cpt_r2/fim_runtime_requirements.lock"
+)
+UV_WHEEL_URL = (
+    "https://files.pythonhosted.org/packages/8d/c4/97fdd4fca11d06633bb500849f70e4e6b201bcba3833894732e709be2d60/"
+    "uv-0.12.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+)
+UV_WHEEL_FILENAME = "uv-0.12.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+UV_WHEEL_SHA256 = "1482d1462b1aecd18ee33627363fe1c63d6a194f12d40d37efc446d9e0d800a1"
+UV_WHEEL_BYTES = 22_346_263
+EXPECTED_RUNTIME = {
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0",
+    "bitsandbytes": "0.50.2",
+    "cuda_runtime": "12.8",
+}
+STARTED_MONOTONIC_ENV = "TABCOMPLETE_FIM_STARTED_MONOTONIC"
+PYTHON311_READY_ENV = "TABCOMPLETE_FIM_PYTHON311_READY"
 MAX_SESSION_SECONDS = 10_800
 MAX_CAMPAIGN_TOKENS = 32_000_000
 MAX_ARM_TOKENS = 4_194_304
@@ -68,6 +95,394 @@ def sha256_file(path: Path) -> str:
 def canonical_sha256(value: Any) -> str:
     payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _normalized_distribution_name(value: str) -> str:
+    return re.sub(r"[-_.]+", "-", value).lower()
+
+
+def _version_tuple(value: str) -> tuple[int, ...]:
+    match = re.match(r"^(\d+(?:\.\d+)*)", value)
+    if match is None:
+        return ()
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def parse_pinned_requirements(path: Path) -> dict[str, str]:
+    versions: dict[str, str] = {}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = re.match(r"^([A-Za-z0-9_.-]+)==([^\s]+) \\$", line)
+            if match:
+                name = _normalized_distribution_name(match.group(1))
+                if name in versions:
+                    raise WorkerError("runtime_requirements_duplicate_package")
+                versions[name] = match.group(2)
+    except (OSError, UnicodeError):
+        raise WorkerError("runtime_requirements_unreadable") from None
+    if not versions:
+        raise WorkerError("runtime_requirements_empty")
+    return versions
+
+
+def requirements_without_nvidia(path: Path, output: Path) -> set[str]:
+    """Filter only verified host CUDA library wheels from the hashed lock."""
+    try:
+        source = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        raise WorkerError("runtime_requirements_unreadable") from None
+    header = re.compile(r"^([A-Za-z0-9_.-]+)==([^\s]+) \\$", re.MULTILINE)
+    matches = list(header.finditer(source))
+    if not matches:
+        raise WorkerError("runtime_requirements_empty")
+    output_parts = [source[: matches[0].start()]]
+    removed: set[str] = set()
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(source)
+        block = source[match.start() : end]
+        name = _normalized_distribution_name(match.group(1))
+        if name.startswith("nvidia-"):
+            removed.add(name)
+        else:
+            output_parts.append(block)
+    if len(removed) != 15:
+        raise WorkerError("runtime_nvidia_lock_inventory_invalid")
+    try:
+        output.write_text("".join(output_parts), encoding="utf-8")
+    except OSError:
+        raise WorkerError("runtime_filtered_lock_write_failed") from None
+    return removed
+
+
+def _elf_is_x86_64(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(20)
+    except OSError:
+        return False
+    if len(header) < 20 or header[:4] != b"\x7fELF" or header[4] != 2:
+        return False
+    endian = "<" if header[5] == 1 else ">" if header[5] == 2 else ""
+    if not endian:
+        return False
+    return struct.unpack_from(f"{endian}H", header, 18)[0] == 62
+
+
+def _runtime_regular_bytes(*roots: Path) -> int:
+    """Count owned regular files, excluding deliberate links to shared CUDA files."""
+    total = 0
+    for root in roots:
+        if not root.exists():
+            continue
+        for current, directories, files in os.walk(root, followlinks=False):
+            current_path = Path(current)
+            directories[:] = [
+                name for name in directories if not (current_path / name).is_symlink()
+            ]
+            for name in files:
+                path = current_path / name
+                if path.is_symlink():
+                    continue
+                try:
+                    if path.is_file():
+                        total += path.stat().st_size
+                except OSError:
+                    raise WorkerError("runtime_storage_inventory_failed") from None
+    return total
+
+
+def verified_managed_python311(
+    interpreter_link: Path, managed_python_root: Path, site_packages: Path
+) -> Path:
+    try:
+        resolved = interpreter_link.resolve(strict=True)
+        resolved.relative_to(managed_python_root.resolve(strict=True))
+    except (OSError, ValueError):
+        raise WorkerError("python311_venv_interpreter_not_owned") from None
+    if (
+        not interpreter_link.is_symlink()
+        or not resolved.is_file()
+        or not os.access(resolved, os.X_OK)
+        or not site_packages.is_dir()
+    ):
+        raise WorkerError("python311_venv_inventory_invalid")
+    return resolved
+
+
+def verify_runtime_lock_files(repo: Path, plan: dict[str, Any]) -> tuple[dict[str, Any], Path]:
+    configuration = plan.get("configuration")
+    if not isinstance(configuration, dict):
+        raise WorkerError("frozen_fim_runtime_binding_missing")
+    binding = configuration.get("runtime_lock")
+    runtime = configuration.get("runtime")
+    if (
+        not isinstance(binding, dict)
+        or not isinstance(runtime, dict)
+        or runtime != EXPECTED_RUNTIME
+        or binding.get("bootstrap_uv_version") != "0.12.3"
+        or binding.get("bootstrap_uv_wheel_sha256") != UV_WHEEL_SHA256
+        or not _is_sha256(binding.get("runtime_lock_sha256"))
+        or not _is_sha256(binding.get("requirements_lock_sha256"))
+    ):
+        raise WorkerError("frozen_fim_runtime_binding_invalid")
+    report_path = repo / RUNTIME_LOCK_RELATIVE
+    if report_path.is_symlink() or not report_path.is_file():
+        raise WorkerError("runtime_lock_report_missing")
+    if sha256_file(report_path) != binding["runtime_lock_sha256"]:
+        raise WorkerError("runtime_lock_report_hash_mismatch")
+    report = _read_json(report_path, "runtime_lock_report_invalid")
+    if (
+        report.get("schema") != "q25-fim-python-runtime-lock-v1"
+        or report.get("expected_versions") != EXPECTED_RUNTIME
+        or report.get("bootstrap_uv_version") != "0.12.3"
+        or report.get("bootstrap_uv_wheel_sha256") != UV_WHEEL_SHA256
+        or report.get("bootstrap_uv_wheel_filename") != UV_WHEEL_FILENAME
+        or report.get("bootstrap_uv_wheel_bytes") != UV_WHEEL_BYTES
+    ):
+        raise WorkerError("runtime_lock_report_identity_invalid")
+    bootstrap_policy = report.get("bootstrap_policy")
+    if (
+        not isinstance(bootstrap_policy, dict)
+        or bootstrap_policy.get("runtime_root") != str(RUNTIME_ROOT)
+        or bootstrap_policy.get("deadline_includes_setup") is not True
+        or bootstrap_policy.get("maximum_setup_seconds") != 1_800
+        or bootstrap_policy.get("minimum_finalization_reserve_seconds") != 1_800
+        or bootstrap_policy.get("pip_uv_cache") is not False
+        or bootstrap_policy.get("model_weight_downloads") is not False
+        or bootstrap_policy.get("fallback_to_host_python") is not False
+        or bootstrap_policy.get("bytecode_writes") is not False
+    ):
+        raise WorkerError("runtime_lock_bootstrap_policy_invalid")
+    requirements = report.get("requirements_lock")
+    if not isinstance(requirements, dict):
+        raise WorkerError("runtime_requirements_lock_identity_missing")
+    relative = Path(str(requirements.get("repo_relative_path", "")))
+    if (
+        relative != RUNTIME_REQUIREMENTS_RELATIVE
+        or relative.is_absolute()
+        or ".." in relative.parts
+        or requirements.get("sha256") != binding["requirements_lock_sha256"]
+        or isinstance(requirements.get("bytes"), bool)
+        or not isinstance(requirements.get("bytes"), int)
+        or requirements.get("package_count") != 71
+    ):
+        raise WorkerError("runtime_requirements_lock_identity_invalid")
+    lock_path = repo / relative
+    if (
+        lock_path.is_symlink()
+        or not lock_path.is_file()
+        or lock_path.stat().st_size != requirements["bytes"]
+        or sha256_file(lock_path) != binding["requirements_lock_sha256"]
+    ):
+        raise WorkerError("runtime_requirements_lock_hash_mismatch")
+    versions = parse_pinned_requirements(lock_path)
+    if (
+        len(versions) != requirements["package_count"]
+        or versions.get("torch") != EXPECTED_RUNTIME["torch"]
+    ):
+        raise WorkerError("runtime_requirements_lock_package_count_mismatch")
+    source_requirements = report.get("source_requirements")
+    if not isinstance(source_requirements, dict):
+        raise WorkerError("runtime_source_requirements_identity_missing")
+    source_relative = Path(str(source_requirements.get("repo_relative_path", "")))
+    if (
+        source_relative.is_absolute()
+        or ".." in source_relative.parts
+        or source_relative != Path("reports/research/q25_code_cpt_r2/fim_runtime_requirements.in")
+        or not _is_sha256(source_requirements.get("sha256"))
+        or isinstance(source_requirements.get("bytes"), bool)
+        or not isinstance(source_requirements.get("bytes"), int)
+    ):
+        raise WorkerError("runtime_source_requirements_identity_invalid")
+    source_path = repo / source_relative
+    if (
+        source_path.is_symlink()
+        or not source_path.is_file()
+        or source_path.stat().st_size != source_requirements["bytes"]
+        or sha256_file(source_path) != source_requirements["sha256"]
+    ):
+        raise WorkerError("runtime_source_requirements_hash_mismatch")
+    return report, lock_path
+
+
+def _distribution_name(distribution: importlib.metadata.Distribution) -> str | None:
+    try:
+        name = distribution.metadata["Name"]
+    except KeyError:
+        return None
+    return _normalized_distribution_name(name) if isinstance(name, str) else None
+
+
+def link_verified_nvidia_libraries(
+    requirements_path: Path,
+    host_site: Path,
+    venv_site: Path | None,
+    inventory_path: Path,
+    *,
+    host_python: str,
+) -> dict[str, Any]:
+    """Link exact lock-matching NVIDIA shared-library wheels without copying them."""
+    locked = parse_pinned_requirements(requirements_path)
+    expected = {name: version for name, version in locked.items() if name.startswith("nvidia-")}
+    inventory: dict[str, Any] = {
+        "schema": "q25-fim-nvidia-runtime-inventory-v1",
+        "host_python": host_python,
+        "host_architecture": platform.machine(),
+        "host_glibc": platform.libc_ver()[1] if platform.libc_ver()[0] == "glibc" else None,
+        "expected_distribution_count": len(expected),
+        "shared_library_bytes_reused": 0,
+        "distributions": [],
+        "status": "validating",
+    }
+    links: dict[Path, Path] = {}
+    reused_realpaths: set[Path] = set()
+    namespace_init: Path | None = None
+    namespace_init_sha256: str | None = None
+    error_reason: str | None = None
+    if (
+        len(expected) != 15
+        or not host_site.is_dir()
+        or (venv_site is not None and not venv_site.is_dir())
+    ):
+        error_reason = "runtime_nvidia_host_inventory_unavailable"
+    host_distributions = list(importlib.metadata.distributions(path=[str(host_site)]))
+    by_name: dict[str, list[importlib.metadata.Distribution]] = {}
+    for distribution in host_distributions:
+        name = _distribution_name(distribution)
+        if name is not None:
+            by_name.setdefault(name, []).append(distribution)
+
+    inventory["host_distribution_count"] = len(host_distributions)
+    inventory["host_nvidia_distribution_count"] = sum(
+        name.startswith("nvidia-") for name in by_name
+    )
+    if platform.machine().lower() not in {"x86_64", "amd64"}:
+        error_reason = error_reason or "runtime_nvidia_host_architecture_mismatch"
+
+    for name, expected_version in sorted(expected.items()):
+        candidates = by_name.get(name, [])
+        actual_version = candidates[0].version if len(candidates) == 1 else None
+        record: dict[str, Any] = {
+            "name": name,
+            "expected_version": expected_version,
+            "actual_version": actual_version,
+            "distribution_count": len(candidates),
+            "shared_library_bytes": 0,
+            "x86_64_elf_verified": False,
+            "status": "unverified",
+        }
+        inventory["distributions"].append(record)
+        if len(candidates) != 1 or actual_version != expected_version:
+            record["status"] = "version_or_inventory_mismatch"
+            error_reason = error_reason or "runtime_nvidia_host_version_mismatch"
+            continue
+        distribution = candidates[0]
+        files = distribution.files
+        if not files:
+            record["status"] = "installed_file_inventory_missing"
+            error_reason = error_reason or "runtime_nvidia_host_files_missing"
+            continue
+        components: set[str] = set()
+        dist_info_names: set[str] = set()
+        package_root = host_site / "nvidia"
+        file_paths: list[Path] = []
+        item_invalid = False
+        for item in files:
+            relative = Path(str(item))
+            if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+                item_invalid = True
+                break
+            if "__pycache__" in relative.parts or relative.suffix == ".pyc":
+                continue
+            located = Path(str(distribution.locate_file(item)))
+            try:
+                resolved = located.resolve(strict=True)
+                resolved.relative_to(host_site.resolve(strict=True))
+            except (OSError, ValueError):
+                item_invalid = True
+                break
+            first = relative.parts[0]
+            if relative == Path("nvidia/__init__.py"):
+                if namespace_init is not None and sha256_file(resolved) != namespace_init_sha256:
+                    item_invalid = True
+                    break
+                namespace_init = resolved
+                namespace_init_sha256 = sha256_file(resolved)
+            elif first == "nvidia" and len(relative.parts) >= 2:
+                component = relative.parts[1]
+                components.add(component)
+                try:
+                    resolved.relative_to(package_root.resolve(strict=True))
+                except (OSError, ValueError):
+                    item_invalid = True
+                    break
+            elif first.endswith(".dist-info"):
+                dist_info_names.add(first)
+            else:
+                item_invalid = True
+                break
+            if not located.is_file():
+                item_invalid = True
+                break
+            if ".so" in relative.name:
+                if (
+                    ".cpython-" in relative.name
+                    or ".abi3" in relative.name
+                    or not relative.name.startswith("lib")
+                    or not _elf_is_x86_64(resolved)
+                ):
+                    item_invalid = True
+                    break
+                reused_realpaths.add(resolved)
+            elif relative.suffix == ".pyd":
+                item_invalid = True
+                break
+            file_paths.append(resolved)
+            if venv_site is not None:
+                destination = venv_site / relative
+                previous_source = links.get(destination)
+                if previous_source is not None and previous_source != resolved:
+                    item_invalid = True
+                    break
+                links[destination] = resolved
+        if item_invalid or not components or len(dist_info_names) != 1:
+            record["status"] = "platform_file_inventory_mismatch"
+            error_reason = error_reason or "runtime_nvidia_host_platform_inventory_mismatch"
+            continue
+        record["shared_library_bytes"] = sum(
+            path.stat().st_size
+            for path in file_paths
+            if ".so" in path.name and path in reused_realpaths
+        )
+        record["x86_64_elf_verified"] = True
+        record["status"] = "verified"
+        dist_info_source = host_site / next(iter(dist_info_names))
+        if dist_info_source.is_symlink() or not dist_info_source.is_dir():
+            record["status"] = "unsafe_or_ambiguous_link_target"
+            error_reason = error_reason or "runtime_nvidia_link_target_unsafe"
+
+    inventory["shared_library_bytes_reused"] = sum(path.stat().st_size for path in reused_realpaths)
+    if error_reason is None and all(
+        record["status"] == "verified" for record in inventory["distributions"]
+    ):
+        if venv_site is not None:
+            try:
+                for destination, source in sorted(links.items(), key=lambda item: str(item[0])):
+                    if destination.exists() or destination.is_symlink():
+                        raise OSError("NVIDIA wheel target already exists")
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.symlink_to(source)
+            except OSError:
+                error_reason = "runtime_nvidia_symlink_creation_failed"
+    if error_reason is None:
+        inventory["status"] = "verified_and_linked" if venv_site is not None else "verified"
+    else:
+        inventory["status"] = "rejected"
+        inventory["failure_reason"] = error_reason
+    _write_json(inventory_path, inventory)
+    if error_reason is not None:
+        raise WorkerError(error_reason)
+    return inventory
 
 
 def _is_sha256(value: Any) -> bool:
@@ -250,8 +665,11 @@ def verify_plan(plan: dict[str, Any], session: dict[str, Any], files: dict[str, 
         "maximum_campaign_input_tokens", budget.get("maximum_additional_training_input_tokens")
     )
     session_limit = budget.get("session_seconds")
+    runtime_setup_reserve = budget.get("runtime_setup_reserve_seconds")
     storage_cap = budget.get("new_artifact_bytes_cap")
     arm_limit = training.get("max_input_tokens")
+    runtime = configuration.get("runtime")
+    runtime_lock = configuration.get("runtime_lock")
     if (
         isinstance(max_campaign, bool)
         or not isinstance(max_campaign, int)
@@ -267,6 +685,13 @@ def verify_plan(plan: dict[str, Any], session: dict[str, Any], files: dict[str, 
         or not 1 <= arm_limit <= MAX_ARM_TOKENS
         or budget.get("paid_compute") is not False
         or budget.get("automatic_renewal_use") is not False
+        or runtime_setup_reserve != 1_800
+        or runtime != EXPECTED_RUNTIME
+        or not isinstance(runtime_lock, dict)
+        or not _is_sha256(runtime_lock.get("runtime_lock_sha256"))
+        or not _is_sha256(runtime_lock.get("requirements_lock_sha256"))
+        or runtime_lock.get("bootstrap_uv_version") != "0.12.3"
+        or runtime_lock.get("bootstrap_uv_wheel_sha256") != UV_WHEEL_SHA256
         or session["external_campaign_tokens"] > max_campaign
     ):
         raise WorkerError("frozen_fim_budget_invalid")
@@ -530,6 +955,7 @@ def _write_json(path: Path, value: dict[str, Any]) -> None:
 
 def trainer_command(
     *,
+    python: Path,
     model: Path,
     paths: dict[str, Path],
     plan: Path,
@@ -543,7 +969,7 @@ def trainer_command(
     execute: bool,
 ) -> list[str]:
     command = [
-        sys.executable,
+        str(python),
         "-m",
         "tinycomplete.code_cpt.q25_fim",
         "--model",
@@ -577,10 +1003,17 @@ def trainer_command(
 
 
 def _evaluation_command(
-    *, model: Path, input_path: Path, output: Path, plan: Path, alias: str, mode: str
+    *,
+    python: Path,
+    model: Path,
+    input_path: Path,
+    output: Path,
+    plan: Path,
+    alias: str,
+    mode: str,
 ) -> list[str]:
     return [
-        sys.executable,
+        str(python),
         str(REPO / "scripts/evaluate_q25_fim.py"),
         "--model",
         str(model),
@@ -598,13 +1031,19 @@ def _evaluation_command(
 
 
 def _regression_commands(
-    *, model: Path, paths: dict[str, Path], output: Path, plan_sha256: str, alias: str
+    *,
+    python: Path,
+    model: Path,
+    paths: dict[str, Path],
+    output: Path,
+    plan_sha256: str,
+    alias: str,
 ) -> list[tuple[str, list[str]]]:
     return [
         (
             "regression-causal",
             [
-                sys.executable,
+                str(python),
                 str(REPO / "scripts/evaluate_q25_code_cpt.py"),
                 "--model",
                 str(model),
@@ -621,7 +1060,7 @@ def _regression_commands(
         (
             "regression-line",
             [
-                sys.executable,
+                str(python),
                 str(REPO / "scripts/evaluate_causal_line.py"),
                 "--model",
                 str(model),
@@ -655,6 +1094,445 @@ class Worker:
             "stages": [],
         }
         self.out = OUT
+        self.python311: Path | None = None
+        self.runtime_lock: dict[str, Any] | None = None
+        self.runtime_requirements: Path | None = None
+        self.runtime_inventory: dict[str, Any] | None = None
+        self.input_artifact_bytes = 0
+
+    def _setup_stage(
+        self,
+        command: list[str],
+        name: str,
+        *,
+        plan: dict[str, Any],
+        env: dict[str, str] | None = None,
+        timeout_seconds: float,
+    ) -> int:
+        setup_limit = int(plan["configuration"]["budget"]["runtime_setup_reserve_seconds"])
+        setup_remaining = self.started + setup_limit - time.monotonic()
+        if setup_remaining < 1:
+            raise WorkerError("runtime_setup_deadline_reached")
+        result = self.run_stage(
+            command,
+            name,
+            env=env,
+            timeout_seconds=min(timeout_seconds, setup_remaining),
+            reserve_seconds=MINIMUM_FINAL_RESERVE_SECONDS,
+        )
+        self.check_storage(mounted_bytes=self.input_artifact_bytes, plan=plan)
+        return result
+
+    def _checkout_repository(self, plan: dict[str, Any]) -> None:
+        if REPO.exists() and (REPO.is_symlink() or not (REPO / ".git").is_dir()):
+            raise WorkerError("repository_checkout_path_not_clean")
+        if not REPO.exists():
+            if (
+                self._setup_stage(
+                    [
+                        "git",
+                        "clone",
+                        "--branch",
+                        "research/q25-code-cpt-r2",
+                        "https://github.com/Shlok-Bhakta/tabcomplete.git",
+                        str(REPO),
+                    ],
+                    "checkout-repository",
+                    plan=plan,
+                    timeout_seconds=600,
+                )
+                != 0
+            ):
+                raise WorkerError("repository_checkout_failed")
+        if (
+            self._setup_stage(
+                ["git", "-C", str(REPO), "checkout", self.session["commit"]],
+                "pin-repository",
+                plan=plan,
+                timeout_seconds=120,
+            )
+            != 0
+        ):
+            raise WorkerError("repository_pin_failed")
+        if (
+            self._setup_stage(
+                ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+                "verify-repository-commit",
+                plan=plan,
+                timeout_seconds=30,
+            )
+            != 0
+        ):
+            raise WorkerError("repository_commit_check_failed")
+        revision_log = self.out / "logs" / "verify-repository-commit.log"
+        try:
+            revision = revision_log.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError):
+            raise WorkerError("repository_commit_check_failed") from None
+        if revision != self.session["commit"]:
+            raise WorkerError("repository_commit_mismatch")
+        if self._runtime_artifact_bytes() < _runtime_regular_bytes(REPO):
+            raise WorkerError("repository_storage_inventory_invalid")
+
+    def _setup_environment(self, uv_site: Path) -> dict[str, str]:
+        return {
+            **os.environ,
+            "PYTHONPATH": str(uv_site),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONNOUSERSITE": "1",
+            "TMPDIR": str(RUNTIME_ROOT / "tmp"),
+            "UV_NO_CACHE": "1",
+            "UV_NO_PROGRESS": "1",
+            "UV_PYTHON_INSTALL_DIR": str(RUNTIME_ROOT / "managed-python"),
+        }
+
+    def _download_uv_wheel(self, destination: Path, plan: dict[str, Any]) -> None:
+        setup_limit = int(plan["configuration"]["budget"]["runtime_setup_reserve_seconds"])
+        remaining = min(
+            self.deadline - time.monotonic() - MINIMUM_FINAL_RESERVE_SECONDS,
+            self.started + setup_limit - time.monotonic(),
+        )
+        if remaining < 1:
+            raise WorkerError("runtime_setup_deadline_reached")
+        digest = hashlib.sha256()
+        received = 0
+        temporary = destination.with_suffix(destination.suffix + ".part")
+        try:
+            with urllib.request.urlopen(UV_WHEEL_URL, timeout=min(30, remaining)) as response:
+                with temporary.open("xb") as handle:
+                    for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                        if time.monotonic() >= self.started + setup_limit:
+                            raise WorkerError("runtime_setup_deadline_reached")
+                        received += len(chunk)
+                        if received > UV_WHEEL_BYTES:
+                            raise WorkerError("uv_bootstrap_wheel_size_mismatch")
+                        digest.update(chunk)
+                        handle.write(chunk)
+            if received != UV_WHEEL_BYTES or digest.hexdigest() != UV_WHEEL_SHA256:
+                raise WorkerError("uv_bootstrap_wheel_hash_mismatch")
+            os.replace(temporary, destination)
+        except WorkerError:
+            temporary.unlink(missing_ok=True)
+            raise
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise WorkerError("uv_bootstrap_download_failed") from None
+        self.check_storage(mounted_bytes=self.input_artifact_bytes, plan=plan)
+
+    def _prepare_python311(
+        self, plan: dict[str, Any], runtime_report: dict[str, Any], requirements: Path
+    ) -> None:
+        if platform.machine().lower() not in {"x86_64", "amd64"}:
+            raise WorkerError("runtime_platform_architecture_unsupported")
+        libc_name, libc_version = platform.libc_ver()
+        if libc_name != "glibc" or _version_tuple(libc_version) < (2, 35):
+            raise WorkerError("runtime_platform_glibc_unsupported")
+        if RUNTIME_ROOT.exists() and (
+            RUNTIME_ROOT.is_symlink() or not RUNTIME_ROOT.is_dir() or any(RUNTIME_ROOT.iterdir())
+        ):
+            raise WorkerError("runtime_root_not_clean")
+        RUNTIME_ROOT.mkdir(parents=True, exist_ok=True)
+        tmpdir = RUNTIME_ROOT / "tmp"
+        tmpdir.mkdir(exist_ok=True)
+        runtime_inventory_path = self.out / "runtime_inventory.json"
+        host_site_value = sysconfig.get_paths().get("purelib")
+        if not isinstance(host_site_value, str) or not host_site_value:
+            raise WorkerError("runtime_host_site_packages_missing")
+        host_site = Path(host_site_value)
+        if not host_site.is_dir():
+            raise WorkerError("runtime_host_site_packages_missing")
+        try:
+            self.runtime_inventory = link_verified_nvidia_libraries(
+                requirements,
+                host_site,
+                None,
+                runtime_inventory_path,
+                host_python=platform.python_version(),
+            )
+        except WorkerError:
+            raise
+        self.status["runtime_inventory"] = {
+            "status": self.runtime_inventory["status"],
+            "expected_distribution_count": self.runtime_inventory["expected_distribution_count"],
+            "shared_library_bytes_reused": self.runtime_inventory["shared_library_bytes_reused"],
+        }
+        self.save_status()
+        self.check_storage(mounted_bytes=self.input_artifact_bytes, plan=plan)
+
+        uv_site = RUNTIME_ROOT / "uv-site"
+        uv_wheel = RUNTIME_ROOT / UV_WHEEL_FILENAME
+        self._download_uv_wheel(uv_wheel, plan)
+        if (
+            self._setup_stage(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-input",
+                    "--disable-pip-version-check",
+                    "--no-warn-script-location",
+                    "--no-cache-dir",
+                    "--no-index",
+                    "--no-deps",
+                    "--target",
+                    str(uv_site),
+                    str(uv_wheel),
+                ],
+                "setup-uv-bootstrap",
+                plan=plan,
+                env=self._setup_environment(uv_site),
+                timeout_seconds=180,
+            )
+            != 0
+        ):
+            raise WorkerError("uv_bootstrap_install_failed")
+        uv_env = self._setup_environment(uv_site)
+        if (
+            self._setup_stage(
+                [sys.executable, "-m", "uv", "--version"],
+                "verify-uv-bootstrap",
+                plan=plan,
+                env=uv_env,
+                timeout_seconds=30,
+            )
+            != 0
+        ):
+            raise WorkerError("uv_bootstrap_version_check_failed")
+        try:
+            uv_version_output = (
+                (self.out / "logs" / "verify-uv-bootstrap.log").read_text(encoding="utf-8").strip()
+            )
+        except (OSError, UnicodeError):
+            raise WorkerError("uv_bootstrap_version_check_failed") from None
+        if uv_version_output != "uv 0.12.3 (x86_64-unknown-linux-gnu)":
+            raise WorkerError("uv_bootstrap_version_mismatch")
+
+        uv = [sys.executable, "-m", "uv"]
+        if (
+            self._setup_stage(
+                uv
+                + [
+                    "python",
+                    "install",
+                    "--managed-python",
+                    "--install-dir",
+                    str(RUNTIME_ROOT / "managed-python"),
+                    "--no-cache",
+                    "--no-progress",
+                    "3.11.15",
+                ],
+                "setup-managed-python311",
+                plan=plan,
+                env=uv_env,
+                timeout_seconds=600,
+            )
+            != 0
+        ):
+            raise WorkerError("python311_install_failed")
+        venv = RUNTIME_ROOT / "venv"
+        if (
+            self._setup_stage(
+                uv
+                + [
+                    "venv",
+                    "--python",
+                    "3.11.15",
+                    "--managed-python",
+                    "--no-python-downloads",
+                    "--no-project",
+                    "--no-config",
+                    str(venv),
+                ],
+                "setup-python311-venv",
+                plan=plan,
+                env=uv_env,
+                timeout_seconds=180,
+            )
+            != 0
+        ):
+            raise WorkerError("python311_venv_create_failed")
+        python311 = venv / "bin" / "python"
+        venv_site = venv / "lib" / "python3.11" / "site-packages"
+        managed_python = RUNTIME_ROOT / "managed-python"
+        verified_managed_python311(python311, managed_python, venv_site)
+        self.runtime_inventory = link_verified_nvidia_libraries(
+            requirements,
+            host_site,
+            venv_site,
+            runtime_inventory_path,
+            host_python=platform.python_version(),
+        )
+        self.status["runtime_inventory"] = {
+            "status": self.runtime_inventory["status"],
+            "expected_distribution_count": self.runtime_inventory["expected_distribution_count"],
+            "shared_library_bytes_reused": self.runtime_inventory["shared_library_bytes_reused"],
+        }
+        self.save_status()
+
+        filtered_lock = RUNTIME_ROOT / "requirements-without-reused-nvidia.lock"
+        removed = requirements_without_nvidia(requirements, filtered_lock)
+        expected_removed = {record["name"] for record in self.runtime_inventory["distributions"]}
+        if removed != expected_removed:
+            raise WorkerError("runtime_nvidia_filtered_lock_mismatch")
+        if (
+            self._setup_stage(
+                uv
+                + [
+                    "pip",
+                    "install",
+                    "--python",
+                    str(python311),
+                    "--require-hashes",
+                    "--no-deps",
+                    "--no-cache",
+                    "--only-binary",
+                    ":all:",
+                    "--no-config",
+                    "--requirements",
+                    str(filtered_lock),
+                ],
+                "setup-python311-packages",
+                plan=plan,
+                env=uv_env,
+                timeout_seconds=1_200,
+            )
+            != 0
+        ):
+            raise WorkerError("locked_dependency_install_failed")
+
+        shutil.rmtree(uv_site)
+        uv_wheel.unlink(missing_ok=True)
+        self.python311 = python311
+        self.runtime_lock = runtime_report
+        self.runtime_requirements = requirements
+        self.status["runtime"] = {
+            "python": EXPECTED_RUNTIME["python"],
+            "torch": EXPECTED_RUNTIME["torch"],
+            "transformers": EXPECTED_RUNTIME["transformers"],
+            "bitsandbytes": EXPECTED_RUNTIME["bitsandbytes"],
+            "cuda_runtime": EXPECTED_RUNTIME["cuda_runtime"],
+            "requirements_lock_sha256": sha256_file(requirements),
+            "nvidia_shared_library_bytes_reused": self.runtime_inventory[
+                "shared_library_bytes_reused"
+            ],
+        }
+        self.check_storage(mounted_bytes=self.input_artifact_bytes, plan=plan)
+
+    def _verify_python311_runtime(
+        self, plan: dict[str, Any], env: dict[str, str]
+    ) -> dict[str, Any]:
+        if self.python311 is None or self.runtime_requirements is None:
+            raise WorkerError("python311_runtime_not_prepared")
+        versions = parse_pinned_requirements(self.runtime_requirements)
+        nvidia = {name: version for name, version in versions.items() if name.startswith("nvidia-")}
+        expected_path = RUNTIME_ROOT / "runtime-probe-input.json"
+        result_path = self.out / "runtime-identity.json"
+        _write_json(expected_path, {"nvidia": nvidia})
+        probe = (
+            "import importlib.metadata as m,json,platform,sys,torch;"
+            "from pathlib import Path;"
+            "expected=json.loads(Path(sys.argv[1]).read_text());"
+            "available=torch.cuda.is_available();"
+            "identity={'python':platform.python_version(),'torch':torch.__version__,"
+            "'cuda_runtime':torch.version.cuda,'transformers':m.version('transformers'),"
+            "'bitsandbytes':m.version('bitsandbytes'),'architecture':platform.machine(),"
+            "'glibc':platform.libc_ver()[1] if platform.libc_ver()[0]=='glibc' else None,"
+            "'cuda_available':available,"
+            "'gpu_name':torch.cuda.get_device_name(0) if available else None,"
+            "'nvidia':{name:m.version(name) for name in expected['nvidia']}};"
+            "Path(sys.argv[2]).write_text(json.dumps(identity,sort_keys=True)+chr(10))"
+        )
+        command = [str(self.python311), "-c", probe, str(expected_path), str(result_path)]
+        if (
+            self.run_stage(
+                command,
+                "verify-python311-runtime",
+                env=env,
+                reserve_seconds=MINIMUM_FINAL_RESERVE_SECONDS,
+                timeout_seconds=300,
+            )
+            != 0
+        ):
+            raise WorkerError("python311_runtime_probe_failed")
+        identity = _read_json(result_path, "python311_runtime_probe_output_invalid")
+        if (
+            {key: identity.get(key) for key in EXPECTED_RUNTIME} != EXPECTED_RUNTIME
+            or identity.get("architecture") not in {"x86_64", "amd64"}
+            or not identity.get("cuda_available")
+            or not isinstance(identity.get("gpu_name"), str)
+            or "T4" not in identity["gpu_name"]
+            or identity.get("nvidia") != nvidia
+            or _version_tuple(str(identity.get("glibc"))) < (2, 35)
+        ):
+            self.status["runtime_probe"] = {
+                "identity_valid": False,
+                "cuda_available": identity.get("cuda_available") is True,
+                "nvidia_count": len(identity.get("nvidia", {})),
+            }
+            self.save_status()
+            raise WorkerError("python311_runtime_identity_mismatch")
+        self.status["runtime_probe"] = {
+            "identity_valid": True,
+            "python": identity["python"],
+            "torch": identity["torch"],
+            "cuda_runtime": identity["cuda_runtime"],
+            "transformers": identity["transformers"],
+            "bitsandbytes": identity["bitsandbytes"],
+            "gpu_name": identity["gpu_name"],
+            "nvidia_count": len(nvidia),
+        }
+        self.status["hardware"] = {
+            "torch": identity["torch"],
+            "cuda_devices_visible": 1,
+            "training_device": identity["gpu_name"],
+            "world_size": 1,
+            "other_devices_unused": True,
+        }
+        self.save_status()
+        self.check_storage(mounted_bytes=self.input_artifact_bytes, plan=plan)
+        return identity
+
+    def _verify_initializer(
+        self, model: Path, *, arm: str, entry: dict[str, Any], env: dict[str, str]
+    ) -> dict[str, Any]:
+        if self.python311 is None:
+            raise WorkerError("python311_runtime_not_prepared")
+        input_path = RUNTIME_ROOT / "initializer-entry.json"
+        output_path = self.out / "initializer-identity.json"
+        _write_json(input_path, entry)
+        code = (
+            "import json,sys;from pathlib import Path;"
+            "from tinycomplete.code_cpt.q25_fim import verify_initializer;"
+            "result=verify_initializer(Path(sys.argv[1]),arm=sys.argv[2],"
+            "entry=json.loads(Path(sys.argv[3]).read_text()));"
+            "Path(sys.argv[4]).write_text(json.dumps(result,sort_keys=True)+chr(10))"
+        )
+        command = [
+            str(self.python311),
+            "-c",
+            code,
+            str(model),
+            arm,
+            str(input_path),
+            str(output_path),
+        ]
+        if (
+            self.run_stage(
+                command,
+                "verify-model-initializer",
+                env=env,
+                reserve_seconds=MINIMUM_FINAL_RESERVE_SECONDS,
+                timeout_seconds=300,
+            )
+            != 0
+        ):
+            raise WorkerError("model_initializer_verification_failed")
+        return _read_json(output_path, "model_initializer_identity_invalid")
+
+    def _runtime_artifact_bytes(self) -> int:
+        repo_bytes = _tree_bytes(REPO) if REPO.is_dir() else 0
+        return repo_bytes + _runtime_regular_bytes(RUNTIME_ROOT)
 
     def save_status(self) -> None:
         self.status["elapsed_seconds"] = time.monotonic() - self.started
@@ -700,16 +1578,23 @@ class Worker:
     def check_storage(self, *, mounted_bytes: int, plan: dict[str, Any]) -> None:
         cap = int(plan["configuration"]["budget"]["new_artifact_bytes_cap"])
         output_bytes = _tree_bytes(self.out)
-        current = mounted_bytes + output_bytes
+        runtime_bytes = self._runtime_artifact_bytes()
+        current = mounted_bytes + output_bytes + runtime_bytes
         self.status["storage"] = {
             "mounted_bytes": mounted_bytes,
             "worker_output_bytes": output_bytes,
+            "runtime_setup_bytes": runtime_bytes,
             "combined_bytes": current,
             "cap_bytes": cap,
         }
         if current > cap:
             raise WorkerError("new_artifact_bytes_cap_exceeded")
-        free = shutil.disk_usage(self.out.parent).free
+        free = min(
+            shutil.disk_usage(self.out.parent).free,
+            shutil.disk_usage(RUNTIME_ROOT.parent).free
+            if RUNTIME_ROOT.parent.exists()
+            else shutil.disk_usage(self.out.parent).free,
+        )
         self.status["storage"]["free_bytes"] = free
         minimum_free_bytes = int(
             plan["configuration"]["budget"].get("minimum_free_bytes", MINIMUM_FREE_BYTES)
@@ -730,7 +1615,10 @@ class Worker:
         env: dict[str, str],
         reserve_seconds: float,
     ) -> None:
+        if self.python311 is None:
+            raise WorkerError("python311_runtime_not_prepared")
         command = _evaluation_command(
+            python=self.python311,
             model=model,
             input_path=input_path,
             output=self.out / stage,
@@ -871,98 +1759,38 @@ class Worker:
             previous_root: Path | None = None
             inherited_baseline: dict[str, Any] | None = None
             total_mounted = _tree_bytes(INPUT_ROOT)
+            self.input_artifact_bytes = total_mounted
             self.status["state"] = "verified_inputs"
             self.save_status()
             self.check_storage(mounted_bytes=total_mounted, plan=plan)
 
-            os.environ.update(
-                HF_HUB_OFFLINE="1",
-                TRANSFORMERS_OFFLINE="1",
-                HF_DATASETS_OFFLINE="1",
-                HF_HUB_DISABLE_TELEMETRY="1",
-                TOKENIZERS_PARALLELISM="false",
-            )
-            package_command = [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--no-input",
-                "-q",
-                "transformers==5.17.0",
-                "bitsandbytes==0.50.2",
-                "PyYAML==6.0.2",
-                "opentelemetry-api==1.44.0",
-                "opentelemetry-sdk==1.44.0",
-                "opentelemetry-exporter-otlp-proto-http==1.44.0",
-                "pydantic>=2",
-                "tree-sitter==0.25.2",
-                "tree-sitter-language-pack==1.20.0",
-                "httpx",
-            ]
-            if self.run_stage(package_command, "setup-packages", reserve_seconds=60) != 0:
-                raise WorkerError("dependency_setup_failed")
-            if (
-                self.run_stage(
-                    [
-                        "git",
-                        "clone",
-                        "--branch",
-                        "research/q25-code-cpt-r2",
-                        "https://github.com/Shlok-Bhakta/tabcomplete.git",
-                        str(REPO),
-                    ],
-                    "checkout-repository",
-                    reserve_seconds=60,
-                )
-                != 0
-            ):
-                raise WorkerError("repository_checkout_failed")
-            if (
-                self.run_stage(
-                    ["git", "-C", str(REPO), "checkout", self.session["commit"]],
-                    "pin-repository",
-                    reserve_seconds=60,
-                )
-                != 0
-            ):
-                raise WorkerError("repository_pin_failed")
-            revision = subprocess.run(
-                ["git", "-C", str(REPO), "rev-parse", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if revision.returncode != 0 or revision.stdout.strip() != self.session["commit"]:
-                raise WorkerError("repository_commit_mismatch")
+            self._checkout_repository(plan)
+            self._verify_repository_fixture(paths, plan)
+            runtime_report, runtime_requirements = verify_runtime_lock_files(REPO, plan)
+            self.runtime_requirements = runtime_requirements
+            self._prepare_python311(plan, runtime_report, runtime_requirements)
+            if self.python311 is None:
+                raise WorkerError("python311_runtime_not_prepared")
 
             env = {
                 **os.environ,
                 "PYTHONPATH": f"{REPO / 'src'}:{REPO / 'scripts'}",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONNOUSERSITE": "1",
+                "HF_HUB_OFFLINE": "1",
+                "TRANSFORMERS_OFFLINE": "1",
+                "HF_DATASETS_OFFLINE": "1",
+                "HF_HUB_DISABLE_TELEMETRY": "1",
+                "TOKENIZERS_PARALLELISM": "false",
                 "TABCOMPLETE_OBSERVABILITY_ENABLED": "1",
                 "TABCOMPLETE_OBSERVABILITY_MODE": "offline",
                 "TABCOMPLETE_OBSERVABILITY_OFFLINE_BUNDLE": str(self.out / "observability.jsonl"),
                 "TABCOMPLETE_OBSERVABILITY_CAPTURE_CONTENT": "0",
                 "CUDA_VISIBLE_DEVICES": "0",
             }
-            sys.path.insert(0, str(REPO / "src"))
-            self._verify_repository_fixture(paths, plan)
-            import torch
-
-            import tinycomplete.code_cpt.q25_fim as q25_fim
-
-            if not torch.cuda.is_available() or "T4" not in torch.cuda.get_device_name(0):
-                raise WorkerError("intended_t4_backend_unavailable")
-            hardware = {
-                "torch": torch.__version__,
-                "cuda_devices_visible": torch.cuda.device_count(),
-                "training_device": torch.cuda.get_device_name(0),
-                "world_size": 1,
-                "other_devices_unused": True,
-            }
-            self.status["hardware"] = hardware
-            initializer_identity = q25_fim.verify_initializer(
-                model, arm=arm, entry=initializer_entry
+            self._verify_python311_runtime(plan, env)
+            initializer_identity = self._verify_initializer(
+                model, arm=arm, entry=initializer_entry, env=env
             )
             initializer_sha256 = canonical_sha256(initializer_identity)
             if self.session["resume_source"] is not None:
@@ -989,11 +1817,20 @@ class Worker:
                 trainer_files=trainer_files,
                 resume_checkpoint=resume_checkpoint,
             )
+            runtime_bytes = self._runtime_artifact_bytes()
+            mounted_extra += runtime_bytes
             self.status["input"] = {
                 "directory": str(input_dir),
                 "file_count": len(manifest["files"]),
                 "mounted_bytes": total_mounted,
                 "mounted_extra_bytes": mounted_extra,
+                "repository_bytes": _tree_bytes(REPO),
+                "python_runtime_bytes": _runtime_regular_bytes(RUNTIME_ROOT),
+                "nvidia_shared_library_bytes_reused": self.runtime_inventory[
+                    "shared_library_bytes_reused"
+                ]
+                if self.runtime_inventory is not None
+                else 0,
                 "initializer_identity_sha256": initializer_sha256,
             }
             self.save_status()
@@ -1001,6 +1838,7 @@ class Worker:
                 raise WorkerError("initializer_identity_changed_after_verification")
 
             preflight_command = trainer_command(
+                python=self.python311,
                 model=model,
                 paths=paths,
                 plan=plan_path,
@@ -1081,6 +1919,7 @@ class Worker:
             trainer_mounted_bytes = mounted_extra + max(0, worker_extra_output)
             self.check_storage(mounted_bytes=total_mounted + max(0, worker_extra_output), plan=plan)
             training_command = trainer_command(
+                python=self.python311,
                 model=model,
                 paths=paths,
                 plan=plan_path,
@@ -1149,6 +1988,7 @@ class Worker:
                 )
                 self.check_storage(mounted_bytes=total_mounted, plan=plan)
             for name, command in _regression_commands(
+                python=self.python311,
                 model=export,
                 paths=paths,
                 output=self.out,

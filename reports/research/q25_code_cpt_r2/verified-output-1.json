@@ -1,0 +1,24 @@
+{
+  "checkpoint_path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/output-attempt-1/q25_code_cpt_r2/training/resume-step-000481.pt",
+  "checkpoint_sha256": "5d8d57f869965dd0cfd39c4cebd194ce4a85ab504ec791ed620b380c2d1b0c8f",
+  "checkpoint_verified": true,
+  "cursor": {
+    "attempted_updates": 481,
+    "completed_updates": 481,
+    "epoch": 1,
+    "next_example_index": 7688,
+    "skipped_updates": 0,
+    "supervised_target_tokens": 7864824,
+    "training_input_tokens": 7872512
+  },
+  "discarded_logged_tail_tokens": 0,
+  "external_campaign_tokens_for_resume": 0,
+  "fingerprint": "963fa4f3a547665e5e9ebb626a0dde9d23a6a45198a93b51516fad7712739a18",
+  "observed_at": "2026-10-04T02:45:01.515163+00:00",
+  "processed_campaign_input_tokens_conservative": 7872512,
+  "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+  "status": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1 has status \"KernelWorkerStatus.COMPLETE\"",
+  "training_status": "complete",
+  "truncated_last_update_record": false,
+  "unlogged_inflight_input_token_reservation": 0
+}

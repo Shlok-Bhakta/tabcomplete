@@ -32,7 +32,7 @@ MODEL = (
 )
 DATASET = "shlokbhakta/tabcomplete-q25-code-cpt-r2-inputs"
 BASE_DATASET = "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-inputs"
-FIM_DATASET = "shlokbhakta/tabcomplete-q25-fim-r2-inputs"
+FIM_DATASET = "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3"
 CPT_INITIALIZER_DATASET = "shlokbhakta/tabcomplete-q25-cpt-r2-fim-initializer"
 FIM_ARMS = ("untouched_q25_to_fim", "completed_cpt_q25_to_fim")
 FIM_LINE_SOURCE = Path(
@@ -399,7 +399,25 @@ def freeze_fim_plan(cpt_plan: dict[str, Any], attempt: int) -> dict[str, Any]:
     manifests = list(output.glob("**/training/run_manifest.json"))
     if len(manifests) != 1:
         raise ValueError("CPT runtime identity is missing or ambiguous")
-    runtime = json.loads(manifests[0].read_text())["identity"]["runtime"]
+    parent_runtime = json.loads(manifests[0].read_text())["identity"]["runtime"]
+    runtime_lock_path = REPORT / "fim_runtime_lock.json"
+    runtime_lock = json.loads(runtime_lock_path.read_text())
+    runtime = runtime_lock["expected_versions"]
+    expected_runtime = {
+        "python": "3.11.15",
+        "torch": "2.11.0+cu128",
+        "transformers": "5.17.0",
+        "bitsandbytes": "0.50.2",
+        "cuda_runtime": "12.8",
+    }
+    if runtime != expected_runtime:
+        raise ValueError("FIM dependency lock differs from the approved Python 3.11 runtime")
+    requirements = runtime_lock["requirements_lock"]
+    relative_path = Path(requirements["repo_relative_path"])
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError("FIM requirements lock must reside inside the repository")
+    if digest(ROOT / relative_path) != requirements["sha256"]:
+        raise ValueError("FIM hashed requirements differ from the runtime lock")
     corpus = ARTIFACTS / "fim/corpus-r3"
     metadata = json.loads((corpus / "corpus_metadata.json").read_text())
     preparation = json.loads((REPORT / "fim_preparation_plan.json").read_text())
@@ -417,17 +435,35 @@ def freeze_fim_plan(cpt_plan: dict[str, Any], attempt: int) -> dict[str, Any]:
     base = cpt_plan["configuration"]["model"]
     plan = {
         "schema": "q25-fim-training-plan-v1",
+        "plan_revision": 3,
+        "revision_reason": (
+            "CPU preflight before all FIM generations corrected reserved FIM tokens "
+            "special=False handling and Transformers 5 semantic config normalization; "
+            "evaluation now explicitly rejects generated FIM control IDs. "
+            "Revision 3 corrects a CPU-detected source-requirements checksum typo "
+            "in the runtime report; resolved wheel lock and runtime versions are unchanged. "
+            "Training examples, weights, tokenizer IDs and fixtures are unchanged."
+        ),
         "gpu_execution_authorized": True,
         "preparation_plan_sha256": digest(REPORT / "fim_preparation_plan.json"),
         "parent_cpt_plan_sha256": digest(REPORT / "plan.json"),
         "campaign_budget_sha256": digest(REPORT / "campaign_budget.json"),
+        "parent_cpt_runtime_observation": parent_runtime,
+        "runtime_revision_reason": (
+            "CPT platform actually used Python 3.13.15; new matched arms pin Python "
+            "3.11.15 as required. Both arms share the same locked runtime."
+        ),
         "configuration": {
             "training": training,
-            "runtime": {
-                key: runtime[key]
-                for key in ("python", "torch", "transformers", "bitsandbytes", "cuda_runtime")
+            "runtime": runtime,
+            "runtime_lock": {
+                "runtime_lock_sha256": digest(runtime_lock_path),
+                "requirements_lock_sha256": requirements["sha256"],
+                "bootstrap_uv_version": runtime_lock["bootstrap_uv_version"],
+                "bootstrap_uv_wheel_sha256": runtime_lock["bootstrap_uv_wheel_sha256"],
             },
             "budget": {
+                "runtime_setup_reserve_seconds": 1800,
                 "session_seconds": 10800,
                 "finalization_reserve_seconds": 1800,
                 "minimum_finalization_reserve_seconds": 1800,
@@ -472,6 +508,12 @@ def freeze_fim_plan(cpt_plan: dict[str, Any], attempt: int) -> dict[str, Any]:
             },
         },
         "evaluation": {
+            "source_syntax": {
+                "protocol": "q25-fim-source-syntax-v1",
+                "purpose": "descriptive original versus verbatim generated full-file parse",
+                "selection_gate": False,
+                "functional_or_human_intent_evidence": False,
+            },
             "development": "240 synthetic source states; EOS-only, greedy, 96 tokens",
             "line": "unchanged 180-case source suite; PSM, newline/EOS, 96 tokens",
             "regression": "unchanged raw causal 200 and raw line 180",
@@ -843,7 +885,9 @@ def submit_fim(
     if any(p.name not in {"run.py", "kernel-metadata.json"} for p in kernel.iterdir()):
         raise ValueError("FIM kernel staging contains an unapproved file")
     sources = [effective_resume_source] if effective_resume_source else []
-    datasets = [FIM_DATASET, BASE_DATASET]
+    datasets = [FIM_DATASET]
+    if arm == FIM_ARMS[0]:
+        datasets.append(BASE_DATASET)
     if arm == FIM_ARMS[1]:
         initializer_receipt = json.loads(
             (ARTIFACTS / "fim/cpt-initializer-submission.json").read_text()

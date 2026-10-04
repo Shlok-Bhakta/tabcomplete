@@ -1,0 +1,14 @@
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+torch==2.11.0+cu128
+transformers==5.17.0
+bitsandbytes==0.50.2
+PyYAML==6.0.2
+tree-sitter==0.25.2
+tree-sitter-language-pack==1.20.0
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.44.0
+pydantic==2.13.5
+httpx==0.28.1

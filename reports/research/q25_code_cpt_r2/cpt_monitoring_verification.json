@@ -1,0 +1,39 @@
+{
+  "run_id": "run-73c890ceb76492f727219afff8f0ce0c",
+  "record_count": 979,
+  "pages": 10,
+  "states": [
+    "ok"
+  ],
+  "pagination_complete": true,
+  "bundle_sha256": "6c3f34956fee7e40e2761de475cd649cb0beac2ec585a765fc46f7100bdcb999",
+  "imported_spans": 3331,
+  "duplicate_import": false,
+  "content_capture": false,
+  "repeat_import": {
+    "bundle_sha256": "6c3f34956fee7e40e2761de475cd649cb0beac2ec585a765fc46f7100bdcb999",
+    "duplicate": true,
+    "imported_spans": 0,
+    "schema_version": 1
+  },
+  "retrieval_checks": {
+    "trace": {
+      "identifier": "49acd09ac3921c240c747ddd3971f3a7",
+      "state": "ok",
+      "record_count": 1,
+      "page": {
+        "limit": 100,
+        "next_cursor": null
+      }
+    },
+    "failures": {
+      "identifier": "run-73c890ceb76492f727219afff8f0ce0c",
+      "state": "no_runs",
+      "record_count": 0,
+      "page": {
+        "limit": 100,
+        "next_cursor": null
+      }
+    }
+  }
+}

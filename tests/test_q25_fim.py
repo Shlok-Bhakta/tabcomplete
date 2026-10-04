@@ -13,6 +13,8 @@ from tinycomplete.code_cpt.q25_fim import (
     Q25_CONFIG_SEMANTICS,
     TRAIN_ARM,
     _input_artifact_bytes,
+    _verify_q25_config,
+    checkpoint_weight_basis,
     load_fim_corpus,
     load_fim_examples,
     run_training,
@@ -26,6 +28,30 @@ from tinycomplete.one_line.train import EncodedExample, TrainingCursor, train_en
 
 MARKERS = {"fim_prefix": 1, "fim_suffix": 2, "fim_middle": 3}
 EOS = 4
+
+
+def test_checkpoint_weight_basis_excludes_duplicated_tied_export_storage() -> None:
+    torch = pytest.importorskip("torch")
+    model = torch.nn.Linear(7, 5, bias=False)
+    assert checkpoint_weight_basis(model, 140) == 70
+    assert checkpoint_weight_basis(model, 68) == 68
+    with pytest.raises(ValueError, match="positive"):
+        checkpoint_weight_basis(model, 0)
+    optimizer = torch.optim.AdamW(model.parameters())
+    from tinycomplete.code_cpt.q25 import estimate_checkpoint_bytes
+
+    estimate = estimate_checkpoint_bytes(model, optimizer, checkpoint_weight_basis(model, 140))
+    assert estimate == 70 * 4 + 64 * 1024**2
+
+
+def test_checkpoint_basis_counts_shared_embedding_and_head_only_once() -> None:
+    torch = pytest.importorskip("torch")
+    model = torch.nn.Module()
+    model.embedding = torch.nn.Embedding(7, 5)
+    model.head = torch.nn.Linear(5, 7, bias=False)
+    model.head.weight = model.embedding.weight
+    assert sum(parameter.numel() for parameter in model.parameters()) == 35
+    assert checkpoint_weight_basis(model, 140) == 70
 
 
 def _sha(value: str) -> str:
@@ -338,6 +364,27 @@ def test_validate_fim_tokenizer_preserves_special_marker_ids() -> None:
         _FakeTokenizer(),
         {"eos_token_id": EOS, "fim_marker_ids": MARKERS},
     )
+
+
+def test_fim_markers_need_not_be_huggingface_special_tokens() -> None:
+    tokenizer = _FakeTokenizer()
+    tokenizer.all_special_tokens = []
+    validate_fim_tokenizer(tokenizer, {"eos_token_id": EOS, "fim_marker_ids": MARKERS})
+
+
+def test_q25_config_accepts_semantically_equal_transformers5_serialization(tmp_path: Path) -> None:
+    config = dict(Q25_CONFIG_SEMANTICS)
+    config.pop("rope_theta")
+    config["rope_parameters"] = {"rope_type": "default", "rope_theta": 1_000_000.0}
+    config["sliding_window"] = None
+    config["layer_types"] = ["full_attention"] * 24
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(config))
+    assert _verify_q25_config(path) == config
+    config["rope_parameters"]["rope_theta"] = 10_000.0
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match="architecture semantics"):
+        _verify_q25_config(path)
 
 
 def test_validate_fim_tokenizer_roundtrips_all_frozen_example_ids() -> None:
@@ -698,9 +745,9 @@ def test_cpu_response_only_fim_training_resumes_exactly(tmp_path: Path) -> None:
         external_campaign_tokens=external_campaign_tokens,
     )
     assert external_campaign_tokens > 4_194_304
-    assert external_campaign_tokens + sum(
-        example.total_tokens for example in examples
-    ) < campaign_cap
+    assert (
+        external_campaign_tokens + sum(example.total_tokens for example in examples) < campaign_cap
+    )
     limited_model, limited_optimizer, limited_scheduler, limited_scaler = _train_state(
         torch, initial_state, total_updates=len(batches)
     )

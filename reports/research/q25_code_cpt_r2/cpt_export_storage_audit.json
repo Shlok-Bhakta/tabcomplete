@@ -1,0 +1,35 @@
+{
+  "schema": "q25-cpt-export-storage-audit-v1",
+  "file_sha256": "15df09d25a5c39610e6c15148850a02295a32d228e1674871e13beddb25a8ccb",
+  "bytes": 1260367152,
+  "stored_tensor_elements": 630167424,
+  "tensor_count": 291,
+  "dtypes": [
+    "F16"
+  ],
+  "tied_tensors": {
+    "model.embed_tokens.weight": {
+      "shape": [
+        151936,
+        896
+      ],
+      "dtype": "F16",
+      "bytes": 272269312,
+      "sha256": "51891bfaedc8a185b60de7adb93d4f6667976d5562beafb407bee16449e9b050"
+    },
+    "lm_head.weight": {
+      "shape": [
+        151936,
+        896
+      ],
+      "dtype": "F16",
+      "bytes": 272269312,
+      "sha256": "51891bfaedc8a185b60de7adb93d4f6667976d5562beafb407bee16449e9b050"
+    }
+  },
+  "tied_bytes_equal": true,
+  "logical_parameters": 494032768,
+  "logical_parameter_evidence": "actual worker process-exit export reload inventory",
+  "checkpoint_estimate_basis_bytes": 988065536,
+  "inference_service_memory_measured": false
+}

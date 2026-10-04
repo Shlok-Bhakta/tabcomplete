@@ -1,0 +1,13 @@
+{
+  "schema": "q25-fim-plan-revision-v1",
+  "old_plan_sha256": "de375a43b661a060a85a4b7967f81577f32e4903e1f633ba9eae635e71e18b76",
+  "new_plan_revision": 3,
+  "old_private_dataset": "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r2",
+  "new_private_dataset": "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3",
+  "reason": "CPU worker lock test found a one-character source-requirements checksum typo in runtime metadata. Correct the declared SHA-256 and bind the corrected report. Hashed requirements lock, runtime versions, model artifacts, data and fixtures are unchanged.",
+  "runtime_lock_sha256": "5f1dd30f40fd208f435e40e1edae59caf7a2f22778c67313b3c5bf47e5b5f65d",
+  "requirements_lock_sha256": "c84aeaafc81059b2bd4bafd7b8fe819dea93462a7f3423e38246f6e2eae699de",
+  "model_outputs_before_revision": 0,
+  "gpu_allocations_before_revision": 0,
+  "prior_staging_preserved_at": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/history/plan-r2"
+}

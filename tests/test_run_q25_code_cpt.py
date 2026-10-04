@@ -1297,6 +1297,24 @@ def test_freeze_fim_plan_builds_cpu_only_reproducible_matched_plan(
             }
         },
     )
+    requirements_path = tmp_path / "fim-requirements.lock"
+    requirements_path.write_text("synthetic hashed requirements\n")
+    runtime_lock = {
+        "expected_versions": {
+            "python": "3.11.15",
+            "torch": "2.11.0+cu128",
+            "transformers": "5.17.0",
+            "bitsandbytes": "0.50.2",
+            "cuda_runtime": "12.8",
+        },
+        "requirements_lock": {
+            "repo_relative_path": requirements_path.name,
+            "sha256": campaign.digest(requirements_path),
+        },
+        "bootstrap_uv_version": "0.12.3",
+        "bootstrap_uv_wheel_sha256": "synthetic-uv-wheel",
+    }
+    campaign.save(report / "fim_runtime_lock.json", runtime_lock)
     cpt_plan = {
         "configuration": {
             "model": {
@@ -1308,6 +1326,7 @@ def test_freeze_fim_plan_builds_cpu_only_reproducible_matched_plan(
         "fixtures": {"causal": {"sha256": "fixture-hash"}},
     }
     monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ROOT", tmp_path)
     monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
     monkeypatch.setattr(campaign, "collect_cpt_export", lambda _plan, _attempt: export)
 
@@ -1321,7 +1340,13 @@ def test_freeze_fim_plan_builds_cpu_only_reproducible_matched_plan(
         7_872_512
     )
     assert plan["evaluation"]["regression"] == "unchanged raw causal 200 and raw line 180"
+    assert plan["configuration"]["runtime"]["python"] == "3.11.15"
+    assert plan["parent_cpt_runtime_observation"]["python"] == "3.11.0"
+    assert plan["evaluation"]["source_syntax"]["selection_gate"] is False
     assert json.loads((report / "fim_training_plan.json").read_text()) == plan
+    requirements_path.write_text("modified requirements\n")
+    with pytest.raises(ValueError, match="requirements differ"):
+        campaign.freeze_fim_plan(cpt_plan, attempt=1)
 
 
 def _fim_submission_context(
@@ -1428,6 +1453,28 @@ def _fim_submission_context(
 
     monkeypatch.setattr(campaign, "cli", fake_cli)
     return plan, report, artifacts, quota_calls, cli_calls
+
+
+@pytest.mark.parametrize("arm", campaign.FIM_ARMS)
+def test_fim_submission_mounts_only_the_selected_initializer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, arm: str
+) -> None:
+    plan, report, artifacts, _quota_calls, _cli_calls = _fim_submission_context(
+        tmp_path, monkeypatch
+    )
+    plan["initializers"][campaign.FIM_ARMS[1]]["artifact_manifest_sha256"] = "export-manifest"
+    campaign.save(report / "fim_training_plan.json", plan)
+    campaign.save(
+        artifacts / "fim/cpt-initializer-submission.json",
+        {"state": "verified", "artifact_manifest_sha256": "export-manifest"},
+    )
+    campaign.submit_fim(plan, arm=arm, attempt=1, cpt_attempt=1, resume_source=None)
+    kernel = artifacts / f"fim/kernel-{arm}-1/kernel-metadata.json"
+    metadata = json.loads(kernel.read_text())
+    expected_initializer = (
+        campaign.BASE_DATASET if arm == campaign.FIM_ARMS[0] else campaign.CPT_INITIALIZER_DATASET
+    )
+    assert metadata["dataset_sources"] == [campaign.FIM_DATASET, expected_initializer]
 
 
 @pytest.mark.parametrize("identity_field", ["fingerprint", "cursor"])

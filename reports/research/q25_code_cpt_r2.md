@@ -78,6 +78,26 @@ The final training plan must bind the actual completed CPT artifact and runtime
 before either FIM allocation. Existing tests and CPU data checks are not evidence
 of a model improvement.
 
+The full training plan is now frozen at revision 2. Both actual initializer
+preflights passed all 4,336 prepared states, with 1,776,908 total training input
+tokens and 34,405 supervised target/EOS tokens per arm, and 256 batches of 16.
+Revision 1 is preserved. CPU preflight found that Qwen's reserved FIM markers
+are ordinary added tokens, despite having fixed control IDs, and Transformers 5
+normalizes RoPE and disabled-window configuration fields. The corrected checks
+compare exact token IDs and canonical architecture meaning while preserving
+file-hash verification. Generation now rejects all Qwen added control tokens.
+This revision preceded every FIM model generation; it changes neither source
+states nor model weights, tokenizer IDs, benchmark fixtures or output ceiling.
+The old private input dataset remains historical. The revised dataset is
+`shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3`.
+
+The Python 3.11 GPU dependency lock contains 71 wheel-only packages. A complete
+fresh CUDA dependency installation would exceed the temporary-storage allowance.
+The worker must reuse the host's 15 NVIDIA distributions only after verifying
+their exact locked versions and native-library architecture. Incompatible host
+libraries cause a recorded failure before training. Python-dependent PyTorch
+and Triton extensions must be installed for CPython 3.11, never reused from 3.13.
+
 ## Budgets and recovery
 
 The authenticated observation at 2026-10-03 23:27:58 UTC reported 45.00 account
@@ -138,15 +158,64 @@ was reconciled against the returned URL and authenticated status; no duplicate
 allocation was submitted. The controller now records returned notebook URLs.
 This reference correction does not change data, prompts, model or training.
 
-Kaggle has not exposed progress/output artifacts during the running session.
-Completed training tokens, quality changes and reload checks remain unknown
-until their respective execution records exist.
+Attempt 1 completed on 2026-10-04, observed at 02:43:28 UTC. The worker took
+8,323.96 seconds including setup, generation, training and saving. Training
+consumed 7,872,512 input tokens and 7,864,824 target tokens, with 481 completed
+updates, no skipped updates and no replayed tail. The largest checkpoint save
+took 12.46 seconds. The collected full resumable checkpoint passed its hash and
+cursor checks. Its SHA-256 is
+`5d8d57f869965dd0cfd39c4cebd194ce4a85ab504ec791ed620b380c2d1b0c8f`.
+
+Held-out source NLL decreased from 1.15449 to 1.13026 on the same 128 blocks and
+130,944 scored target tokens. The raw continuation suite changed from 16 to 17
+exact matches out of 180, and syntax passes from 146 to 155. These small changes
+do not establish better editor intent. Full causal scoring and paired outcomes
+are recorded separately; the FIM arms remain pending.
+
+| Fixed diagnostic | Untouched Qwen | After raw-code CPT |
+| --- | --- | --- |
+| Causal functional test pass | 10/200 | 10/200 |
+| Causal compile pass | 13/200 | 20/200 |
+| Causal exact match | 1/200 | 0/200 |
+| Line exact match | 16/180 | 17/180 |
+| Line syntax pass | 146/180 | 155/180 |
+
+The functional cases have four CPT wins and four losses. Line exact matches have
+two wins and one loss; the paired case bootstrap interval for the rate change
+is approximately -1.11 to +2.78 percentage points. Syntax improved on this fixed
+line suite, with ten wins and one loss. These case-level intervals describe
+synthetic diagnostics and do not justify a population or human-edit claim.
+All eight current compiler-container image digests match the frozen environment.
+The [paired comparison](q25_code_cpt_r2/cpt_quality_comparison.json) includes
+input/output hashes, denominators and the tokenizer-serialization caveat.
+
+The actual worker used Python 3.13.15, despite the repository's Python 3.11
+requirement. This was a platform setup error and is recorded rather than
+reported as compliant. Both upcoming FIM arms require the same pinned Python
+3.11.15 environment. The CPT runtime otherwise reports PyTorch 2.11.0+cu128,
+CUDA 12.8, Transformers 5.17.0 and bitsandbytes 0.50.2. One Tesla T4 performed
+training; a second visible T4 was unused.
+
+An authenticated quota refresh at 2026-10-04 03:06:36 UTC reported 42.69 of 45
+account GPU-hours remaining, 2.31 used, renewal 2026-10-10, and no active jobs.
+It is an observation, not authorization to use a renewed balance. Allocation
+still requires another live quota and active-job refresh.
+
+The verified FP16 inference export weighs 1,260,367,152 bytes, SHA-256
+`15df09d25a5c39610e6c15148850a02295a32d228e1674871e13beddb25a8ccb`.
+Its stored tensor count includes two byte-identical copies of the tied embedding
+and output head, each 272,269,312 bytes. The reloaded model still has 494,032,768
+logical parameters. All serialized weights are FP16. Actual file bytes remain
+included in storage accounting; checkpoint estimates use unique logical weights.
+This artifact has not been quantized, deployed or measured as a laptop service.
 
 The existing SigNoz CLI query for the historical failed kernel identifier
 `tabcomplete-one-line-instinct-pilot-r1-retry` returned `no_runs`. Its private
 worker status and scientific artifacts remain available, but a training trace
-was not recovered under that identifier. New disconnected worker telemetry uses
-the existing offline mode and will be imported after artifact retrieval.
+was not recovered under that identifier. The completed CPT offline bundle was
+imported through the existing CLI. Run `run-73c890ceb76492f727219afff8f0ce0c`
+returned 979 records over ten pages, with complete pagination and status `ok`.
+The bundle contained 3,331 imported spans. Prompt content capture was disabled.
 
 Automatic personalization remains disabled. No CPT checkpoint is automatically
 promoted into the editor.
@@ -155,3 +224,19 @@ The completion follow-up code passed a final full run of 966 Python tests,
 Ruff and mypy across 90 source files. Gateway tests passed 16 cases and collector
 tests passed 59 cases; both service type checks passed. These are implementation
 checks. Actual completion training and model-quality results are still pending.
+
+## Matched completion implementation verification
+
+The revision-3 completion follow-up passed 992 Python tests (two dependency
+deprecation warnings), Ruff and mypy across 90 source files. The actual Bun
+results are 16 gateway and 59 collector tests, with both type checks passing.
+Both CPU initializer preflights validate all 4,336 examples against the same
+plan and tokenizer IDs. See `q25_code_cpt_r2/verification-fim-r3.json`.
+
+The worker downloads no new model weights. It bootstraps a pinned Python 3.11
+environment and reuses host NVIDIA libraries only after exact version and ELF
+checks. Setup, owned runtime files and atomic checkpoint writes count toward
+the deadline and storage budget. An incompatible host library fails before
+training with a bounded inventory. The CPT arm mounts only its completed export;
+partial runs save resumable state without producing an unused inference export.
+The 10 GiB output cap and 12 GiB aggregate artifact cap both remain enforced.

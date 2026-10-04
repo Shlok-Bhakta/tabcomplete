@@ -232,9 +232,7 @@ def load_fim_examples(
             if not isinstance(row, dict):
                 raise ValueError("FIM encoded-example row must be an object")
             identifier = row.get("id")
-            expected_identifier = (0 if split == "train" else MAX_TRAIN_EXAMPLES) + len(
-                examples
-            )
+            expected_identifier = (0 if split == "train" else MAX_TRAIN_EXAMPLES) + len(examples)
             if (
                 not isinstance(identifier, int)
                 or isinstance(identifier, bool)
@@ -362,10 +360,7 @@ def load_fim_corpus(
     if not isinstance(data_plan, dict):
         raise ValueError("FIM full training plan has no data identity")
     parent_cpt_hash = plan.get("parent_cpt_plan_sha256")
-    if (
-        not _is_sha256(parent_cpt_hash)
-        or metadata.get("parent_cpt_plan_sha256") != parent_cpt_hash
-    ):
+    if not _is_sha256(parent_cpt_hash) or metadata.get("parent_cpt_plan_sha256") != parent_cpt_hash:
         raise ValueError("FIM corpus parent CPT identity differs from the training plan")
     eos_token_id = metadata.get("eos_token_id")
     marker_ids = metadata.get("fim_marker_ids")
@@ -483,7 +478,6 @@ def validate_fim_tokenizer(
     """Check frozen FIM IDs and exact round-trips for the prepared token corpus."""
     if tokenizer.eos_token_id != metadata.get("eos_token_id"):
         raise ValueError("loaded Q25 EOS ID differs from the FIM corpus")
-    special_tokens = set(getattr(tokenizer, "all_special_tokens", ()))
     for token, key in (
         (FIM_PREFIX, "fim_prefix"),
         (FIM_SUFFIX, "fim_suffix"),
@@ -491,11 +485,7 @@ def validate_fim_tokenizer(
     ):
         encoded = tokenizer.encode(token, add_special_tokens=False)
         token_id = metadata["fim_marker_ids"][key]
-        if (
-            encoded != [token_id]
-            or token not in special_tokens
-            or tokenizer.convert_tokens_to_ids(token) != token_id
-        ):
+        if encoded != [token_id] or tokenizer.convert_tokens_to_ids(token) != token_id:
             raise ValueError("loaded Q25 tokenizer does not preserve a frozen FIM marker ID")
     for index, example in enumerate(examples):
         decoded = tokenizer.decode(
@@ -674,8 +664,23 @@ def _verify_q25_config(config_path: Path) -> dict[str, Any]:
         config = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeError):
         raise ValueError("Q25 initializer config is invalid") from None
+    normalized_fields = {"rope_theta", "sliding_window"}
     if not isinstance(config, dict) or any(
-        config.get(key) != expected for key, expected in Q25_CONFIG_SEMANTICS.items()
+        config.get(key) != expected
+        for key, expected in Q25_CONFIG_SEMANTICS.items()
+        if key not in normalized_fields
+    ):
+        raise ValueError("Q25 initializer config differs from pinned architecture semantics")
+    # Transformers 5 migrates legacy RoPE fields and clears an inactive window.
+    # Compare their meaning while retaining the exact serialized file hashes.
+    rope = config.get("rope_parameters")
+    if rope is None:
+        rope = {"rope_type": "default", "rope_theta": config.get("rope_theta")}
+    if (
+        rope != {"rope_type": "default", "rope_theta": 1_000_000.0}
+        or config.get("rope_scaling") is not None
+        or config.get("sliding_window") not in (None, 32768)
+        or ("layer_types" in config and config["layer_types"] != ["full_attention"] * 24)
     ):
         raise ValueError("Q25 initializer config differs from pinned architecture semantics")
     return config
@@ -729,7 +734,7 @@ def save_fim_training_cursor(
         total_cap_bytes=total_cap_bytes,
         input_artifact_bytes=input_artifact_bytes,
         minimum_free_bytes=minimum_free_bytes,
-        source_weight_bytes=source_weight_bytes,
+        source_weight_bytes=checkpoint_weight_basis(model, source_weight_bytes),
     )
     pointer_path = output / "latest.json"
     pointer = _read_json(pointer_path)
@@ -739,6 +744,22 @@ def save_fim_training_cursor(
         pointer["schema"] = LATEST_SCHEMA
         q25.atomic_json(pointer_path, pointer)
     return checkpoint
+
+
+def checkpoint_weight_basis(model: Any, serialized_weight_bytes: int) -> int:
+    """Bound the BF16 basis by unique parameters, excluding duplicated tied tensors.
+
+    The parent estimator reserves four times this basis for FP32 masters and
+    optimizer state, and independently checks actual model/optimizer tensor bytes.
+    The CPT export serializes tied embeddings twice. Its file size must still be
+    counted as input storage, but it does not double resumable training state.
+    """
+    logical_bf16_bytes = sum(
+        parameter.numel() * 2 for parameter in model.parameters() if parameter.is_floating_point()
+    )
+    if serialized_weight_bytes <= 0 or logical_bf16_bytes <= 0:
+        raise ValueError("checkpoint weight basis must be positive")
+    return min(serialized_weight_bytes, logical_bf16_bytes)
 
 
 def _budget(document: dict[str, Any]) -> dict[str, Any]:
@@ -1058,9 +1079,7 @@ def run_training(
         plan=document,
     )
     corpus_metadata = _read_json(metadata_path)
-    validate_local_tokenizer_corpus(
-        model_path, corpus_metadata, examples + development_examples
-    )
+    validate_local_tokenizer_corpus(model_path, corpus_metadata, examples + development_examples)
     input_tokens = sum(item.total_tokens for item in examples)
     target_tokens = sum(item.response_tokens for item in examples)
     if input_tokens > int(training["max_input_tokens"]):
@@ -1130,8 +1149,9 @@ def run_training(
         "runtime": runtime,
     }
     fingerprint = canonical_sha256(identity)
-    output_cap_bytes = int(
-        budget.get("output_bytes_cap", budget.get("new_artifact_bytes_cap", 12 * 1024**3))
+    output_cap_bytes = min(
+        int(training.get("max_output_bytes", 12 * 1024**3)),
+        int(budget.get("output_bytes_cap", budget.get("new_artifact_bytes_cap", 12 * 1024**3))),
     )
     total_cap_bytes = int(budget.get("new_artifact_bytes_cap", 12 * 1024**3))
     minimum_free_bytes = int(budget.get("minimum_free_bytes", 2 * 1024**3))
@@ -1330,7 +1350,10 @@ def run_training(
                 "checkpoint_estimate_bytes": q25.estimate_checkpoint_bytes(
                     model,
                     optimizer,
-                    int(initializer_identity["files"]["model.safetensors"]["bytes"]),
+                    checkpoint_weight_basis(
+                        model,
+                        int(initializer_identity["files"]["model.safetensors"]["bytes"]),
+                    ),
                 ),
             },
         }
@@ -1344,22 +1367,24 @@ def run_training(
             )
             after["fingerprint"] = fingerprint
             q25.atomic_json(output / "fim-development-after.json", after)
-            export = save_fim_inference_export(
-                model,
-                tokenizer,
-                output / "inference-f16",
-                output_root=output,
-                output_cap_bytes=output_cap_bytes,
-                total_cap_bytes=total_cap_bytes,
-                input_artifact_bytes=input_artifact_bytes,
-                minimum_free_bytes=minimum_free_bytes,
-                fingerprint=fingerprint,
-                cursor=result.cursor,
-                arm=arm,
-                initializer_identity=initializer_identity,
-            )
             summary["development_after"] = after
-            summary["inference_export"] = export
+            # The worker evaluates exports only after a complete pass. Keep a
+            # partial run's resumable state without an unused duplicate export.
+            if result.status == "complete":
+                summary["inference_export"] = save_fim_inference_export(
+                    model,
+                    tokenizer,
+                    output / "inference-f16",
+                    output_root=output,
+                    output_cap_bytes=output_cap_bytes,
+                    total_cap_bytes=total_cap_bytes,
+                    input_artifact_bytes=input_artifact_bytes,
+                    minimum_free_bytes=minimum_free_bytes,
+                    fingerprint=fingerprint,
+                    cursor=result.cursor,
+                    arm=arm,
+                    initializer_identity=initializer_identity,
+                )
             summary["storage"]["output_bytes"] = q25.directory_bytes(output)
         q25.atomic_json(output / "run_result.json", summary)
         return summary

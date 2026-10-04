@@ -45,12 +45,13 @@ Do not describe an allocation or a model gain as completed based on this handoff
 alone. Commit and push the campaign code before submission; the controller
 enforces that the remote branch matches the local commit.
 
-Attempt 1 is running at the actual Kaggle reference
+Attempt 1 completed at the actual Kaggle reference
 `shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1`, launched from `fce293d`.
-The short requested ID was not created; do not retry submission under that ID.
-Inspect the actual reference, then collect attempt 1 only after COMPLETE/ERROR.
-The job receipt and fresh quota observation are committed beside this file.
-No second notebook may be allocated while it remains active.
+The verified final cursor contains 481 completed updates and 7,872,512 input
+tokens, with no skips or replayed tail. The full state and FP16 inference export
+are collected in the private artifact directory. Do not resume this completed
+source pass. The short requested ID was not created; do not retry under that ID.
+Refresh authenticated quota and active jobs before either FIM allocation.
 
 The optional watcher retrieves terminal output without starting another job. It
 stops after three consecutive transport failures or its observation deadline.
@@ -87,11 +88,20 @@ uv run python scripts/run_q25_code_cpt.py --freeze-fim --cpt-attempt 1
 uv run python scripts/run_q25_code_cpt.py --phase fim --bundle --upload
 ```
 
-The freeze step binds the actual CPT runtime and export. The upload mounts only
+The freeze step binds the actual CPT export and the new matched Python 3.11.15
+dependency lock. CPT actually ran Python 3.13.15; this deviation is recorded and
+must not be carried forward. The upload mounts only
 the completed export in a new private dataset, with no optimizer states. After
 remote path/size verification it removes the owned temporary staged weight copy;
 the original research export and training checkpoint remain intact. A retry of
 a verified upload does not recopy the weights.
+
+Full FIM plan revision 3 is active. Original revision 1 and its unused private
+input staging/receipt are preserved under `fim_training_plan.r1.json` and
+`/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/history/plan-r1`. CPU preflight fixed
+ordinary reserved FIM token handling and semantically equivalent Transformers 5
+config serialization before any FIM generation. The revised private input dataset
+is `shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3`; both initializer preflights pass. Revision 2 remains in `fim_training_plan.r2.json` and `fim/history/plan-r2`. Revision 3 fixes a runtime-report checksum typo found by CPU tests before any FIM generation. The resolved wheels, runtime versions, examples, weights and tokenizer IDs are unchanged.
 
 Run CPU preflight against the frozen full plan for both initializers. Commit and
 push the completed source and upload receipts before GPU allocation. Then launch
