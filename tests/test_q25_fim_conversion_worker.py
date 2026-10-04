@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,6 +17,30 @@ SPEC.loader.exec_module(WORKER)
 
 def test_cpu_runtime_probe_is_valid_python_without_importing_torch() -> None:
     compile(WORKER._cpu_inventory_script(), "cpu_runtime_probe.py", "exec")
+
+
+def test_preflight_failure_records_stage_without_exception_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(WORKER, "PREFLIGHT_STAGE", "selected_export_identity")
+    output = tmp_path / "failure.json"
+    WORKER._record_preflight_failure(output, ValueError("secret-value-must-not-escape"))
+    record = json.loads(output.read_text())
+    assert record["stage"] == "selected_export_identity"
+    assert record["exception_class"] == "ValueError"
+    assert record["exception_text_recorded"] is False
+    assert record["training_input_tokens"] == 0
+    assert record["gpu_enabled"] is False
+    assert "secret-value" not in output.read_text()
+
+
+def test_preflight_failure_does_not_follow_output_symlink(tmp_path: Path) -> None:
+    target = tmp_path / "preserved"
+    target.write_text("original")
+    output = tmp_path / "failure.json"
+    output.symlink_to(target)
+    WORKER._record_preflight_failure(output, RuntimeError("untrusted"))
+    assert target.read_text() == "original"
 
 
 def test_source_kernel_reference_is_a_safe_owner_and_slug_pair() -> None:

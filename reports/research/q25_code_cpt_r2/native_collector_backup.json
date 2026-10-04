@@ -1,0 +1,18 @@
+{
+  "schema": "q25-fim-existing-collector-backup-v1",
+  "observed_at": "2026-10-04T08:45:00.639882+00:00",
+  "source": "/mnt/ssd/collector-data/collector.sqlite",
+  "backup": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/native/collector-before-native.sqlite",
+  "backup_bytes": 8556544,
+  "backup_sha256": "a54597089317fa82d0a244d4aa29d9a9738a3b9bbe1aedbe02aa5b2d8b39a77c",
+  "method": "sqlite3 online backup from read-only source including consistent WAL-visible state",
+  "integrity_check": "ok",
+  "counts": {
+    "sessions": 91,
+    "events": 13014,
+    "blobs": 393
+  },
+  "user_version": 0,
+  "migration_required": false,
+  "source_modified": false
+}

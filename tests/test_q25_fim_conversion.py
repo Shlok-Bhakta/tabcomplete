@@ -407,6 +407,43 @@ def test_initializer_identity_requires_all_parent_fields_and_values(
     assert not conversion._initializer_identity_matches(mismatched_value, expected)
 
 
+def test_untouched_initializer_matches_trainer_three_file_provenance() -> None:
+    files = {
+        name: {"bytes": 10 + index, "sha256": str(index + 1) * 64}
+        for index, name in enumerate(
+            ("config.json", "model.safetensors", "tokenizer.json", "tokenizer_config.json")
+        )
+    }
+    expected = {
+        "kind": "untouched_pretrained",
+        "model_id": conversion.MODEL_ID,
+        "revision": conversion.MODEL_REVISION,
+        "files": files,
+    }
+    actual = {
+        **expected,
+        "files": {
+            name: record for name, record in files.items() if name != "tokenizer_config.json"
+        },
+    }
+    assert conversion._initializer_identity_matches(actual, expected)
+    for name in actual["files"]:
+        changed = {**actual, "files": {**actual["files"], name: {"bytes": 1, "sha256": "f" * 64}}}
+        assert not conversion._initializer_identity_matches(changed, expected)
+        missing = {
+            **actual,
+            "files": {key: value for key, value in actual["files"].items() if key != name},
+        }
+        assert not conversion._initializer_identity_matches(missing, expected)
+    assert not conversion._initializer_identity_matches(
+        {**actual, "files": {**actual["files"], "unbound": files["tokenizer_config.json"]}},
+        expected,
+    )
+    assert not conversion._initializer_identity_matches(
+        {**actual, "kind": "completed_cpt_export"}, {**expected, "kind": "completed_cpt_export"}
+    )
+
+
 def test_completed_cpt_initializer_is_bound_to_frozen_plan_identity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -1,9 +1,9 @@
 {
   "account_gpu_hours_reserved": 0,
-  "attempt": 2,
+  "attempt": 1,
   "automatic_allocation": false,
   "automatic_renewal_use": false,
-  "commit": "38d68e811d8ae905b301de435888d2008e33ef6f",
+  "commit": "c5ef7b060910a8b5a5fe44954f9dd64e33c7c74a",
   "conservative_reserved_session_seconds": 10800,
   "enable_gpu": false,
   "input_manifest_sha256": "f200c93f51c13a7c6cb695c0481b73276f9b8cda5491c15c04855a65b2b06a01",
@@ -15,10 +15,6 @@
       {
         "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
         "status": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation has status \"KernelWorkerStatus.COMPLETE\""
-      },
-      {
-        "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
-        "status": "shlokbhakta/tc-q25-fim-q4-conversion-r1 has status \"KernelWorkerStatus.ERROR\""
       },
       {
         "reference": "shlokbhakta/tc-q25-fim-r2-1-a1",
@@ -198,7 +194,7 @@
         "reference": "shlokbhakta/exercise-functions-and-getting-help",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-10-04T08:43:15.314199+00:00"
+        "verified_at": "2026-10-04T08:08:51.961291+00:00"
       },
       {
         "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
@@ -222,10 +218,10 @@
         "reference": "shlokbhakta/notebookd2edcfa65c",
         "status": "unknown",
         "verification_source": "authenticated kaggle kernels status HTTP 404",
-        "verified_at": "2026-10-04T08:43:15.314199+00:00"
+        "verified_at": "2026-10-04T08:08:51.961291+00:00"
       }
     ],
-    "observed_at": "2026-10-04T08:42:36.079873+00:00",
+    "observed_at": "2026-10-04T08:08:13.280069+00:00",
     "remaining": 41.08,
     "renewal": "2026-10-10T00:00:00",
     "source": "authenticated kaggle quota --format json and kernel statuses",
@@ -233,15 +229,14 @@
     "units": "Kaggle account GPU-hours",
     "used": 3.92
   },
-  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1-a2",
-  "requested_reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1-a2",
-  "retry_authorization_reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
+  "requested_reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
   "selected_arm": "untouched_q25_to_fim",
   "selection_sha256": "3ad25987bccf5cc693dfd95f3c0ef37861c88fda113bb51ac4ff432a0ed313ab",
   "session_seconds": 10800,
   "source_kernel_reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
   "status": "submitted",
-  "submission_response": "Kernel version 1 successfully pushed.  Please check progress at https://www.kaggle.com/code/shlokbhakta/tc-q25-fim-q4-conversion-r1-a2",
-  "submitted_at": "2026-10-04T08:43:18.599403+00:00",
+  "submission_response": "Kernel version 1 successfully pushed.  Please check progress at https://www.kaggle.com/code/shlokbhakta/tc-q25-fim-q4-conversion-r1",
+  "submitted_at": "2026-10-04T08:08:55.609237+00:00",
   "training_plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780"
 }

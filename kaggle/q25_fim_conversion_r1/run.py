@@ -25,6 +25,7 @@ MINIMUM_RESERVE_SECONDS = 1_800
 RUNTIME_SETUP_PEAK_BYTES = 4 * 1024**3
 MAX_ARTIFACT_BYTES = 12 * 1024**3
 MINIMUM_FREE_BYTES = 2 * 1024**3
+PREFLIGHT_STAGE = "not_started"
 CHECKOUT_FILES = (
     "convert_hf_to_gguf.py",
     "conversion/base.py",
@@ -584,6 +585,8 @@ def convert(
     session_seconds: float,
     reserve_seconds: float,
 ) -> dict[str, Any]:
+    global PREFLIGHT_STAGE
+    PREFLIGHT_STAGE = "session_contract"
     started = time.monotonic()
     if (
         not math.isfinite(session_seconds)
@@ -596,6 +599,7 @@ def convert(
     if not _valid_source_kernel_reference(source_kernel_reference):
         raise ValueError("selected source kernel reference is invalid")
     deadline = started + session_seconds - reserve_seconds
+    PREFLIGHT_STAGE = "source_contract"
     contract = _load_runtime_contract(code_root)
     if contract.LLAMA_CPP_REVISION != LLAMA_CPP_REVISION:
         raise RuntimeError("conversion contract and worker disagree on llama.cpp revision")
@@ -604,6 +608,7 @@ def convert(
         raise RuntimeError("CPU conversion dependency lock differs from the pinned file")
     if not input_root.is_dir() or not code_root.is_dir():
         raise FileNotFoundError("conversion input or code root is missing")
+    PREFLIGHT_STAGE = "io_roots"
     output_root, runtime_root = _validate_io_roots(
         input_root=input_root,
         code_root=code_root,
@@ -613,6 +618,7 @@ def convert(
     _require_empty_or_missing(output_root, "conversion output")
     _require_empty_or_missing(runtime_root, "conversion runtime")
 
+    PREFLIGHT_STAGE = "selected_export_identity"
     verified = contract.verify_selection_bundle(
         input_root=input_root,
         selection_path=selection_path,
@@ -620,6 +626,7 @@ def convert(
         expected_selection_sha256=expected_selection_sha256,
         source_root=source_root,
     )
+    PREFLIGHT_STAGE = "conversion_size_projection"
     source_weight_bytes = verified.source_files["model.safetensors"]["bytes"]
     physical_parameter_count = max(
         verified.safetensors["physical_parameter_count"],
@@ -639,6 +646,7 @@ def convert(
     output_root.parent.mkdir(parents=True, exist_ok=True)
     runtime_root.parent.mkdir(parents=True, exist_ok=True)
     initial_roots = [input_root, code_root, output_root, runtime_root]
+    PREFLIGHT_STAGE = "storage_guard"
     projected = contract.preflight_storage(
         roots=initial_roots,
         additional_peak_bytes=RUNTIME_SETUP_PEAK_BYTES + conversion_peak_bytes,
@@ -675,6 +683,7 @@ def convert(
         },
     }
     atomic_json(output_root / "conversion.json", state)
+    PREFLIGHT_STAGE = "manifest_created"
     try:
         uv_path, uv_binary_sha = _managed_uv(runtime_root, log_root=logs, deadline=deadline)
         python_path, runtime_identity = _install_python_runtime(
@@ -877,6 +886,32 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _record_preflight_failure(output: Path, error: BaseException) -> None:
+    # Emit only bounded classifications, never exception text or environment.
+    # A fixed Kaggle output path avoids writing through unvalidated CLI roots.
+    if not output.parent.is_dir() or output.parent.is_symlink() or output.is_symlink():
+        return
+    allowed_classes = {
+        "ConversionContractError",
+        "ValueError",
+        "RuntimeError",
+        "FileNotFoundError",
+        "OSError",
+    }
+    name = type(error).__name__
+    atomic_json(
+        output,
+        {
+            "schema": "q25-fim-conversion-preflight-failure-v1",
+            "stage": PREFLIGHT_STAGE,
+            "exception_class": name if name in allowed_classes else "other",
+            "exception_text_recorded": False,
+            "training_input_tokens": 0,
+            "gpu_enabled": False,
+        },
+    )
+
+
 def main() -> int:
     args = _parse_args()
     try:
@@ -893,7 +928,14 @@ def main() -> int:
             session_seconds=args.session_seconds,
             reserve_seconds=args.reserve_seconds,
         )
-    except BaseException:
+    except BaseException as error:
+        if not (args.output_root / "conversion.json").is_file():
+            try:
+                _record_preflight_failure(
+                    Path("/kaggle/working/q25_fim_conversion_preflight_failure.json"), error
+                )
+            except OSError:
+                pass
         print(
             "Q25 FIM conversion failed; inspect private conversion status and logs.",
             file=sys.stderr,

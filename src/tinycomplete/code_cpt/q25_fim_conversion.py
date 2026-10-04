@@ -209,8 +209,25 @@ def _initializer_identity_matches(actual: Any, expected: Any) -> bool:
         }
     else:
         return False
-    return set(actual) == identity_fields and all(
-        name in expected and actual[name] == expected[name] for name in identity_fields
+    if set(actual) != identity_fields or any(
+        name not in expected or actual[name] != expected[name]
+        for name in identity_fields - {"files"}
+    ):
+        return False
+    if actual["files"] == expected["files"]:
+        return True
+    # The untouched trainer records the three files used to initialize weights
+    # and tokenizer. The input plan additionally inventories tokenizer_config.
+    # Admit only that documented omission; every recorded byte/hash still binds
+    # exactly to the immutable input plan. CPT exports retain their complete map.
+    required = {"config.json", "model.safetensors", "tokenizer.json"}
+    return (
+        kind == "untouched_pretrained"
+        and isinstance(actual["files"], dict)
+        and isinstance(expected["files"], dict)
+        and set(actual["files"]) == required
+        and set(expected["files"]) == required | {"tokenizer_config.json"}
+        and all(actual["files"][name] == expected["files"][name] for name in required)
     )
 
 

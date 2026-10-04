@@ -1,0 +1,17 @@
+{
+  "schema": "q25-fim-conversion-provenance-fix-v1",
+  "observed_at": "2026-10-04T08:53:47.799332+00:00",
+  "old_contract_sha256": "6fd2e477af574d6d65cc312f27154ed48b66eaf3152b075597608554a0647a74",
+  "new_contract_sha256": "1ceaac670f0a3bfe338970fe52b0bd2eddc94ea73d33a17c2cfc6d441eff9857",
+  "new_worker_sha256": "650b9b97c5168ebdbf1edd3394d2983ce7bc3a694a85a02c388cd77298f185c5",
+  "change": "Only admit untouched trainer three-file initialization record versus plan four-file inventory with every recorded hash/size exactly matching. CPT initialization map still exact. Add bounded pre-manifest failure stage/class evidence without exception text.",
+  "actual_direct_manifest_initializer_check": true,
+  "remaining_local_selected_export_check": "missing local model file, intentionally not downloaded",
+  "weights_changed": false,
+  "training_plan_changed": false,
+  "selection_changed": false,
+  "fixtures_changed": false,
+  "verification_log": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/gate-conversion-provenance-worker-fix.log",
+  "verification_log_sha256": "8823c7bad041b1c656801f25b608a05ec0ad2848b48936b302413df8e4d2abd2",
+  "requires_new_conversion_plan_revision": 2
+}

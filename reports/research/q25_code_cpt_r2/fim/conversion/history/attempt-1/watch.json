@@ -1,0 +1,7 @@
+{
+  "automatic_allocation": false,
+  "observed_at": "2026-10-04T08:11:04.083435+00:00",
+  "plan_sha256": "bb2755083d3a8a8f6a9b20d3a88f8b822089ab5210fd5661ffad854ff5543bec",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
+  "status": "shlokbhakta/tc-q25-fim-q4-conversion-r1 has status \"KernelWorkerStatus.ERROR\""
+}

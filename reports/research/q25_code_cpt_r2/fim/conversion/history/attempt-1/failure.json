@@ -1,0 +1,37 @@
+{
+  "attempt": 1,
+  "automatic_retry": false,
+  "conservative_reserved_session_seconds": 10800,
+  "conversion_started": false,
+  "failure_kind": "launcher_pre_worker",
+  "failure_log_file": "fim/conversion-failure-r1/tc-q25-fim-q4-conversion-r1.log",
+  "failure_log_sha256": "f3908cfed007915f22de902de095f52b8ccacd6b2da652af78c748aa2eaef1f1",
+  "gpu_enabled": false,
+  "job_sha256": "ea7d7791d4ca38da6a59ab62ae2a3fa1161926e41b104a2a4280a58806216c3b",
+  "launcher_failure_observed_seconds": 0.797851115,
+  "launcher_sha256": "572760cf825f3abddedb9e1773413145c6762e8e18a590fadcb7925480dbfe8c",
+  "observed_at": "2026-10-04T08:11:04.083435+00:00",
+  "plan_sha256": "bb2755083d3a8a8f6a9b20d3a88f8b822089ab5210fd5661ffad854ff5543bec",
+  "pulled_launcher_sha256": "572760cf825f3abddedb9e1773413145c6762e8e18a590fadcb7925480dbfe8c",
+  "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
+  "remote_inputs_verified": {
+    "dataset_sources": [
+      "shlokbhakta/tabcomplete-q25-fim-conversion-r1-inputs"
+    ],
+    "enable_gpu": false,
+    "kernel_sources": [
+      "shlokbhakta/tc-q25-fim-r2-0-a5"
+    ]
+  },
+  "remote_metadata_sha256": "7f75cb9b36a607ab291a8d1119cc20ba8a8225c5add697f516e12bb67972b851",
+  "schema": "q25-fim-cpu-conversion-failure-v1",
+  "selection_sha256": "3ad25987bccf5cc693dfd95f3c0ef37861c88fda113bb51ac4ff432a0ed313ab",
+  "source_kernel_reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+  "telemetry_query_sha256": "9d97576ef8bc5402fd8145d98eaa32e0d8b762e8f366b3b1e5e33060769b03c0",
+  "telemetry_query_state": "no_runs",
+  "terminal_status": "ERROR",
+  "training_input_tokens": 0,
+  "watch_sha256": "2a84da25e3e1d2f556ee7ad53047700738e92874d60d87142546358dacb292f4",
+  "worker_elapsed_seconds": null,
+  "worker_started": false
+}
