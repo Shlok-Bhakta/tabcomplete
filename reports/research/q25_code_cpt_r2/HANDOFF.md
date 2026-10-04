@@ -4,6 +4,46 @@ Worktree: `/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2`.
 Branch: `research/q25-code-cpt-r2`, from `0047e18`.
 Private artifacts: `/mnt/ssd/tabcomplete-q25-code-cpt-r2`.
 
+## Current execution at 2026-10-04T09:08:00.390553+00:00
+
+Raw CPT and both matched FIM arms are COMPLETE. Do not restart training.
+The selected direct FIM candidate scored 130/240 exact+EOS development states;
+CPT→FIM scored 127/240, with an inconclusive paired difference. Native Q4 is
+still pending. Selected kernel remains `shlokbhakta/tc-q25-fim-r2-0-a5`.
+
+CPU conversion r1 attempt 1 failed in the launcher. Explicit r1 attempt 2
+reached the worker but failed before any manifest. Both terminal receipts,
+private logs, submitted source and quota observations are preserved. Actual
+SigNoz queries returned `no_runs`; do not invent worker traces. Root reproduced
+the untouched initializer provenance mismatch from actual manifests and fixed
+only the three-vs-four file-map comparison, retaining every shared bytes/hash.
+Bounded pre-manifest stage/class diagnostics are added without exception text.
+The old r1 plan still pins old sources and must stay immutable. An isolated
+agent is adding explicit conversion revision 2 with one new CPU allocation,
+using the SAME verified configuration dataset and selected weights. Wait for
+root tests, new r2 plan freeze and exact clean source push before allocation.
+Both old CPU reservations still count; another three-hour CPU session fits the
+existing shared cap. There is no active Kaggle job at this checkpoint.
+
+Integrated opt-in native installer, executable embedding and 144-request FIM
+latency replay are present. Runtime source remains the root release binary
+`d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074`.
+A replay bytes-vs-file hashing bug was fixed BEFORE outputs. A follow-up is
+adding hard replay deadlines and full sampling coverage before plan freeze.
+FIM request events now distinguish actual prompt blob SHA from request-bound
+context digest and carry the validated tokenizer identities. Root Lua86,
+installer/replay20 and exporter17 focused tests passed. Full Python gate had
+1159 passes and three controller test-isolation failures due to archived history
+under the real report root; the controller agent is fixing those. Do not report
+that full gate as passed. Ruff excludes immutable archived uploaded source.
+
+Existing SQLite online backup is under `fim/native/collector-before-native.sqlite`,
+integrity check `ok`; no database migration or wipe is required. Stable desktop
+service/config are unchanged. ThinkPad known SSH alias timed out again. Do not
+claim new target installation. Personalization remains disabled. Complete Q4
+retrieval, actual native quality/latency, real synthetic Neovim/SQLite replay,
+and opt-in desktop deployment before a completion claim.
+
 Read `plan.json` and the scientific report before resuming. Preserve the running
 ThinkPad/editor configuration and stable weights. Do not consume a renewed
 Kaggle allocation automatically or download a different model.
