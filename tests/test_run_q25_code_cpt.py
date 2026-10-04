@@ -3184,6 +3184,76 @@ def test_conversion_input_bundle_contains_only_config_and_selection_not_weights(
     assert not list(bundle.glob("*.gguf"))
 
 
+def test_conversion_upload_verifies_kaggle_payloads_and_worker_hashes_all_config_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    bundle = campaign.build_fim_conversion_bundle(plan)
+    manifest = json.loads((bundle / "input-manifest.json").read_text())
+    payload_names = {
+        "selection.json",
+        "training_plan.json",
+        "original_config.json",
+        "original_tokenizer.json",
+    }
+    assert set(manifest["files"]) == payload_names
+    for name, record in manifest["files"].items():
+        assert record == {
+            "bytes": (bundle / name).stat().st_size,
+            "sha256": campaign.digest(bundle / name),
+        }
+
+    remote_rows = [
+        {"name": name, "size": (bundle / name).stat().st_size}
+        for name in sorted((*payload_names, "input-manifest.json"))
+    ]
+    remote_calls: list[tuple[str, ...]] = []
+
+    def fake_run(args: list[str], *, timeout: int = 90) -> str:
+        del timeout
+        remote_calls.append(tuple(args))
+        return json.dumps(remote_rows)
+
+    monkeypatch.setattr(build_pilot, "_csv_refs", lambda _args: set())
+    monkeypatch.setattr(build_pilot, "_run", fake_run)
+    monkeypatch.setattr(
+        campaign,
+        "cli",
+        lambda *_args, **_kwargs: "Your private Dataset is being created.",
+    )
+    monkeypatch.setattr(
+        build_pilot.time,
+        "sleep",
+        lambda _seconds: pytest.fail("published five-file dataset should verify immediately"),
+    )
+
+    verification = campaign.upload_fim_conversion_bundle(plan)
+
+    assert verification == {
+        "verified_files": 5,
+        "remote_files": 5,
+        "paths_and_sizes_verified": True,
+        "hashes_verified_by_worker": False,
+    }
+    assert len(remote_calls) == 1
+    assert remote_calls[0][:4] == (
+        "kaggle",
+        "datasets",
+        "files",
+        campaign.CONVERSION_DATASET,
+    )
+    assert {row["name"] for row in remote_rows} == payload_names | {"input-manifest.json"}
+    assert "dataset-metadata.json" not in {row["name"] for row in remote_rows}
+
+    kernel = campaign.build_fim_conversion_kernel(plan, "f" * 40)
+    launcher = (kernel / "run.py").read_text()
+    assert 'sha(path) != record.get("sha256")' in launcher
+    assert set(json.loads((bundle / "input-manifest.json").read_text())["files"]) == payload_names
+
+
 def _symlink_hf_model_snapshot(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

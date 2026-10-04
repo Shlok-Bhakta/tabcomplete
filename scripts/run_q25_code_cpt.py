@@ -2637,7 +2637,6 @@ def upload_fim_conversion_bundle(plan: dict[str, Any] | None = None) -> dict[str
     manifest = json.loads((output / "input-manifest.json").read_text())
     expected = dict(manifest["files"])
     expected["input-manifest.json"] = {"bytes": (output / "input-manifest.json").stat().st_size}
-    expected["dataset-metadata.json"] = {"bytes": (output / "dataset-metadata.json").stat().st_size}
     if not marker.exists():
         refs = _csv_refs(["kaggle", "datasets", "list", "--mine", "--page-size", "100", "--csv"])
         if CONVERSION_DATASET in refs:
