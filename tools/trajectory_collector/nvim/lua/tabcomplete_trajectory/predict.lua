@@ -251,6 +251,7 @@ local function record_request(state)
     model_alias = rust and identity.alias or nil,
     model_protocol = rust and identity.model_protocol or nil,
     context_layout = rust and identity.context_layout or nil,
+    filetype_training_scope = state.filetype_training_scope,
     syntax_validation = rust and identity.syntax_validation,
     precision = opts.precision,
     adapter_identity = opts.adapter_identity,
@@ -381,7 +382,10 @@ local function buffer_state()
   local identity = cache.root and (cache.root .. ":" .. (cache.head or "")) or path
   if is_contract_protocol() then
     local canonical_filetype = normalized_filetype(filetype)
-    if not canonical_filetype then return nil, "single-line-edit-v1 does not support " .. filetype end
+    if not canonical_filetype and not is_fim_protocol() then
+      return nil, "single-line-edit-v1 does not support " .. filetype
+    end
+    canonical_filetype = canonical_filetype or filetype
     local history_items = {}
     if latest and not latest.deleted_text:find("\n", 1, true)
         and not latest.inserted_text:find("\n", 1, true) then
@@ -392,7 +396,7 @@ local function buffer_state()
       file_id = path, filetype = canonical_filetype, source = content_of(buf), target_row = row,
       cursor_col = col, history = history_items, relevant = {},
     }
-    local state_ok = pcall(single_line_v1.new_context, contract_state)
+    local state_ok = is_fim_protocol() or pcall(single_line_v1.new_context, contract_state)
     if not state_ok then return nil, "buffer is outside the single-line-edit-v1 source contract" end
     local state = {
       bufnr = buf, path = path, row = row, start_col = col, end_col = #line,
@@ -868,7 +872,14 @@ local function finished(request, result)
       last_status = request.protocol_error
       consecutive_failures = consecutive_failures + 1
     elseif request.context_error then
-      lifecycle(state, "invalidated_unseen", request.context_error)
+      local evidence
+      if request.context_status or request.context_code then
+        evidence = {
+          context_status = request.context_status,
+          context_code = request.context_code,
+        }
+      end
+      lifecycle(state, "invalidated_unseen", request.context_error, evidence)
       last_status = request.context_error
     elseif request.parser and request.parser.error then
       lifecycle(state, "invalid_output", request.parser.error)
@@ -895,8 +906,8 @@ local function finished(request, result)
           collector.store_prediction_blob(raw_response, function() end)
         end
       end
-      local action, raw_or_err
-      if is_rust then action, raw_or_err = sse.finish_rust(request.parser, {
+      local action, raw_or_err, fim_terminal_bound
+      if is_rust then action, raw_or_err, fim_terminal_bound = sse.finish_rust(request.parser, {
         model_identity = state.model_identity, contract_state = state.contract_state, window = state.window,
         fim_prepared = state.fim_prepared, fim_token_contract = state.fim_token_contract,
         request_id = state.request_id, context_hash = state.context_hash,
@@ -909,6 +920,35 @@ local function finished(request, result)
           evidence = { raw_response_hash = state.raw_response_hash }
           local validation = request.parser.terminal and request.parser.terminal.action_validation
           if type(validation) == "table" then evidence.action_validation = vim.deepcopy(validation) end
+          if is_fim_protocol() and fim_terminal_bound then
+            local terminal = request.parser.terminal
+            local profile = state.model_identity and state.model_identity.fim_profile
+            evidence.fim_terminal = {
+              quality_outcome_bound = true,
+              failure_code = type(validation) == "table" and validation.code
+                or "fim_client_decode_rejected",
+              model_sha256 = terminal.model_sha256,
+              artifact_manifest_sha256 = type(profile) == "table"
+                  and profile.artifact_manifest_sha256 or nil,
+              model_protocol = terminal.model_protocol,
+              context_layout = terminal.context_layout,
+              request_id = terminal.request_id,
+              context_hash = terminal.context_hash,
+              completion_mode = terminal.completion_mode,
+              tokenizer_id = state.model_identity.tokenizer_id,
+              tokenizer_revision = state.model_identity.tokenizer_revision,
+              tokenizer_sha256 = terminal.tokenizer_sha256,
+              tokenizer_contract_sha256 = terminal.tokenizer_contract_sha256,
+              tokenizer_vocab_size = state.model_identity.tokenizer_vocab_size,
+              tokenizer_vocab_ids_sha256 = state.model_identity.tokenizer_vocab_ids_sha256,
+              fim_token_ids = vim.deepcopy(terminal.fim_token_ids),
+              stop_type = terminal.stop_type,
+              terminal_token_id = terminal.terminal_token_id,
+              tokens_predicted = terminal.tokens_predicted,
+              sampled_token_ids = vim.deepcopy(terminal.sampled_token_ids),
+              timings = vim.deepcopy(terminal.timings),
+            }
+          end
         end
         lifecycle(state, "invalid_output", raw_or_err, evidence)
         counters.invalid_output = counters.invalid_output + 1
@@ -932,6 +972,7 @@ local function finished(request, result)
             action_blob_hash = state.action_blob_hash, canonical_action = action.kind,
             stop_type = request.parser.terminal.stop_type, context_hash = state.context_hash,
             context_policy_version = state.context_policy_version or single_line_v1.CONTEXT_POLICY_VERSION,
+            filetype_training_scope = state.filetype_training_scope,
             model_alias = is_rust and state.model_identity.alias or nil,
             model_sha256 = is_rust and state.model_identity.model_sha256 or nil,
             model_protocol = is_rust and state.model_identity.model_protocol or nil,
@@ -1205,7 +1246,15 @@ local function post_rust_json(path, body, callback)
             { http_code = http_code, error = "invalid backend JSON" })
         end)
       else
-        vim.schedule(function() callback(false, { http_code = http_code }) end)
+        local failure = { http_code = http_code }
+        if http_code == 422 then
+          local decoded_ok, decoded = pcall(vim.json.decode, response_body)
+          if decoded_ok and type(decoded) == "table"
+              and decoded.error == "fim_context_unsupported_non_nfc" then
+            failure.error = decoded.error
+          end
+        end
+        vim.schedule(function() callback(false, failure) end)
       end
     end)
 end
@@ -1311,23 +1360,19 @@ local function validate_editor_context(state, response)
   if identity.model_protocol == fim_v1.WIRE_VERSION then
     local token_contract = state.model_identity and state.model_identity._fim_token_contract
     if not token_contract then return nil, "selected FIM tokenizer inventory is unavailable" end
-    local prepared, prepare_err = fim_v1.prepare(state.contract_state.source,
-      state.contract_state.target_row, state.contract_state.cursor_col, token_contract)
-    if not prepared or response.prompt ~= prepared.prompt
+    local prepared, prepare_err = fim_v1.verify_prepared(state.contract_state.source,
+      state.contract_state.target_row, state.contract_state.cursor_col, token_contract, response)
+    local filetype_training_scope = fim_v1.filetype_training_scope(state.contract_state.filetype)
+    if not prepared
         or response.request_id ~= state.request_id
         or response.completion_mode ~= fim_v1.COMPLETION_MODE
-        or response.tokenizer_sha256 ~= identity.tokenizer_sha256
-        or response.tokenizer_contract_sha256 ~= identity.tokenizer_contract_sha256
-        or response.target_row ~= state.contract_state.target_row
-        or response.cursor_col ~= state.contract_state.cursor_col
-        or not vim.deep_equal(response.model_hole_range, prepared.model_hole_range)
-        or not vim.deep_equal(response.apply_range, prepared.apply_range)
-        or response.line_ending ~= prepared.line_ending
+        or response.filetype_training_scope ~= filetype_training_scope
         or response.context_hash ~= fim_v1.context_digest(state.request_id,
           state.contract_state.source, state.contract_state.target_row,
-          state.contract_state.cursor_col, prepared.prompt, identity.tokenizer_contract_sha256) then
+          state.contract_state.cursor_col, prepared) then
       return nil, prepare_err or "Rust FIM context does not match the editor state"
     end
+    prepared.filetype_training_scope = filetype_training_scope
     identity._fim_token_contract = token_contract
     identity._fim_vocab_ids = state.model_identity._fim_vocab_ids
     fim_prepared = prepared
@@ -1429,6 +1474,14 @@ local function tokenize_rust(request)
         return
       end
       if not ok then
+        if is_fim_protocol() and response and response.http_code == 422
+            and response.error == "fim_context_unsupported_non_nfc" then
+          request.context_status = "unsupported"
+          request.context_code = response.error
+          request.context_error = "FIM context unsupported: retained prompt text is not NFC-normalized; source was left unchanged."
+          finished(request, { code = 0 })
+          return
+        end
         finished(request, { code = 1 })
         return
       end
@@ -1448,6 +1501,8 @@ local function tokenize_rust(request)
       state.context_layout = context.context_layout
       state.window, state.selected_buffers = context.window, context.selected_buffers
       state.fim_prepared = context.fim_prepared
+      state.filetype_training_scope = context.fim_prepared
+        and context.fim_prepared.filetype_training_scope or nil
       opts.current_model_identity = context.model_identity
       opts.model = context.model_identity.alias
       opts.model_revision = context.model_identity.model_sha256

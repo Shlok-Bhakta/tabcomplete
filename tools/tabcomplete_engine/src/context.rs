@@ -75,15 +75,21 @@ fn lines(source: &str) -> Result<Vec<(&str, &str)>> {
     }
     Ok(out)
 }
-fn validate(s: &EditorState) -> Result<()> {
+fn validate(s: &EditorState, enforce_training_language: bool) -> Result<()> {
     ensure!(
         s.source.len() <= 1024 * 1024 && !s.source.contains('\0'),
         "source outside size contract"
     );
     ensure!(
-        matches!(s.filetype.as_str(), "python" | "typescript" | "rust" | "go"),
-        "unsupported filetype"
+        s.filetype.len() <= 256 && !s.filetype.chars().any(char::is_control),
+        "invalid filetype"
     );
+    if enforce_training_language {
+        ensure!(
+            matches!(s.filetype.as_str(), "python" | "typescript" | "rust" | "go"),
+            "unsupported filetype"
+        );
+    }
     ensure!(
         !excluded(&s.file_id) && s.file_id.len() < 4096,
         "excluded path"
@@ -102,8 +108,13 @@ fn validate(s: &EditorState) -> Result<()> {
     Ok(())
 }
 pub fn validate_editor_state(s: &EditorState) -> Result<()> {
-    validate(s)
+    validate(s, true)
 }
+
+pub fn validate_fim_editor_state(s: &EditorState) -> Result<()> {
+    validate(s, false)
+}
+
 pub fn excluded(path: &str) -> bool {
     let base = path.rsplit('/').next().unwrap_or(path).to_lowercase();
     base == ".env"
@@ -176,7 +187,7 @@ pub fn prepare(
     budget: usize,
     count: impl Fn(&str) -> Result<usize>,
 ) -> Result<Prepared> {
-    validate(&req.state)?;
+    validate(&req.state, true)?;
     ensure!(
         req.repository_identity.len() <= 4096,
         "repository identity too large"
@@ -565,6 +576,28 @@ mod tests {
             relevant: vec![],
         }
     }
+
+    #[test]
+    fn fim_editor_validation_allows_uncalibrated_languages_but_keeps_path_guards() {
+        let mut request_state = state();
+        request_state.filetype = "lua".into();
+        assert!(validate_editor_state(&request_state).is_err());
+        assert!(validate_fim_editor_state(&request_state).is_ok());
+        assert_eq!(
+            crate::fim_v1::filetype_training_scope("lua"),
+            "uncalibrated_language"
+        );
+        assert_eq!(
+            crate::fim_v1::filetype_training_scope("python"),
+            "trained_language"
+        );
+
+        request_state.file_id = "/repo/.env.local".into();
+        assert!(validate_fim_editor_state(&request_state).is_err());
+        request_state.file_id = "safe.lua".into();
+        request_state.cursor_col = 12;
+        assert!(validate_fim_editor_state(&request_state).is_err());
+    }
     #[test]
     fn trained_layout_preserves_the_control_prompt() {
         let req = ContextRequest {
@@ -721,9 +754,9 @@ mod tests {
     fn unicode_boundary() {
         let mut s = state();
         s.cursor_col = 12;
-        assert!(validate(&s).is_err());
+        assert!(validate(&s, true).is_err());
         s.cursor_col = 13;
-        assert!(validate(&s).is_ok());
+        assert!(validate(&s, true).is_ok());
     }
     #[test]
     fn strict_wire() {

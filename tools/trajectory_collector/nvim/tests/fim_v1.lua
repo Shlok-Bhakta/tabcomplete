@@ -82,6 +82,61 @@ return function(ok, assert_eq, assert_true)
     assert_eq(prepared.model_protocol, "q25-fim-line-completion-v1")
   end)
 
+  ok("fim-bounded-context-v2-reconstructs-source-without-tokenizing-locally", function()
+    local source = "old line\nleft🙂right\r\nsuffix"
+    local token_contract = contract()
+    local base = assert(fim_v1.prepare(source, 1, 8, token_contract))
+    local prepared = vim.deepcopy(base)
+    prepared.prefix_range = { start_byte = 9, end_byte = 17, end_exclusive = true }
+    prepared.prefix_token_count = 5
+    prepared.suffix_range = { start_byte = 24, end_byte = 30, end_exclusive = true }
+    prepared.suffix_token_count = 6
+    prepared.prompt = "<|fim_prefix|>left🙂<|fim_suffix|>suffix<|fim_middle|>"
+    local response_value = {
+      context_policy_version = fim_v1.CONTEXT_POLICY_VERSION,
+      context_layout = fim_v1.CONTEXT_LAYOUT,
+      tokenizer_sha256 = base.tokenizer_sha256,
+      tokenizer_contract_sha256 = base.tokenizer_contract_sha256,
+      target_row = 1,
+      cursor_col = 8,
+      prompt = prepared.prompt,
+      prompt_tokens = 14,
+      prefix_range = vim.deepcopy(prepared.prefix_range),
+      prefix_context_tokens = prepared.prefix_token_count,
+      suffix_range = vim.deepcopy(prepared.suffix_range),
+      suffix_context_tokens = prepared.suffix_token_count,
+      model_hole_range = vim.deepcopy(base.model_hole_range),
+      apply_range = vim.deepcopy(base.apply_range),
+      line_ending = base.line_ending,
+    }
+    local verified, err = fim_v1.verify_prepared(source, 1, 8, token_contract, response_value)
+    assert_true(verified ~= nil, tostring(err))
+    assert_eq(verified.prompt, prepared.prompt)
+    assert_eq(verified.prefix_range.start_byte, 9)
+    assert_eq(verified.prefix_range.end_byte, 17)
+    assert_eq(verified.suffix_range.start_byte, 24)
+    assert_eq(verified.suffix_range.end_byte, 30)
+    assert_eq(verified.apply_range.start_byte, base.apply_range.start_byte)
+    assert_eq(verified.apply_range.end_byte, base.apply_range.end_byte)
+
+    local tampered = vim.deepcopy(response_value)
+    tampered.prefix_range.start_byte = 15
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract, tampered),
+      "a crop inside the emoji is rejected")
+    tampered = vim.deepcopy(response_value)
+    tampered.prefix_range.end_byte = 16
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract, tampered),
+      "prefix must end at the original cursor")
+    tampered = vim.deepcopy(response_value)
+    tampered.prompt = tampered.prompt .. "altered"
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract, tampered),
+      "prompt must be reconstructed from source ranges")
+    tampered = vim.deepcopy(response_value)
+    tampered.prefix_context_tokens = fim_v1.PREFIX_CONTEXT_TOKEN_LIMIT + 1
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract, tampered),
+      "per-side token limit is enforced")
+  end)
+
   ok("fim-crlf-completion-reuses-canonical-buffer-applier", function()
     local source = "a🙂b\r\ntail\r\n"
     local prepared, err = fim_v1.prepare(source, 0, 5, contract())

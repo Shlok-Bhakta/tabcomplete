@@ -1,17 +1,16 @@
-//! Detached, byte-exact adapter for the Qwen PSM line-completion contract.
-//!
-//! This module is intentionally not registered as a serving model protocol.
-//! A selected model digest and a frozen tokenizer-control inventory are needed
-//! before a server profile can safely expose it.
+//! Byte-exact adapter for the Qwen PSM line-completion contract.
 
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::{BTreeMap, BTreeSet};
+use unicode_normalization::is_nfc;
 
 pub const WIRE_VERSION: &str = "q25-fim-line-completion-v1";
-pub const CONTEXT_POLICY_VERSION: &str = "q25-fim-psm-cursor-to-line-end-v1";
-pub const CONTEXT_LAYOUT: &str = "q25-fim-psm-v1";
+pub const CONTEXT_POLICY_VERSION: &str = "q25-fim-psm-cursor-to-line-end-bounded640-256-v2";
+pub const CONTEXT_LAYOUT: &str = "q25-fim-psm-bounded-v2";
+pub const PREFIX_CONTEXT_TOKEN_LIMIT: usize = 640;
+pub const SUFFIX_CONTEXT_TOKEN_LIMIT: usize = 256;
 pub const OUTPUT_TOKEN_CAP: usize = 96;
 
 pub const EOS_TOKEN_ID: i32 = 151_643;
@@ -24,6 +23,150 @@ pub const FIM_SUFFIX: &str = "<|fim_suffix|>";
 pub const FIM_MIDDLE: &str = "<|fim_middle|>";
 pub const EOS_SPELLING: &str = "<|endoftext|>";
 pub const COMPLETION_MODE: &str = "remaining_logical_line_after_utf8_cursor";
+
+pub fn filetype_training_scope(filetype: &str) -> &'static str {
+    if matches!(
+        filetype,
+        "python" | "typescript" | "typescriptreact" | "rust" | "go"
+    ) {
+        "trained_language"
+    } else {
+        "uncalibrated_language"
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ContextSide {
+    KeepRight,
+    KeepLeft,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CroppedContext {
+    /// Byte range into the supplied segment, end-exclusive.
+    pub start_byte: usize,
+    pub end_byte: usize,
+    pub token_count: usize,
+}
+
+fn piece_boundaries(text: &str, pieces: &[Vec<u8>]) -> Result<Vec<usize>> {
+    let mut boundaries = Vec::with_capacity(pieces.len() + 1);
+    let mut offset = 0usize;
+    boundaries.push(offset);
+    for piece in pieces {
+        offset = offset
+            .checked_add(piece.len())
+            .ok_or_else(|| anyhow::anyhow!("token-piece offset overflow"))?;
+        ensure!(offset <= text.len(), "token pieces exceed source segment");
+        boundaries.push(offset);
+    }
+    ensure!(
+        offset == text.len(),
+        "native tokenizer pieces do not round-trip the source segment"
+    );
+    Ok(boundaries)
+}
+
+fn floor_char_boundary(text: &str, mut offset: usize) -> usize {
+    while !text.is_char_boundary(offset) {
+        offset -= 1;
+    }
+    offset
+}
+
+fn ceil_char_boundary(text: &str, mut offset: usize) -> usize {
+    while !text.is_char_boundary(offset) {
+        offset += 1;
+    }
+    offset
+}
+
+/// Crop one source-side segment from token-piece byte offsets. `tokenize`
+/// must return pieces in source order; their concatenation is checked exactly
+/// before any offsets are used. The result never splits a UTF-8 scalar.
+pub fn crop_context<F>(
+    text: &str,
+    token_limit: usize,
+    side: ContextSide,
+    mut tokenize: F,
+) -> Result<CroppedContext>
+where
+    F: FnMut(&str) -> Result<Vec<Vec<u8>>>,
+{
+    let mut start = 0usize;
+    let mut end = text.len();
+    if token_limit == 0 {
+        let point = match side {
+            ContextSide::KeepRight => text.len(),
+            ContextSide::KeepLeft => 0,
+        };
+        return Ok(CroppedContext {
+            start_byte: point,
+            end_byte: point,
+            token_count: 0,
+        });
+    }
+
+    for _ in 0..=text.chars().count() {
+        let candidate = &text[start..end];
+        let pieces = tokenize(candidate)?;
+        let boundaries = piece_boundaries(candidate, &pieces)?;
+        if pieces.len() <= token_limit {
+            return Ok(CroppedContext {
+                start_byte: start,
+                end_byte: end,
+                token_count: pieces.len(),
+            });
+        }
+
+        match side {
+            ContextSide::KeepRight => {
+                let token_index = pieces.len() - token_limit;
+                let mut cut = floor_char_boundary(candidate, boundaries[token_index]);
+                if cut == 0 {
+                    cut = boundaries
+                        .iter()
+                        .copied()
+                        .find(|offset| *offset > 0 && candidate.is_char_boundary(*offset))
+                        .or_else(|| candidate.char_indices().nth(1).map(|(offset, _)| offset))
+                        .unwrap_or(candidate.len());
+                }
+                ensure!(
+                    cut > 0 && cut <= candidate.len(),
+                    "prefix context crop stalled"
+                );
+                start += cut;
+            }
+            ContextSide::KeepLeft => {
+                let token_index = (token_limit - 1).min(pieces.len() - 1);
+                let mut cut = ceil_char_boundary(candidate, boundaries[token_index + 1]);
+                if cut >= candidate.len() {
+                    cut = boundaries
+                        .iter()
+                        .copied()
+                        .filter(|offset| *offset > 0 && *offset < candidate.len())
+                        .filter(|offset| candidate.is_char_boundary(*offset))
+                        .next_back()
+                        .unwrap_or_else(|| {
+                            candidate
+                                .char_indices()
+                                .next_back()
+                                .map_or(0, |(offset, _)| offset)
+                        });
+                }
+                if cut == 0 {
+                    cut = candidate
+                        .char_indices()
+                        .next_back()
+                        .map_or(0, |(offset, _)| offset);
+                }
+                ensure!(cut < candidate.len(), "suffix context crop stalled");
+                end = start + cut;
+            }
+        }
+    }
+    anyhow::bail!("context crop failed to converge")
+}
 
 /// Frozen identity supplied by a selected research-model profile. The digest
 /// covers these tokenizer fields and the complete control/user-defined token
@@ -211,8 +354,7 @@ pub fn context_digest(
     source: &str,
     target_row: usize,
     cursor_col: usize,
-    prompt: &str,
-    tokenizer_contract_sha256: &str,
+    prepared: &Prepared,
 ) -> Result<String> {
     ensure!(
         !request_id.is_empty()
@@ -222,17 +364,25 @@ pub fn context_digest(
         "invalid request identity"
     );
     ensure!(
-        valid_sha256(tokenizer_contract_sha256),
+        valid_sha256(&prepared.tokenizer_contract_sha256),
         "invalid tokenizer contract digest"
     );
     let canonical = format!(
-        "q25-fim-context-v1\n{}\n{:x}\n{}\n{}\n{:x}\n{}\n",
+        "q25-fim-context-v2\n{}\n{:x}\n{}\n{}\n{:x}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
         request_id,
         sha2::Sha256::digest(source.as_bytes()),
         target_row,
         cursor_col,
-        sha2::Sha256::digest(prompt.as_bytes()),
-        tokenizer_contract_sha256.to_ascii_lowercase(),
+        sha2::Sha256::digest(prepared.prompt.as_bytes()),
+        prepared.prefix_range.start_byte,
+        prepared.prefix_range.end_byte,
+        prepared.prefix_token_count,
+        prepared.suffix_range.start_byte,
+        prepared.suffix_range.end_byte,
+        prepared.suffix_token_count,
+        prepared.context_policy_version,
+        prepared.context_layout,
+        prepared.tokenizer_contract_sha256.to_ascii_lowercase(),
     );
     Ok(format!("{:x}", sha2::Sha256::digest(canonical.as_bytes())))
 }
@@ -399,6 +549,12 @@ pub struct Prepared {
     pub tokenizer_contract_sha256: String,
     pub target_row: usize,
     pub cursor_col: usize,
+    /// Retained source prefix, ending at the cursor byte.
+    pub prefix_range: ByteRange,
+    pub prefix_token_count: usize,
+    /// Retained source suffix, starting after the target line terminator.
+    pub suffix_range: ByteRange,
+    pub suffix_token_count: usize,
     /// Cursor through the physical line ending, matching the model hole.
     pub model_hole_range: ByteRange,
     /// Whole-line replacement interval used by the existing canonical applier.
@@ -429,6 +585,41 @@ pub struct DecodedCompletion {
     pub apply_range: ByteRange,
     /// Number of model sampling steps including the verified EOS token.
     pub generated_steps: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CompletionFailure {
+    MissingEos,
+    TerminalNotEos,
+    OutputCapExceeded,
+    TokenIdOutsideVocabulary,
+    ControlTokenInBody,
+    NulInBody,
+    LiteralControlSpelling,
+    LineEndingMismatch,
+    MultipleLines,
+}
+
+impl CompletionFailure {
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::MissingEos => "fim_missing_eos",
+            Self::TerminalNotEos => "fim_terminal_not_eos",
+            Self::OutputCapExceeded => "fim_output_cap_exceeded",
+            Self::TokenIdOutsideVocabulary => "fim_token_id_outside_vocabulary",
+            Self::ControlTokenInBody => "fim_control_token_in_body",
+            Self::NulInBody => "fim_nul_in_body",
+            Self::LiteralControlSpelling => "fim_literal_control_spelling",
+            Self::LineEndingMismatch => "fim_line_ending_mismatch",
+            Self::MultipleLines => "fim_multiline_completion",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CompletionCheck {
+    Valid(DecodedCompletion),
+    Invalid(CompletionFailure),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -521,10 +712,12 @@ pub fn prepare(
         .unwrap_or((0, 0, 0));
     let cursor_byte = line_start + cursor_col;
     let prefix_before_cursor = content[..cursor_col].to_string();
+    let prefix_range = ByteRange::new(0, cursor_byte);
+    let suffix_range = ByteRange::new(line_end, source.len());
     let prompt = format!(
         "{FIM_PREFIX}{}{FIM_SUFFIX}{}{FIM_MIDDLE}",
-        &source[..cursor_byte],
-        &source[line_end..]
+        &source[prefix_range.start_byte..prefix_range.end_byte],
+        &source[suffix_range.start_byte..suffix_range.end_byte]
     );
     Ok(Prepared {
         prompt,
@@ -535,12 +728,69 @@ pub fn prepare(
         tokenizer_contract_sha256: tokens.tokenizer_contract_sha256.clone(),
         target_row,
         cursor_col,
+        prefix_range,
+        prefix_token_count: 0,
+        suffix_range,
+        suffix_token_count: 0,
         model_hole_range: ByteRange::new(cursor_byte, line_end),
         apply_range: ByteRange::new(line_start, content_end),
         line_ending: ending,
         prefix_before_cursor,
         virtual_empty_file,
     })
+}
+
+impl Prepared {
+    /// Replace the full-file PSM segments with exact bounded source ranges.
+    /// The editor source itself and the canonical whole-line apply range stay
+    /// unchanged. Retained text must remain byte-exact and NFC, matching the
+    /// training tokenizer's normalization behavior.
+    pub fn set_bounded_window(
+        &mut self,
+        source: &str,
+        prefix_start_byte: usize,
+        suffix_end_byte: usize,
+        prefix_token_count: usize,
+        suffix_token_count: usize,
+    ) -> Result<()> {
+        let prefix_end_byte = self.model_hole_range.start_byte;
+        let suffix_start_byte = self.model_hole_range.end_byte;
+        ensure!(
+            prefix_start_byte <= prefix_end_byte
+                && prefix_end_byte <= source.len()
+                && source.is_char_boundary(prefix_start_byte)
+                && source.is_char_boundary(prefix_end_byte),
+            "invalid retained FIM prefix range"
+        );
+        ensure!(
+            suffix_start_byte <= suffix_end_byte
+                && suffix_end_byte <= source.len()
+                && source.is_char_boundary(suffix_start_byte)
+                && source.is_char_boundary(suffix_end_byte),
+            "invalid retained FIM suffix range"
+        );
+        ensure!(
+            prefix_token_count <= PREFIX_CONTEXT_TOKEN_LIMIT
+                && suffix_token_count <= SUFFIX_CONTEXT_TOKEN_LIMIT,
+            "retained FIM context exceeds its per-side token limit"
+        );
+        let prefix = &source[prefix_start_byte..prefix_end_byte];
+        let suffix = &source[suffix_start_byte..suffix_end_byte];
+        ensure!(
+            is_nfc(prefix),
+            "retained FIM prefix is not NFC-normalized; tokenizer parity is unavailable"
+        );
+        ensure!(
+            is_nfc(suffix),
+            "retained FIM suffix is not NFC-normalized; tokenizer parity is unavailable"
+        );
+        self.prefix_range = ByteRange::new(prefix_start_byte, prefix_end_byte);
+        self.prefix_token_count = prefix_token_count;
+        self.suffix_range = ByteRange::new(suffix_start_byte, suffix_end_byte);
+        self.suffix_token_count = suffix_token_count;
+        self.prompt = format!("{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}");
+        Ok(())
+    }
 }
 
 /// Decode one completed PSM response. `content_token_ids` excludes the terminal
@@ -555,6 +805,31 @@ pub fn decode_completion(
     terminal_token_id: Option<i32>,
     tokens: &TokenContract,
 ) -> Result<DecodedCompletion> {
+    match check_completion(
+        prepared,
+        model_protocol,
+        output_cap,
+        raw_text,
+        content_token_ids,
+        terminal_token_id,
+        tokens,
+    )? {
+        CompletionCheck::Valid(decoded) => Ok(decoded),
+        CompletionCheck::Invalid(failure) => {
+            anyhow::bail!("FIM completion validation failed ({})", failure.code())
+        }
+    }
+}
+
+pub fn check_completion(
+    prepared: &Prepared,
+    model_protocol: &str,
+    output_cap: usize,
+    raw_text: &str,
+    content_token_ids: &[i32],
+    terminal_token_id: Option<i32>,
+    tokens: &TokenContract,
+) -> Result<CompletionCheck> {
     ensure!(
         model_protocol == WIRE_VERSION,
         "FIM model protocol mismatch"
@@ -564,54 +839,68 @@ pub fn decode_completion(
         "FIM context tokenizer identity mismatch"
     );
     ensure!(output_cap == OUTPUT_TOKEN_CAP, "FIM output cap mismatch");
-    let terminal = terminal_token_id.ok_or_else(|| anyhow::anyhow!("missing terminal token"))?;
-    ensure!(
-        terminal == EOS_TOKEN_ID,
-        "generation did not terminate with EOS"
-    );
-    let generated_steps = content_token_ids
-        .len()
-        .checked_add(1)
-        .ok_or_else(|| anyhow::anyhow!("generated token count overflow"))?;
-    ensure!(
-        generated_steps <= OUTPUT_TOKEN_CAP,
-        "FIM generation exceeds the EOS-inclusive token cap"
-    );
-    for id in content_token_ids {
-        ensure!(*id >= 0, "negative generated token id");
-        ensure!(
-            tokens.known_vocab_ids.contains(id),
-            "generated token ID is outside the selected tokenizer vocabulary"
-        );
-        ensure!(
-            !tokens.special_by_id.contains_key(id),
-            "generated added-special token is forbidden"
-        );
+    let Some(terminal) = terminal_token_id else {
+        return Ok(CompletionCheck::Invalid(CompletionFailure::MissingEos));
+    };
+    if terminal != EOS_TOKEN_ID {
+        return Ok(CompletionCheck::Invalid(CompletionFailure::TerminalNotEos));
     }
-    ensure!(!raw_text.contains('\0'), "completion contains NUL");
-    tokens.reject_special_spellings(raw_text, "completion")?;
+    let Some(generated_steps) = content_token_ids.len().checked_add(1) else {
+        return Ok(CompletionCheck::Invalid(
+            CompletionFailure::OutputCapExceeded,
+        ));
+    };
+    if generated_steps > OUTPUT_TOKEN_CAP {
+        return Ok(CompletionCheck::Invalid(
+            CompletionFailure::OutputCapExceeded,
+        ));
+    }
+    for id in content_token_ids {
+        if *id < 0 || !tokens.known_vocab_ids.contains(id) {
+            return Ok(CompletionCheck::Invalid(
+                CompletionFailure::TokenIdOutsideVocabulary,
+            ));
+        }
+        if tokens.special_by_id.contains_key(id) {
+            return Ok(CompletionCheck::Invalid(
+                CompletionFailure::ControlTokenInBody,
+            ));
+        }
+    }
+    if raw_text.contains('\0') {
+        return Ok(CompletionCheck::Invalid(CompletionFailure::NulInBody));
+    }
+    if tokens
+        .reject_special_spellings(raw_text, "completion")
+        .is_err()
+    {
+        return Ok(CompletionCheck::Invalid(
+            CompletionFailure::LiteralControlSpelling,
+        ));
+    }
 
     let line_ending = prepared.line_ending.bytes();
     let body = if line_ending.is_empty() {
-        ensure!(
-            !raw_text.contains(['\r', '\n']),
-            "EOF completion contains a line ending"
-        );
+        if raw_text.contains(['\r', '\n']) {
+            return Ok(CompletionCheck::Invalid(
+                CompletionFailure::LineEndingMismatch,
+            ));
+        }
         raw_text
     } else {
-        ensure!(
-            raw_text.ends_with(line_ending),
-            "completion line ending mismatch"
-        );
+        if !raw_text.ends_with(line_ending) {
+            return Ok(CompletionCheck::Invalid(
+                CompletionFailure::LineEndingMismatch,
+            ));
+        }
         let body = &raw_text[..raw_text.len() - line_ending.len()];
-        ensure!(
-            !body.contains(['\r', '\n']),
-            "completion contains more than its one declared line ending"
-        );
+        if body.contains(['\r', '\n']) {
+            return Ok(CompletionCheck::Invalid(CompletionFailure::MultipleLines));
+        }
         body
     };
     let replacement = format!("{}{body}", prepared.prefix_before_cursor);
-    Ok(DecodedCompletion {
+    Ok(CompletionCheck::Valid(DecodedCompletion {
         raw_text: raw_text.into(),
         stripped_line_ending: line_ending.into(),
         action: CanonicalAction {
@@ -626,7 +915,7 @@ pub fn decode_completion(
         model_hole_range: prepared.model_hole_range,
         apply_range: prepared.apply_range,
         generated_steps,
-    })
+    }))
 }
 
 #[cfg(test)]
@@ -745,70 +1034,86 @@ mod tests {
 
     #[test]
     fn context_digest_binds_request_source_cursor_prompt_and_tokenizer() {
-        let baseline = context_digest(
-            "12345678-1234-1234-1234-123456789abc",
-            "x=1\n",
-            0,
-            2,
-            "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
-            &"c".repeat(64),
-        )
-        .unwrap();
-        for (request, source, row, col, prompt, tokenizer) in [
-            (
+        let request = "12345678-1234-1234-1234-123456789abc";
+        let source = "x=1\n";
+        let mut prepared = prepare(source, 0, 2, &tokens()).unwrap();
+        prepared.tokenizer_contract_sha256 = "c".repeat(64);
+        prepared
+            .set_bounded_window(source, 0, source.len(), 2, 0)
+            .unwrap();
+        let baseline = context_digest(request, source, 0, 2, &prepared).unwrap();
+        assert_ne!(
+            context_digest(
                 "22345678-1234-1234-1234-123456789abc",
-                "x=1\n",
+                source,
                 0,
                 2,
-                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
-                "c".repeat(64),
-            ),
-            (
-                "12345678-1234-1234-1234-123456789abc",
-                "y=1\n",
-                0,
-                2,
-                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
-                "c".repeat(64),
-            ),
-            (
-                "12345678-1234-1234-1234-123456789abc",
-                "x=1\n",
-                1,
-                2,
-                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
-                "c".repeat(64),
-            ),
-            (
-                "12345678-1234-1234-1234-123456789abc",
-                "x=1\n",
-                0,
-                3,
-                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
-                "c".repeat(64),
-            ),
-            (
-                "12345678-1234-1234-1234-123456789abc",
-                "x=1\n",
-                0,
-                2,
-                "<|fim_prefix|>x1<|fim_suffix|><|fim_middle|>",
-                "c".repeat(64),
-            ),
-            (
-                "12345678-1234-1234-1234-123456789abc",
-                "x=1\n",
-                0,
-                2,
-                "<|fim_prefix|>x=<|fim_suffix|><|fim_middle|>",
-                "d".repeat(64),
-            ),
-        ] {
-            assert_ne!(
-                context_digest(request, source, row, col, prompt, &tokenizer).unwrap(),
-                baseline
-            );
-        }
+                &prepared
+            )
+            .unwrap(),
+            baseline
+        );
+        assert_ne!(
+            context_digest(request, "y=1\n", 0, 2, &prepared).unwrap(),
+            baseline
+        );
+        assert_ne!(
+            context_digest(request, source, 1, 2, &prepared).unwrap(),
+            baseline
+        );
+        assert_ne!(
+            context_digest(request, source, 0, 3, &prepared).unwrap(),
+            baseline
+        );
+
+        let mut changed = prepared.clone();
+        changed.prompt.push('!');
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared.clone();
+        changed.prefix_range.start_byte = 1;
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared.clone();
+        changed.prefix_token_count += 1;
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared.clone();
+        changed.suffix_range.end_byte = 1;
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared.clone();
+        changed.suffix_token_count += 1;
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared.clone();
+        changed.context_policy_version.push_str("-changed");
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared.clone();
+        changed.context_layout.push_str("-changed");
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
+        let mut changed = prepared;
+        changed.tokenizer_contract_sha256 = "d".repeat(64);
+        assert_ne!(
+            context_digest(request, source, 0, 2, &changed).unwrap(),
+            baseline
+        );
     }
 
     #[test]
@@ -821,9 +1126,78 @@ mod tests {
         assert_eq!(prepared.model_hole_range, ByteRange::new(2, 5));
         assert_eq!(prepared.apply_range, ByteRange::new(0, 4));
         assert_eq!(prepared.line_ending, LineEnding::Lf);
+        assert_eq!(prepared.prefix_range, ByteRange::new(0, 2));
+        assert_eq!(prepared.suffix_range, ByteRange::new(5, 12));
         let metadata = serde_json::to_value(&prepared).unwrap();
         assert_eq!(metadata["line_ending"], "LF");
         assert_eq!(metadata["model_hole_range"]["end_exclusive"], true);
+    }
+
+    #[test]
+    fn bounded_crop_matches_utf8_offset_windows_for_unicode_whitespace_and_crlf() {
+        let scalar_pieces = |text: &str| -> Result<Vec<Vec<u8>>> {
+            Ok(text
+                .chars()
+                .map(|character| character.to_string().into_bytes())
+                .collect())
+        };
+        let source = "ab🙂cd";
+        let prefix = crop_context(source, 3, ContextSide::KeepRight, scalar_pieces).unwrap();
+        assert_eq!(&source[prefix.start_byte..prefix.end_byte], "🙂cd");
+        assert_eq!(prefix.start_byte, 2);
+        assert_eq!(prefix.token_count, 3);
+        let suffix = crop_context(source, 3, ContextSide::KeepLeft, scalar_pieces).unwrap();
+        assert_eq!(&source[suffix.start_byte..suffix.end_byte], "ab🙂");
+        assert_eq!(suffix.end_byte, 6);
+
+        let combining = "a\u{301}bc";
+        let prefix = crop_context(combining, 2, ContextSide::KeepRight, scalar_pieces).unwrap();
+        assert_eq!(&combining[prefix.start_byte..prefix.end_byte], "bc");
+        assert!(combining.is_char_boundary(prefix.start_byte));
+        let whitespace_crlf = "left   \r\n  right";
+        let suffix =
+            crop_context(whitespace_crlf, 7, ContextSide::KeepLeft, scalar_pieces).unwrap();
+        assert_eq!(
+            &whitespace_crlf[suffix.start_byte..suffix.end_byte],
+            "left   "
+        );
+        let prefix =
+            crop_context(whitespace_crlf, 4, ContextSide::KeepRight, scalar_pieces).unwrap();
+        assert_eq!(&whitespace_crlf[prefix.start_byte..prefix.end_byte], "ight");
+    }
+
+    #[test]
+    fn byte_fallback_offsets_expand_to_utf8_boundaries_then_retokenize() {
+        let byte_pieces = |text: &str| -> Result<Vec<Vec<u8>>> {
+            Ok(text.as_bytes().iter().map(|byte| vec![*byte]).collect())
+        };
+        let source = "x🙂y";
+        let prefix = crop_context(source, 4, ContextSide::KeepRight, byte_pieces).unwrap();
+        assert_eq!(&source[prefix.start_byte..prefix.end_byte], "y");
+        assert_eq!(prefix.start_byte, 5);
+        let suffix = crop_context(source, 4, ContextSide::KeepLeft, byte_pieces).unwrap();
+        assert_eq!(&source[suffix.start_byte..suffix.end_byte], "x");
+        assert_eq!(suffix.end_byte, 1);
+    }
+
+    #[test]
+    fn nfc_guard_checks_only_the_retained_prompt_segments() {
+        let decomposed = "e\u{301}=1\nnext()\n";
+        let mut prepared = prepare(decomposed, 0, 3, &tokens()).unwrap();
+        assert!(
+            prepared
+                .set_bounded_window(decomposed, 0, decomposed.len(), 3, 0)
+                .is_err()
+        );
+
+        let retained_ascii = "e\u{301}=1\nnext()\n";
+        let mut prepared = prepare(retained_ascii, 1, 2, &tokens()).unwrap();
+        let line_start = "e\u{301}=1\n".len();
+        prepared
+            .set_bounded_window(retained_ascii, line_start, retained_ascii.len(), 2, 0)
+            .unwrap();
+        assert_eq!(prepared.prefix_range.start_byte, line_start);
+        assert!(prepared.prompt.contains("<|fim_prefix|>ne"));
     }
 
     #[test]
@@ -927,6 +1301,68 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn bound_invalid_completions_have_stable_failure_codes() {
+        let prepared = prepare("x\n", 0, 1, &tokens()).unwrap();
+        let token_contract = tokens();
+        let cases = [
+            ("\n", vec![], None, "fim_missing_eos"),
+            ("\n", vec![], Some(151_644), "fim_terminal_not_eos"),
+            (
+                "\n",
+                vec![17; OUTPUT_TOKEN_CAP],
+                Some(EOS_TOKEN_ID),
+                "fim_output_cap_exceeded",
+            ),
+            (
+                "\n",
+                vec![999_999],
+                Some(EOS_TOKEN_ID),
+                "fim_token_id_outside_vocabulary",
+            ),
+            (
+                "<|im_start|>\n",
+                vec![151_644],
+                Some(EOS_TOKEN_ID),
+                "fim_control_token_in_body",
+            ),
+            ("value\0\n", vec![17], Some(EOS_TOKEN_ID), "fim_nul_in_body"),
+            (
+                "<|im_start|>\n",
+                vec![17],
+                Some(EOS_TOKEN_ID),
+                "fim_literal_control_spelling",
+            ),
+            (
+                "value",
+                vec![17],
+                Some(EOS_TOKEN_ID),
+                "fim_line_ending_mismatch",
+            ),
+            (
+                "value\nmore\n",
+                vec![17],
+                Some(EOS_TOKEN_ID),
+                "fim_multiline_completion",
+            ),
+        ];
+        for (raw, ids, terminal, expected_code) in cases {
+            let CompletionCheck::Invalid(failure) = check_completion(
+                &prepared,
+                WIRE_VERSION,
+                OUTPUT_TOKEN_CAP,
+                raw,
+                &ids,
+                terminal,
+                &token_contract,
+            )
+            .unwrap() else {
+                panic!("expected bound invalid completion {expected_code}");
+            };
+            assert_eq!(failure.code(), expected_code);
+        }
     }
 
     #[test]

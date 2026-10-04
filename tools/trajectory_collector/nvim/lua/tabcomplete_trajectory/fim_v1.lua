@@ -1,10 +1,12 @@
--- Detached Qwen PSM completion adapter. It is not selected by the legacy
--- predictor or by any model alias until an artifact identity is frozen.
+-- Experimental Qwen PSM route. It requires an externally selected profile
+-- with a frozen model artifact and tokenizer identity.
 local M = {}
 
 M.WIRE_VERSION = "q25-fim-line-completion-v1"
-M.CONTEXT_POLICY_VERSION = "q25-fim-psm-cursor-to-line-end-v1"
-M.CONTEXT_LAYOUT = "q25-fim-psm-v1"
+M.CONTEXT_POLICY_VERSION = "q25-fim-psm-cursor-to-line-end-bounded640-256-v2"
+M.CONTEXT_LAYOUT = "q25-fim-psm-bounded-v2"
+M.PREFIX_CONTEXT_TOKEN_LIMIT = 640
+M.SUFFIX_CONTEXT_TOKEN_LIMIT = 256
 M.MAX_OUTPUT_TOKENS = 96
 M.COMPLETION_MODE = "remaining_logical_line_after_utf8_cursor"
 
@@ -13,10 +15,30 @@ M.FIM_PREFIX_TOKEN_ID = 151659
 M.FIM_MIDDLE_TOKEN_ID = 151660
 M.FIM_SUFFIX_TOKEN_ID = 151661
 
+M.INVALID_COMPLETION_CODES = {
+  fim_missing_eos = true,
+  fim_terminal_not_eos = true,
+  fim_output_cap_exceeded = true,
+  fim_token_id_outside_vocabulary = true,
+  fim_control_token_in_body = true,
+  fim_nul_in_body = true,
+  fim_literal_control_spelling = true,
+  fim_line_ending_mismatch = true,
+  fim_multiline_completion = true,
+}
+
 M.EOS = "<|endoftext|>"
 M.FIM_PREFIX = "<|fim_prefix|>"
 M.FIM_SUFFIX = "<|fim_suffix|>"
 M.FIM_MIDDLE = "<|fim_middle|>"
+
+function M.filetype_training_scope(filetype)
+  if filetype == "python" or filetype == "typescript" or filetype == "typescriptreact"
+      or filetype == "rust" or filetype == "go" then
+    return "trained_language"
+  end
+  return "uncalibrated_language"
+end
 
 local single_line_v1 = require("tabcomplete_trajectory.single_line_v1")
 local util = require("tabcomplete_trajectory.util")
@@ -210,16 +232,26 @@ function M.tokenizer_contract_sha256(config)
   return util.sha256hex(table.concat(lines))
 end
 
-function M.context_digest(request_id, source, target_row, cursor_col, prompt, tokenizer_contract_sha256)
+function M.context_digest(request_id, source, target_row, cursor_col, prepared)
   if type(request_id) ~= "string" or request_id == ""
       or request_id:find("[^%w%-]") or type(source) ~= "string"
       or not integer(target_row, 0) or not integer(cursor_col, 0)
-      or type(prompt) ~= "string" or not is_sha256(tokenizer_contract_sha256) then
+      or type(prepared) ~= "table" or type(prepared.prompt) ~= "string"
+      or type(prepared.prefix_range) ~= "table" or type(prepared.suffix_range) ~= "table"
+      or not integer(prepared.prefix_token_count, 0)
+      or not integer(prepared.suffix_token_count, 0)
+      or type(prepared.context_policy_version) ~= "string"
+      or type(prepared.context_layout) ~= "string"
+      or not is_sha256(prepared.tokenizer_contract_sha256) then
     error("invalid FIM request context identity")
   end
-  local canonical = table.concat({ "q25-fim-context-v1", request_id,
+  local canonical = table.concat({ "q25-fim-context-v2", request_id,
     util.sha256hex(source), tostring(target_row), tostring(cursor_col),
-    util.sha256hex(prompt), tokenizer_contract_sha256:lower(), "" }, "\n")
+    util.sha256hex(prepared.prompt), tostring(prepared.prefix_range.start_byte),
+    tostring(prepared.prefix_range.end_byte), tostring(prepared.prefix_token_count),
+    tostring(prepared.suffix_range.start_byte), tostring(prepared.suffix_range.end_byte),
+    tostring(prepared.suffix_token_count), prepared.context_policy_version,
+    prepared.context_layout, prepared.tokenizer_contract_sha256:lower(), "" }, "\n")
   return util.sha256hex(canonical)
 end
 
@@ -309,6 +341,10 @@ function M.prepare(source, target_row, cursor_col, contract)
     source = source,
     target_row = target_row,
     cursor_col = cursor_col,
+    prefix_range = { start_byte = 0, end_byte = cursor_byte, end_exclusive = true },
+    prefix_token_count = 0,
+    suffix_range = { start_byte = line_end, end_byte = #source, end_exclusive = true },
+    suffix_token_count = 0,
     prefix_before_cursor = content:sub(1, cursor_col),
     line_ending = ending_name,
     line_ending_bytes = terminator,
@@ -316,6 +352,68 @@ function M.prepare(source, target_row, cursor_col, contract)
     apply_range = { start_byte = line_start, end_byte = content_end, end_exclusive = true },
     virtual_empty_file = virtual_empty_file,
   }
+end
+
+local function valid_source_range(range, source)
+  return type(range) == "table"
+    and integer(range.start_byte, 0)
+    and integer(range.end_byte, range.start_byte)
+    and range.end_exclusive == true
+    and range.end_byte <= #source
+    and is_boundary(source, range.start_byte)
+    and is_boundary(source, range.end_byte)
+end
+
+-- Verify a bounded Rust-selected PSM window without local tokenization. The
+-- byte ranges are checked against the full source and the original line edit
+-- ranges before they can be used for generation or application.
+function M.verify_prepared(source, target_row, cursor_col, contract, response)
+  local base, prepare_err = M.prepare(source, target_row, cursor_col, contract)
+  if not base then return nil, prepare_err end
+  if type(response) ~= "table"
+      or response.context_policy_version ~= M.CONTEXT_POLICY_VERSION
+      or response.context_layout ~= M.CONTEXT_LAYOUT
+      or response.tokenizer_sha256 ~= base.tokenizer_sha256
+      or response.tokenizer_contract_sha256 ~= base.tokenizer_contract_sha256
+      or response.target_row ~= target_row or response.cursor_col ~= cursor_col
+      or not valid_source_range(response.prefix_range, source)
+      or not valid_source_range(response.suffix_range, source)
+      or not integer(response.prefix_context_tokens, 0)
+      or response.prefix_context_tokens > M.PREFIX_CONTEXT_TOKEN_LIMIT
+      or not integer(response.suffix_context_tokens, 0)
+      or response.suffix_context_tokens > M.SUFFIX_CONTEXT_TOKEN_LIMIT
+      or type(response.prompt) ~= "string"
+      or not integer(response.prompt_tokens, 1)
+      or response.prompt_tokens ~= response.prefix_context_tokens
+          + response.suffix_context_tokens + 3 then
+    return nil, "Rust FIM bounded context metadata is invalid"
+  end
+  local cursor_byte = base.model_hole_range.start_byte
+  local line_end_byte = base.model_hole_range.end_byte
+  if response.prefix_range.end_byte ~= cursor_byte
+      or response.suffix_range.start_byte ~= line_end_byte then
+    return nil, "Rust FIM bounded ranges do not meet the original cursor and line end"
+  end
+  local prefix = source:sub(response.prefix_range.start_byte + 1, response.prefix_range.end_byte)
+  local suffix = source:sub(response.suffix_range.start_byte + 1, response.suffix_range.end_byte)
+  local expected_prompt = M.FIM_PREFIX .. prefix .. M.FIM_SUFFIX .. suffix .. M.FIM_MIDDLE
+  if response.prompt ~= expected_prompt then
+    return nil, "Rust FIM prompt does not match its source ranges"
+  end
+  if not vim.deep_equal(response.model_hole_range, base.model_hole_range)
+      or not vim.deep_equal(response.apply_range, base.apply_range)
+      or response.line_ending ~= base.line_ending then
+    return nil, "Rust FIM context changed the original edit range"
+  end
+  local prepared = vim.deepcopy(base)
+  prepared.prompt = response.prompt
+  prepared.context_policy_version = response.context_policy_version
+  prepared.context_layout = response.context_layout
+  prepared.prefix_range = vim.deepcopy(response.prefix_range)
+  prepared.prefix_token_count = response.prefix_context_tokens
+  prepared.suffix_range = vim.deepcopy(response.suffix_range)
+  prepared.suffix_token_count = response.suffix_context_tokens
+  return prepared
 end
 
 local function valid_sampled_ids(ids, predicted, contract)

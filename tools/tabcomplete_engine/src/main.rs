@@ -204,6 +204,21 @@ fn output_limit(args: &Args, p: &Profile) -> usize {
     }
 }
 
+fn generation_renders_special_tokens(protocol: &str) -> bool {
+    protocol == fim_v1::WIRE_VERSION
+}
+
+fn public_context_error(error: &anyhow::Error) -> &'static str {
+    if error
+        .to_string()
+        .contains("not NFC-normalized; tokenizer parity is unavailable")
+    {
+        "fim_context_unsupported_non_nfc"
+    } else {
+        "editor context outside contract"
+    }
+}
+
 struct FimContextBinding {
     prepared: fim_v1::Prepared,
     request_id: String,
@@ -240,6 +255,14 @@ fn verify_prompt_round_trip(model: &LlamaModel, prompt: &str) -> Result<Vec<Llam
         "FIM prompt does not round-trip through the selected native tokenizer"
     );
     Ok(tokens)
+}
+
+fn native_token_pieces(model: &LlamaModel, text: &str) -> Result<Vec<Vec<u8>>> {
+    let tokens = model.str_to_token(text, AddBos::Never)?;
+    tokens
+        .into_iter()
+        .map(|token| token_piece(model, token, true))
+        .collect()
 }
 
 fn verify_fim_tokenizer(
@@ -428,6 +451,12 @@ fn worker(
                     json!(fim_profile.tokenizer.tokenizer_vocab_size);
                 identity["tokenizer_vocab_ids_sha256"] =
                     json!(fim_profile.tokenizer.tokenizer_vocab_ids_sha256);
+                identity["fim_token_ids"] = json!({
+                    "eos": fim_profile.tokenizer.eos_id,
+                    "fim_prefix": fim_profile.tokenizer.fim_prefix_id,
+                    "fim_suffix": fim_profile.tokenizer.fim_suffix_id,
+                    "fim_middle": fim_profile.tokenizer.fim_middle_id,
+                });
             }
             *app.identity.lock().unwrap() = identity.clone();
             if let Some(reply) = ready.take() {
@@ -490,7 +519,7 @@ fn worker(
                                 .ok_or_else(|| anyhow::anyhow!("missing FIM completion mode"));
                             request_id
                                 .and_then(|request_id| {
-                                    context::validate_editor_state(&request.state)?;
+                                    context::validate_fim_editor_state(&request.state)?;
                                     ensure!(
                                         completion_mode? == fim_v1::COMPLETION_MODE,
                                         "FIM completion mode mismatch"
@@ -498,17 +527,46 @@ fn worker(
                                     Ok(request_id)
                                 })
                                 .and_then(|request_id| {
-                                    let prepared = fim_v1::prepare(
+                                    let mut prepared = fim_v1::prepare(
                                         &request.state.source,
                                         request.state.target_row,
                                         request.state.cursor_col,
                                         token_contract,
+                                    )?;
+                                    let prefix_source = &request.state.source
+                                        [..prepared.model_hole_range.start_byte];
+                                    let suffix_source =
+                                        &request.state.source[prepared.model_hole_range.end_byte..];
+                                    let prefix_window = fim_v1::crop_context(
+                                        prefix_source,
+                                        fim_v1::PREFIX_CONTEXT_TOKEN_LIMIT,
+                                        fim_v1::ContextSide::KeepRight,
+                                        |segment| native_token_pieces(&model, segment),
+                                    )?;
+                                    let suffix_window = fim_v1::crop_context(
+                                        suffix_source,
+                                        fim_v1::SUFFIX_CONTEXT_TOKEN_LIMIT,
+                                        fim_v1::ContextSide::KeepLeft,
+                                        |segment| native_token_pieces(&model, segment),
+                                    )?;
+                                    prepared.set_bounded_window(
+                                        &request.state.source,
+                                        prefix_window.start_byte,
+                                        suffix_window.end_byte + prepared.model_hole_range.end_byte,
+                                        prefix_window.token_count,
+                                        suffix_window.token_count,
                                     )?;
                                     let prompt_tokens =
                                         verify_prompt_round_trip(&model, &prepared.prompt)?.len();
                                     ensure!(
                                         prompt_tokens > 0
                                             && prompt_tokens <= args.input_tokens
+                                            && prompt_tokens
+                                                == prefix_window.token_count
+                                                    + suffix_window.token_count
+                                                    + 3
+                                            && prompt_tokens + fim_v1::OUTPUT_TOKEN_CAP
+                                                <= args.input_tokens
                                             && prompt_tokens + fim_v1::OUTPUT_TOKEN_CAP
                                                 <= args.context_size as usize,
                                         "FIM prompt exceeds the configured token budget"
@@ -518,11 +576,17 @@ fn worker(
                                         &request.state.source,
                                         request.state.target_row,
                                         request.state.cursor_col,
-                                        &prepared.prompt,
-                                        &prepared.tokenizer_contract_sha256,
+                                        &prepared,
                                     )?;
                                     let mut value = serde_json::to_value(&prepared)?;
                                     value["prompt_tokens"] = json!(prompt_tokens);
+                                    value["prefix_context_tokens"] =
+                                        json!(prepared.prefix_token_count);
+                                    value["suffix_context_tokens"] =
+                                        json!(prepared.suffix_token_count);
+                                    value["filetype_training_scope"] = json!(
+                                        fim_v1::filetype_training_scope(&request.state.filetype)
+                                    );
                                     value["request_id"] = json!(request_id);
                                     value["completion_mode"] = json!(fim_v1::COMPLETION_MODE);
                                     value["context_hash"] = json!(context_hash);
@@ -563,8 +627,8 @@ fn worker(
                             }
                             p
                         });
-                        let _ = reply
-                            .send(result.map_err(|_| "editor context outside contract".into()));
+                        let _ =
+                            reply.send(result.map_err(|error| public_context_error(&error).into()));
                     }
                     Job::Tokenize(prompt, special, reply) => {
                         prepared_fim = None;
@@ -693,15 +757,18 @@ fn worker(
                                 if is_fim {
                                     sampled_token_ids.push(token.0);
                                 }
-                                let piece = match model
-                                    .token_to_piece_bytes(token, 128, false, None)
-                                {
+                                let piece = match model.token_to_piece_bytes(
+                                    token,
+                                    128,
+                                    generation_renders_special_tokens(&profile.protocol),
+                                    None,
+                                ) {
                                     Err(
                                         llama_cpp_2::TokenToStringError::InsufficientBufferSpace(n),
                                     ) => model.token_to_piece_bytes(
                                         token,
                                         n.unsigned_abs() as usize,
-                                        false,
+                                        generation_renders_special_tokens(&profile.protocol),
                                         None,
                                     ),
                                     result => result,
@@ -729,7 +796,8 @@ fn worker(
                                 ctx.decode(&mut batch)?;
                                 cached.push(token);
                             }
-                            let mut action = if eos && is_fim {
+                            let mut completion_failure = None;
+                            let mut action = if is_fim {
                                 let binding = fim_binding.as_ref().ok_or_else(|| {
                                     anyhow::anyhow!("FIM generation lost its prepared context")
                                 })?;
@@ -737,7 +805,7 @@ fn worker(
                                 let token_contract = fim_contract.as_ref().ok_or_else(|| {
                                     anyhow::anyhow!("FIM tokenizer contract unavailable")
                                 })?;
-                                let decoded = fim_v1::decode_completion(
+                                match fim_v1::check_completion(
                                     &binding.prepared,
                                     &profile.protocol,
                                     output_limit(&args, &profile),
@@ -745,8 +813,15 @@ fn worker(
                                     &sampled_token_ids,
                                     terminal_token_id,
                                     token_contract,
-                                )?;
-                                Some(serde_json::to_value(decoded.action)?)
+                                )? {
+                                    fim_v1::CompletionCheck::Valid(decoded) => {
+                                        Some(serde_json::to_value(decoded.action)?)
+                                    }
+                                    fim_v1::CompletionCheck::Invalid(failure) => {
+                                        completion_failure = Some(failure.code());
+                                        None
+                                    }
+                                }
                             } else if eos {
                                 let raw = std::str::from_utf8(&bytes)?;
                                 if profile.protocol == "single-line-edit-v1" {
@@ -760,18 +835,44 @@ fn worker(
                             } else {
                                 None
                             };
-                            let action_validation = validate_action(
-                                args.syntax_validation,
-                                &request.prompt,
-                                &prepared_context,
-                                &mut action,
-                            );
-                            let mut terminal = json!({"content":"","stop":true,"stop_type":if eos{"eos"}else{"limit"},"tokens_predicted":predicted,
+                            let action_validation = if is_fim {
+                                match completion_failure {
+                                    Some(code) => {
+                                        json!({"policy":"q25-fim-completion-v1","status":"invalid","code":code})
+                                    }
+                                    None => {
+                                        json!({"policy":"q25-fim-completion-v1","status":"not_applicable"})
+                                    }
+                                }
+                            } else {
+                                validate_action(
+                                    args.syntax_validation,
+                                    &request.prompt,
+                                    &prepared_context,
+                                    &mut action,
+                                )
+                            };
+                            let stop_type = if is_fim {
+                                match terminal_token_id {
+                                    Some(id) if id == fim_v1::EOS_TOKEN_ID => "eos",
+                                    Some(_) => "control",
+                                    None => "limit",
+                                }
+                            } else if eos {
+                                "eos"
+                            } else {
+                                "limit"
+                            };
+                            let mut terminal = json!({"content":"","stop":true,"stop_type":stop_type,"tokens_predicted":predicted,
                                 "canonical_action":action,"action_validation":action_validation,"model_protocol":profile.protocol,"model_sha256":profile.sha256,
                                 "context_layout":context_layout,
                                 "timings":{"cache_n":common,"prompt_n":tokens.len()-common,"prompt_ms":prompt_ms,"predicted_n":predicted,
                                     "predicted_ms":generated.elapsed().as_secs_f64()*1000.,"total_ms":started.elapsed().as_secs_f64()*1000.}});
                             if let Some(binding) = &fim_binding {
+                                let fim_profile =
+                                    profile.fim_profile.as_ref().ok_or_else(|| {
+                                        anyhow::anyhow!("FIM profile identity unavailable")
+                                    })?;
                                 terminal["terminal_token_id"] =
                                     terminal_token_id.map_or(Value::Null, |id| json!(id));
                                 terminal["sampled_token_ids"] = json!(sampled_token_ids);
@@ -782,6 +883,22 @@ fn worker(
                                     json!(binding.prepared.tokenizer_sha256);
                                 terminal["tokenizer_contract_sha256"] =
                                     json!(binding.prepared.tokenizer_contract_sha256);
+                                terminal["artifact_manifest_sha256"] =
+                                    json!(fim_profile.artifact_manifest_sha256);
+                                terminal["tokenizer_id"] =
+                                    json!(fim_profile.tokenizer.tokenizer_id);
+                                terminal["tokenizer_revision"] =
+                                    json!(fim_profile.tokenizer.tokenizer_revision);
+                                terminal["tokenizer_vocab_size"] =
+                                    json!(fim_profile.tokenizer.tokenizer_vocab_size);
+                                terminal["tokenizer_vocab_ids_sha256"] =
+                                    json!(fim_profile.tokenizer.tokenizer_vocab_ids_sha256);
+                                terminal["fim_token_ids"] = json!({
+                                    "eos": fim_v1::EOS_TOKEN_ID,
+                                    "fim_prefix": fim_v1::FIM_PREFIX_TOKEN_ID,
+                                    "fim_suffix": fim_v1::FIM_SUFFIX_TOKEN_ID,
+                                    "fim_middle": fim_v1::FIM_MIDDLE_TOKEN_ID,
+                                });
                             }
                             let _ = reply.blocking_send(Ok(Event::default().json_data(terminal)?));
                             Ok(())
@@ -865,11 +982,18 @@ async fn rpc(app: App, make: impl FnOnce(Reply) -> Job) -> Response {
     }
     match rx.await {
         Ok(Ok(value)) => Json(value).into_response(),
-        Ok(Err(_)) => (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            Json(json!({"error":"request outside contract"})),
-        )
-            .into_response(),
+        Ok(Err(error)) => {
+            let public_error = if error == "fim_context_unsupported_non_nfc" {
+                "fim_context_unsupported_non_nfc"
+            } else {
+                "request outside contract"
+            };
+            (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({"error":public_error})),
+            )
+                .into_response()
+        }
         Err(_) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
     }
 }
@@ -1089,6 +1213,29 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod worker_guard_tests {
     use super::*;
+    #[test]
+    fn only_fim_generation_renders_control_token_spellings() {
+        assert!(generation_renders_special_tokens(fim_v1::WIRE_VERSION));
+        assert!(!generation_renders_special_tokens("single-line-edit-v1"));
+        assert!(!generation_renders_special_tokens("sweep-full-file-v1"));
+    }
+
+    #[test]
+    fn context_refusal_exposes_only_the_nfc_unsupported_code() {
+        let nfc_refusal = anyhow::anyhow!(
+            "retained FIM prefix is not NFC-normalized; tokenizer parity is unavailable"
+        );
+        assert_eq!(
+            public_context_error(&nfc_refusal),
+            "fim_context_unsupported_non_nfc"
+        );
+        let arbitrary = anyhow::anyhow!("private source text must stay hidden");
+        assert_eq!(
+            public_context_error(&arbitrary),
+            "editor context outside contract"
+        );
+    }
+
     #[test]
     fn syntax_guard_requires_the_exact_prepared_prompt() {
         let state = context::EditorState {
