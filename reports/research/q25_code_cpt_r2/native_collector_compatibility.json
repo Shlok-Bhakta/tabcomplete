@@ -1,0 +1,86 @@
+{
+  "schema": "tabcomplete-native-fim-collector-compatibility-v1",
+  "audit_scope": "Read-only deployed collector source and database schema compatibility check.",
+  "source_worktree_commit": "82b80c96576ba22a80c8d1bd26656dcc153e78f1",
+  "container": {
+    "name": "tabcomplete-collector",
+    "container_id": "bb7608659def27bb5b56c018078fc20a0b4c86ac9f1bb2fbc4eff46aa72b8c4b",
+    "image_id": "1b06cb40ff68baaa822ffb74b68ae8750e7b6de53b5d3b8c064c97c4731c6951",
+    "state": "running"
+  },
+  "deployed_source_sha256": {
+    "/app/src/types.ts": "d0727a68daafb5ed47e9aa03f08f40c48dac0ea25e693a94311944728a582efa",
+    "/app/src/index.ts": "b46da4b10f5af8dc88d38940eb2d28b7abe529d9c73f7829dd883c08f30f1e31",
+    "/app/src/projection.ts": "6fd058b4b0a0711e45401e572056c2bf78efc10da9db35359cb72917cd3e667e",
+    "/app/src/migrations.ts": "56167f0844279820551cd8d56d94699936a229aea2d1e8d1751403e25f683be5",
+    "/app/src/schema.ts": "cc2839d983a657c3fd9f46c23331887030235592098ab201aa45fec56247efbd"
+  },
+  "source_comparison": "All five deployed source files match the corresponding worktree files byte-for-byte.",
+  "database": {
+    "container_path": "/data/collector.sqlite",
+    "host_mount_path": "/mnt/ssd/collector-data/collector.sqlite",
+    "applied_schema_migrations": [1, 2, 3],
+    "sqlite_quick_check": "ok",
+    "prediction_projection_columns": [
+      "session_id",
+      "prediction_id",
+      "request_event_id",
+      "shown_event_id",
+      "last_outcome_event_id",
+      "file_identity",
+      "resolved_file_id",
+      "model_revision",
+      "model_gguf_sha256",
+      "runtime_config_hash",
+      "context_policy_version",
+      "pre_state_hash",
+      "pre_state_sequence",
+      "context_blob_hash",
+      "action_blob_hash",
+      "requested_at",
+      "shown_at",
+      "closed_at",
+      "outcome",
+      "outcome_source",
+      "projection_version",
+      "updated_through_sequence",
+      "review_event_id",
+      "review_status"
+    ]
+  },
+  "fim_compatibility": {
+    "prediction_generated_event_allowed": true,
+    "payload_validation_is_generic": true,
+    "canonical_action_replace_line_rejected": false,
+    "raw_event_payload_json_retains_fim_fields": true,
+    "raw_event_fields": [
+      "canonical_action",
+      "context_hash",
+      "context_blob_hash",
+      "context_policy_version",
+      "tokenizer_sha256",
+      "tokenizer_revision",
+      "tokenizer_contract_sha256",
+      "tokenizer_vocab_ids_sha256"
+    ],
+    "projection_rebuild_accepts_replace_line_without_action_enum": true,
+    "projection_materializes_existing_context_and_outcome_fields": true,
+    "projection_only_fields_not_materialized": [
+      "canonical_action",
+      "context_hash",
+      "tokenizer_sha256",
+      "tokenizer_revision",
+      "tokenizer_contract_sha256",
+      "tokenizer_vocab_ids_sha256"
+    ],
+    "migration_required_for_raw_ingestion_and_existing_outcome_projection": false,
+    "migration_required_to_add_dedicated_projection_columns_for_unmaterialized_fields": true
+  },
+  "read_only_checks": {
+    "event_rows_read": false,
+    "blob_contents_read": false,
+    "prompt_or_response_contents_read": false,
+    "database_mutated": false,
+    "model_calls_made": false
+  }
+}
