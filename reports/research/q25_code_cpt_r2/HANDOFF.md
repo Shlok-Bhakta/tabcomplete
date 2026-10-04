@@ -14,6 +14,7 @@ inputs, submits one bounded session, and verifies retrieved complete checkpoints
 ```bash
 uv run python scripts/run_q25_code_cpt.py --bundle --upload
 uv run python scripts/run_q25_code_cpt.py --execute
+uv run python scripts/run_q25_code_cpt.py --watch --attempt 1
 uv run python scripts/run_q25_code_cpt.py --collect --attempt 1
 ```
 
@@ -50,3 +51,9 @@ The short requested ID was not created; do not retry submission under that ID.
 Inspect the actual reference, then collect attempt 1 only after COMPLETE/ERROR.
 The job receipt and fresh quota observation are committed beside this file.
 No second notebook may be allocated while it remains active.
+
+The optional watcher retrieves terminal output without starting another job. It
+stops after three consecutive transport failures or its observation deadline.
+The GPU worker still enforces its own deadline if the watcher disconnects. Watch
+state is operational evidence, not a completed training-token count. Five watcher
+tests and the submission URL test passed; the controller suite now has 32 tests.

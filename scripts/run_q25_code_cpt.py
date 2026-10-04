@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -361,7 +362,9 @@ def submit(plan: dict[str, Any], *, attempt: int, resume_source: str | None) -> 
             "NvidiaTeslaT4",
             timeout=240,
         )
-        urls = re.findall(r"https://www\.kaggle\.com/code/([A-Za-z0-9_-]+/[A-Za-z0-9_-]+)", response)
+        urls = re.findall(
+            r"https://www\.kaggle\.com/code/([A-Za-z0-9_-]+/[A-Za-z0-9_-]+)", response
+        )
         actual_reference = urls[-1] if urls else reference
         job.update(
             status="submitted",
@@ -512,6 +515,47 @@ def collect(plan: dict[str, Any], attempt: int) -> dict[str, Any]:
     return record
 
 
+def watch(plan: dict[str, Any], attempt: int, *, poll_seconds: float = 30) -> dict[str, Any]:
+    """Observe an existing allocation and retrieve its terminal output.
+
+    This never allocates compute or retries a submission. Remote training keeps
+    its own deadline even if this observer exits or loses connectivity.
+    """
+    if not 1 <= poll_seconds <= 60:
+        raise ValueError("watch interval must be between one and sixty seconds")
+    job = json.loads((REPORT / f"job-{attempt}.json").read_text())
+    if job["plan_sha256"] != digest(REPORT / "plan.json"):
+        raise ValueError("observed allocation belongs to a different plan")
+    end = datetime.fromisoformat(job["submitted_at"]).timestamp()
+    end += plan["configuration"]["budget"]["session_seconds"] + 900
+    failures = 0
+    while datetime.now(UTC).timestamp() < end:
+        observation: dict[str, Any] = {
+            "reference": job["reference"],
+            "observed_at": datetime.now(UTC).isoformat(),
+            "automatic_allocation": False,
+        }
+        try:
+            status = cli("kaggle", "kernels", "status", job["reference"], timeout=60)
+            observation["status"] = status
+            failures = 0
+        except (RuntimeError, subprocess.TimeoutExpired) as exc:
+            failures += 1
+            observation.update(error_class=type(exc).__name__, consecutive_failures=failures)
+            save(REPORT / f"watch-{attempt}.json", observation)
+            if failures >= 3:
+                raise RuntimeError(
+                    "remote observer lost connectivity; allocation was not retried"
+                ) from None
+            time.sleep(poll_seconds)
+            continue
+        save(REPORT / f"watch-{attempt}.json", observation)
+        if any(terminal in status for terminal in ("COMPLETE", "ERROR")):
+            return collect(plan, attempt)
+        time.sleep(poll_seconds)
+    raise TimeoutError("observer deadline reached; inspect the existing allocation before resuming")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -521,6 +565,7 @@ def main() -> None:
     parser.add_argument("--upload", action="store_true")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--collect", action="store_true")
+    parser.add_argument("--watch", action="store_true")
     parser.add_argument("--attempt", type=int, default=1)
     parser.add_argument("--resume-source")
     args = parser.parse_args()
@@ -534,6 +579,8 @@ def main() -> None:
         result["job"] = submit(plan, attempt=args.attempt, resume_source=args.resume_source)
     if args.collect:
         result["output"] = collect(plan, args.attempt)
+    if args.watch:
+        result["output"] = watch(plan, args.attempt)
     print(json.dumps(result, sort_keys=True))
 
 

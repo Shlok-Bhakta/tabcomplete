@@ -653,3 +653,156 @@ def test_collect_rejects_pointer_and_run_result_cursor_disagreement(
         campaign.collect(plan, attempt=1)
 
     assert not (report / "verified-output-1.json").exists()
+
+
+def _watch_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    plan_sha256: str | None = None,
+    submitted_at: str = "2099-01-01T00:00:00+00:00",
+):
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    plan = _plan()
+    plan_path = report / "plan.json"
+    campaign.save(plan_path, plan)
+    campaign.save(
+        report / "job-1.json",
+        {
+            "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+            "plan_sha256": plan_sha256 or campaign.digest(plan_path),
+            "submitted_at": submitted_at,
+        },
+    )
+    monkeypatch.setattr(campaign, "REPORT", report)
+    return plan, report
+
+
+def test_watch_collects_once_after_running_transitions_to_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, _report = _watch_context(tmp_path, monkeypatch)
+    statuses = iter(["RUNNING", "KernelWorkerStatus.COMPLETE"])
+    cli_calls: list[tuple[str, ...]] = []
+    collect_calls: list[tuple[dict[str, Any], int]] = []
+    sleeps: list[float] = []
+
+    def fake_cli(*args: str, **kwargs: Any) -> str:
+        cli_calls.append(tuple(args))
+        return next(statuses)
+
+    def fake_collect(value: dict[str, Any], attempt: int) -> dict[str, Any]:
+        collect_calls.append((value, attempt))
+        return {"checkpoint_verified": True, "attempt": attempt}
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(campaign, "collect", fake_collect)
+    monkeypatch.setattr(campaign.time, "sleep", sleeps.append)
+
+    result = campaign.watch(plan, attempt=1, poll_seconds=5)
+
+    assert result == {"checkpoint_verified": True, "attempt": 1}
+    assert [call[2] for call in cli_calls] == ["status", "status"]
+    assert collect_calls == [(plan, 1)]
+    assert sleeps == [5]
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in cli_calls)
+
+
+def test_watch_recovers_after_one_transient_cli_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report = _watch_context(tmp_path, monkeypatch)
+    responses: list[str | Exception] = [
+        RuntimeError("offline"),
+        "RUNNING",
+        "COMPLETE",
+    ]
+    sleeps: list[float] = []
+    collect_calls: list[int] = []
+
+    def fake_cli(*_args: str, **_kwargs: Any) -> str:
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    def fake_collect(_plan: dict[str, Any], attempt: int) -> dict[str, bool]:
+        collect_calls.append(attempt)
+        return {"ok": True}
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(campaign, "collect", fake_collect)
+    monkeypatch.setattr(campaign.time, "sleep", sleeps.append)
+
+    assert campaign.watch(plan, attempt=1, poll_seconds=2) == {"ok": True}
+    assert json.loads((report / "watch-1.json").read_text())["status"] == "COMPLETE"
+    assert sleeps == [2, 2]
+    assert collect_calls == [1]
+
+
+def test_watch_stops_after_three_cli_failures_without_collecting_or_allocating(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report = _watch_context(tmp_path, monkeypatch)
+    cli_calls: list[tuple[str, ...]] = []
+    sleeps: list[float] = []
+    collect_calls: list[int] = []
+
+    def failing_cli(*args: str, **_kwargs: Any) -> str:
+        cli_calls.append(tuple(args))
+        raise RuntimeError("offline")
+
+    monkeypatch.setattr(campaign, "cli", failing_cli)
+    monkeypatch.setattr(campaign, "collect", lambda _plan, attempt: collect_calls.append(attempt))
+    monkeypatch.setattr(campaign.time, "sleep", sleeps.append)
+
+    with pytest.raises(RuntimeError, match="observer lost connectivity"):
+        campaign.watch(plan, attempt=1, poll_seconds=1)
+
+    observation = json.loads((report / "watch-1.json").read_text())
+    assert observation["consecutive_failures"] == 3
+    assert len(cli_calls) == 3
+    assert sleeps == [1, 1]
+    assert collect_calls == []
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in cli_calls)
+
+
+def test_watch_rejects_plan_mismatch_and_out_of_range_poll_interval(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, _report = _watch_context(tmp_path, monkeypatch, plan_sha256="wrong-plan")
+    cli_calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr(campaign, "cli", lambda *args, **_kwargs: cli_calls.append(tuple(args)))
+
+    with pytest.raises(ValueError, match="different plan"):
+        campaign.watch(plan, attempt=1)
+    assert cli_calls == []
+
+    for poll in (0, 61):
+        with pytest.raises(ValueError, match="between one and sixty"):
+            campaign.watch(plan, attempt=1, poll_seconds=poll)
+    assert cli_calls == []
+
+
+def test_watch_exits_when_observer_deadline_is_expired(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, _report = _watch_context(
+        tmp_path,
+        monkeypatch,
+        submitted_at="2000-01-01T00:00:00+00:00",
+    )
+    cli_calls: list[tuple[str, ...]] = []
+    collect_calls: list[int] = []
+    sleeps: list[float] = []
+    monkeypatch.setattr(campaign, "cli", lambda *args, **_kwargs: cli_calls.append(tuple(args)))
+    monkeypatch.setattr(campaign, "collect", lambda _plan, attempt: collect_calls.append(attempt))
+    monkeypatch.setattr(campaign.time, "sleep", sleeps.append)
+
+    with pytest.raises(TimeoutError, match="observer deadline"):
+        campaign.watch(plan, attempt=1, poll_seconds=1)
+
+    assert cli_calls == []
+    assert collect_calls == []
+    assert sleeps == []
