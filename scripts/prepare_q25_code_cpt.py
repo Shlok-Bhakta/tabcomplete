@@ -800,18 +800,18 @@ def prepare_corpus(
             ("development_manifest.jsonl", dev_manifest),
         ):
             try:
-                with (stage / name).open("w", encoding="utf-8") as handle:
+                with (stage / name).open("w", encoding="utf-8") as manifest_handle:
                     for record in records:
-                        handle.write(json.dumps(record, sort_keys=True) + "\n")
+                        manifest_handle.write(json.dumps(record, sort_keys=True) + "\n")
             except OSError:
                 raise PreparationError("manifest_write_failed") from None
 
-        output_files = {}
-        for path in sorted(stage.iterdir()):
-            if path.is_file():
-                output_files[path.name] = {
-                    "bytes": path.stat().st_size,
-                    "sha256": sha256_file(path),
+        output_files: dict[str, dict[str, Any]] = {}
+        for output_path in sorted(stage.iterdir()):
+            if output_path.is_file():
+                output_files[output_path.name] = {
+                    "bytes": output_path.stat().st_size,
+                    "sha256": sha256_file(output_path),
                 }
         output_bytes = sum(item["bytes"] for item in output_files.values())
         if output_bytes > cap:

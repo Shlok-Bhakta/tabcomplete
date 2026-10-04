@@ -110,6 +110,10 @@
     }
   },
   "post_preparation_source_change": {
+    "additional_type_check_change": {
+      "reason": "Rename reused binary/text handle and str/Path locals for mypy; no generated CPT corpus or active trainer source changed. Original producer hash remains authoritative.",
+      "source_sha256": "f5b3727505b2e196455c4aa62369a1798f7865d5449781bddc94da6d9f4d646d"
+    },
     "original_producer_source_sha256": "3203e01b1d9e05d81da337c01e49f0d2799e7ff646259536e2418a572affc713",
     "reason": "Ruff formatting, unused import/loop-variable cleanup; generated corpus unchanged",
     "source_sha256": "e86a1d06bfe69f66ff56b8a1bee40bdfa7026194471a0e75883c3b0338547c75"

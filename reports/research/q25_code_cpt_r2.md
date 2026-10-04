@@ -31,13 +31,52 @@ candidate weights remain private. No external teacher calls or new model weight
 downloads are needed.
 
 The [Stack dedup dataset card](https://huggingface.co/datasets/bigcode/the-stack-dedup/blob/main/README.md)
-describes approximately 1.5 TB of source. This bounded
-subset is an ablation, not an entire-corpus campaign. Qwen2.5-Coder already has
-extensive code pretraining, so extra raw code may have little effect on editor
-intent. The unchanged 200-case causal suite and 180-case continuation suite are
+lists 1.5 TB for v1.0, 3 TB for v1.1 and 2.7 TB for v1.2 of the
+near-deduplicated source. The reused source revision still matches the current
+Hub revision at this check. This bounded subset is an ablation, not an
+entire-corpus campaign. [Qwen's model card](https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B)
+reports 5.5 trillion training tokens for the coder family. Extra raw code may
+have little effect on editor intent. The unchanged 200-case causal suite and 180-case continuation suite are
 code diagnostics. They do not establish next-edit ability. A future matched
 completion adaptation must compare the untouched base with this CPT candidate
 using the same ordered training examples and separate development data.
+
+## Matched completion follow-up
+
+The CPU preparation plan freezes a supervised FIM comparison after the raw-code
+pass. One arm starts from the untouched Qwen checkpoint; the other starts from
+the verified completed CPT export. Both use the same ordered examples, one pass,
+response-only loss, and supervised EOS. This is synthetic source completion,
+not observed next-edit intent.
+
+Preparation uses actual source lines or the remainder after a UTF-8 cursor.
+It keeps the original PSM markers and never truncates labels. The reserved
+development pool contains only 120 eligible source documents, yielding 240
+distinct states. It is not duplicated to reach the requested 512-state target.
+
+A CPU serving check found two revision-2 training prompts whose decomposed
+Unicode was normalized by Qwen's NFC tokenizer. Revision 3 requires exact
+prompt and target token/string round trips before deterministic selection.
+The old prepared files and failure evidence are preserved. This correction
+preceded every FIM model output and does not change CPT data or benchmark fixtures.
+
+Each FIM allocation has a three-hour deadline including setup, evaluation and
+saving. The shared campaign cap is 32 million processed input tokens, 20 reserved
+session hours and 40 conservatively charged account GPU-hours. Raw CPT retains
+its own 12-million processed-token cap. The controller preserves budget for both
+completion arms and accounts for interrupted tails without summing the same
+cumulative cursor twice. These limits implement the user's separate authorization
+for further free Kaggle work; they do not extend the historical model-data-r2
+exception or consume a renewed allocation.
+
+| Path | Completed training | Development completion | General code regression |
+| --- | --- | --- | --- |
+| Untouched Qwen → FIM | Pending | Pending | Pending |
+| Qwen → raw-code CPT → FIM | Pending | Pending | Pending |
+
+The final training plan must bind the actual completed CPT artifact and runtime
+before either FIM allocation. Existing tests and CPU data checks are not evidence
+of a model improvement.
 
 ## Budgets and recovery
 
@@ -111,3 +150,8 @@ the existing offline mode and will be imported after artifact retrieval.
 
 Automatic personalization remains disabled. No CPT checkpoint is automatically
 promoted into the editor.
+
+The completion follow-up code passed a final full run of 966 Python tests,
+Ruff and mypy across 90 source files. Gateway tests passed 16 cases and collector
+tests passed 59 cases; both service type checks passed. These are implementation
+checks. Actual completion training and model-quality results are still pending.

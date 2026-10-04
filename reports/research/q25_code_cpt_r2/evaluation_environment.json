@@ -1,0 +1,35 @@
+{
+  "backend": "container",
+  "case_count": 200,
+  "docker_images": {
+    "docker.io/library/eclipse-temurin:21-jdk": "f5699e5c9724cd5bc9f639ba77608e169e8fb5675e230882683bc691dfc44622",
+    "docker.io/library/gcc:14": "69d01b59a6f7e74c94828b6c7e02a334cf56e5b837ec5d88b74eb2be54e8c4b1",
+    "docker.io/library/golang:1.24-bookworm": "e0cffc405270b9114fac7706d07c373727d1b42b0e47c525b9cd1ab1097779ff",
+    "docker.io/library/node:22-bookworm-slim": "c72861c6705868ed7f08e1cf22ef4f7ba07a82c19a54ba65d931c442d3575889",
+    "docker.io/library/python:3.12-slim": "9e87977b867847e186d066f531ef783b006d582a985c341c269446088d90f2c4",
+    "docker.io/library/rust:1.85-slim": "8573a005bfcb44d5f462a33f6ad6e85d231f51e759b60c8061777422becfcb94",
+    "localhost/tabcomplete-typescript-bench:5.9.2": "35192dd4199bbe26b6af09944bb7eb9024f1280c17a3d1dc572f54da1624f83f",
+    "mcr.microsoft.com/dotnet/sdk:9.0": "956d89d4479d7fa25091073fe562026107ccf49eb69347a2673baf6b7d44ed6f"
+  },
+  "fixture_sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4",
+  "gold_verification": {
+    "compile_pass_rate": 1.0,
+    "images_unchanged": true,
+    "model_inference": false,
+    "monitoring": {
+      "campaign_id": "campaign-5381546798249e9cc07b04f67bbb865a",
+      "run_id": "run-5381546798249e9cc07b04f67bbb865a"
+    },
+    "parse_pass_rate": 1.0,
+    "results_sha256": "cbb2b63631d6d3f207c4d15c74bb22ec1a5bbe441c25962c888147c1cc4f26cd",
+    "test_pass_rate": 1.0,
+    "timeouts": 0,
+    "total": 200
+  },
+  "gold_verification_pending": false,
+  "host": "crabcake",
+  "observed_at": "2026-10-04T01:30:22.436549+00:00",
+  "schema": "q25-cpt-fim-code-scoring-environment-v1",
+  "scoring_rule": "existing evaluate_code_benchmark.py; no prompt/parser/scoring changes",
+  "source": "authenticated local Docker image inventory; no image downloads"
+}

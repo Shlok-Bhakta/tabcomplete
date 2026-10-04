@@ -1,0 +1,38 @@
+{
+  "authorization": "User explicitly authorized further free Kaggle training using the current weekly45GPU-hour allocation, then requested resilient raw-code training followed by FIM/completion adaptation. The historical research/model-data-r2 exception is a different campaign. This record does not modify AGENTS.md.",
+  "deployment_policy": {
+    "automatic_personalization_enabled": false,
+    "automatic_promotion": false,
+    "stable_editor_weights_unchanged": true
+  },
+  "phases": {
+    "matched_fim": {
+      "arms": 2,
+      "epochs_per_arm": 1,
+      "final_training_plan_and_fingerprints_required": true,
+      "logical_input_token_cap_per_arm": 4194304,
+      "preparation_plan": "fim_preparation_plan.json"
+    },
+    "raw_code_cpt": {
+      "epochs": 1,
+      "frozen_plan": "plan.json",
+      "logical_input_tokens_actual": 7872512,
+      "processed_input_token_cap_including_discarded_replay": 12000000
+    }
+  },
+  "recorded_at": "2026-10-04T00:43:24.284946+00:00",
+  "schema": "q25-cpt-fim-campaign-budget-v1",
+  "shared_limits": {
+    "aggregate_reserved_session_seconds": 72000,
+    "automatic_renewal_use": false,
+    "conservative_account_gpu_hours": 40,
+    "maximum_additional_processed_training_input_tokens": 32000000,
+    "minimum_free_bytes": 2147483648,
+    "minimum_reserved_future_fim_session_seconds": 21600,
+    "new_artifact_bytes_cap_per_machine": 12884901888,
+    "one_allocation_at_a_time": true,
+    "paid_compute": false,
+    "quota_renewal": "2026-10-10T00:00:00"
+  },
+  "training_data_policy": "Only pinned public-source clean corpus and clearly labeled synthetic completion states. No personal/employer data or teacher calls."
+}

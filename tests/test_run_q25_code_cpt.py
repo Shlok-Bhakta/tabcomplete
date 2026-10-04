@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import UTC
+from datetime import datetime as RealDatetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -224,6 +226,26 @@ def test_submit_reserves_account_gpu_hours_before_any_remote_work(
     assert calls == []
 
 
+def test_submit_rejects_session_crossing_unchanged_quota_renewal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, _report, _artifacts, calls = _submission_context(tmp_path, monkeypatch)
+
+    class FixedDatetime:
+        @classmethod
+        def now(cls, tz: Any = None) -> RealDatetime:
+            return RealDatetime(2026, 10, 9, 23, 0, tzinfo=tz or UTC)
+
+        fromisoformat = staticmethod(RealDatetime.fromisoformat)
+
+    monkeypatch.setattr(campaign, "datetime", FixedDatetime)
+
+    with pytest.raises(RuntimeError, match="session deadline would cross"):
+        campaign.submit(plan, attempt=1, resume_source=None)
+
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in calls)
+
+
 def test_submit_requires_immediately_prior_verified_complete_checkpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -398,9 +420,7 @@ def _collect_context(
     artifacts = tmp_path / "artifacts"
     artifacts.mkdir()
     plan = _plan()
-    plan["configuration"]["budget"]["maximum_additional_training_input_tokens"] = (
-        maximum_tokens
-    )
+    plan["configuration"]["budget"]["maximum_additional_training_input_tokens"] = maximum_tokens
     campaign.save(
         report / "job-1.json",
         {
@@ -535,9 +555,7 @@ def test_collect_carries_prior_external_tokens_once_across_a_clean_resume(
     record = campaign.collect(plan, attempt=1)
 
     assert record["external_campaign_tokens_for_resume"] == already_external
-    assert record["processed_campaign_input_tokens_conservative"] == (
-        1_048_576 + already_external
-    )
+    assert record["processed_campaign_input_tokens_conservative"] == (1_048_576 + already_external)
 
 
 def test_collect_rejects_token_reservation_over_campaign_cap(
@@ -806,3 +824,1411 @@ def test_watch_exits_when_observer_deadline_is_expired(
     assert cli_calls == []
     assert collect_calls == []
     assert sleeps == []
+
+
+def _shared_budget_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    cpt_reservations: tuple[int, ...] = (),
+    fim_reservations: tuple[int, ...] = (),
+) -> None:
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "aggregate_reserved_session_seconds": 72_000,
+                "conservative_account_gpu_hours": 40,
+                "minimum_reserved_future_fim_session_seconds": 21_600,
+            }
+        },
+    )
+    for index, reservation in enumerate(cpt_reservations, start=1):
+        campaign.save(
+            report / f"job-{index}.json",
+            {"conservative_reserved_session_seconds": reservation},
+        )
+    for index, reservation in enumerate(fim_reservations, start=1):
+        campaign.save(
+            report / f"fim-job-{index}.json",
+            {"conservative_reserved_session_seconds": reservation},
+        )
+    monkeypatch.setattr(campaign, "REPORT", report)
+
+
+def test_shared_allocation_budget_counts_cpt_and_fim_receipts_together(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _shared_budget_context(
+        tmp_path,
+        monkeypatch,
+        cpt_reservations=(36_000,),
+        fim_reservations=(21_600,),
+    )
+
+    # 10h CPT + 6h FIM + 4h new FIM = exactly 20h / 40 account GPU-hours.
+    campaign.check_shared_allocation_budget(14_400, phase="fim")
+
+    with pytest.raises(RuntimeError, match="shared CPT/FIM session reservation"):
+        campaign.check_shared_allocation_budget(14_401, phase="fim")
+
+
+def test_cpt_budget_keeps_the_full_six_hour_reserve_for_two_fim_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _shared_budget_context(tmp_path, monkeypatch, cpt_reservations=(36_000,))
+
+    # Existing CPT 10h + new CPT 4h + two 3h FIM arms = the 20h limit.
+    campaign.check_shared_allocation_budget(14_400, phase="cpt")
+
+    with pytest.raises(RuntimeError, match="shared CPT/FIM session reservation"):
+        campaign.check_shared_allocation_budget(14_401, phase="cpt")
+
+
+def test_raw_cpt_cannot_restart_after_a_fim_receipt_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _shared_budget_context(tmp_path, monkeypatch, fim_reservations=(10_800,))
+
+    with pytest.raises(RuntimeError, match="cannot restart after matched FIM"):
+        campaign.check_shared_allocation_budget(14_400, phase="cpt")
+
+
+def test_submit_rejects_resume_when_raw_cpt_pass_is_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, _artifacts, calls = _submission_context(tmp_path, monkeypatch)
+    prior = "shlokbhakta/tc-q25-code-cpt-r2-a1"
+    campaign.save(report / "job-1.json", {"reference": prior, "status": "submitted"})
+    campaign.save(
+        report / "verified-output-1.json",
+        {
+            "checkpoint_verified": True,
+            "training_status": "complete",
+            "external_campaign_tokens_for_resume": 0,
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="raw-code pass is already complete"):
+        campaign.submit(plan, attempt=2, resume_source=prior)
+
+    assert calls == []
+
+
+def _token_ledger_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    maximum_tokens: int = 32_000_000,
+) -> Path:
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "maximum_additional_processed_training_input_tokens": maximum_tokens,
+            }
+        },
+    )
+    monkeypatch.setattr(campaign, "REPORT", report)
+    return report
+
+
+def _write_fim_token_attempt(
+    report: Path,
+    arm: str,
+    attempt: int,
+    *,
+    reservation: int,
+    verified_total: int | None = None,
+) -> None:
+    campaign.save(
+        report / f"fim-job-{arm}-{attempt}.json",
+        {
+            "attempt": attempt,
+            "processed_arm_token_reservation": reservation,
+        },
+    )
+    if verified_total is not None:
+        campaign.save(
+            report / f"fim-verified-{arm}-{attempt}.json",
+            {"processed_arm_input_tokens_conservative": verified_total},
+        )
+
+
+def test_shared_token_ledger_uses_latest_cumulative_attempt_per_phase(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _token_ledger_context(tmp_path, monkeypatch)
+    for attempt, cumulative in ((1, 9_000_000), (2, 11_500_000)):
+        campaign.save(report / f"job-{attempt}.json", {"attempt": attempt})
+        campaign.save(
+            report / f"verified-output-{attempt}.json",
+            {"processed_campaign_input_tokens_conservative": cumulative},
+        )
+    first_arm, second_arm = campaign.FIM_ARMS
+    _write_fim_token_attempt(report, first_arm, 1, reservation=1_500_000, verified_total=1_500_000)
+    _write_fim_token_attempt(report, first_arm, 2, reservation=1_750_000, verified_total=1_750_000)
+    _write_fim_token_attempt(report, second_arm, 1, reservation=1_600_000, verified_total=1_600_000)
+
+    assert campaign.shared_token_ledger() == {
+        "cpt": 11_500_000,
+        first_arm: 1_750_000,
+        second_arm: 1_600_000,
+    }
+
+
+def test_shared_token_ledger_keeps_full_reservations_for_uncollected_jobs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _token_ledger_context(tmp_path, monkeypatch)
+    arm = campaign.FIM_ARMS[0]
+    campaign.save(report / "job-1.json", {"attempt": 1})
+    _write_fim_token_attempt(report, arm, 1, reservation=2_250_000)
+
+    assert campaign.shared_token_ledger() == {"cpt": 12_000_000, arm: 2_250_000}
+
+
+def test_shared_token_budget_enforces_the_32m_boundary_across_all_phases(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _token_ledger_context(tmp_path, monkeypatch)
+    first_arm, second_arm = campaign.FIM_ARMS
+    _write_fim_token_attempt(
+        report, first_arm, 1, reservation=20_000_000, verified_total=20_000_000
+    )
+    _write_fim_token_attempt(
+        report, second_arm, 1, reservation=11_999_999, verified_total=11_999_999
+    )
+
+    assert campaign.check_shared_token_budget("cpt", 1) == 31_999_999
+    with pytest.raises(RuntimeError, match="processed-token reservation exhausted"):
+        campaign.check_shared_token_budget("cpt", 2)
+
+
+def test_shared_token_budget_rejects_negative_request_and_negative_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = _token_ledger_context(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="invalid campaign phase or token reservation"):
+        campaign.check_shared_token_budget("cpt", -1)
+
+    campaign.save(report / "job-1.json", {"attempt": 1})
+    campaign.save(
+        report / "verified-output-1.json",
+        {"processed_campaign_input_tokens_conservative": -1},
+    )
+    with pytest.raises(ValueError, match="negative counter"):
+        campaign.shared_token_ledger()
+
+
+def _cpt_export_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    verified_overrides: dict[str, Any] | None = None,
+    manifest_overrides: dict[str, Any] | None = None,
+    files_override: dict[str, dict[str, Any]] | None = None,
+) -> tuple[dict[str, Any], Path, Path, Path, list[tuple[str, ...]]]:
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    artifacts = tmp_path / "artifacts"
+    export = artifacts / "output-attempt-1/training/inference-f16"
+    export.mkdir(parents=True)
+    fingerprint = "frozen-cpt-fingerprint"
+    cursor = {"training_input_tokens": 7_872_512, "completed_updates": 481}
+    blobs = {"config.json": b"{}", "model.safetensors": b"synthetic weights"}
+    file_records = {
+        name: {
+            "bytes": len(content),
+            "sha256": campaign.hashlib.sha256(content).hexdigest(),
+        }
+        for name, content in blobs.items()
+    }
+    for name, content in blobs.items():
+        (export / name).write_bytes(content)
+    manifest: dict[str, Any] = {
+        "schema": "q25-cpt-inference-f16-v1",
+        "fingerprint": fingerprint,
+        "training_cursor": cursor,
+        "files": file_records if files_override is None else files_override,
+    }
+    if manifest_overrides:
+        manifest.update(manifest_overrides)
+    campaign.save(export / "artifact_manifest.json", manifest)
+    verified: dict[str, Any] = {
+        "checkpoint_verified": True,
+        "training_status": "complete",
+        "fingerprint": fingerprint,
+        "cursor": cursor,
+        "reference": "owner/completed-cpt-kernel",
+    }
+    if verified_overrides:
+        verified.update(verified_overrides)
+    campaign.save(report / "verified-output-1.json", verified)
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(
+        campaign.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(free=16 * 1024**3),
+    )
+    calls: list[tuple[str, ...]] = []
+
+    def unexpected_cli(*args: str, **_kwargs: Any) -> str:
+        calls.append(tuple(args))
+        raise AssertionError("unexpected remote retrieval for a fully local export")
+
+    monkeypatch.setattr(campaign, "cli", unexpected_cli)
+    return _plan(), report, artifacts, export, calls
+
+
+def test_collect_cpt_export_accepts_only_the_complete_481_update_pass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, _artifacts, export, calls = _cpt_export_context(tmp_path, monkeypatch)
+
+    result = campaign.collect_cpt_export(plan, attempt=1)
+
+    assert result == export
+    verification = json.loads((report / "cpt-export-verification.json").read_text())
+    assert verification["training_cursor"] == {
+        "training_input_tokens": 7_872_512,
+        "completed_updates": 481,
+    }
+    assert verification["fingerprint"] == "frozen-cpt-fingerprint"
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    ("verified_overrides", "manifest_overrides", "message"),
+    [
+        ({"checkpoint_verified": False}, {}, "verified complete CPT pass"),
+        ({"training_status": "deadline_stop"}, {}, "verified complete CPT pass"),
+        (
+            {"cursor": {"training_input_tokens": 7_872_511, "completed_updates": 481}},
+            {},
+            "frozen completed pass",
+        ),
+        (
+            {},
+            {
+                "training_cursor": {
+                    "training_input_tokens": 7_872_512,
+                    "completed_updates": 480,
+                }
+            },
+            "frozen completed pass",
+        ),
+    ],
+)
+def test_collect_cpt_export_rejects_incomplete_or_wrong_cursor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    verified_overrides: dict[str, Any],
+    manifest_overrides: dict[str, Any],
+    message: str,
+) -> None:
+    plan, report, _artifacts, _export, calls = _cpt_export_context(
+        tmp_path,
+        monkeypatch,
+        verified_overrides=verified_overrides,
+        manifest_overrides=manifest_overrides,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        campaign.collect_cpt_export(plan, attempt=1)
+
+    assert calls == []
+    assert not (report / "cpt-export-verification.json").exists()
+
+
+def test_collect_cpt_export_rejects_unsafe_manifest_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, _report, _artifacts, _export, calls = _cpt_export_context(
+        tmp_path,
+        monkeypatch,
+        files_override={"../outside.safetensors": {"bytes": 10, "sha256": "0" * 64}},
+    )
+
+    with pytest.raises(ValueError, match="unsafe file record"):
+        campaign.collect_cpt_export(plan, attempt=1)
+
+    assert calls == []
+
+
+@pytest.mark.parametrize("limit_kind", ["artifact_cap", "free_space"])
+def test_collect_cpt_export_checks_storage_before_retrieving_missing_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    limit_kind: str,
+) -> None:
+    plan, _report, _artifacts, _export, calls = _cpt_export_context(
+        tmp_path,
+        monkeypatch,
+        files_override={"missing.safetensors": {"bytes": 100, "sha256": "0" * 64}},
+    )
+    if limit_kind == "artifact_cap":
+        plan["configuration"]["budget"]["new_artifact_bytes_cap"] = 99
+        monkeypatch.setattr(campaign, "directory_bytes", lambda _path: 0)
+        message = "exceeds storage headroom"
+    else:
+        monkeypatch.setattr(campaign, "directory_bytes", lambda _path: 0)
+        monkeypatch.setattr(
+            campaign.shutil,
+            "disk_usage",
+            lambda _path: SimpleNamespace(free=2 * 1024**3 + 99),
+        )
+        message = "exceeds storage headroom"
+
+    with pytest.raises(OSError, match=message):
+        campaign.collect_cpt_export(plan, attempt=1)
+
+    assert calls == []
+
+
+def test_collect_cpt_export_rejects_hash_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, _artifacts, _export, calls = _cpt_export_context(
+        tmp_path,
+        monkeypatch,
+        files_override={"config.json": {"bytes": 2, "sha256": "0" * 64}},
+    )
+
+    with pytest.raises(ValueError, match="file identity differs"):
+        campaign.collect_cpt_export(plan, attempt=1)
+
+    assert calls == []
+    assert not (report / "cpt-export-verification.json").exists()
+
+
+def test_freeze_fim_plan_builds_cpu_only_reproducible_matched_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    campaign.save(report / "plan.json", {"schema": "test-cpt-plan"})
+    artifacts = tmp_path / "artifacts"
+    export = artifacts / "output-attempt-1/training/inference-f16"
+    export.mkdir(parents=True)
+    weights = b"synthetic completed CPT weights"
+    (export / "model.safetensors").write_bytes(weights)
+    export_manifest = {
+        "schema": "q25-cpt-inference-f16-v1",
+        "fingerprint": "completed-cpt-fingerprint",
+        "training_cursor": {
+            "training_input_tokens": 7_872_512,
+            "completed_updates": 481,
+        },
+        "files": {
+            "model.safetensors": {
+                "bytes": len(weights),
+                "sha256": campaign.hashlib.sha256(weights).hexdigest(),
+            }
+        },
+    }
+    campaign.save(export / "artifact_manifest.json", export_manifest)
+    cpt_output = artifacts / "output-attempt-1/training"
+    cpt_output.mkdir(parents=True, exist_ok=True)
+    campaign.save(
+        cpt_output / "run_manifest.json",
+        {
+            "identity": {
+                "runtime": {
+                    "python": "3.11.0",
+                    "torch": "2.14.0+cu128",
+                    "transformers": "5.17.0",
+                    "bitsandbytes": "0.50.2",
+                    "cuda_runtime": "12.8",
+                }
+            }
+        },
+    )
+    preparation = {
+        "planned_training": {
+            "maximum_input_tokens_per_arm": 4_194_304,
+            "effective_batch": 16,
+            "microbatch_examples": 1,
+            "epochs": 1,
+            "learning_rate": 1e-5,
+            "checkpoint_every_updates": 64,
+            "compute": "fp16",
+            "gradient_checkpointing": True,
+            "master_weights": "fp32",
+            "optimizer": "AdamW8bit",
+            "seed": 314159,
+        }
+    }
+    preparation_path = report / "fim_preparation_plan.json"
+    campaign.save(preparation_path, preparation)
+    corpus = artifacts / "fim/corpus-r3"
+    corpus.mkdir(parents=True)
+    files: dict[str, dict[str, Any]] = {}
+    splits: dict[str, dict[str, Any]] = {}
+    for split, tokens in (("train", 1_776_736), ("development", 91_434)):
+        name = f"{split}.jsonl"
+        content = f"{split} rows\n".encode()
+        (corpus / name).write_bytes(content)
+        files[name] = {
+            "bytes": len(content),
+            "sha256": campaign.hashlib.sha256(content).hexdigest(),
+        }
+        splits[split] = {"file": name, "input_tokens": tokens, "row_count": 1}
+    campaign.save(
+        corpus / "corpus_metadata.json",
+        {
+            "preparation_plan_sha256": campaign.digest(preparation_path),
+            "files": files,
+            "splits": splits,
+        },
+    )
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "new_artifact_bytes_cap_per_machine": 12 * 1024**3,
+                "minimum_free_bytes": 2 * 1024**3,
+                "quota_renewal": "2026-10-10T00:00:00",
+            }
+        },
+    )
+    cpt_plan = {
+        "configuration": {
+            "model": {
+                "id": "Qwen/Qwen2.5-Coder-0.5B",
+                "revision": "pinned-revision",
+            }
+        },
+        "existing_model_files": {"model.safetensors": {"sha256": "base-model-hash"}},
+        "fixtures": {"causal": {"sha256": "fixture-hash"}},
+    }
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(campaign, "collect_cpt_export", lambda _plan, _attempt: export)
+
+    plan = campaign.freeze_fim_plan(cpt_plan, attempt=1)
+
+    assert plan["gpu_execution_authorized"] is True
+    assert plan["configuration"]["training"]["max_input_tokens"] == 4_194_304
+    assert plan["configuration"]["budget"]["session_seconds"] == 10_800
+    assert plan["initializers"][campaign.FIM_ARMS[1]]["expected_complete_updates"] == 481
+    assert plan["initializers"][campaign.FIM_ARMS[1]]["expected_training_input_tokens"] == (
+        7_872_512
+    )
+    assert plan["evaluation"]["regression"] == "unchanged raw causal 200 and raw line 180"
+    assert json.loads((report / "fim_training_plan.json").read_text()) == plan
+
+
+def _fim_submission_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    cpt_session_reservation: int = 0,
+    cpt_fingerprint: str = "frozen-cpt-fingerprint",
+    cpt_cursor: dict[str, int] | None = None,
+    active_jobs: list[dict[str, Any]] | None = None,
+):
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    artifacts = tmp_path / "artifacts"
+    manifest_path = artifacts / "fim/input-bundle/input-manifest.json"
+    manifest_path.parent.mkdir(parents=True)
+    campaign.save(manifest_path, {"schema": "synthetic-fim-inputs"})
+    campaign.save(
+        artifacts / "fim/dataset-submission.json",
+        {
+            "state": "verified",
+            "input_manifest_sha256": campaign.digest(manifest_path),
+        },
+    )
+    cursor = cpt_cursor or {"training_input_tokens": 7_872_512, "completed_updates": 481}
+    plan = {
+        "schema": "q25-fim-training-plan-v1",
+        "gpu_execution_authorized": True,
+        "configuration": {
+            "training": {
+                "max_input_tokens": 4_194_304,
+                "effective_batch": 16,
+                "sequence_length": 1024,
+            },
+            "budget": {
+                "session_seconds": 10_800,
+                "maximum_discarded_replay_input_tokens": 2_097_152,
+                "new_artifact_bytes_cap": 12 * 1024**3,
+                "minimum_free_bytes": 2 * 1024**3,
+                "paid_compute": False,
+                "automatic_renewal_use": False,
+                "quota_renewal": "2026-10-10T00:00:00",
+                "conservative_quota_multiplier": 2,
+                "quota_account_gpu_hours_cap": 40,
+            },
+        },
+        "initializers": {
+            campaign.FIM_ARMS[1]: {
+                "fingerprint": "frozen-cpt-fingerprint",
+                "training_cursor": {"training_input_tokens": 7_872_512, "completed_updates": 481},
+            }
+        },
+        "data": {"train": {"input_tokens": 1_776_736}},
+    }
+    campaign.save(report / "fim_training_plan.json", plan)
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "aggregate_reserved_session_seconds": 72_000,
+                "conservative_account_gpu_hours": 40,
+                "minimum_reserved_future_fim_session_seconds": 21_600,
+                "maximum_additional_processed_training_input_tokens": 32_000_000,
+            }
+        },
+    )
+    if cpt_session_reservation:
+        campaign.save(
+            report / "job-1.json",
+            {"conservative_reserved_session_seconds": cpt_session_reservation},
+        )
+    campaign.save(
+        report / "verified-output-1.json",
+        {
+            "checkpoint_verified": True,
+            "training_status": "complete",
+            "fingerprint": cpt_fingerprint,
+            "cursor": cursor,
+            "reference": "owner/completed-cpt-kernel",
+        },
+    )
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(build_pilot, "_csv_refs", lambda _command: set())
+    monkeypatch.setattr(build_pilot, "_job_statuses_verified", lambda _value: True)
+    quota_calls: list[dict[str, Any]] = []
+    observation = _observation(active_jobs=active_jobs or [])
+    monkeypatch.setattr(campaign, "quota", lambda: quota_calls.append(observation) or observation)
+    cli_calls: list[tuple[str, ...]] = []
+    commit = "c" * 40
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        call = tuple(args)
+        cli_calls.append(call)
+        if call[0] == "git" and call[-2:] == ("status", "--porcelain"):
+            return ""
+        if call[-2:] == ("rev-parse", "HEAD"):
+            return commit
+        if call[-2:] == ("origin", "refs/heads/research/q25-code-cpt-r2"):
+            return f"{commit}\trefs/heads/research/q25-code-cpt-r2"
+        if call[:3] == ("kaggle", "kernels", "push"):
+            return "Kernel pushed"
+        raise AssertionError(f"unexpected remote command: {call[:3]}")
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    return plan, report, artifacts, quota_calls, cli_calls
+
+
+@pytest.mark.parametrize("identity_field", ["fingerprint", "cursor"])
+def test_submit_fim_rejects_wrong_frozen_cpt_initializer_before_quota_or_push(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    identity_field: str,
+) -> None:
+    plan, report, _artifacts, quota_calls, cli_calls = _fim_submission_context(
+        tmp_path,
+        monkeypatch,
+        cpt_fingerprint=(
+            "different-completed-cpt-fingerprint"
+            if identity_field == "fingerprint"
+            else "frozen-cpt-fingerprint"
+        ),
+        cpt_cursor=(
+            {"training_input_tokens": 7_872_511, "completed_updates": 481}
+            if identity_field == "cursor"
+            else None
+        ),
+    )
+
+    with pytest.raises(ValueError, match="differs from the frozen matched FIM initializer"):
+        campaign.submit_fim(
+            plan,
+            arm=campaign.FIM_ARMS[1],
+            attempt=1,
+            cpt_attempt=1,
+            resume_source=None,
+        )
+
+    assert quota_calls == []
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in cli_calls)
+    assert not (report / f"fim-job-{campaign.FIM_ARMS[1]}-1.json").exists()
+
+
+def test_submit_fim_preserves_the_other_arms_three_hour_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, _artifacts, quota_calls, cli_calls = _fim_submission_context(
+        tmp_path,
+        monkeypatch,
+        cpt_session_reservation=50_401,
+    )
+
+    with pytest.raises(RuntimeError, match="shared CPT/FIM session reservation exhausted"):
+        campaign.submit_fim(
+            plan,
+            arm=campaign.FIM_ARMS[0],
+            attempt=1,
+            cpt_attempt=1,
+            resume_source=None,
+        )
+
+    assert quota_calls == []
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in cli_calls)
+    assert not (report / f"fim-job-{campaign.FIM_ARMS[0]}-1.json").exists()
+
+
+def test_submit_fim_checks_live_quota_before_staging_or_pushing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, _artifacts, quota_calls, cli_calls = _fim_submission_context(
+        tmp_path,
+        monkeypatch,
+        active_jobs=[{"reference": "owner/other-job", "status": "RUNNING"}],
+    )
+
+    with pytest.raises(RuntimeError, match="another notebook is active"):
+        campaign.submit_fim(
+            plan,
+            arm=campaign.FIM_ARMS[1],
+            attempt=1,
+            cpt_attempt=1,
+            resume_source=None,
+        )
+
+    assert len(quota_calls) == 1
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in cli_calls)
+    assert not (report / f"fim-job-{campaign.FIM_ARMS[1]}-1.json").exists()
+
+
+@pytest.mark.parametrize("identity_mismatch", ["arm", "plan"])
+def test_watch_fim_rejects_wrong_job_identity_before_status_query(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    identity_mismatch: str,
+) -> None:
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    plan = {"schema": "q25-fim-training-plan-v1"}
+    plan_path = report / "fim_training_plan.json"
+    campaign.save(plan_path, plan)
+    arm = campaign.FIM_ARMS[0]
+    job = {
+        "arm": campaign.FIM_ARMS[1] if identity_mismatch == "arm" else arm,
+        "plan_sha256": "wrong-plan" if identity_mismatch == "plan" else campaign.digest(plan_path),
+        "reference": "owner/fim-kernel",
+    }
+    campaign.save(report / f"fim-job-{arm}-1.json", job)
+    monkeypatch.setattr(campaign, "REPORT", report)
+    calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr(campaign, "cli", lambda *args, **_kwargs: calls.append(tuple(args)))
+
+    with pytest.raises(ValueError, match="observer identity differs"):
+        campaign.watch_fim(plan, arm, attempt=1)
+
+    assert calls == []
+
+
+def _fim_collect_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    arm: str | None = None,
+    attempt: int = 2,
+    committed_tokens: int = 1_000_000,
+    logged_tail_tokens: int = 32_768,
+    prior_discarded_tokens: int = 100_000,
+    updates_content: str | None = None,
+    training_exit_code: int = 1,
+):
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    artifacts = tmp_path / "artifacts"
+    arm = campaign.FIM_ARMS[0] if arm is None else arm
+    plan = {
+        "schema": "q25-fim-training-plan-v1",
+        "configuration": {
+            "training": {
+                "max_input_tokens": 4_194_304,
+                "effective_batch": 16,
+                "sequence_length": 1024,
+            },
+            "budget": {
+                "new_artifact_bytes_cap": 12 * 1024**3,
+                "minimum_free_bytes": 2 * 1024**3,
+                "maximum_discarded_replay_input_tokens": 2_097_152,
+            },
+        },
+        "data": {"train": {"input_tokens": 1_776_736}},
+    }
+    plan_path = report / "fim_training_plan.json"
+    campaign.save(plan_path, plan)
+    campaign.save(
+        report / "campaign_budget.json",
+        {
+            "shared_limits": {
+                "maximum_additional_processed_training_input_tokens": 32_000_000,
+            }
+        },
+    )
+    campaign.save(
+        report / "job-1.json",
+        {"conservative_reserved_session_seconds": 14_400},
+    )
+    campaign.save(
+        report / "verified-output-1.json",
+        {"processed_campaign_input_tokens_conservative": 12_000_000},
+    )
+    plan_sha = campaign.digest(plan_path)
+    if attempt > 1:
+        campaign.save(
+            report / f"fim-job-{arm}-1.json",
+            {
+                "attempt": 1,
+                "arm": arm,
+                "plan_sha256": plan_sha,
+                "processed_arm_token_reservation": 6_291_456,
+            },
+        )
+        campaign.save(
+            report / f"fim-verified-{arm}-1.json",
+            {"processed_arm_input_tokens_conservative": 900_000},
+        )
+    campaign.save(
+        report / f"fim-job-{arm}-{attempt}.json",
+        {
+            "attempt": attempt,
+            "arm": arm,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": "d" * 64,
+            "commit": "c" * 40,
+            "reference": "owner/fim-kernel",
+            "own_discarded_tokens": prior_discarded_tokens,
+            "other_phase_tokens": 12_000_000,
+            "processed_arm_token_reservation": 6_291_456,
+        },
+    )
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(
+        campaign.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(free=16 * 1024**3),
+    )
+    fingerprint = "frozen-fim-fingerprint"
+    cursor = {
+        "training_input_tokens": committed_tokens,
+        "completed_updates": 64,
+        "supervised_target_tokens": committed_tokens // 10,
+    }
+    checkpoint_name = "resume-step-000064.pt"
+    checkpoint_bytes = b"synthetic complete FIM resume state"
+    content = updates_content
+    if content is None:
+        content = (
+            json.dumps({"cumulative_input_tokens": committed_tokens + logged_tail_tokens}) + "\n"
+        )
+    cli_calls: list[tuple[str, ...]] = []
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        call = tuple(args)
+        cli_calls.append(call)
+        if call[:3] == ("kaggle", "kernels", "status"):
+            return "ERROR"
+        if call[:3] != ("kaggle", "kernels", "output"):
+            raise AssertionError(f"unexpected command: {call[:3]}")
+        output = Path(call[call.index("-p") + 1])
+        pattern = call[call.index("--file-pattern") + 1]
+        training = output / "training"
+        training.mkdir(parents=True, exist_ok=True)
+        if pattern == r"\.(json|jsonl|log)$":
+            campaign.save(
+                training / "latest.json",
+                {"path": checkpoint_name, "fingerprint": fingerprint, "cursor": cursor},
+            )
+            campaign.save(
+                training / (checkpoint_name + ".complete.json"),
+                {
+                    "sha256": campaign.hashlib.sha256(checkpoint_bytes).hexdigest(),
+                    "fingerprint": fingerprint,
+                },
+            )
+            campaign.save(
+                training / "run_result.json",
+                {"status": "deadline_stop", "fingerprint": fingerprint, "cursor": cursor},
+            )
+            (training / "updates.jsonl").write_text(content, encoding="utf-8")
+            campaign.save(
+                output / "worker-status.json",
+                {"stages": [{"name": "training", "exit_code": training_exit_code}]},
+            )
+        else:
+            (training / checkpoint_name).write_bytes(checkpoint_bytes)
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    return plan, report, cli_calls
+
+
+def _fim_zero_work_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    identity_mismatch: str | None = None,
+    training_started: Any = False,
+    evidence: str | None = None,
+    missing_status: bool = False,
+):
+    report = tmp_path / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    arm = campaign.FIM_ARMS[0]
+    plan = {
+        "schema": "q25-fim-training-plan-v1",
+        "configuration": {
+            "training": {"effective_batch": 16, "sequence_length": 1024},
+            "budget": {
+                "new_artifact_bytes_cap": 12 * 1024**3,
+                "minimum_free_bytes": 2 * 1024**3,
+                "maximum_discarded_replay_input_tokens": 2_097_152,
+            },
+        },
+        "data": {"train": {"input_tokens": 1_776_736}},
+    }
+    plan_path = report / "fim_training_plan.json"
+    campaign.save(plan_path, plan)
+    campaign.save(
+        report / "campaign_budget.json",
+        {"shared_limits": {"maximum_additional_processed_training_input_tokens": 32_000_000}},
+    )
+    plan_sha = campaign.digest(plan_path)
+    input_sha = "d" * 64
+    commit = "c" * 40
+    job = {
+        "reference": "owner/zero-work-fim-kernel",
+        "arm": arm,
+        "attempt": 1,
+        "plan_sha256": plan_sha,
+        "input_manifest_sha256": input_sha,
+        "commit": commit,
+        "resume_source": None,
+        "resume_identity": None,
+        "own_discarded_tokens": 0,
+        "other_phase_tokens": 12_000_000,
+        "processed_arm_token_reservation": 6_291_456,
+    }
+    campaign.save(report / f"fim-job-{arm}-1.json", job)
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(
+        campaign.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(free=16 * 1024**3),
+    )
+    worker = {
+        "schema": "q25-fim-kaggle-worker-status-v1",
+        "state": "failed",
+        "commit": commit,
+        "attempt": 1,
+        "arm": arm,
+        "plan_sha256": plan_sha,
+        "input_manifest_sha256": input_sha,
+        "training_started": training_started,
+        "stages": [],
+    }
+    if identity_mismatch is not None:
+        worker[identity_mismatch] = "wrong-identity"
+    cli_calls: list[tuple[str, ...]] = []
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        call = tuple(args)
+        cli_calls.append(call)
+        if call[:3] == ("kaggle", "kernels", "status"):
+            return "ERROR"
+        if call[:3] != ("kaggle", "kernels", "output"):
+            raise AssertionError(f"unexpected command: {call[:3]}")
+        output = Path(call[call.index("-p") + 1])
+        if not missing_status:
+            if evidence in {"run_result", "updates"}:
+                nested_training = output / "q25_fim_r2/training"
+                nested_training.mkdir(parents=True)
+                path = nested_training / (
+                    "run_result.json" if evidence == "run_result" else "updates.jsonl"
+                )
+                path.write_text("{}\n", encoding="utf-8")
+            if evidence == "training_log":
+                log_dir = output / "q25_fim_r2/logs"
+                log_dir.mkdir(parents=True)
+                (log_dir / "training.log").write_text("synthetic\n", encoding="utf-8")
+            if evidence == "training_stage":
+                worker["stages"] = [{"name": "training", "exit_code": 1}]
+            campaign.save(output / "q25_fim_r2/worker-status.json", worker)
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    return plan, report, arm, cli_calls
+
+
+def test_collect_fim_accepts_only_identity_verified_zero_work_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, arm, cli_calls = _fim_zero_work_context(tmp_path, monkeypatch)
+
+    record = campaign.collect_fim(plan, arm, attempt=1)
+
+    assert record["no_training_executed"] is True
+    assert record["training_status"] == "no_training_executed"
+    assert record["checkpoint_verified"] is False
+    assert record["carried_checkpoint_verified"] is False
+    assert record["processed_arm_input_tokens_conservative"] == 0
+    assert json.loads((report / f"fim-verified-{arm}-1.json").read_text()) == record
+    assert len([call for call in cli_calls if call[:3] == ("kaggle", "kernels", "output")]) == 1
+
+
+@pytest.mark.parametrize(
+    "identity_mismatch", ["commit", "attempt", "arm", "plan_sha256", "input_manifest_sha256"]
+)
+def test_collect_fim_rejects_zero_work_status_with_wrong_allocation_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, identity_mismatch: str
+) -> None:
+    plan, report, arm, _calls = _fim_zero_work_context(
+        tmp_path, monkeypatch, identity_mismatch=identity_mismatch
+    )
+
+    with pytest.raises(ValueError, match="worker identity differs"):
+        campaign.collect_fim(plan, arm, attempt=1)
+
+    assert not (report / f"fim-verified-{arm}-1.json").exists()
+
+
+@pytest.mark.parametrize("training_started", [True, None, 0])
+def test_collect_fim_fails_closed_when_zero_work_status_is_not_explicit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, training_started: Any
+) -> None:
+    plan, report, arm, _calls = _fim_zero_work_context(
+        tmp_path, monkeypatch, training_started=training_started
+    )
+
+    with pytest.raises(ValueError, match="training state is unknown"):
+        campaign.collect_fim(plan, arm, attempt=1)
+
+    assert not (report / f"fim-verified-{arm}-1.json").exists()
+
+
+@pytest.mark.parametrize("evidence", ["run_result", "updates", "training_log", "training_stage"])
+def test_collect_fim_rejects_training_evidence_even_when_pointer_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, evidence: str
+) -> None:
+    plan, report, arm, _calls = _fim_zero_work_context(tmp_path, monkeypatch, evidence=evidence)
+
+    with pytest.raises(ValueError, match="training evidence|training artifacts|training log"):
+        campaign.collect_fim(plan, arm, attempt=1)
+
+    assert not (report / f"fim-verified-{arm}-1.json").exists()
+
+
+def test_collect_fim_rejects_missing_zero_work_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, arm, _calls = _fim_zero_work_context(tmp_path, monkeypatch, missing_status=True)
+
+    with pytest.raises(ValueError, match="exactly one worker status"):
+        campaign.collect_fim(plan, arm, attempt=1)
+
+    assert not (report / f"fim-verified-{arm}-1.json").exists()
+
+
+def _record_zero_work_retry(
+    report: Path,
+    arm: str,
+    *,
+    attempt: int,
+    reference: str,
+    plan_sha: str,
+    input_sha: str,
+    commit: str,
+    resume_source: str | None = None,
+    resume_identity: dict[str, Any] | None = None,
+    own_discarded: int = 0,
+) -> None:
+    campaign.save(
+        report / f"fim-job-{arm}-{attempt}.json",
+        {
+            "reference": reference,
+            "arm": arm,
+            "attempt": attempt,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_sha,
+            "commit": commit,
+            "authorization_lineage_reference": None,
+            "resume_source": resume_source,
+            "resume_identity": resume_identity,
+            "own_discarded_tokens": own_discarded,
+            "other_phase_tokens": 0,
+            "processed_arm_token_reservation": 6_291_456,
+            "conservative_reserved_session_seconds": 10_800,
+        },
+    )
+    cursor = None if resume_identity is None else resume_identity["cursor"]
+    committed = 0 if cursor is None else cursor["training_input_tokens"]
+    campaign.save(
+        report / f"fim-verified-{arm}-{attempt}.json",
+        {
+            "reference": reference,
+            "arm": arm,
+            "attempt": attempt,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_sha,
+            "commit": commit,
+            "checkpoint_verified": False,
+            "carried_checkpoint_verified": resume_identity is not None,
+            "carried_checkpoint_source": resume_source,
+            "carried_checkpoint_identity": resume_identity,
+            "no_training_executed": True,
+            "training_status": "no_training_executed",
+            "own_discarded_tokens_for_resume": own_discarded,
+            "processed_arm_input_tokens_conservative": committed + own_discarded,
+        },
+    )
+
+
+def test_submit_fim_zero_work_retry_authorizes_prior_but_restarts_from_baseline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, artifacts, _quota_calls, _cli_calls = _fim_submission_context(
+        tmp_path, monkeypatch
+    )
+    arm = campaign.FIM_ARMS[0]
+    plan_sha = campaign.digest(report / "fim_training_plan.json")
+    input_sha = campaign.digest(artifacts / "fim/input-bundle/input-manifest.json")
+    prior = "owner/failed-before-training"
+    commit = "c" * 40
+    _record_zero_work_retry(
+        report,
+        arm,
+        attempt=1,
+        reference=prior,
+        plan_sha=plan_sha,
+        input_sha=input_sha,
+        commit=commit,
+    )
+
+    job = campaign.submit_fim(plan, arm=arm, attempt=2, cpt_attempt=1, resume_source=prior)
+
+    metadata = json.loads((artifacts / f"fim/kernel-{arm}-2/kernel-metadata.json").read_text())
+    session_source = (artifacts / f"fim/kernel-{arm}-2/run.py").read_text()
+    assert job["authorization_lineage_reference"] == prior
+    assert job["resume_source"] is None
+    assert job["resume_identity"] is None
+    assert metadata["kernel_sources"] == []
+    assert "'authorization_lineage_reference': 'owner/failed-before-training'" in session_source
+    assert "'resume_source': None" in session_source
+
+
+def test_submit_fim_zero_work_retry_inherits_only_the_prior_verified_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, artifacts, _quota_calls, _cli_calls = _fim_submission_context(
+        tmp_path, monkeypatch
+    )
+    arm = campaign.FIM_ARMS[0]
+    plan_sha = campaign.digest(report / "fim_training_plan.json")
+    input_sha = campaign.digest(artifacts / "fim/input-bundle/input-manifest.json")
+    commit = "c" * 40
+    source = "owner/verified-checkpoint"
+    failed = "owner/failed-before-resume-training"
+    cursor = {"training_input_tokens": 500_000, "completed_updates": 32}
+    identity = {
+        "fingerprint": "frozen-fim-fingerprint",
+        "checkpoint_sha256": "e" * 64,
+        "cursor": cursor,
+    }
+    _record_zero_work_retry(
+        report,
+        arm,
+        attempt=1,
+        reference=source,
+        plan_sha=plan_sha,
+        input_sha=input_sha,
+        commit=commit,
+    )
+    campaign.save(
+        report / f"fim-verified-{arm}-1.json",
+        {
+            "reference": source,
+            "arm": arm,
+            "attempt": 1,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_sha,
+            "commit": commit,
+            "checkpoint_verified": True,
+            "training_status": "deadline_stop",
+            "fingerprint": identity["fingerprint"],
+            "checkpoint_sha256": identity["checkpoint_sha256"],
+            "cursor": cursor,
+            "own_discarded_tokens_for_resume": 65_536,
+            "processed_arm_input_tokens_conservative": 565_536,
+        },
+    )
+    _record_zero_work_retry(
+        report,
+        arm,
+        attempt=2,
+        reference=failed,
+        plan_sha=plan_sha,
+        input_sha=input_sha,
+        commit=commit,
+        resume_source=source,
+        resume_identity=identity,
+        own_discarded=65_536,
+    )
+
+    job = campaign.submit_fim(plan, arm=arm, attempt=3, cpt_attempt=1, resume_source=failed)
+
+    metadata = json.loads((artifacts / f"fim/kernel-{arm}-3/kernel-metadata.json").read_text())
+    assert job["authorization_lineage_reference"] == failed
+    assert job["resume_source"] == source
+    assert job["resume_identity"] == identity
+    assert job["own_discarded_tokens"] == 65_536
+    assert metadata["kernel_sources"] == [source]
+
+
+def test_submit_fim_resumes_checkpoint_from_its_normal_collection_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, artifacts, _quota_calls, _submission_calls = _fim_submission_context(
+        tmp_path, monkeypatch
+    )
+    arm = campaign.FIM_ARMS[0]
+    plan_path = report / "fim_training_plan.json"
+    campaign.save(plan_path, plan)
+    manifest_path = artifacts / "fim/input-bundle/input-manifest.json"
+    prior = "owner/collected-partial-fim"
+    commit = "c" * 40
+    job = {
+        "reference": prior,
+        "arm": arm,
+        "attempt": 1,
+        "plan_sha256": campaign.digest(plan_path),
+        "input_manifest_sha256": campaign.digest(manifest_path),
+        "commit": commit,
+        "resume_source": None,
+        "resume_identity": None,
+        "own_discarded_tokens": 0,
+        "other_phase_tokens": 0,
+        "processed_arm_token_reservation": 6_291_456,
+        "conservative_reserved_session_seconds": 10_800,
+    }
+    campaign.save(report / f"fim-job-{arm}-1.json", job)
+    fingerprint = "frozen-fim-fingerprint"
+    cursor = {
+        "training_input_tokens": 500_000,
+        "completed_updates": 32,
+        "supervised_target_tokens": 50_000,
+    }
+    checkpoint_name = "resume-step-000032.pt"
+    checkpoint_bytes = b"synthetic verified FIM checkpoint"
+    original_cli = campaign.cli
+
+    def collect_cli(*args: str, timeout: int = 120) -> str:
+        call = tuple(args)
+        if call[:3] == ("kaggle", "kernels", "status"):
+            return "ERROR"
+        if call[:3] != ("kaggle", "kernels", "output"):
+            raise AssertionError(f"unexpected collection command: {call[:3]}")
+        output = Path(call[call.index("-p") + 1])
+        pattern = call[call.index("--file-pattern") + 1]
+        training = output / "training"
+        training.mkdir(parents=True, exist_ok=True)
+        if pattern == r"\.(json|jsonl|log)$":
+            campaign.save(
+                training / "latest.json",
+                {"path": checkpoint_name, "fingerprint": fingerprint, "cursor": cursor},
+            )
+            campaign.save(
+                training / (checkpoint_name + ".complete.json"),
+                {
+                    "sha256": campaign.hashlib.sha256(checkpoint_bytes).hexdigest(),
+                    "fingerprint": fingerprint,
+                },
+            )
+            campaign.save(
+                training / "run_result.json",
+                {"status": "deadline_stop", "fingerprint": fingerprint, "cursor": cursor},
+            )
+            (training / "updates.jsonl").write_text(
+                json.dumps({"cumulative_input_tokens": 532_768}) + "\n", encoding="utf-8"
+            )
+            campaign.save(
+                output / "worker-status.json",
+                {"stages": [{"name": "training", "exit_code": 124}]},
+            )
+        else:
+            (training / checkpoint_name).write_bytes(checkpoint_bytes)
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", collect_cli)
+    monkeypatch.setattr(
+        campaign.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(free=16 * 1024**3),
+    )
+    collected = campaign.collect_fim(plan, arm, attempt=1)
+    assert collected["checkpoint_verified"] is True
+    assert collected["training_status"] == "deadline_stop"
+    assert collected["plan_sha256"] == job["plan_sha256"]
+    assert collected["input_manifest_sha256"] == job["input_manifest_sha256"]
+    assert collected["commit"] == commit
+
+    monkeypatch.setattr(campaign, "cli", original_cli)
+    resumed = campaign.submit_fim(plan, arm=arm, attempt=2, cpt_attempt=1, resume_source=prior)
+
+    assert resumed["authorization_lineage_reference"] == prior
+    assert resumed["resume_source"] == prior
+    assert resumed["resume_identity"] == {
+        "fingerprint": fingerprint,
+        "checkpoint_sha256": campaign.hashlib.sha256(checkpoint_bytes).hexdigest(),
+        "cursor": cursor,
+    }
+    metadata = json.loads((artifacts / f"fim/kernel-{arm}-2/kernel-metadata.json").read_text())
+    assert metadata["kernel_sources"] == [prior]
+
+
+def _fim_bundle_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, artifact_cap: int
+) -> tuple[dict[str, Any], Path]:
+    root = tmp_path / "repo"
+    report = root / "reports/research/q25_code_cpt_r2"
+    artifacts = tmp_path / "artifacts"
+    corpus = artifacts / "fim/corpus-r3"
+    report.mkdir(parents=True)
+    corpus.mkdir(parents=True)
+    (root / "data/benchmarks").mkdir(parents=True)
+    sources = {
+        "train.jsonl": corpus / "train.jsonl",
+        "development.jsonl": corpus / "development.jsonl",
+        "corpus_metadata.json": corpus / "corpus_metadata.json",
+        "causal200.jsonl": root / "data/benchmarks/code_completion_v2.jsonl",
+    }
+    for name, path in sources.items():
+        path.write_text(f"synthetic {name}\n", encoding="utf-8")
+    line_source = root / "data/preserved/causal_line_v1-r3.jsonl"
+    line_source.parent.mkdir(parents=True)
+    line_source.write_text("synthetic preserved line fixture\n", encoding="utf-8")
+    plan: dict[str, Any] = {
+        "schema": "q25-fim-training-plan-v1",
+        "gpu_execution_authorized": True,
+        "configuration": {
+            "budget": {
+                "new_artifact_bytes_cap": artifact_cap,
+                "minimum_free_bytes": 1,
+            }
+        },
+        "data": {
+            "train": {"sha256": campaign.digest(sources["train.jsonl"])},
+            "development": {"sha256": campaign.digest(sources["development.jsonl"])},
+            "corpus_metadata_sha256": campaign.digest(sources["corpus_metadata.json"]),
+        },
+        "evaluation": {
+            "fixtures": {
+                "causal": {"sha256": campaign.digest(sources["causal200.jsonl"])},
+                "line": {"sha256": campaign.digest(line_source)},
+            }
+        },
+    }
+    campaign.save(report / "fim_training_plan.json", plan)
+    monkeypatch.setattr(campaign, "ROOT", root)
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(campaign, "FIM_LINE_SOURCE", line_source)
+    monkeypatch.setattr(
+        campaign.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(free=64 * 1024**3),
+    )
+    return plan, artifacts
+
+
+def test_build_fim_bundle_rejects_unapproved_staging_entry_before_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, artifacts = _fim_bundle_context(tmp_path, monkeypatch, artifact_cap=12 * 1024**3)
+    output = artifacts / "fim/input-bundle"
+    output.mkdir(parents=True)
+    (output / "unapproved.txt").write_text("synthetic sentinel\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unapproved file"):
+        campaign.build_fim_bundle(plan)
+
+    assert sorted(path.name for path in output.iterdir()) == ["unapproved.txt"]
+
+
+def test_build_fim_bundle_checks_projected_storage_before_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, artifacts = _fim_bundle_context(tmp_path, monkeypatch, artifact_cap=1)
+    output = artifacts / "fim/input-bundle"
+
+    with pytest.raises(OSError, match="staging would exhaust storage headroom"):
+        campaign.build_fim_bundle(plan)
+
+    assert not list(output.iterdir())
+
+
+def test_collect_fim_accounts_for_cumulative_tail_once_across_resume_attempts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    committed = 1_000_000
+    logged_tail = 32_768
+    prior_discarded = 100_000
+    plan, report, cli_calls = _fim_collect_context(
+        tmp_path,
+        monkeypatch,
+        committed_tokens=committed,
+        logged_tail_tokens=logged_tail,
+        prior_discarded_tokens=prior_discarded,
+    )
+    arm = campaign.FIM_ARMS[0]
+
+    record = campaign.collect_fim(plan, arm, attempt=2)
+
+    own_discarded = prior_discarded + logged_tail + 16 * 1024
+    processed = committed + own_discarded
+    assert record["discarded_logged_tail_tokens"] == logged_tail
+    assert record["unlogged_inflight_input_token_reservation"] == 16 * 1024
+    assert record["own_discarded_tokens_for_resume"] == own_discarded
+    assert record["processed_arm_input_tokens_conservative"] == processed
+    assert campaign.shared_token_ledger() == {"cpt": 12_000_000, arm: processed}
+    assert json.loads((report / f"fim-verified-{arm}-2.json").read_text()) == record
+    assert [call[2] for call in cli_calls if call[:3] == ("kaggle", "kernels", "output")] == [
+        "output",
+        "output",
+    ]
+
+
+def test_collect_fim_rejects_malformed_update_log_without_committing_verification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arm = campaign.FIM_ARMS[0]
+    plan, report, _cli_calls = _fim_collect_context(
+        tmp_path,
+        monkeypatch,
+        attempt=1,
+        updates_content='{"cumulative_input_tokens":1000000}\n{malformed}\n',
+    )
+
+    with pytest.raises(ValueError, match="FIM update log contains a malformed record"):
+        campaign.collect_fim(plan, arm, attempt=1)
+
+    assert not (report / f"fim-verified-{arm}-1.json").exists()

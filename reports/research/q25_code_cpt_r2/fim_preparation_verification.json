@@ -1,0 +1,70 @@
+{
+  "audit": {
+    "benchmark_repository_exclusions": 172,
+    "eos_and_psm_marker_order": true,
+    "license_allowlist_verified": true,
+    "sealed_data_read": false,
+    "source_region_roundtrip": true,
+    "token_limits_and_no_label_truncation": true,
+    "train_development_source_and_alias_disjoint": true,
+    "unicode_byte_boundaries": true
+  },
+  "corpus_directory": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/corpus-r3",
+  "corpus_sha256": "6523d1b11b51721783c97b0907dc0428fdbfb39ff070d0bfbc46a9e8dade5f3c",
+  "cpu_only": true,
+  "development_shortfall": "All120 eligible reserved source documents yielded240 states; no duplication to reach512.",
+  "files": {
+    "development.jsonl": {
+      "bytes": 627395,
+      "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+    },
+    "train.jsonl": {
+      "bytes": 11595941,
+      "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690"
+    }
+  },
+  "metadata_sha256": "1c4ef4b28f92dd29b5eaa41c1dfe8c36638e5f73a68304a9a36d3c13467f73e8",
+  "post_preparation_source_change": {
+    "reason": "Validate/narrow source path string and annotate fixed three marker IDs for mypy; corpus not regenerated; original producer hash retained.",
+    "source_sha256": "e3154d7d10c0a8879afdaa722ab071abf67569d47e8f948c90728a5174e941e0"
+  },
+  "preparation_plan_sha256": "460770a6bab77eeecd7b31eb2c8da278c5c29cea98cc872d8fbd36b22a6dc6de",
+  "producer_source_sha256_at_generation": "b56a3b4f5378b00f80aa911be1aec9cc58cd1030452aa47fb172095be048db0b",
+  "rejected_candidates": {
+    "invalid_or_overlength_state": 14,
+    "token_roundtrip_mismatch": 4
+  },
+  "schema": "q25-fim-preparation-verification-v1",
+  "serving_construction_verification": {
+    "command": "evaluate_q25_fim.development_case on every prepared row with pinned local AutoTokenizer",
+    "exact_prompt_target_hashes": true,
+    "exact_prompt_token_ids": true,
+    "rows": {
+      "development": 240,
+      "train": 4096
+    },
+    "weights_loaded": false
+  },
+  "splits": {
+    "development": {
+      "distinct_repository_identities": 119,
+      "distinct_source_documents": 120,
+      "input_tokens": 91434,
+      "max_variants_per_source": 2,
+      "states": 240,
+      "supervised_target_tokens_including_eos": 1999
+    },
+    "train": {
+      "distinct_repository_identities": 3316,
+      "distinct_source_documents": 3351,
+      "input_tokens": 1776908,
+      "max_variants_per_source": 2,
+      "states": 4096,
+      "supervised_target_tokens_including_eos": 34405
+    }
+  },
+  "status": "PASS",
+  "task": "Synthetic source completion, not genuine user next-edit intent",
+  "training_completed": false,
+  "weights_loaded": false
+}

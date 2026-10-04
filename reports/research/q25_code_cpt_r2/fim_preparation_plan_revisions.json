@@ -1,0 +1,16 @@
+[
+  {
+    "changed_before_model_results": true,
+    "cpt_plan_unchanged": true,
+    "new_sha256": "467acbd3cc619ac2d683a4c8d3f9b1b0e2875c95123fb5af8ffff4a1a7b7b7ea",
+    "previous_sha256": "102073816a17342ae3097dd846aea8ac5ae80fe94b4e10a0788d776f04299b9e",
+    "reason": "Source inventory identified that strict training-language proportions would discard most reserved development files and limit dev to96states. Retain all eligible dev feeder documents, at most2states/doc and512total. Training weights remain fixed. No FIM preparation or model comparison outputs existed before this revision."
+  },
+  {
+    "changed_before_model_results": true,
+    "cpt_plan_unchanged": true,
+    "new_sha256": "460770a6bab77eeecd7b31eb2c8da278c5c29cea98cc872d8fbd36b22a6dc6de",
+    "previous_sha256": "467acbd3cc619ac2d683a4c8d3f9b1b0e2875c95123fb5af8ffff4a1a7b7b7ea",
+    "reason": "CPU serving parity found two training prompts whose decomposed Unicode was normalized by the pinned tokenizer NFC normalizer. Reject any prompt/target that fails exact encoded-string roundtrip before selection. No FIM model outputs or GPU allocations existed. Preserve r2 prepared files as historical CPU artifacts. CPT plan, raw CPT data, benchmark fixtures and targets remain unchanged."
+  }
+]

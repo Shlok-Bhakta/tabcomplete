@@ -1,0 +1,61 @@
+{
+  "active_cpt_trainer_source_unchanged_from": "fce293d0074d38817810434d74051da243d30e2d",
+  "collector": {
+    "bun_tests_passed": 59,
+    "initial_command_failure": "Gateway CLI flags omitted collector tsconfig strict settings. Existing collector package typecheck passed without source changes.",
+    "typecheck": "PASS",
+    "typecheck_command": "bun run typecheck"
+  },
+  "focused_followup": {
+    "controller_tests": 78,
+    "cpu_torch": "2.14.0+cpu",
+    "fim_evaluator_tests": 13,
+    "fim_export_tests": 5,
+    "fim_preparation_tests": 4,
+    "fim_trainer_tests": 17,
+    "fim_worker_tests": 10,
+    "initializer_upload_tests": 3,
+    "local_cuda": false
+  },
+  "gateway": {
+    "bun_tests_passed": 16,
+    "typecheck": "PASS",
+    "typecheck_command": "bunx tsc --noEmit --module preserve --target esnext --moduleResolution bundler --allowJs --skipLibCheck src/*.ts tests/*.ts"
+  },
+  "gpu_training_quality": "not established by repository tests",
+  "observed_at": "2026-10-04T02:29:47.576693+00:00",
+  "previous_full_gates": [
+    {
+      "command": "UV_PROJECT_ENVIRONMENT=/home/crabcake/Projects/tabcomplete-product-r2/.venv PYTHONPATH=src:scripts:/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages uv run --no-sync pytest -q",
+      "log_sha256": "da3806ef0960bbfa8d83265c74d86f75bd27a50c212ee92b8f38e2c3cd207b87",
+      "passed": 923,
+      "seconds": 89.68,
+      "warnings": 2
+    },
+    {
+      "command": "UV_PROJECT_ENVIRONMENT=/home/crabcake/Projects/tabcomplete-product-r2/.venv PYTHONPATH=src:scripts:/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages uv run --no-sync pytest -q",
+      "log_sha256": "199743ec41032a990209f903408f1a48f967e6f0885f29f218426df28be27a68",
+      "passed": 946,
+      "seconds": 89.69,
+      "warnings": 2
+    }
+  ],
+  "python": {
+    "command": "UV_PROJECT_ENVIRONMENT=/home/crabcake/Projects/tabcomplete-product-r2/.venv PYTHONPATH=src:scripts:/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages uv run --no-sync pytest -q",
+    "log_sha256": "e9ede0d7c600a05a3da0c521a1a5c9f63e275dfb4540b4ad48f2a65893f374e0",
+    "passed": 966,
+    "seconds": 87.88,
+    "warnings": 2
+  },
+  "ruff": {
+    "command": "uv run --no-sync ruff check .",
+    "status": "PASS"
+  },
+  "schema": "q25-cpt-fim-repository-verification-v1",
+  "scope": "Final full Python suite after FIM worker, upload/export, staging allowlist and zero-training retry checks. Final mypy type-only local-variable fix preserves behavior.",
+  "type_checks": {
+    "command": "uv run --no-sync mypy src scripts/run_q25_code_cpt.py scripts/evaluate_q25_fim.py scripts/prepare_q25_fim.py scripts/observability.py kaggle/q25_code_cpt_r2/run_fim.py",
+    "source_files": 90,
+    "status": "PASS"
+  }
+}

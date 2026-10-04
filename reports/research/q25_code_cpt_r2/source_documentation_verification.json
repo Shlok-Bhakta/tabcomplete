@@ -1,0 +1,19 @@
+{
+  "current_hub_revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+  "dataset_api_source": "https://huggingface.co/api/datasets/bigcode/the-stack-dedup",
+  "dataset_card_source": "https://huggingface.co/datasets/bigcode/the-stack-dedup",
+  "dataset_id": "bigcode/the-stack-dedup",
+  "interpretation": "Small raw-code pass is an ablation; extensive original code pretraining does not establish editor intent or guarantee improvement.",
+  "new_model_or_source_weights_downloaded": false,
+  "observed_at": "2026-10-04T02:05:45.318250+00:00",
+  "published_sizes": {
+    "v1.0_near_dedup": "1.5 TB",
+    "v1.1_near_dedup": "3 TB",
+    "v1.2_near_dedup": "2.7 TB"
+  },
+  "qwen_family_pretraining_tokens_reported": 5500000000000,
+  "qwen_model_card": "https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B",
+  "reused_revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+  "reused_revision_matches_current": true,
+  "schema": "q25-source-documentation-check-v1"
+}

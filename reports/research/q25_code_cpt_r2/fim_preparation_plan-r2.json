@@ -1,0 +1,139 @@
+{
+  "budget": {
+    "automatic_personalization_enabled": false,
+    "cpu_preparation_only": true,
+    "final_training_plan_required_before_gpu": true,
+    "minimum_free_bytes": 2147483648,
+    "new_artifact_bytes_cap": 12884901888,
+    "paid_compute": false,
+    "quota_renewal": "2026-10-10T00:00:00",
+    "total_account_gpu_hours_cap_including_cpt": 40,
+    "total_campaign_session_wall_seconds_cap_including_cpt": 72000
+  },
+  "data": {
+    "development_allocation": "all_eligible_manifest_documents_no_language_downsampling",
+    "development_states_max": 512,
+    "encoding": "Own tokenizer, no auto-special tokens; target plus tokenizer EOS, prompt masked, no label truncation. Prefix/suffix token slices may only remove remote context and must decode on UTF-8 boundaries.",
+    "hole_modes": [
+      "whole_logical_line",
+      "remaining_logical_line_after_utf8_cursor"
+    ],
+    "language_weights": {
+      "go": 0.15,
+      "python": 0.4,
+      "rust": 0.25,
+      "typescript": 0.2
+    },
+    "markers": [
+      "<|fim_prefix|>",
+      "<|fim_suffix|>",
+      "<|fim_middle|>"
+    ],
+    "max_total_tokens": 1024,
+    "mode_assignment": "hash of content SHA and variant index modulo two; enumerate two variants per document, retain only distinct valid states",
+    "prefix_tokens_max": 640,
+    "prompt_format": "PSM through existing tinycomplete.data.fim.format_psm, no chat template",
+    "seed": 314159,
+    "skip_empty_or_whitespace_only_targets": true,
+    "skip_overlength_targets": true,
+    "source_order": "sha256(seed, split, content SHA, variant) sorted; deterministic per-language allocation with no oversampling",
+    "suffix_tokens_max": 256,
+    "target_tokens_including_eos_max": 96,
+    "task": "synthetic one-line FIM completion; not observed next-edit intent",
+    "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "train_states_max": 4096,
+    "training_allocation": "frozen language weights, deterministic quotas, no oversampling",
+    "validation": "Exact source hash, unchanged region round trip, target application reconstructs full source; source-group split/dedup; no sealed fixtures read.",
+    "variants_per_document_max": 2
+  },
+  "frozen_at": "2026-10-04T00:39:19.141109+00:00",
+  "gpu_allocation_authorized_by_this_plan": false,
+  "model": {
+    "id": "Qwen/Qwen2.5-Coder-0.5B",
+    "initializer": "untouched_pretrained",
+    "license": "Apache-2.0",
+    "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "weight_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80"
+  },
+  "parent_cpt_plan_sha256": "1aaff2ee4f4e0adeeafb87e616f99e657f7ff0be4fa438f40ecbb1150aeed1f9",
+  "plan_revision": 2,
+  "planned_evaluation": {
+    "automatic_editor_promotion": false,
+    "decoding": "greedy, actual EOS or registered first-newline line boundary, no parser repair or trim",
+    "development": "reserved source-group-disjoint generated FIM states; same ordered cases for both arms; strict exact target, termination, syntax, output length, paired source-group uncertainty",
+    "existing_causal_suite": {
+      "bytes": 290914,
+      "sha256": "ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4"
+    },
+    "existing_line_suite": {
+      "bytes": 1064851,
+      "sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead"
+    },
+    "general_next_edit_quality_claim": false,
+    "max_output_tokens": 96
+  },
+  "planned_training": {
+    "arms": [
+      "untouched_q25_to_fim",
+      "completed_cpt_q25_to_fim"
+    ],
+    "checkpoint_every_updates": 64,
+    "compute": "fp16",
+    "cosine_floor_fraction": 0.1,
+    "effective_batch": 16,
+    "epochs": 1,
+    "gradient_checkpointing": true,
+    "gradient_clip": 1.0,
+    "initial_loss_scale": 128,
+    "learning_rate": 1e-05,
+    "master_weights": "fp32",
+    "maximum_input_tokens_per_arm": 4194304,
+    "microbatch_examples": 1,
+    "objective": "example_mean_response_only_FIM_target_and_EOS",
+    "optimizer": "AdamW8bit",
+    "same_examples_and_order": true,
+    "seed": 314159,
+    "warmup_fraction": 0.03,
+    "weight_decay": 0.01
+  },
+  "schema": "q25-fim-cpu-preparation-plan-v1",
+  "sources": {
+    "benchmark_exclusion_sha256": "afa1501dceb8eda249a0c7c78c6c70a8f4c1d048a036fd2b1f7b7da7747c4d70",
+    "dataset": "bigcode/the-stack-dedup",
+    "development_manifest": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/corpus/development_manifest.jsonl",
+      "sha256": "a345581c23fdf556df145a9ac90b5c61b7ea369cedaaa6ca930403cc6ab4a07c"
+    },
+    "pool": {
+      "go": {
+        "bytes": 75753945,
+        "sha256": "1dbca27bf3cf40513e19aa88180955f40e79ed51f72676d3c20605b360310ba2",
+        "sidecar_sha256": "dbc1fc05a6fe5dbf51cad0c02f6c93539d8bcc1732b31413397d009d134cecc3"
+      },
+      "python": {
+        "bytes": 31289717,
+        "sha256": "991ff59e26bba6191abd2d3017b0a7aaa6e089882d9cbb92c87563da846e0c37",
+        "sidecar_sha256": "3880e7e65f2a5eab932790a11556f9cc996fda256a7f64bed4fd533da2a22c85"
+      },
+      "rust": {
+        "bytes": 66121278,
+        "sha256": "676cc14204029bff85a9c692e52ca7dc99504fc0389472cd879e5ebb9c388735",
+        "sidecar_sha256": "cd032256e19c213f9486db8a91dfe0ff14456191821c9d0a5e2bdcbed2d0a183"
+      },
+      "typescript": {
+        "bytes": 27071751,
+        "sha256": "f54d113d17c40d0997da6567e95ac18204a3ac7c443f3b390a0f28d45a63a16a",
+        "sidecar_sha256": "ace70e4b7abea5b73ff73cf5f6340d9928f9743cd44ad836359596bc1a9214d8"
+      }
+    },
+    "raw_pool": "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/pool",
+    "revision": "17cad72c886a2858e08d4c349a00d6466f54df63",
+    "split_membership": "Only exact clean feeder documents in frozen CPT train/development manifests; related variants retain that split.",
+    "train_manifest": {
+      "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/corpus/train_manifest.jsonl",
+      "sha256": "5ad7e2260424624a59b6c6be6b4aaac125ef4d59889a54fca15522db80eca0f3"
+    }
+  }
+}

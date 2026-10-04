@@ -1,0 +1,62 @@
+{
+  "audit": {
+    "benchmark_repository_exclusions": 172,
+    "eos_and_psm_marker_order": true,
+    "license_allowlist_verified": true,
+    "sealed_data_read": false,
+    "source_region_roundtrip": true,
+    "token_limits_and_no_label_truncation": true,
+    "train_development_source_and_alias_disjoint": true,
+    "unicode_byte_boundaries": true
+  },
+  "corpus_sha256": "8d98919bfaac0070365414b19d25f42b86a9c6682a9d6cf04a245ca3ca9a460d",
+  "cpu_only": true,
+  "development_shortfall": "All120 eligible reserved source documents yielded240 states; no duplication to reach512.",
+  "files": {
+    "development.jsonl": {
+      "bytes": 627395,
+      "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+    },
+    "train.jsonl": {
+      "bytes": 11596220,
+      "sha256": "ba31143080136380c36fd51ab873f9e934ac7b525882960aff3b20162b5bda3a"
+    }
+  },
+  "metadata_sha256": "7e9ebe1b3e2825657a6b5360cd612b10c797673274a3c5481e2b6dfd7bf3aa3a",
+  "preparation_plan_sha256": "467acbd3cc619ac2d683a4c8d3f9b1b0e2875c95123fb5af8ffff4a1a7b7b7ea",
+  "schema": "q25-fim-preparation-verification-v1",
+  "serving_construction_verification": {
+    "affected_training_row_ids": [
+      2043,
+      3320
+    ],
+    "development_failures": 0,
+    "development_rows_verified": 240,
+    "failure": "Pinned tokenizer NFC normalizer changed two training prompt strings on decode",
+    "model_weights_loaded": false,
+    "status": "FAILED",
+    "targets_unchanged": true
+  },
+  "splits": {
+    "development": {
+      "distinct_repository_identities": 119,
+      "distinct_source_documents": 120,
+      "input_tokens": 91434,
+      "max_variants_per_source": 2,
+      "states": 240,
+      "supervised_target_tokens_including_eos": 1999
+    },
+    "train": {
+      "distinct_repository_identities": 3316,
+      "distinct_source_documents": 3351,
+      "input_tokens": 1776736,
+      "max_variants_per_source": 2,
+      "states": 4096,
+      "supervised_target_tokens_including_eos": 34404
+    }
+  },
+  "status": "REVISED_BEFORE_MODEL_OUTPUTS",
+  "task": "Synthetic source completion, not genuine user next-edit intent",
+  "training_completed": false,
+  "weights_loaded": false
+}
