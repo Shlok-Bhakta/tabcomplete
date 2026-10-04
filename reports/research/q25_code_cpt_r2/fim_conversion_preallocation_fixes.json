@@ -22,6 +22,12 @@
       "issue": "kernels_push uploads only code_file text, not adjacent source files",
       "source_commit": "9408ca2",
       "status": "fixed and independently tested before allocation"
+    },
+    {
+      "evidence": "Preallocation source branch guard stopped execute-conversion before any job receipt",
+      "fix": "Require integrated research/q25-code-cpt-r2 and exact pushed HEAD",
+      "issue": "Controller retained isolated orchestration branch after cherry-pick",
+      "status": "fixed before allocation"
     }
   ],
   "local_staging_files": 6,
@@ -34,6 +40,8 @@
     "collector_analysis_typecheck": "passed",
     "controller_and_conversion_tests": 163,
     "failures": 0,
+    "integrated_branch_log_sha256": "600d8c0c7d5980e6187aee5f14660c0f10864942e0aefc7a1a096621384a03a5",
+    "integrated_branch_tests": 163,
     "log_sha256": "a86aa89ea387520f0e2bc4665c02153ce40dd9aad63f1f7f02611801b431d246",
     "nested_mount_execution_test": true,
     "single_file_execution_test": true
