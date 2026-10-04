@@ -1,6 +1,10 @@
 mod context;
 mod embedded;
 mod syntax_guard;
+// The FIM adapter remains detached from runtime profiles until an evaluated
+// checkpoint supplies a frozen model digest and tokenizer inventory.
+#[allow(dead_code)]
+mod fim_v1;
 use anyhow::{Result, ensure};
 use axum::{
     Json, Router,
