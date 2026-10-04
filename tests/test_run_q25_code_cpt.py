@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from datetime import UTC, timedelta
@@ -2805,3 +2806,538 @@ def test_settlement_cli_does_not_freeze_or_allocate(
     campaign.main()
 
     assert json.loads(capsys.readouterr().out) == {"ledger": "local-ledger", "settled_count": 0}
+
+
+def _fim_conversion_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path, Path, dict[str, Any], dict[str, Path]]:
+    repository = tmp_path / "repo"
+    report = repository / "reports/research/q25_code_cpt_r2"
+    report.mkdir(parents=True)
+    artifacts = tmp_path / "artifacts"
+    model = tmp_path / "qwen"
+    model.mkdir()
+    original_config = model / "config.json"
+    original_tokenizer = model / "tokenizer.json"
+    original_weights = model / "model.safetensors"
+    original_config.write_text('{"model_type":"qwen2"}\n')
+    original_tokenizer.write_text('{"version":"1.0"}\n')
+    original_weights.write_bytes(b"original weights fixture")
+
+    def file_record(path: Path) -> dict[str, Any]:
+        return {"bytes": path.stat().st_size, "sha256": campaign.digest(path)}
+
+    arm = "untouched_q25_to_fim"
+    attempt = 1
+    commit = "a" * 40
+    fingerprint = "b" * 64
+    input_manifest_sha = "c" * 64
+    cursor = {
+        "attempted_updates": 256,
+        "completed_updates": 256,
+        "skipped_updates": 0,
+        "training_input_tokens": 1_776_908,
+        "supervised_target_tokens": 100_000,
+        "next_example_index": 4096,
+        "epoch": 1,
+    }
+    training_plan = {
+        "schema": "q25-fim-training-plan-v1",
+        "configuration": {"training": {"effective_batch": 16}},
+        "data": {
+            "train": {
+                "row_count": 4096,
+                "input_tokens": cursor["training_input_tokens"],
+                "target_tokens": cursor["supervised_target_tokens"],
+            }
+        },
+        "initializers": {
+            "untouched_q25_to_fim": {
+                "kind": "untouched_pretrained",
+                "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+                "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+                "files": {
+                    "config.json": file_record(original_config),
+                    "tokenizer.json": file_record(original_tokenizer),
+                    "model.safetensors": file_record(original_weights),
+                },
+            },
+            "completed_cpt_q25_to_fim": {
+                "kind": "completed_cpt_export",
+                "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+                "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+                "files": {},
+                "artifact_manifest_sha256": "d" * 64,
+                "fingerprint": "e" * 64,
+                "training_cursor": {"completed_updates": 481},
+            },
+        },
+    }
+    plan_path = report / "fim_training_plan.json"
+    campaign.save(plan_path, training_plan)
+    plan_sha = campaign.digest(plan_path)
+    campaign.save(report / "fim_quality_comparison.json", {"paired": "synthetic"})
+    quality_sha = campaign.digest(report / "fim_quality_comparison.json")
+
+    output_root = artifacts / f"fim/output-{arm}-{attempt}"
+    run_root = output_root / "q25_fim_r2"
+    export = output_root / campaign.CONVERSION_EXPORT_DIRECTORY
+    export.mkdir(parents=True)
+    export_files: dict[str, dict[str, Any]] = {}
+    for name, content in {
+        "config.json": b'{"model_type":"qwen2"}\n',
+        "model.safetensors": b"selected FIM model fixture",
+        "tokenizer.json": b'{"version":"1.0"}\n',
+    }.items():
+        path = export / name
+        path.write_bytes(content)
+        export_files[name] = file_record(path)
+        if name == "model.safetensors":
+            path.unlink()
+    manifest = {
+        "schema": "q25-fim-inference-f16-v1",
+        "arm": arm,
+        "fingerprint": fingerprint,
+        "training_cursor": cursor,
+        "files": export_files,
+    }
+    manifest_path = export / "artifact_manifest.json"
+    campaign.save(manifest_path, manifest)
+    manifest_sha = campaign.digest(manifest_path)
+
+    selection_path = report / "fim_conversion/selection.json"
+    selection_path.parent.mkdir(parents=True)
+    campaign.save(
+        selection_path,
+        {
+            "schema": "q25-fim-conversion-selection-v1",
+            "status": "selected_complete",
+            "training_plan_sha256": plan_sha,
+            "selected_arm": arm,
+            "source_kernel_reference": "owner/selected-fim-kernel",
+            "paired_quality_report_sha256": quality_sha,
+            "source_export": {
+                "directory": campaign.CONVERSION_EXPORT_DIRECTORY,
+                "artifact_manifest_sha256": manifest_sha,
+                "fingerprint": fingerprint,
+                "training_cursor": cursor,
+                "files": export_files,
+            },
+            "tokenizer": {
+                "model_id": "Qwen/Qwen2.5-Coder-0.5B",
+                "revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+                "sha256": campaign.digest(original_tokenizer),
+                "eos_token_id": 151643,
+                "fim_marker_ids": {
+                    "fim_prefix": 151659,
+                    "fim_middle": 151660,
+                    "fim_suffix": 151661,
+                },
+            },
+            "model": {
+                "architecture": "Qwen2ForCausalLM",
+                "model_type": "qwen2",
+                "logical_parameter_count": 494_032_768,
+                "rope_parameters": {"rope_type": "default", "rope_theta": 1_000_000.0},
+            },
+        },
+    )
+
+    job_path = report / f"fim-job-{arm}-{attempt}.json"
+    campaign.save(
+        job_path,
+        {
+            "reference": "owner/selected-fim-kernel",
+            "arm": arm,
+            "attempt": attempt,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_manifest_sha,
+            "commit": commit,
+        },
+    )
+    verified_path = report / f"fim-verified-{arm}-{attempt}.json"
+    checkpoint = output_root / "q25_fim_r2/training/resume-step-256.pt"
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_bytes(b"full cursor checkpoint fixture")
+    checkpoint_sha = campaign.digest(checkpoint)
+    campaign.save(
+        verified_path,
+        {
+            "reference": "owner/selected-fim-kernel",
+            "arm": arm,
+            "attempt": attempt,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_manifest_sha,
+            "commit": commit,
+            "training_status": "complete",
+            "checkpoint_verified": True,
+            "checkpoint_sha256": checkpoint_sha,
+            "fingerprint": fingerprint,
+            "cursor": cursor,
+        },
+    )
+    training_dir = output_root / "q25_fim_r2/training"
+    campaign.save(
+        training_dir / "latest.json",
+        {"path": checkpoint.name, "fingerprint": fingerprint, "cursor": cursor},
+    )
+    campaign.save(
+        training_dir / f"{checkpoint.name}.complete.json",
+        {"version": 1, "sha256": checkpoint_sha, "fingerprint": fingerprint},
+    )
+    campaign.save(
+        output_root / "q25_fim_r2/worker-status.json",
+        {
+            "schema": "q25-fim-kaggle-worker-status-v1",
+            "reference": "owner/selected-fim-kernel",
+            "commit": commit,
+            "attempt": attempt,
+            "arm": arm,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_manifest_sha,
+            "training_started": True,
+            "state": "complete",
+            "training": {"status": "complete", "cursor": cursor},
+        },
+    )
+    campaign.save(
+        training_dir / "run_result.json",
+        {
+            "status": "complete",
+            "arm": arm,
+            "fingerprint": fingerprint,
+            "cursor": cursor,
+            "logical_training_input_tokens": cursor["training_input_tokens"],
+        },
+    )
+    campaign.save(
+        run_root / "baseline/identity.json",
+        {
+            "schema": "q25-fim-baseline-v1",
+            "arm": arm,
+            "plan_sha256": plan_sha,
+            "input_manifest_sha256": input_manifest_sha,
+            "files": {"fixture": "hash"},
+        },
+    )
+    for relative, cases in (
+        ("before/development/summary.json", 240),
+        ("before/line/summary.json", 180),
+        ("after/development/summary.json", 240),
+        ("after/line/summary.json", 180),
+    ):
+        campaign.save(run_root / relative, {"cases": cases, "plan_sha256": plan_sha})
+    for relative in (
+        "after/development/results.jsonl",
+        "after/line/results.jsonl",
+        "regression/causal/predictions.jsonl",
+        "regression/causal/predictions.jsonl.metadata.json",
+        "regression/line/predictions.jsonl",
+        "regression/line/predictions.jsonl.metadata.json",
+    ):
+        path = run_root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n")
+
+    code_sources = {
+        "conversion_worker.py": repository / "kaggle/q25_fim_conversion_r1/run.py",
+        "src/tinycomplete/__init__.py": repository / "src/tinycomplete/__init__.py",
+        "src/tinycomplete/code_cpt/__init__.py": (
+            repository / "src/tinycomplete/code_cpt/__init__.py"
+        ),
+        "src/tinycomplete/code_cpt/q25_fim_conversion.py": (
+            repository / "src/tinycomplete/code_cpt/q25_fim_conversion.py"
+        ),
+        "kaggle/q25_fim_conversion_r1/requirements-conversion.lock": (
+            repository / "kaggle/q25_fim_conversion_r1/requirements-conversion.lock"
+        ),
+    }
+    for path in code_sources.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("synthetic pinned conversion source\n")
+    monkeypatch.setattr(campaign, "ROOT", repository)
+    monkeypatch.setattr(campaign, "REPORT", report)
+    monkeypatch.setattr(campaign, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(campaign, "MODEL", model)
+    monkeypatch.setattr(campaign, "CONVERSION_SELECTION", selection_path)
+    monkeypatch.setattr(
+        campaign, "CONVERSION_QUALITY_REPORT", report / "fim_quality_comparison.json"
+    )
+    monkeypatch.setattr(campaign, "CONVERSION_PLAN", report / "fim_conversion_plan.json")
+    monkeypatch.setattr(
+        campaign, "CONVERSION_INPUT_BUNDLE", artifacts / "fim/conversion-input-bundle"
+    )
+    monkeypatch.setattr(campaign, "CONVERSION_KERNEL_ROOT", artifacts / "fim/conversion-kernel")
+    monkeypatch.setattr(campaign, "CONVERSION_JOB_FILE", report / "fim-conversion-job.json")
+    monkeypatch.setattr(
+        campaign, "CONVERSION_SUBMISSION_FILE", report / "fim-conversion-dataset-submission.json"
+    )
+    monkeypatch.setattr(campaign, "CONVERSION_OUTPUT", artifacts / "fim/conversion/output")
+    monkeypatch.setattr(campaign, "_conversion_code_files", lambda: code_sources)
+    monkeypatch.setattr(
+        campaign.shutil, "disk_usage", lambda _path: SimpleNamespace(free=64 * 1024**3)
+    )
+    return selection_path, report, artifacts, training_plan, code_sources
+
+
+def test_conversion_freeze_binds_manual_arm_quality_receipt_and_cpu_only_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+
+    plan = campaign.freeze_fim_conversion(selection_path)
+
+    assert plan["source"]["kernel_reference"] == "owner/selected-fim-kernel"
+    assert plan["source"]["paired_quality_report_sha256"] == campaign.digest(
+        report / "fim_quality_comparison.json"
+    )
+    assert plan["execution"]["enable_gpu"] is False
+    assert plan["execution"]["session_seconds"] == 10_800
+    assert plan["execution"]["finalization_reserve_seconds"] == 1_800
+
+
+@pytest.mark.parametrize("tamper", ["quality_report", "cursor", "fingerprint"])
+def test_conversion_freeze_rejects_mismatched_manual_selection_provenance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper: str
+) -> None:
+    selection_path, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    selection = json.loads(selection_path.read_text())
+    if tamper == "quality_report":
+        selection["paired_quality_report_sha256"] = "f" * 64
+    elif tamper == "cursor":
+        selection["source_export"]["training_cursor"]["completed_updates"] = 255
+    else:
+        selection["source_export"]["fingerprint"] = "f" * 64
+    campaign.save(selection_path, selection)
+
+    with pytest.raises(ValueError):
+        campaign.freeze_fim_conversion(selection_path)
+
+    assert not (report / "fim_conversion_plan.json").exists()
+
+
+def test_conversion_selection_rejects_duplicate_source_job_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    campaign.save(
+        report / "fim-job-untouched_q25_to_fim-2.json",
+        {"reference": "owner/selected-fim-kernel", "arm": "untouched_q25_to_fim"},
+    )
+
+    with pytest.raises(ValueError, match="exactly one"):
+        campaign.freeze_fim_conversion(selection_path)
+
+
+def test_conversion_input_bundle_contains_only_config_and_selection_not_weights(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    campaign.freeze_fim_conversion(selection_path)
+
+    bundle = campaign.build_fim_conversion_bundle()
+
+    assert {path.name for path in bundle.iterdir()} == {
+        "selection.json",
+        "training_plan.json",
+        "original_config.json",
+        "original_tokenizer.json",
+        "input-manifest.json",
+        "dataset-metadata.json",
+    }
+    assert not list(bundle.glob("*.safetensors"))
+    assert not list(bundle.glob("*.gguf"))
+
+
+def test_conversion_bundle_fails_closed_on_storage_cap_or_headroom(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    campaign.freeze_fim_conversion(selection_path)
+    monkeypatch.setattr(
+        campaign, "directory_bytes", lambda _root: campaign.CONVERSION_ARTIFACT_CAP_BYTES
+    )
+    with pytest.raises(OSError, match="artifact cap"):
+        campaign.build_fim_conversion_bundle()
+
+    monkeypatch.setattr(campaign, "directory_bytes", lambda _root: 0)
+    monkeypatch.setattr(campaign.shutil, "disk_usage", lambda _path: SimpleNamespace(free=0))
+    with pytest.raises(OSError, match="headroom"):
+        campaign.build_fim_conversion_bundle()
+
+
+def test_conversion_kernel_is_cpu_only_and_attaches_only_selected_source_kernel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    campaign.freeze_fim_conversion(selection_path)
+
+    kernel = campaign.build_fim_conversion_kernel(campaign._load_conversion_plan(), "f" * 40)
+
+    metadata = json.loads((kernel / "kernel-metadata.json").read_text())
+    assert metadata["enable_gpu"] is False
+    assert metadata["dataset_sources"] == [campaign.CONVERSION_DATASET]
+    assert metadata["kernel_sources"] == ["owner/selected-fim-kernel"]
+    assert not any(
+        "accelerator" in line.lower() for line in (kernel / "run.py").read_text().splitlines()
+    )
+
+
+def test_conversion_quota_rejects_gpu_enabled_plan_before_any_submit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    plan["execution"]["enable_gpu"] = True
+
+    with pytest.raises(ValueError, match="must not enable GPU"):
+        campaign._check_conversion_quota(plan, _observation())
+
+
+def test_conversion_submit_blocks_on_active_job_without_kernel_push(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    bundle = campaign.build_fim_conversion_bundle(plan)
+    campaign.save(
+        campaign.CONVERSION_SUBMISSION_FILE,
+        {
+            "dataset": campaign.CONVERSION_DATASET,
+            "state": "verified",
+            "input_manifest_sha256": campaign.digest(bundle / "input-manifest.json"),
+        },
+    )
+    campaign.save(
+        report / "campaign_budget.json",
+        {"shared_limits": {"quota_renewal": "2026-10-10T00:00:00"}},
+    )
+    calls: list[tuple[str, ...]] = []
+    commit = "f" * 40
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        call = tuple(args)
+        calls.append(call)
+        if call[-2:] == ("branch", "--show-current"):
+            return campaign.CONVERSION_BRANCH
+        if call[-2:] == ("status", "--porcelain"):
+            return ""
+        if call[-2:] == ("rev-parse", "HEAD"):
+            return commit
+        if call[-2:] == ("origin", f"refs/heads/{campaign.CONVERSION_BRANCH}"):
+            return f"{commit}\trefs/heads/{campaign.CONVERSION_BRANCH}"
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(
+        campaign, "quota", lambda: _observation(active_jobs=[{"status": "RUNNING"}])
+    )
+    monkeypatch.setattr(campaign, "check_shared_allocation_budget", lambda *_args, **_kwargs: None)
+
+    with pytest.raises(RuntimeError, match="another Kaggle job is active"):
+        campaign.submit_fim_conversion(plan)
+
+    assert not any(call[:3] == ("kaggle", "kernels", "push") for call in calls)
+    assert not campaign.CONVERSION_JOB_FILE.exists()
+
+
+def test_conversion_cli_has_separate_non_gpu_action_path(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["run_q25_code_cpt.py", "--bundle-conversion"])
+    monkeypatch.setattr(
+        campaign, "freeze", lambda _config: pytest.fail("normal GPU plan was frozen")
+    )
+    monkeypatch.setattr(campaign, "_load_conversion_plan", lambda: {"schema": "cpu-only"})
+    monkeypatch.setattr(
+        campaign, "build_fim_conversion_bundle", lambda _plan: Path("/private/config-bundle")
+    )
+
+    campaign.main()
+
+    assert json.loads(capsys.readouterr().out) == {"conversion_bundle": "/private/config-bundle"}
+
+
+def test_conversion_collect_retrieves_only_result_manifest_and_selected_q4(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    selection_path, _report, _artifacts, _training_plan, _code_sources = _fim_conversion_context(
+        tmp_path, monkeypatch
+    )
+    plan = campaign.freeze_fim_conversion(selection_path)
+    campaign.save(
+        campaign.CONVERSION_JOB_FILE,
+        {
+            "reference": campaign.CONVERSION_KERNEL_REFERENCE,
+            "source_kernel_reference": plan["source"]["kernel_reference"],
+            "plan_sha256": campaign.digest(campaign.CONVERSION_PLAN),
+            "selection_sha256": plan["selection_sha256"],
+            "enable_gpu": False,
+            "automatic_allocation": False,
+        },
+    )
+    q4_bytes = b"synthetic q4 artifact"
+    q4_sha = hashlib.sha256(q4_bytes).hexdigest()
+    q4_name = f"q25-{plan['source']['arm']}-Q4_K_M.gguf"
+    result = {
+        "schema": "q25-fim-q4-conversion-run-v1",
+        "status": "complete",
+        "selection_sha256": plan["selection_sha256"],
+        "training_plan_sha256": plan["training_plan_sha256"],
+        "selected_arm": plan["source"]["arm"],
+        "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
+        "source_fingerprint": plan["source"]["fingerprint"],
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "training_cursor": plan["source"]["training_cursor"],
+        "conversion": {"gpu_enabled": False},
+        "q4_export": {"file": q4_name, "bytes": len(q4_bytes), "sha256": q4_sha},
+    }
+    calls: list[tuple[str, ...]] = []
+
+    def fake_cli(*args: str, timeout: int = 120) -> str:
+        call = tuple(args)
+        calls.append(call)
+        if call[:3] == ("kaggle", "kernels", "status"):
+            return "COMPLETE"
+        destination = Path(call[call.index("-p") + 1])
+        pattern = call[call.index("--file-pattern") + 1]
+        if pattern == r"q25_fim_conversion_r1/conversion\.json$":
+            manifest = destination / "q25_fim_conversion_r1/conversion.json"
+            campaign.save(manifest, result)
+        else:
+            destination.mkdir(parents=True, exist_ok=True)
+            (destination / q4_name).write_bytes(q4_bytes)
+        return ""
+
+    monkeypatch.setattr(campaign, "cli", fake_cli)
+    monkeypatch.setattr(
+        campaign.shutil, "disk_usage", lambda _path: SimpleNamespace(free=64 * 1024**3)
+    )
+
+    receipt = campaign.collect_fim_conversion(plan)
+
+    output_patterns = [
+        call[call.index("--file-pattern") + 1] for call in calls if "--file-pattern" in call
+    ]
+    assert output_patterns == [
+        r"q25_fim_conversion_r1/conversion\.json$",
+        campaign.re.escape(q4_name) + "$",
+    ]
+    assert receipt["q4_file"] == q4_name
+    assert receipt["source_weight_or_checkpoint_retrieval"] is False

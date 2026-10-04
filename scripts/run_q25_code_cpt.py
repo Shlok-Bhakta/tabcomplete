@@ -18,7 +18,7 @@ import subprocess
 import sys
 import time
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -35,6 +35,23 @@ DATASET = "shlokbhakta/tabcomplete-q25-code-cpt-r2-inputs"
 BASE_DATASET = "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-inputs"
 FIM_DATASET = "shlokbhakta/tabcomplete-q25-fim-r2-inputs-r4"
 CPT_INITIALIZER_DATASET = "shlokbhakta/tabcomplete-q25-cpt-r2-fim-initializer"
+CONVERSION_DATASET = "shlokbhakta/tabcomplete-q25-fim-conversion-r1-inputs"
+CONVERSION_DATASET_SLUG = "tabcomplete-q25-fim-conversion-r1-inputs"
+CONVERSION_KERNEL_REFERENCE = "shlokbhakta/tc-q25-fim-q4-conversion-r1"
+CONVERSION_BRANCH = "research/q25-fim-conversion-orchestration-r1"
+CONVERSION_SESSION_SECONDS = 10_800
+CONVERSION_FINALIZATION_RESERVE_SECONDS = 1_800
+CONVERSION_ARTIFACT_CAP_BYTES = 12 * 1024**3
+CONVERSION_MINIMUM_FREE_BYTES = 2 * 1024**3
+CONVERSION_EXPORT_DIRECTORY = "q25_fim_r2/training/inference-f16"
+CONVERSION_PLAN = REPORT / "fim_conversion_plan.json"
+CONVERSION_SELECTION = REPORT / "fim_conversion" / "selection.json"
+CONVERSION_QUALITY_REPORT = REPORT / "fim_quality_comparison.json"
+CONVERSION_INPUT_BUNDLE = ARTIFACTS / "fim/conversion-input-bundle"
+CONVERSION_KERNEL_ROOT = ARTIFACTS / "fim/conversion-kernel"
+CONVERSION_JOB_FILE = REPORT / "fim-conversion-job.json"
+CONVERSION_SUBMISSION_FILE = REPORT / "fim-conversion-dataset-submission.json"
+CONVERSION_OUTPUT = ARTIFACTS / "fim/conversion/output"
 FIM_ARMS = ("untouched_q25_to_fim", "completed_cpt_q25_to_fim")
 FIM_LINE_SOURCE = Path(
     "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl"
@@ -690,9 +707,10 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
         return
     shared = json.loads(path.read_text())["shared_limits"]
     fim_settlements = _load_validated_session_settlements()
-    jobs = [*REPORT.glob("job-*.json"), *REPORT.glob("fim-job-*.json")]
-    reserved = 0
-    for job_path in jobs:
+    gpu_jobs = [*REPORT.glob("job-*.json"), *REPORT.glob("fim-job-*.json")]
+    wall_reserved = 0
+    gpu_reserved = 0
+    for job_path in gpu_jobs:
         job = json.loads(job_path.read_text())
         job_reservation = int(job["conservative_reserved_session_seconds"])
         if job_path.name.startswith("fim-job-"):
@@ -701,13 +719,28 @@ def check_shared_allocation_budget(session_seconds: int, *, phase: str) -> None:
                 if settlement["job_file"] != job_path.name:
                     raise ValueError("session settlement points to a different FIM job")
                 job_reservation = int(settlement["settled_session_seconds"])
-        reserved += job_reservation
+        wall_reserved += job_reservation
+        gpu_reserved += job_reservation
+    # A CPU conversion kernel consumes the aggregate Kaggle session window but
+    # does not consume account GPU-hours. Keep these units separate.
+    for job_path in REPORT.glob("fim-conversion-job*.json"):
+        job = json.loads(job_path.read_text())
+        reservation = job.get("conservative_reserved_session_seconds")
+        if not isinstance(reservation, int) or isinstance(reservation, bool) or reservation <= 0:
+            raise ValueError("CPU conversion job has an invalid session reservation")
+        if job.get("enable_gpu") is not False:
+            raise ValueError("conversion reservation unexpectedly enables a GPU")
+        wall_reserved += reservation
     future_reserve = (
         int(shared["minimum_reserved_future_fim_session_seconds"]) if phase == "cpt" else 0
     )
-    if reserved + session_seconds + future_reserve > shared["aggregate_reserved_session_seconds"]:
+    if (
+        wall_reserved + session_seconds + future_reserve
+        > shared["aggregate_reserved_session_seconds"]
+    ):
         raise RuntimeError("shared CPT/FIM session reservation exhausted")
-    if (reserved + session_seconds) / 3600 * 2 > shared["conservative_account_gpu_hours"]:
+    new_gpu_seconds = session_seconds if phase in {"cpt", "fim"} else 0
+    if (gpu_reserved + new_gpu_seconds) / 3600 * 2 > shared["conservative_account_gpu_hours"]:
         raise RuntimeError("shared CPT/FIM account GPU-hour reservation exhausted")
     if phase == "cpt" and list(REPORT.glob("fim-job-*.json")):
         raise RuntimeError("raw CPT cannot restart after matched FIM adaptation begins")
@@ -2080,6 +2113,1005 @@ def collect_fim_export(plan: dict[str, Any], arm: str, attempt: int) -> Path:
     return export
 
 
+def _conversion_relpath(value: Any, *, label: str) -> Path:
+    if not isinstance(value, str) or not value or "\\" in value:
+        raise ValueError(f"{label} must be a normalized relative path")
+    relative = PurePosixPath(value)
+    if (
+        relative.is_absolute()
+        or relative.as_posix() != value
+        or not relative.parts
+        or any(part in {"", ".", ".."} for part in relative.parts)
+    ):
+        raise ValueError(f"{label} must stay inside its selected root")
+    return Path(*relative.parts)
+
+
+def _conversion_file_record(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("conversion input contains a missing or unsafe file")
+    return {"bytes": path.stat().st_size, "sha256": digest(path)}
+
+
+def _conversion_tree_records(root: Path, prefixes: tuple[str, ...]) -> dict[str, dict[str, Any]]:
+    records: dict[str, dict[str, Any]] = {}
+    for prefix in prefixes:
+        directory = root / prefix
+        if directory.is_symlink() or not directory.is_dir():
+            raise ValueError("selected FIM run is missing complete evaluation evidence")
+        for path in sorted(directory.rglob("*")):
+            if path.is_symlink():
+                raise ValueError("selected FIM evidence contains a symbolic link")
+            if path.is_file():
+                relative = path.relative_to(root).as_posix()
+                records[relative] = _conversion_file_record(path)
+    return records
+
+
+def _expected_fim_cursor(training_plan: dict[str, Any]) -> dict[str, int]:
+    training = training_plan["configuration"]["training"]
+    train = training_plan["data"]["train"]
+    row_count = train.get("row_count")
+    batch = training.get("effective_batch")
+    input_tokens = train.get("input_tokens")
+    target_tokens = train.get("target_tokens")
+    if any(
+        not isinstance(value, int) or isinstance(value, bool) or value <= 0
+        for value in (row_count, batch, input_tokens, target_tokens)
+    ):
+        raise ValueError("frozen FIM plan has invalid full-pass totals")
+    updates = (row_count + batch - 1) // batch
+    return {
+        "attempted_updates": updates,
+        "completed_updates": updates,
+        "skipped_updates": 0,
+        "training_input_tokens": input_tokens,
+        "supervised_target_tokens": target_tokens,
+        "next_example_index": row_count,
+        "epoch": 1,
+    }
+
+
+def _find_conversion_source_job(
+    source_reference: str, selected_arm: str
+) -> tuple[Path, dict[str, Any]]:
+    if not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", source_reference):
+        raise ValueError("selection source kernel reference is invalid")
+    matches: list[tuple[Path, dict[str, Any]]] = []
+    for arm in FIM_ARMS:
+        for path in REPORT.glob(f"fim-job-{arm}-*.json"):
+            job = json.loads(path.read_text())
+            if job.get("reference") == source_reference:
+                if arm != selected_arm or job.get("arm") != selected_arm:
+                    raise ValueError("selection source reference belongs to another FIM arm")
+                matches.append((path, job))
+    if len(matches) != 1:
+        raise ValueError("selection must identify exactly one completed FIM kernel")
+    return matches[0]
+
+
+def _verify_conversion_source(selection_path: Path) -> dict[str, Any]:
+    if selection_path.is_symlink() or not selection_path.is_file():
+        raise ValueError("manual conversion selection is missing or unsafe")
+    selection_abs = selection_path.resolve(strict=True)
+    if not selection_abs.is_relative_to(REPORT.resolve(strict=True)):
+        raise ValueError("manual conversion selection must be inside the research report")
+    selection = json.loads(selection_abs.read_text())
+    training_plan_path = REPORT / "fim_training_plan.json"
+    training_plan = json.loads(training_plan_path.read_text())
+    plan_sha = digest(training_plan_path)
+    selection_sha = digest(selection_abs)
+    if (
+        selection.get("schema") != "q25-fim-conversion-selection-v1"
+        or selection.get("status") != "selected_complete"
+        or selection.get("training_plan_sha256") != plan_sha
+        or selection.get("selected_arm") not in FIM_ARMS
+    ):
+        raise ValueError("conversion requires the root-selected complete frozen FIM arm")
+    quality_sha = selection.get("paired_quality_report_sha256")
+    if (
+        not CONVERSION_QUALITY_REPORT.is_file()
+        or CONVERSION_QUALITY_REPORT.is_symlink()
+        or not re.fullmatch(r"[0-9a-f]{64}", str(quality_sha))
+        or digest(CONVERSION_QUALITY_REPORT) != quality_sha
+    ):
+        raise ValueError("manual selection is not bound to the paired quality report")
+    arm = selection["selected_arm"]
+    source_ref = selection.get("source_kernel_reference")
+    source_export = selection.get("source_export")
+    if not isinstance(source_export, dict):
+        raise ValueError("selection does not bind an exported FIM initializer")
+    if source_export.get("directory") != CONVERSION_EXPORT_DIRECTORY:
+        raise ValueError("selection export path differs from the frozen kernel output layout")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(source_export.get("artifact_manifest_sha256"))):
+        raise ValueError("selection export manifest identity is invalid")
+    job_path, job = _find_conversion_source_job(source_ref, arm)
+    attempt = job.get("attempt")
+    if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 1:
+        raise ValueError("selected FIM attempt identity is invalid")
+    verified_path = REPORT / f"fim-verified-{arm}-{attempt}.json"
+    verified = json.loads(verified_path.read_text())
+    if (
+        job.get("plan_sha256") != plan_sha
+        or verified.get("reference") != source_ref
+        or verified.get("arm") != arm
+        or verified.get("attempt") != attempt
+        or verified.get("plan_sha256") != plan_sha
+        or verified.get("input_manifest_sha256") != job.get("input_manifest_sha256")
+        or verified.get("commit") != job.get("commit")
+        or verified.get("training_status") != "complete"
+        or verified.get("checkpoint_verified") is not True
+    ):
+        raise ValueError("selected FIM kernel lacks a matching complete verified receipt")
+    expected_cursor = _expected_fim_cursor(training_plan)
+    if (
+        verified.get("cursor") != expected_cursor
+        or source_export.get("training_cursor") != expected_cursor
+    ):
+        raise ValueError("selected FIM kernel did not complete the exact planned pass")
+    if (
+        verified.get("cursor", {}).get("completed_updates") != 256
+        or verified.get("cursor", {}).get("training_input_tokens") != 1_776_908
+    ):
+        raise ValueError("selected FIM export is not the frozen 256-update pass")
+    if (
+        not re.fullmatch(r"[0-9a-f]{64}", str(verified.get("fingerprint")))
+        or source_export.get("fingerprint") != verified.get("fingerprint")
+        or not re.fullmatch(r"[0-9a-f]{64}", str(verified.get("checkpoint_sha256")))
+    ):
+        raise ValueError("selected FIM checkpoint/export fingerprint is invalid")
+
+    output_root = ARTIFACTS / f"fim/output-{arm}-{attempt}"
+    export = output_root / CONVERSION_EXPORT_DIRECTORY
+    manifest_path = export / "artifact_manifest.json"
+    if export.is_symlink() or manifest_path.is_symlink() or not manifest_path.is_file():
+        raise ValueError("selected FIM export is missing or unsafe")
+    manifest = json.loads(manifest_path.read_text())
+    manifest_sha = digest(manifest_path)
+    files = manifest.get("files")
+    if (
+        manifest_sha != source_export["artifact_manifest_sha256"]
+        or manifest.get("schema") != "q25-fim-inference-f16-v1"
+        or manifest.get("arm") != arm
+        or manifest.get("fingerprint") != verified["fingerprint"]
+        or manifest.get("training_cursor") != expected_cursor
+        or not isinstance(files, dict)
+        or source_export.get("files") != files
+    ):
+        raise ValueError("selected FIM artifact manifest differs from its frozen selection")
+    if not isinstance(files, dict) or not files:
+        raise ValueError("selected FIM artifact manifest has no model file map")
+    required_local_files = {"config.json", "tokenizer.json"}
+    for name, record in files.items():
+        relative = _conversion_relpath(name, label="selected export filename")
+        path = export / relative
+        expected_bytes = record.get("bytes") if isinstance(record, dict) else None
+        expected_sha = record.get("sha256") if isinstance(record, dict) else None
+        if (
+            not isinstance(expected_bytes, int)
+            or isinstance(expected_bytes, bool)
+            or expected_bytes <= 0
+            or not re.fullmatch(r"[0-9a-f]{64}", str(expected_sha))
+        ):
+            raise ValueError("selected FIM export file record is invalid")
+        if path.is_symlink():
+            raise ValueError("selected FIM export contains a symbolic link")
+        if path.exists():
+            if (
+                not path.is_file()
+                or path.stat().st_size != expected_bytes
+                or digest(path) != expected_sha
+            ):
+                raise ValueError("locally collected FIM export file differs from its manifest")
+        elif name in required_local_files:
+            raise ValueError("selected FIM export lacks its local config or tokenizer")
+        if name == "model.safetensors" and path.exists():
+            raise ValueError("conversion freeze must not retrieve the source F16 weights")
+    export_paths = list(export.rglob("*"))
+    if any(path.is_symlink() for path in export_paths):
+        raise ValueError("selected FIM export contains a symbolic link")
+    actual_export_files = {
+        path.relative_to(export).as_posix()
+        for path in export_paths
+        if path.is_file() and path.name != "artifact_manifest.json"
+    }
+    if not required_local_files.issubset(actual_export_files) or not actual_export_files.issubset(
+        files
+    ):
+        raise ValueError("local FIM export files are missing or unmanifested")
+
+    worker_path = output_root / "q25_fim_r2/worker-status.json"
+    result_path = output_root / "q25_fim_r2/training/run_result.json"
+    pointer_path = output_root / "q25_fim_r2/training/latest.json"
+    checkpoint_marker_path: Path | None = None
+    worker = json.loads(worker_path.read_text())
+    result = json.loads(result_path.read_text())
+    pointer = json.loads(pointer_path.read_text())
+    checkpoint_name = pointer.get("path")
+    if not isinstance(checkpoint_name, str) or not re.fullmatch(
+        r"resume-step-[0-9]+\.pt", checkpoint_name
+    ):
+        raise ValueError("selected full-pass checkpoint pointer is invalid")
+    checkpoint = pointer_path.parent / checkpoint_name
+    checkpoint_marker_path = pointer_path.parent / f"{checkpoint_name}.complete.json"
+    marker = json.loads(checkpoint_marker_path.read_text())
+    if (
+        worker.get("schema") != "q25-fim-kaggle-worker-status-v1"
+        or worker.get("reference") not in (None, source_ref)
+        or worker.get("commit") != job.get("commit")
+        or worker.get("attempt") != attempt
+        or worker.get("arm") != arm
+        or worker.get("plan_sha256") != plan_sha
+        or worker.get("input_manifest_sha256") != job.get("input_manifest_sha256")
+        or worker.get("training_started") is not True
+        or worker.get("state") != "complete"
+        or worker.get("training", {}).get("status") != "complete"
+        or worker.get("training", {}).get("cursor") != expected_cursor
+        or result.get("status") != "complete"
+        or result.get("arm") != arm
+        or result.get("fingerprint") != verified["fingerprint"]
+        or result.get("cursor") != expected_cursor
+        or pointer.get("fingerprint") != verified["fingerprint"]
+        or pointer.get("cursor") != expected_cursor
+        or marker.get("version") != 1
+        or marker.get("fingerprint") != verified["fingerprint"]
+        or marker.get("sha256") != verified.get("checkpoint_sha256")
+        or not checkpoint.is_file()
+        or checkpoint.is_symlink()
+        or digest(checkpoint) != marker.get("sha256")
+    ):
+        raise ValueError("selected FIM worker, result, or checkpoint identity is inconsistent")
+    if result.get("logical_training_input_tokens") != expected_cursor["training_input_tokens"]:
+        raise ValueError("selected FIM result token cursor differs from the full pass")
+
+    run_root = output_root / "q25_fim_r2"
+    baseline_path = run_root / "baseline/identity.json"
+    baseline = json.loads(baseline_path.read_text())
+    if (
+        baseline.get("schema") != "q25-fim-baseline-v1"
+        or baseline.get("arm") != arm
+        or baseline.get("plan_sha256") != plan_sha
+        or baseline.get("input_manifest_sha256") != job.get("input_manifest_sha256")
+        or not isinstance(baseline.get("files"), dict)
+        or not baseline["files"]
+    ):
+        raise ValueError("selected FIM kernel lacks frozen before-run evaluation evidence")
+
+    required_results = (
+        "before/development/summary.json",
+        "before/line/summary.json",
+        "after/development/results.jsonl",
+        "after/development/summary.json",
+        "after/line/results.jsonl",
+        "after/line/summary.json",
+        "regression/causal/predictions.jsonl",
+        "regression/causal/predictions.jsonl.metadata.json",
+        "regression/line/predictions.jsonl",
+        "regression/line/predictions.jsonl.metadata.json",
+    )
+    evidence_prefixes = ("baseline", "before", "after", "regression")
+    evidence_files = _conversion_tree_records(run_root, evidence_prefixes)
+    for relative_result in required_results:
+        if relative_result not in evidence_files:
+            raise ValueError("selected FIM kernel lacks a required paired evaluation result")
+    for relative_summary, expected_cases in (
+        ("after/development/summary.json", 240),
+        ("after/line/summary.json", 180),
+        ("before/development/summary.json", 240),
+        ("before/line/summary.json", 180),
+    ):
+        summary = json.loads((run_root / relative_summary).read_text())
+        if summary.get("cases") != expected_cases or summary.get("plan_sha256") != plan_sha:
+            raise ValueError("selected FIM evaluation result differs from its frozen suite")
+
+    job_sha = digest(job_path)
+    verified_sha = digest(verified_path)
+    evidence = {
+        "job_sha256": job_sha,
+        "verified_receipt_sha256": verified_sha,
+        "worker_status_sha256": digest(worker_path),
+        "run_result_sha256": digest(result_path),
+        "checkpoint_pointer_sha256": digest(pointer_path),
+        "checkpoint_marker_sha256": digest(checkpoint_marker_path),
+        "checkpoint_sha256": digest(checkpoint),
+        "export_manifest_sha256": manifest_sha,
+        "evaluation_files": evidence_files,
+    }
+    return {
+        "selection": selection,
+        "selection_path": selection_abs.relative_to(ROOT).as_posix(),
+        "selection_sha256": selection_sha,
+        "training_plan": training_plan,
+        "training_plan_sha256": plan_sha,
+        "source": {
+            "arm": arm,
+            "attempt": attempt,
+            "kernel_reference": source_ref,
+            "export_directory": CONVERSION_EXPORT_DIRECTORY,
+            "artifact_manifest_sha256": manifest_sha,
+            "fingerprint": verified["fingerprint"],
+            "training_cursor": expected_cursor,
+            "files": files,
+            "input_manifest_sha256": job["input_manifest_sha256"],
+            "commit": job["commit"],
+            "paired_quality_report_sha256": quality_sha,
+        },
+        "source_evidence": evidence,
+        "source_output_root": output_root,
+    }
+
+
+def _conversion_code_files() -> dict[str, Path]:
+    return {
+        "conversion_worker.py": ROOT / "kaggle/q25_fim_conversion_r1/run.py",
+        "src/tinycomplete/__init__.py": ROOT / "src/tinycomplete/__init__.py",
+        "src/tinycomplete/code_cpt/__init__.py": ROOT / "src/tinycomplete/code_cpt/__init__.py",
+        "src/tinycomplete/code_cpt/q25_fim_conversion.py": ROOT
+        / "src/tinycomplete/code_cpt/q25_fim_conversion.py",
+        "kaggle/q25_fim_conversion_r1/requirements-conversion.lock": ROOT
+        / "kaggle/q25_fim_conversion_r1/requirements-conversion.lock",
+    }
+
+
+def freeze_fim_conversion(selection_path: Path = CONVERSION_SELECTION) -> dict[str, Any]:
+    """Freeze only a manual complete-arm selection and its verified provenance."""
+    source = _verify_conversion_source(selection_path)
+    original_config = MODEL / "config.json"
+    original_tokenizer = MODEL / "tokenizer.json"
+    if not original_config.is_file() or not original_tokenizer.is_file():
+        raise FileNotFoundError("pinned original Qwen config/tokenizer files are unavailable")
+    untouched = source["training_plan"]["initializers"]["untouched_q25_to_fim"]
+    expected_original = untouched["files"]
+    if (
+        digest(original_config) != expected_original["config.json"]["sha256"]
+        or digest(original_tokenizer) != expected_original["tokenizer.json"]["sha256"]
+        or digest(original_tokenizer) != source["selection"]["tokenizer"]["sha256"]
+    ):
+        raise ValueError("original Qwen config/tokenizer differs from the FIM provenance")
+    code_files = _conversion_code_files()
+    missing = [name for name, path in code_files.items() if not path.is_file() or path.is_symlink()]
+    if missing:
+        raise FileNotFoundError("pinned CPU conversion source files are incomplete")
+    plan = {
+        "schema": "q25-fim-q4-conversion-plan-v1",
+        "plan_revision": 1,
+        "selection_path": source["selection_path"],
+        "selection_sha256": source["selection_sha256"],
+        "paired_quality_report_sha256": source["source"]["paired_quality_report_sha256"],
+        "training_plan_sha256": source["training_plan_sha256"],
+        "source": source["source"],
+        "source_evidence": source["source_evidence"],
+        "original_q25_config_sha256": digest(original_config),
+        "original_q25_tokenizer_sha256": digest(original_tokenizer),
+        "source_code": {name: digest(path) for name, path in code_files.items()},
+        "execution": {
+            "session_seconds": CONVERSION_SESSION_SECONDS,
+            "finalization_reserve_seconds": CONVERSION_FINALIZATION_RESERVE_SECONDS,
+            "enable_gpu": False,
+            "enable_internet": True,
+            "paid_compute": False,
+            "automatic_renewal_use": False,
+            "artifact_bytes_cap": CONVERSION_ARTIFACT_CAP_BYTES,
+            "minimum_free_bytes": CONVERSION_MINIMUM_FREE_BYTES,
+        },
+    }
+    if CONVERSION_PLAN.exists():
+        frozen = json.loads(CONVERSION_PLAN.read_text())
+        if frozen != plan:
+            raise ValueError("frozen Q25 FIM conversion plan differs; create a new revision")
+        return frozen
+    save(CONVERSION_PLAN, plan)
+    return plan
+
+
+def _load_conversion_plan() -> dict[str, Any]:
+    plan = json.loads(CONVERSION_PLAN.read_text())
+    if (
+        plan.get("schema") != "q25-fim-q4-conversion-plan-v1"
+        or plan.get("plan_revision") != 1
+        or plan.get("execution", {}).get("enable_gpu") is not False
+        or plan.get("execution", {}).get("paid_compute") is not False
+        or plan.get("execution", {}).get("automatic_renewal_use") is not False
+    ):
+        raise ValueError("frozen CPU conversion plan is invalid")
+    return plan
+
+
+def build_fim_conversion_bundle(plan: dict[str, Any] | None = None) -> Path:
+    plan = _load_conversion_plan() if plan is None else plan
+    if plan != _load_conversion_plan():
+        raise ValueError("conversion bundle plan differs from its frozen report")
+    selection_path = ROOT / plan["selection_path"]
+    if digest(selection_path) != plan["selection_sha256"]:
+        raise ValueError("manual conversion selection changed after freeze")
+    training_plan_path = REPORT / "fim_training_plan.json"
+    if digest(training_plan_path) != plan["training_plan_sha256"]:
+        raise ValueError("FIM training plan changed after conversion freeze")
+    sources = {
+        "selection.json": selection_path,
+        "training_plan.json": training_plan_path,
+        "original_config.json": MODEL / "config.json",
+        "original_tokenizer.json": MODEL / "tokenizer.json",
+    }
+    allowed = set(sources) | {"input-manifest.json", "dataset-metadata.json"}
+    output = CONVERSION_INPUT_BUNDLE
+    output.mkdir(parents=True, exist_ok=True)
+    if any(path.name not in allowed or path.is_symlink() for path in output.iterdir()):
+        raise ValueError("conversion input staging contains an unapproved artifact")
+    projected = sum(
+        path.stat().st_size for name, path in sources.items() if not (output / name).exists()
+    )
+    if directory_bytes(ARTIFACTS) + projected > CONVERSION_ARTIFACT_CAP_BYTES:
+        raise OSError("conversion input staging exceeds the artifact cap")
+    if shutil.disk_usage(ARTIFACTS).free < projected + CONVERSION_MINIMUM_FREE_BYTES:
+        raise OSError("conversion input staging would exhaust storage headroom")
+    file_records: dict[str, dict[str, Any]] = {}
+    for name, source in sources.items():
+        if source.is_symlink() or not source.is_file():
+            raise ValueError("conversion input source is missing or unsafe")
+        target = output / name
+        if target.exists():
+            if target.is_symlink() or not target.is_file() or digest(target) != digest(source):
+                raise ValueError("immutable conversion input differs from its frozen source")
+        else:
+            shutil.copy2(source, target)
+        file_records[name] = _conversion_file_record(target)
+    manifest_value = {
+        "schema": "q25-fim-conversion-input-manifest-v1",
+        "files": file_records,
+        "selection_sha256": plan["selection_sha256"],
+        "training_plan_sha256": plan["training_plan_sha256"],
+        "selected_arm": plan["source"]["arm"],
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "source_export_directory": plan["source"]["export_directory"],
+        "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
+    }
+    manifest_path = output / "input-manifest.json"
+    if manifest_path.exists():
+        if json.loads(manifest_path.read_text()) != manifest_value:
+            raise ValueError("immutable conversion input manifest differs")
+    else:
+        save(manifest_path, manifest_value)
+    metadata = {
+        "id": CONVERSION_DATASET,
+        "title": "TabComplete Q25 selected FIM conversion config r1",
+        "licenses": [{"name": "other"}],
+    }
+    metadata_path = output / "dataset-metadata.json"
+    if metadata_path.exists():
+        if json.loads(metadata_path.read_text()) != metadata:
+            raise ValueError("conversion dataset metadata differs from its frozen identity")
+    else:
+        save(metadata_path, metadata)
+    if directory_bytes(ARTIFACTS) > CONVERSION_ARTIFACT_CAP_BYTES:
+        raise OSError("conversion input bundle exceeds the artifact cap")
+    if shutil.disk_usage(ARTIFACTS).free < CONVERSION_MINIMUM_FREE_BYTES:
+        raise OSError("conversion input bundle exhausted storage headroom")
+    return output
+
+
+def upload_fim_conversion_bundle(plan: dict[str, Any] | None = None) -> dict[str, Any]:
+    sys.path.insert(0, str(ROOT / "kaggle/one_line_gpu_pilot_r1"))
+    from build_pilot import _csv_refs, wait_for_remote_inputs
+
+    output = build_fim_conversion_bundle(plan)
+    marker = CONVERSION_SUBMISSION_FILE
+    manifest = json.loads((output / "input-manifest.json").read_text())
+    expected = dict(manifest["files"])
+    expected["input-manifest.json"] = {"bytes": (output / "input-manifest.json").stat().st_size}
+    expected["dataset-metadata.json"] = {"bytes": (output / "dataset-metadata.json").stat().st_size}
+    if not marker.exists():
+        refs = _csv_refs(["kaggle", "datasets", "list", "--mine", "--page-size", "100", "--csv"])
+        if CONVERSION_DATASET in refs:
+            raise ValueError("conversion dataset exists without this campaign's receipt")
+        response = cli(
+            "kaggle",
+            "datasets",
+            "create",
+            "-p",
+            str(output),
+            "-t",
+            "--dir-mode",
+            "zip",
+            timeout=900,
+        )
+        if "Your private Dataset is being created." not in response:
+            raise RuntimeError("Kaggle did not confirm private conversion dataset creation")
+        save(
+            marker,
+            {
+                "dataset": CONVERSION_DATASET,
+                "state": "created",
+                "input_manifest_sha256": digest(output / "input-manifest.json"),
+            },
+        )
+    recorded = json.loads(marker.read_text())
+    if recorded.get("dataset") != CONVERSION_DATASET or recorded.get(
+        "input_manifest_sha256"
+    ) != digest(output / "input-manifest.json"):
+        raise ValueError("uploaded conversion dataset differs from its frozen input manifest")
+    verification = wait_for_remote_inputs(CONVERSION_DATASET, expected)
+    save(marker, {**recorded, "state": "verified", "remote_verification": verification})
+    return verification
+
+
+def _conversion_launcher(session: dict[str, Any]) -> str:
+    embedded = repr(json.dumps(session, sort_keys=True, separators=(",", ":")))
+    template = r"""from __future__ import annotations
+import hashlib
+import json
+import os
+import runpy
+import sys
+from pathlib import Path, PurePosixPath
+
+SESSION = json.loads(__SESSION_JSON__)
+INPUT_ROOT = Path("/kaggle/input")
+CODE_ROOT = Path(__file__).resolve().parent
+
+def sha(path):
+    value = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            value.update(block)
+    return value.hexdigest()
+
+def fail():
+    raise SystemExit("conversion input identity is missing or ambiguous")
+
+def direct_mounts():
+    if INPUT_ROOT.is_symlink() or not INPUT_ROOT.is_dir():
+        fail()
+    values = []
+    for path in INPUT_ROOT.iterdir():
+        if path.is_symlink():
+            continue
+        if path.is_dir():
+            values.append(path.resolve(strict=True))
+    return values
+
+mounts = direct_mounts()
+config_mounts = []
+for mount in mounts:
+    manifest = mount / "input-manifest.json"
+    if manifest.is_symlink() or not manifest.is_file():
+        continue
+    if sha(manifest) == SESSION["input_manifest_sha256"]:
+        config_mounts.append(mount)
+if len(config_mounts) != 1:
+    fail()
+config_root = config_mounts[0]
+manifest = json.loads((config_root / "input-manifest.json").read_text(encoding="utf-8"))
+if (manifest.get("schema") != "q25-fim-conversion-input-manifest-v1"
+    or manifest.get("selection_sha256") != SESSION["selection_sha256"]
+    or manifest.get("training_plan_sha256") != SESSION["training_plan_sha256"]
+    or manifest.get("selected_arm") != SESSION["selected_arm"]
+    or manifest.get("source_kernel_reference") != SESSION["source_kernel_reference"]
+    or manifest.get("source_export_manifest_sha256") != SESSION["source_export_manifest_sha256"]):
+    fail()
+files = manifest.get("files")
+if not isinstance(files, dict) or set(files) != {
+    "selection.json", "training_plan.json", "original_config.json", "original_tokenizer.json"
+}:
+    fail()
+for name, record in files.items():
+    relative = PurePosixPath(name)
+    path = config_root.joinpath(*relative.parts)
+    if (relative.is_absolute() or ".." in relative.parts or path.is_symlink()
+        or not path.is_file() or path.stat().st_size != record.get("bytes")
+        or sha(path) != record.get("sha256")):
+        fail()
+if sha(config_root / "selection.json") != SESSION["selection_sha256"]:
+    fail()
+if sha(config_root / "training_plan.json") != SESSION["training_plan_sha256"]:
+    fail()
+selection = json.loads((config_root / "selection.json").read_text(encoding="utf-8"))
+if (selection.get("source_kernel_reference") != SESSION["source_kernel_reference"]
+    or selection.get("selected_arm") != SESSION["selected_arm"]
+    or selection.get("source_export", {}).get("directory") != SESSION["source_export_directory"]
+    or selection.get("source_export", {}).get("artifact_manifest_sha256")
+       != SESSION["source_export_manifest_sha256"]):
+    fail()
+relative_export = PurePosixPath(SESSION["source_export_directory"])
+if relative_export.is_absolute() or ".." in relative_export.parts:
+    fail()
+source_mounts = []
+for mount in mounts:
+    if mount == config_root:
+        continue
+    export = mount.joinpath(*relative_export.parts)
+    manifest_path = export / "artifact_manifest.json"
+    if not manifest_path.exists():
+        continue
+    if any(path.is_symlink() for path in (mount, export, manifest_path)):
+        fail()
+    if manifest_path.is_file() and sha(manifest_path) == SESSION["source_export_manifest_sha256"]:
+        source_mounts.append(mount)
+if len(source_mounts) != 1:
+    fail()
+source_root = source_mounts[0]
+worker = CODE_ROOT / "conversion_worker.py"
+if worker.is_symlink() or not worker.is_file():
+    fail()
+sys.argv = [str(worker),
+    "--input-root", str(INPUT_ROOT),
+    "--selection", str(config_root / "selection.json"),
+    "--training-plan", str(config_root / "training_plan.json"),
+    "--expected-selection-sha256", SESSION["selection_sha256"],
+    "--code-root", str(CODE_ROOT),
+    "--source-root", str(source_root),
+    "--source-kernel-reference", SESSION["source_kernel_reference"],
+    "--output-root", "/kaggle/working/q25_fim_conversion_r1",
+    "--runtime-root", "/kaggle/temp/q25_fim_conversion_r1",
+    "--session-seconds", str(SESSION["session_seconds"]),
+    "--reserve-seconds", str(SESSION["finalization_reserve_seconds"])]
+runpy.run_path(str(worker), run_name="__main__")
+"""
+    return template.replace("__SESSION_JSON__", embedded)
+
+
+def build_fim_conversion_kernel(plan: dict[str, Any], commit: str) -> Path:
+    bundle = build_fim_conversion_bundle(plan)
+    input_manifest_sha = digest(bundle / "input-manifest.json")
+    kernel = CONVERSION_KERNEL_ROOT
+    kernel.mkdir(parents=True, exist_ok=True)
+    code_files = _conversion_code_files()
+    allowed_paths = {"run.py", "kernel-metadata.json"} | set(code_files)
+    for existing in kernel.rglob("*"):
+        if existing.is_symlink():
+            raise ValueError("conversion kernel staging contains a symbolic link")
+        if existing.is_file() and existing.relative_to(kernel).as_posix() not in allowed_paths:
+            raise ValueError("conversion kernel staging contains an unapproved file")
+    session = {
+        "commit": commit,
+        "plan_sha256": digest(CONVERSION_PLAN),
+        "input_manifest_sha256": input_manifest_sha,
+        "selection_sha256": plan["selection_sha256"],
+        "training_plan_sha256": plan["training_plan_sha256"],
+        "selected_arm": plan["source"]["arm"],
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "source_export_directory": plan["source"]["export_directory"],
+        "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
+        "session_seconds": CONVERSION_SESSION_SECONDS,
+        "finalization_reserve_seconds": CONVERSION_FINALIZATION_RESERVE_SECONDS,
+    }
+    for relative, source in code_files.items():
+        target = kernel / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            if target.is_symlink() or not target.is_file() or digest(target) != digest(source):
+                raise ValueError("staged conversion source differs from the frozen code")
+        else:
+            shutil.copy2(source, target)
+    launcher = _conversion_launcher(session)
+    run_path = kernel / "run.py"
+    if run_path.exists() and run_path.read_text() != launcher:
+        raise ValueError("frozen conversion launcher differs from its input receipt")
+    if not run_path.exists():
+        run_path.write_text(launcher)
+    metadata = {
+        "id": CONVERSION_KERNEL_REFERENCE,
+        "title": "tc q25 fim q4 conversion r1",
+        "code_file": "run.py",
+        "language": "python",
+        "kernel_type": "script",
+        "is_private": True,
+        "enable_gpu": False,
+        "enable_internet": True,
+        "dataset_sources": [CONVERSION_DATASET],
+        "kernel_sources": [plan["source"]["kernel_reference"]],
+    }
+    metadata_path = kernel / "kernel-metadata.json"
+    if metadata_path.exists():
+        if json.loads(metadata_path.read_text()) != metadata:
+            raise ValueError("conversion kernel metadata differs from the frozen selection")
+    else:
+        save(metadata_path, metadata)
+    if directory_bytes(ARTIFACTS) > CONVERSION_ARTIFACT_CAP_BYTES:
+        raise OSError("conversion kernel bundle exceeds the artifact cap")
+    if shutil.disk_usage(ARTIFACTS).free < CONVERSION_MINIMUM_FREE_BYTES:
+        raise OSError("conversion kernel bundle exhausted storage headroom")
+    return kernel
+
+
+def _check_conversion_quota(plan: dict[str, Any], observation: dict[str, Any]) -> None:
+    execution = plan["execution"]
+    if (
+        execution.get("enable_gpu") is not False
+        or execution.get("paid_compute") is not False
+        or execution.get("automatic_renewal_use") is not False
+    ):
+        raise ValueError("CPU conversion must not enable GPU, paid compute, or renewal use")
+    sys.path.insert(0, str(ROOT / "kaggle/one_line_gpu_pilot_r1"))
+    from build_pilot import _job_statuses_verified
+
+    if observation.get("active_jobs") or not _job_statuses_verified(observation):
+        raise RuntimeError("another Kaggle job is active or its status is unresolved")
+    if observation.get("units") != "Kaggle account GPU-hours" or not observation.get("source"):
+        raise ValueError("live quota observation lacks units or provenance")
+    if len(observation.get("job_statuses", [])) >= 100:
+        raise RuntimeError("job listing may be truncated; verify pagination before allocation")
+    budget = json.loads((REPORT / "campaign_budget.json").read_text())["shared_limits"]
+    if observation.get("renewal") != budget.get("quota_renewal"):
+        raise RuntimeError("quota renewal differs from the frozen campaign budget")
+    renewal = datetime.fromisoformat(str(observation["renewal"]).replace("Z", "+00:00"))
+    if renewal.tzinfo is None:
+        renewal = renewal.replace(tzinfo=UTC)
+    if datetime.now(UTC) + timedelta(seconds=CONVERSION_SESSION_SECONDS) >= renewal:
+        raise RuntimeError("CPU conversion session would cross the authorized quota renewal")
+    remaining = observation.get("remaining")
+    if not isinstance(remaining, (int, float)) or isinstance(remaining, bool) or remaining < 0:
+        raise RuntimeError("live account quota is unavailable or invalid")
+
+
+def submit_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
+    plan = _load_conversion_plan() if plan is None else plan
+    if plan != _load_conversion_plan():
+        raise ValueError("conversion plan differs from its frozen report")
+    if CONVERSION_JOB_FILE.exists():
+        raise ValueError("conversion job already has a submission receipt; inspect it instead")
+    if cli("git", "-C", str(ROOT), "branch", "--show-current") != CONVERSION_BRANCH:
+        raise ValueError("conversion source is not on its frozen branch")
+    if cli("git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=all"):
+        raise RuntimeError("commit all conversion source files before submitting")
+    commit = cli("git", "-C", str(ROOT), "rev-parse", "HEAD")
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise RuntimeError("conversion source commit is invalid")
+    remote = cli("git", "-C", str(ROOT), "ls-remote", "origin", f"refs/heads/{CONVERSION_BRANCH}")
+    if not remote or remote.split()[0] != commit:
+        raise RuntimeError("push the exact frozen conversion source commit before submitting")
+    code_files = _conversion_code_files()
+    if set(plan["source_code"]) != set(code_files) or any(
+        path.is_symlink() or not path.is_file() or digest(path) != plan["source_code"][name]
+        for name, path in code_files.items()
+    ):
+        raise ValueError("conversion source files changed after plan freeze")
+    submission = json.loads(CONVERSION_SUBMISSION_FILE.read_text())
+    bundle = build_fim_conversion_bundle(plan)
+    if (
+        submission.get("state") != "verified"
+        or submission.get("dataset") != CONVERSION_DATASET
+        or submission.get("input_manifest_sha256") != digest(bundle / "input-manifest.json")
+    ):
+        raise ValueError("private CPU conversion inputs are not uploaded and verified")
+    existing = list(REPORT.glob("fim-conversion-job*.json"))
+    if existing:
+        raise ValueError("conversion allocation already exists; automatic retry is disabled")
+    check_shared_allocation_budget(CONVERSION_SESSION_SECONDS, phase="conversion")
+    observation = quota()
+    _check_conversion_quota(plan, observation)
+    if _csv_ref_exists(CONVERSION_KERNEL_REFERENCE):
+        raise ValueError(
+            "conversion kernel reference already exists; refusing duplicate allocation"
+        )
+    source_status = cli("kaggle", "kernels", "status", plan["source"]["kernel_reference"])
+    if "COMPLETE" not in source_status.upper():
+        raise RuntimeError("selected source FIM kernel is not complete")
+    kernel = build_fim_conversion_kernel(plan, commit)
+    job = {
+        "reference": CONVERSION_KERNEL_REFERENCE,
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "selected_arm": plan["source"]["arm"],
+        "attempt": 1,
+        "plan_sha256": digest(CONVERSION_PLAN),
+        "selection_sha256": plan["selection_sha256"],
+        "training_plan_sha256": plan["training_plan_sha256"],
+        "input_manifest_sha256": digest(bundle / "input-manifest.json"),
+        "commit": commit,
+        "enable_gpu": False,
+        "session_seconds": CONVERSION_SESSION_SECONDS,
+        "conservative_reserved_session_seconds": CONVERSION_SESSION_SECONDS,
+        "account_gpu_hours_reserved": 0,
+        "paid_compute": False,
+        "automatic_renewal_use": False,
+        "quota": observation,
+        "status": "submission_pending",
+        "submitted_at": datetime.now(UTC).isoformat(),
+        "automatic_allocation": False,
+    }
+    save(REPORT / "fim-conversion-quota.json", observation)
+    save(CONVERSION_JOB_FILE, job)
+    try:
+        response = cli(
+            "kaggle",
+            "kernels",
+            "push",
+            "-p",
+            str(kernel),
+            "--timeout",
+            str(CONVERSION_SESSION_SECONDS),
+            timeout=240,
+        )
+        urls = re.findall(
+            r"https://www\.kaggle\.com/code/([A-Za-z0-9_-]+/[A-Za-z0-9_-]+)", response
+        )
+        job.update(
+            status="submitted",
+            submission_response=response,
+            requested_reference=CONVERSION_KERNEL_REFERENCE,
+            reference=urls[-1] if urls else CONVERSION_KERNEL_REFERENCE,
+        )
+    except Exception as exc:
+        job.update(status="submission_unknown", error_class=type(exc).__name__)
+        save(CONVERSION_JOB_FILE, job)
+        raise
+    save(CONVERSION_JOB_FILE, job)
+    return job
+
+
+def _csv_ref_exists(reference: str) -> bool:
+    sys.path.insert(0, str(ROOT / "kaggle/one_line_gpu_pilot_r1"))
+    from build_pilot import _csv_refs
+
+    return reference in _csv_refs(
+        ["kaggle", "kernels", "list", "--mine", "--page-size", "100", "--csv"]
+    )
+
+
+def collect_fim_conversion(plan: dict[str, Any] | None = None) -> dict[str, Any]:
+    plan = _load_conversion_plan() if plan is None else plan
+    if plan != _load_conversion_plan() or not CONVERSION_JOB_FILE.is_file():
+        raise ValueError("conversion collection lacks its frozen job receipt")
+    job = json.loads(CONVERSION_JOB_FILE.read_text())
+    if (
+        job.get("plan_sha256") != digest(CONVERSION_PLAN)
+        or job.get("selection_sha256") != plan["selection_sha256"]
+        or job.get("source_kernel_reference") != plan["source"]["kernel_reference"]
+        or job.get("enable_gpu") is not False
+        or job.get("automatic_allocation") is not False
+    ):
+        raise ValueError("conversion job belongs to another plan or source kernel")
+    status = cli("kaggle", "kernels", "status", job["reference"])
+    if not any(word in status.upper() for word in ("COMPLETE", "ERROR")):
+        return {"status": status, "conversion_verified": False}
+    if "COMPLETE" not in status.upper():
+        raise RuntimeError("CPU conversion kernel did not complete successfully")
+    CONVERSION_OUTPUT.mkdir(parents=True, exist_ok=True)
+    if CONVERSION_OUTPUT.is_symlink():
+        raise ValueError("conversion output directory is unsafe")
+    cli(
+        "kaggle",
+        "kernels",
+        "output",
+        job["reference"],
+        "-p",
+        str(CONVERSION_OUTPUT),
+        "-q",
+        "--file-pattern",
+        r"q25_fim_conversion_r1/conversion\.json$",
+        timeout=300,
+    )
+    manifests = list(CONVERSION_OUTPUT.glob("**/conversion.json"))
+    if (
+        len(manifests) != 1
+        or manifests[0].is_symlink()
+        or manifests[0].stat().st_size > 2 * 1024**2
+    ):
+        raise ValueError("conversion worker result manifest is missing or ambiguous")
+    result_path = manifests[0]
+    result = json.loads(result_path.read_text())
+    if (
+        result.get("schema") != "q25-fim-q4-conversion-run-v1"
+        or result.get("status") != "complete"
+        or result.get("selection_sha256") != plan["selection_sha256"]
+        or result.get("training_plan_sha256") != plan["training_plan_sha256"]
+        or result.get("selected_arm") != plan["source"]["arm"]
+        or result.get("source_export_manifest_sha256") != plan["source"]["artifact_manifest_sha256"]
+        or result.get("source_fingerprint") != plan["source"]["fingerprint"]
+        or result.get("source_kernel_reference") != plan["source"]["kernel_reference"]
+        or result.get("training_cursor") != plan["source"]["training_cursor"]
+        or result.get("conversion", {}).get("gpu_enabled") is not False
+    ):
+        raise ValueError("conversion result manifest is incomplete or bound to another input")
+    q4 = result.get("q4_export")
+    if not isinstance(q4, dict):
+        raise ValueError("conversion result does not contain a verified Q4 export")
+    expected_name = f"q25-{plan['source']['arm']}-Q4_K_M.gguf"
+    if (
+        q4.get("file") != expected_name
+        or not isinstance(q4.get("bytes"), int)
+        or isinstance(q4.get("bytes"), bool)
+        or not 0 < q4["bytes"] <= CONVERSION_ARTIFACT_CAP_BYTES
+        or not re.fullmatch(r"[0-9a-f]{64}", str(q4.get("sha256")))
+    ):
+        raise ValueError("conversion Q4 output identity is invalid")
+    if "f16_intermediate" in result:
+        raise ValueError("conversion worker retained its F16 intermediate")
+    existing_bytes = directory_bytes(ARTIFACTS)
+    q4_target = CONVERSION_OUTPUT / expected_name
+    if not q4_target.exists() and existing_bytes + q4["bytes"] > CONVERSION_ARTIFACT_CAP_BYTES:
+        raise OSError("Q4 collection would exceed the artifact cap")
+    missing_bytes = 0 if q4_target.exists() else q4["bytes"]
+    if shutil.disk_usage(ARTIFACTS).free < missing_bytes + CONVERSION_MINIMUM_FREE_BYTES:
+        raise OSError("Q4 collection would exhaust storage headroom")
+    cli(
+        "kaggle",
+        "kernels",
+        "output",
+        job["reference"],
+        "-p",
+        str(CONVERSION_OUTPUT),
+        "-q",
+        "--file-pattern",
+        re.escape(expected_name) + "$",
+        timeout=900,
+    )
+    if (
+        q4_target.is_symlink()
+        or not q4_target.is_file()
+        or q4_target.stat().st_size != q4["bytes"]
+        or digest(q4_target) != q4["sha256"]
+    ):
+        raise ValueError("retrieved Q4 artifact differs from the verified conversion result")
+    record = {
+        "schema": "q25-fim-q4-conversion-receipt-v1",
+        "reference": job["reference"],
+        "source_kernel_reference": plan["source"]["kernel_reference"],
+        "selected_arm": plan["source"]["arm"],
+        "conversion_plan_sha256": digest(CONVERSION_PLAN),
+        "selection_sha256": plan["selection_sha256"],
+        "training_plan_sha256": plan["training_plan_sha256"],
+        "source_export_manifest_sha256": plan["source"]["artifact_manifest_sha256"],
+        "conversion_manifest_sha256": digest(result_path),
+        "q4_file": expected_name,
+        "q4_bytes": q4["bytes"],
+        "q4_sha256": q4["sha256"],
+        "collected_at": datetime.now(UTC).isoformat(),
+        "source_weight_or_checkpoint_retrieval": False,
+    }
+    save(REPORT / "fim-conversion-verified.json", record)
+    save(result_path.with_name("conversion-receipt.json"), record)
+    return record
+
+
+def watch_fim_conversion(
+    plan: dict[str, Any] | None = None, *, poll_seconds: float = 30
+) -> dict[str, Any]:
+    plan = _load_conversion_plan() if plan is None else plan
+    if not CONVERSION_JOB_FILE.is_file():
+        raise FileNotFoundError("conversion observer requires one submitted job receipt")
+    job = json.loads(CONVERSION_JOB_FILE.read_text())
+    if job.get("plan_sha256") != digest(CONVERSION_PLAN) or job.get("enable_gpu") is not False:
+        raise ValueError("conversion observer identity differs from the CPU plan")
+    if (
+        not isinstance(poll_seconds, (int, float))
+        or isinstance(poll_seconds, bool)
+        or not 1 <= poll_seconds <= 120
+    ):
+        raise ValueError("conversion observer poll interval is outside its bound")
+    end = datetime.fromisoformat(job["submitted_at"].replace("Z", "+00:00")).timestamp()
+    end += CONVERSION_SESSION_SECONDS + 900
+    failures = 0
+    while datetime.now(UTC).timestamp() < end:
+        observation: dict[str, Any] = {
+            "reference": job["reference"],
+            "plan_sha256": job["plan_sha256"],
+            "observed_at": datetime.now(UTC).isoformat(),
+            "automatic_allocation": False,
+        }
+        try:
+            status = cli("kaggle", "kernels", "status", job["reference"], timeout=60)
+            observation["status"] = status
+            failures = 0
+        except (RuntimeError, subprocess.TimeoutExpired) as exc:
+            failures += 1
+            observation.update(error_class=type(exc).__name__, consecutive_failures=failures)
+            save(REPORT / "fim-conversion-watch.json", observation)
+            if failures >= 3:
+                raise RuntimeError(
+                    "conversion observer lost connectivity; no job was retried"
+                ) from None
+            time.sleep(poll_seconds)
+            continue
+        save(REPORT / "fim-conversion-watch.json", observation)
+        if "COMPLETE" in status.upper():
+            return collect_fim_conversion(plan)
+        if "ERROR" in status.upper():
+            raise RuntimeError("CPU conversion job failed; inspect its existing output")
+        time.sleep(poll_seconds)
+    raise TimeoutError("conversion observer deadline reached; no new job was allocated")
+
+
 def watch_fim(plan: dict[str, Any], arm: str, attempt: int) -> dict[str, Any]:
     if arm not in FIM_ARMS:
         raise ValueError("unknown FIM arm")
@@ -2127,6 +3159,13 @@ def main() -> None:
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--phase", choices=("cpt", "fim"), default="cpt")
     parser.add_argument("--freeze-fim", action="store_true")
+    parser.add_argument("--freeze-conversion", action="store_true")
+    parser.add_argument("--bundle-conversion", action="store_true")
+    parser.add_argument("--upload-conversion", action="store_true")
+    parser.add_argument("--execute-conversion", action="store_true")
+    parser.add_argument("--collect-conversion", action="store_true")
+    parser.add_argument("--watch-conversion", action="store_true")
+    parser.add_argument("--conversion-selection", type=Path, default=CONVERSION_SELECTION)
     parser.add_argument("--settle-sessions", action="store_true")
     parser.add_argument("--cpt-attempt", type=int, default=1)
     parser.add_argument("--arm", choices=FIM_ARMS, default=FIM_ARMS[0])
@@ -2134,6 +3173,53 @@ def main() -> None:
     parser.add_argument("--resume-source")
     args = parser.parse_args()
     result: dict[str, Any]
+    conversion_actions = {
+        "freeze": args.freeze_conversion,
+        "bundle": args.bundle_conversion,
+        "upload": args.upload_conversion,
+        "execute": args.execute_conversion,
+        "collect": args.collect_conversion,
+        "watch": args.watch_conversion,
+    }
+    selected_conversion_actions = [
+        name for name, selected in conversion_actions.items() if selected
+    ]
+    if selected_conversion_actions:
+        if (
+            len(selected_conversion_actions) != 1
+            or args.phase != "cpt"
+            or any(
+                (
+                    args.bundle,
+                    args.upload,
+                    args.execute,
+                    args.collect,
+                    args.watch,
+                    args.freeze_fim,
+                    args.settle_sessions,
+                )
+            )
+        ):
+            parser.error("conversion actions must run alone, one at a time")
+        action = selected_conversion_actions[0]
+        if action == "freeze":
+            result = {"fim_conversion_plan": freeze_fim_conversion(args.conversion_selection)}
+        else:
+            if args.conversion_selection != CONVERSION_SELECTION:
+                parser.error("--conversion-selection applies only to --freeze-conversion")
+            conversion_plan = _load_conversion_plan()
+            if action == "bundle":
+                result = {"conversion_bundle": str(build_fim_conversion_bundle(conversion_plan))}
+            elif action == "upload":
+                result = {"conversion_dataset": upload_fim_conversion_bundle(conversion_plan)}
+            elif action == "execute":
+                result = {"conversion_job": submit_fim_conversion(conversion_plan)}
+            elif action == "collect":
+                result = {"conversion_output": collect_fim_conversion(conversion_plan)}
+            else:
+                result = {"conversion_output": watch_fim_conversion(conversion_plan)}
+        print(json.dumps(result, sort_keys=True))
+        return
     if args.settle_sessions:
         if any((args.bundle, args.upload, args.execute, args.collect, args.watch, args.freeze_fim)):
             parser.error("--settle-sessions cannot be combined with other campaign actions")
