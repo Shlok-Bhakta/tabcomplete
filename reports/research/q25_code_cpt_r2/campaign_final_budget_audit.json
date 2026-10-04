@@ -1,0 +1,528 @@
+{
+  "audit_scope": "read-only; current authenticated quota observation, existing budget ledgers, and full private campaign artifact tree; no allocation, download, or source mutation",
+  "campaign_budget": {
+    "limits": {
+      "aggregate_reserved_session_seconds": 72000,
+      "automatic_renewal_use": false,
+      "conservative_account_gpu_hours": 40.0,
+      "maximum_additional_processed_training_input_tokens": 32000000,
+      "minimum_free_bytes": 2147483648,
+      "minimum_reserved_future_fim_session_seconds": 21600,
+      "new_artifact_bytes_cap_per_machine": 12884901888,
+      "one_allocation_at_a_time": true,
+      "paid_compute": false,
+      "quota_renewal": "2026-10-10T00:00:00"
+    },
+    "processed_training_input_tokens": {
+      "accounting_source": "scripts/run_q25_code_cpt.py shared_token_ledger() and verified output receipts",
+      "campaign_processed_token_cap": 32000000,
+      "ledger_total_actual_trained_input_tokens": 11426328,
+      "matches_requested_reported_actual_11426328": true,
+      "per_phase": {
+        "completed_cpt_q25_to_fim": 1776908,
+        "cpt": 7872512,
+        "untouched_q25_to_fim": 1776908
+      },
+      "remaining_processed_token_headroom": 20573672,
+      "reported_actual_trained_input_tokens": 11426328
+    },
+    "reservation_accounting": {
+      "campaign_gpu_account_hours_reserved_conservatively": 20.718888888888888,
+      "combined_existing_wall_session_seconds": 70588,
+      "cpu_conversion_receipt_count_unique_references": 5,
+      "cpu_conversion_reservations": [
+        {
+          "attempt": 1,
+          "charged_session_seconds": 10800,
+          "gpu_enabled": false,
+          "plan_revision": null,
+          "receipt_file": "fim/conversion/history/attempt-1/job.json",
+          "receipt_sha256": "ea7d7791d4ca38da6a59ab62ae2a3fa1161926e41b104a2a4280a58806216c3b",
+          "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "verified_cpu_failure_settlement": false
+        },
+        {
+          "attempt": 2,
+          "charged_session_seconds": 10800,
+          "gpu_enabled": false,
+          "plan_revision": null,
+          "receipt_file": "fim-conversion-job.json",
+          "receipt_sha256": "0e024a4c996ea8a444154adf062688c23fd1987695949f11c094584e883179c7",
+          "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1-a2",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "verified_cpu_failure_settlement": false
+        },
+        {
+          "attempt": 1,
+          "charged_session_seconds": 333,
+          "gpu_enabled": false,
+          "plan_revision": 2,
+          "receipt_file": "fim-conversion-job-r2.json",
+          "receipt_sha256": "28866f860140ed90ea16a88c8c42326cc7a4a233f6ead3af0008888a88f99cf9",
+          "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r2",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "verified_cpu_failure_settlement": true
+        },
+        {
+          "attempt": 1,
+          "charged_session_seconds": 561,
+          "gpu_enabled": false,
+          "plan_revision": 3,
+          "receipt_file": "fim-conversion-job-r3.json",
+          "receipt_sha256": "18907ebf0db409e58aea75f09c1589b49270d5d934b90bf1454702aabe7fa99e",
+          "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r3",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "verified_cpu_failure_settlement": true
+        },
+        {
+          "attempt": 1,
+          "charged_session_seconds": 10800,
+          "gpu_enabled": false,
+          "plan_revision": 4,
+          "receipt_file": "fim-conversion-job-r4.json",
+          "receipt_sha256": "5eb05ae041f9e866c8bb61b50370d3a7528650020ffdb2f823c457e3ccdfc875",
+          "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r4",
+          "remote_status": "COMPLETE",
+          "reserved_session_seconds": 10800,
+          "verified_cpu_failure_settlement": false
+        }
+      ],
+      "cpu_conversion_wall_session_seconds_after_valid_settlements": 33294,
+      "gpu_account_hour_multiplier": 2,
+      "gpu_job_receipt_count": 7,
+      "gpu_job_reservations": [
+        {
+          "arm": "completed_cpt_q25_to_fim",
+          "attempt": 1,
+          "charged_session_seconds": 10800,
+          "no_training_executed": false,
+          "receipt_file": "fim-job-completed_cpt_q25_to_fim-1.json",
+          "reference": "shlokbhakta/tc-q25-fim-r2-1-a1",
+          "remote_status": "COMPLETE",
+          "reserved_session_seconds": 10800,
+          "settled_zero_work": false,
+          "training_status": "complete"
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 1,
+          "charged_session_seconds": 172,
+          "no_training_executed": true,
+          "receipt_file": "fim-job-untouched_q25_to_fim-1.json",
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a1",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled_zero_work": true,
+          "training_status": "no_training_executed"
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 2,
+          "charged_session_seconds": 130,
+          "no_training_executed": true,
+          "receipt_file": "fim-job-untouched_q25_to_fim-2.json",
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a2",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled_zero_work": true,
+          "training_status": "no_training_executed"
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 3,
+          "charged_session_seconds": 779,
+          "no_training_executed": true,
+          "receipt_file": "fim-job-untouched_q25_to_fim-3.json",
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a3",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled_zero_work": true,
+          "training_status": "no_training_executed"
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 4,
+          "charged_session_seconds": 213,
+          "no_training_executed": true,
+          "receipt_file": "fim-job-untouched_q25_to_fim-4.json",
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a4",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled_zero_work": true,
+          "training_status": "no_training_executed"
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 5,
+          "charged_session_seconds": 10800,
+          "no_training_executed": false,
+          "receipt_file": "fim-job-untouched_q25_to_fim-5.json",
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+          "remote_status": "COMPLETE",
+          "reserved_session_seconds": 10800,
+          "settled_zero_work": false,
+          "training_status": "complete"
+        },
+        {
+          "arm": null,
+          "attempt": 1,
+          "charged_session_seconds": 14400,
+          "no_training_executed": false,
+          "receipt_file": "job-1.json",
+          "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+          "remote_status": "COMPLETE",
+          "reserved_session_seconds": 14400,
+          "settled_zero_work": false,
+          "training_status": "complete"
+        }
+      ],
+      "gpu_reserved_wall_session_seconds_after_valid_settlements": 37294,
+      "r4_cpu_conversion_reserved_session_seconds": 10800,
+      "remaining_aggregate_wall_session_seconds": 1412,
+      "remaining_conservative_account_gpu_hours": 19.281111111111112,
+      "reservation_policy": "Unsettled or unverified jobs retain their full receipt reservation; validated zero-work FIM and CPU failure settlements retain their conservative bounded charges. CPU conversion reservations consume wall-session budget but no account GPU-hours.",
+      "settled_zero_work_fim_sessions": [
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 1,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a1",
+          "settled_session_seconds": 172
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 2,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a2",
+          "settled_session_seconds": 130
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 3,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a3",
+          "settled_session_seconds": 779
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 4,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a4",
+          "settled_session_seconds": 213
+        }
+      ],
+      "validation_with_zero_new_session": "pass",
+      "verified_zero_training_attempt_count": 4,
+      "verified_zero_training_attempts": [
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 1,
+          "charged_session_seconds": 172,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a1",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled": true
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 2,
+          "charged_session_seconds": 130,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a2",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled": true
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 3,
+          "charged_session_seconds": 779,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a3",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled": true
+        },
+        {
+          "arm": "untouched_q25_to_fim",
+          "attempt": 4,
+          "charged_session_seconds": 213,
+          "reference": "shlokbhakta/tc-q25-fim-r2-0-a4",
+          "remote_status": "ERROR",
+          "reserved_session_seconds": 10800,
+          "settled": true
+        }
+      ]
+    },
+    "source_file": "campaign_budget.json",
+    "source_sha256": "b0a88cff01bb6c409b74e9888d17b1cd3b1694f03bfb0ec3dc427193b2eb363e"
+  },
+  "quota": {
+    "active_job_count": 0,
+    "active_jobs": [],
+    "automatic_renewal_use_authorized": false,
+    "collection_finished_at": "2026-10-04T12:12:21.141674+00:00",
+    "job_statuses_verified": true,
+    "jobs": [
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-adaptation",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r4",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r3",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r2",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1-a2",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-q4-conversion-r1",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-1-a1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a4",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a3",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a2",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tc-q25-fim-r2-0-a1",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tc-public-functional-3e5-v2",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tc-public-functional-1e5-v2",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-disposable-fixture-v5",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-disposable-fixture-v4",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-disposable-fixture-v2",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-6",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-attempt-5",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-final",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-verified",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1-retry",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-sweep-comparison-r1",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-retry",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-conversion",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-heldout",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-r1-lfm-q4-retry",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-conversion",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-line-repair",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening-v2",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-small-model-prototype-r1-screening",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-context",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-evaluation",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-filtered",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-4",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-3",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard-attempt-2",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-standard",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-model-data-r2-baseline",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-long-context-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-evaluation-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-context-probe-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-campaign-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-resume-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-smoke-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare-r1",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-bench",
+        "status": "COMPLETE"
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/exercise-functions-and-getting-help",
+        "status": "NOT_FOUND_VERIFIED",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-10-04T12:12:19.707100+00:00"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-stage1",
+        "status": "ERROR"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-prepare",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-code-cpt-access",
+        "status": "COMPLETE"
+      },
+      {
+        "reference": "shlokbhakta/tabcomplete-lora-smoke",
+        "status": "COMPLETE"
+      },
+      {
+        "http_status": 404,
+        "not_found_verified": true,
+        "reference": "shlokbhakta/notebookd2edcfa65c",
+        "status": "NOT_FOUND_VERIFIED",
+        "verification_source": "authenticated kaggle kernels status HTTP 404",
+        "verified_at": "2026-10-04T12:12:19.707100+00:00"
+      }
+    ],
+    "listed_job_count": 55,
+    "listing_may_be_truncated": false,
+    "observed_at": "2026-10-04T12:11:37.941596+00:00",
+    "remaining": 41.08,
+    "renewal": "2026-10-10T00:00:00",
+    "source": "authenticated kaggle quota --format json and kernel statuses",
+    "status_listing_limit": 100,
+    "total": 45.0,
+    "units": "Kaggle account GPU-hours",
+    "used": 3.92
+  },
+  "schema": "q25-code-cpt-final-budget-audit-v1",
+  "storage": {
+    "artifact_root": "/mnt/ssd/tabcomplete-q25-code-cpt-r2",
+    "cache_temp_classification": "Unique regular files beneath path components named cache, tmp, temp, temporary, runtime, staging, or uv-cache; this is a subset of the complete artifact-tree total.",
+    "cache_temp_runtime_staging_file_count": 3479,
+    "cache_temp_runtime_staging_subset_bytes_included_in_total": 1043448082,
+    "cap_bytes": 12884901888,
+    "controller_directory_bytes_measurement": 12514423946,
+    "controller_measurement_exceeds_cap": false,
+    "controller_measurement_headroom_bytes": 370477942,
+    "external_preexisting_package_or_model_caches": "outside campaign artifact-root cap; their current use is reflected in filesystem free bytes",
+    "hidden_file_count_included": 1404,
+    "inventory_note": "The full recursive controller byte measure includes hidden files and cache/temp/runtime/staging files under the private artifact root. Symlinked directories were not traversed by the independent inventory.",
+    "minimum_free_bytes_required": 2147483648,
+    "minimum_free_space_gate_passes": true,
+    "regular_file_count": 4271,
+    "regular_files_allocated_bytes_deduplicated_by_inode": 12464074752,
+    "regular_files_apparent_bytes_no_symlink_follow": 12514423946,
+    "symlink_directory_count_not_followed_by_inventory": 0,
+    "symlink_file_count_not_followed_by_inventory": 0,
+    "total_filesystem_free_bytes_at_artifact_root": 32027676672
+  }
+}

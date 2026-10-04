@@ -1,0 +1,24 @@
+{
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 271828,
+  "cases": 240,
+  "comparison_changes_runtime_and_precision": true,
+  "completion_byte_changes": 49,
+  "hf_fp16_exact_eos": 130,
+  "hf_results_sha256": "ffe6357a89a2b1f93dad0a6a8c05e5d90f55649c485bcbc382f4ad0c529170b5",
+  "native_capped": 1,
+  "native_minus_hf_percentage_points": -1.6666666666666667,
+  "native_q4_exact_valid_eos": 126,
+  "native_raw_eos": 239,
+  "native_results_sha256": "1afaa31eaa20f3d0fb23d761169b4d924bcf4dd77d423f73e401f3e5d5cc1d54",
+  "native_valid": 235,
+  "paired_gains": 1,
+  "paired_losses": 5,
+  "quality_claim": "synthetic source-completion development only; no human next-edit or acceptance conclusion",
+  "repository_bootstrap_95_percent_interval_percentage_points": [
+    -3.7815126050420167,
+    0.0
+  ],
+  "repository_groups": 119,
+  "schema": "q25-fim-native-paired-comparison-v1"
+}
