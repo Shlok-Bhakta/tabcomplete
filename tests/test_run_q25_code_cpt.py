@@ -161,6 +161,29 @@ def test_submit_requires_verified_upload_and_pushes_one_bounded_t4_kernel(
     assert json.loads((report / "job-1.json").read_text())["status"] == "submitted"
 
 
+def test_submit_records_title_derived_reference_from_kaggle_push_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan, report, _artifacts, _calls = _submission_context(tmp_path, monkeypatch)
+    requested = "shlokbhakta/tc-q25-code-cpt-r2-a1"
+    resolved = "shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1"
+    original_cli = campaign.cli
+
+    def url_returning_cli(*args: str, **kwargs: Any) -> str:
+        if args[:3] == ("kaggle", "kernels", "push"):
+            return f"Kernel pushed: https://www.kaggle.com/code/{resolved}"
+        return original_cli(*args, **kwargs)
+
+    monkeypatch.setattr(campaign, "cli", url_returning_cli)
+
+    job = campaign.submit(plan, attempt=1, resume_source=None)
+
+    saved = json.loads((report / "job-1.json").read_text())
+    assert job["requested_reference"] == requested
+    assert job["reference"] == resolved
+    assert saved["reference"] == resolved
+
+
 def test_submit_refuses_missing_or_unverified_dataset_receipt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

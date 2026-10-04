@@ -327,7 +327,7 @@ def submit(plan: dict[str, Any], *, attempt: int, resume_source: str | None) -> 
         kernel / "kernel-metadata.json",
         {
             "id": reference,
-            "title": f"TabComplete Q25 code CPT r2 attempt {attempt}",
+            "title": f"tc q25 code cpt r2 a{attempt}",
             "code_file": "run.py",
             "language": "python",
             "kernel_type": "script",
@@ -361,7 +361,14 @@ def submit(plan: dict[str, Any], *, attempt: int, resume_source: str | None) -> 
             "NvidiaTeslaT4",
             timeout=240,
         )
-        job.update(status="submitted", submission_response=response)
+        urls = re.findall(r"https://www\.kaggle\.com/code/([A-Za-z0-9_-]+/[A-Za-z0-9_-]+)", response)
+        actual_reference = urls[-1] if urls else reference
+        job.update(
+            status="submitted",
+            submission_response=response,
+            requested_reference=reference,
+            reference=actual_reference,
+        )
     except Exception as exc:
         job.update(status="submission_unknown", error_class=type(exc).__name__)
         save(target, job)

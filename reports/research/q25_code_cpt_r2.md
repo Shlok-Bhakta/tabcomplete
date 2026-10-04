@@ -83,8 +83,25 @@ cap is 12 million, including a 4 million allowance for replaying an interrupted
 uncommitted tail. This allowance does not authorize an extra pass over the
 source corpus. Every resumed session carries that counter forward.
 
-Actual GPU training, paired evaluation and artifact reload verification remain
-pending until their respective execution records exist.
+The complete repository verification passed 862 Python tests, Ruff, mypy across
+85 source files, 16 gateway Bun tests and 59 collector Bun tests. Both service
+type checks passed. Initial Python failures came from two ignored historical
+artifacts missing in the isolated worktree; the exact existing files were
+restored without changing the tests. The subsequent full run passed.
+
+Attempt 1 was submitted from commit `fce293d0074d38817810434d74051da243d30e2d`
+at 2026-10-04 00:23:07 UTC. Its actual private notebook is
+`shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1`. Authenticated status reported
+`RUNNING`. The immediate pre-allocation observation reported 45.00 account
+GPU-hours remaining, no active notebooks, and the unchanged October 10 renewal.
+Kaggle used the title-derived slug despite the requested short ID. The receipt
+was reconciled against the returned URL and authenticated status; no duplicate
+allocation was submitted. The controller now records returned notebook URLs.
+This reference correction does not change data, prompts, model or training.
+
+Kaggle has not exposed progress/output artifacts during the running session.
+Completed training tokens, quality changes and reload checks remain unknown
+until their respective execution records exist.
 
 The existing SigNoz CLI query for the historical failed kernel identifier
 `tabcomplete-one-line-instinct-pilot-r1-retry` returned `no_runs`. Its private

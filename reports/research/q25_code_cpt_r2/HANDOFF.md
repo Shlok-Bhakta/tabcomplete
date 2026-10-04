@@ -43,3 +43,10 @@ it after `src:scripts` in `PYTHONPATH` for trainer tests. Local CUDA is unavaila
 Do not describe an allocation or a model gain as completed based on this handoff
 alone. Commit and push the campaign code before submission; the controller
 enforces that the remote branch matches the local commit.
+
+Attempt 1 is running at the actual Kaggle reference
+`shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1`, launched from `fce293d`.
+The short requested ID was not created; do not retry submission under that ID.
+Inspect the actual reference, then collect attempt 1 only after COMPLETE/ERROR.
+The job receipt and fresh quota observation are committed beside this file.
+No second notebook may be allocated while it remains active.
