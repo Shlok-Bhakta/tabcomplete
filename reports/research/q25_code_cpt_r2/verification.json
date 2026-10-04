@@ -1,0 +1,31 @@
+{
+  "collector_bun": {
+    "failed": 0,
+    "passed": 59
+  },
+  "collector_typecheck": "passed",
+  "focused_cpt": {
+    "failed": 0,
+    "passed": 31
+  },
+  "gateway_bun": {
+    "failed": 0,
+    "passed": 16
+  },
+  "gateway_typecheck": "passed",
+  "gpu_allocated_at_verification": false,
+  "mypy": {
+    "source_files": 85,
+    "status": "passed"
+  },
+  "python": {
+    "cpu_torch": "2.14.0+cpu",
+    "failed": 0,
+    "initial_failure": "Two historical tests lacked ignored frozen author artifacts in isolated worktree; exact existing files restored, unchanged tests rerun.",
+    "passed": 862,
+    "seconds": 89.3,
+    "warnings": 2
+  },
+  "ruff": "passed",
+  "training_host_local_cuda": false
+}

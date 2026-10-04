@@ -1,0 +1,149 @@
+{
+  "actual_train_input_tokens": 7872512,
+  "actual_training_allocation": {
+    "go": 1172,
+    "python": 3001,
+    "rust": 1953,
+    "typescript": 1562
+  },
+  "corpus_metadata_sha256": "b7360a710a49cf4b163513286981855791e1ca117c3132710719937139057c33",
+  "corpus_sha256": "f30135d4c0c3c19e8dc633720ce809859556e1026aecd17adad19a8cc33fc257",
+  "cross_split_alias_overlap": 0,
+  "cross_split_content_overlap": 0,
+  "data_outputs": {
+    "development_blocks.npy": {
+      "bytes": 524416,
+      "sha256": "5436e2a4ce5a678546c0a62f436a7247d36f967b40af34d30ef372a293801263"
+    },
+    "development_manifest.jsonl": {
+      "bytes": 74831,
+      "sha256": "a345581c23fdf556df145a9ac90b5c61b7ea369cedaaa6ca930403cc6ab4a07c"
+    },
+    "train_blocks.npy": {
+      "bytes": 31490176,
+      "sha256": "23532cd53a6a1360fee92e3c3135a6c482867aab8344b0ba3c7f3956bd95c69a"
+    },
+    "train_languages.npy": {
+      "bytes": 7816,
+      "sha256": "aeea399acb1ee3abb290afd2e13e7b37d174e88e34e75062a9dfa7befc1112d3"
+    },
+    "train_manifest.jsonl": {
+      "bytes": 3701887,
+      "sha256": "5ad7e2260424624a59b6c6be6b4aaac125ef4d59889a54fca15522db80eca0f3"
+    }
+  },
+  "development_feeder_documents": 120,
+  "development_input_tokens": 131072,
+  "development_unique_primary_repositories": 119,
+  "license_counts": {
+    "allowed_spdx": [
+      "0BSD",
+      "Apache-2.0",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "CC0-1.0",
+      "ISC",
+      "MIT",
+      "Unlicense"
+    ],
+    "development_counts_by_language": {
+      "go": {
+        "Apache-2.0": 5,
+        "MIT": 6
+      },
+      "python": {
+        "Apache-2.0": 12,
+        "BSD-3-Clause": 7,
+        "MIT": 33
+      },
+      "rust": {
+        "Apache-2.0": 7,
+        "MIT": 7
+      },
+      "typescript": {
+        "Apache-2.0": 8,
+        "BSD-3-Clause": 2,
+        "MIT": 35
+      }
+    },
+    "repository_level_all_claims_must_be_allowlisted": true,
+    "train_counts_by_language": {
+      "go": {
+        "0BSD": 1,
+        "Apache-2.0": 338,
+        "BSD-2-Clause": 8,
+        "BSD-3-Clause": 45,
+        "CC0-1.0": 4,
+        "MIT": 377,
+        "Unlicense": 8
+      },
+      "python": {
+        "0BSD": 3,
+        "Apache-2.0": 505,
+        "BSD-2-Clause": 50,
+        "BSD-3-Clause": 178,
+        "CC0-1.0": 16,
+        "ISC": 2,
+        "MIT": 1539,
+        "Unlicense": 49
+      },
+      "rust": {
+        "0BSD": 9,
+        "Apache-2.0": 448,
+        "BSD-2-Clause": 13,
+        "BSD-3-Clause": 26,
+        "CC0-1.0": 6,
+        "ISC": 4,
+        "MIT": 898,
+        "Unlicense": 22
+      },
+      "typescript": {
+        "0BSD": 5,
+        "Apache-2.0": 260,
+        "BSD-2-Clause": 6,
+        "BSD-3-Clause": 30,
+        "CC0-1.0": 11,
+        "ISC": 5,
+        "MIT": 1491,
+        "Unlicense": 23
+      }
+    }
+  },
+  "post_preparation_source_change": {
+    "original_producer_source_sha256": "3203e01b1d9e05d81da337c01e49f0d2799e7ff646259536e2418a572affc713",
+    "reason": "Ruff formatting, unused import/loop-variable cleanup; generated corpus unchanged",
+    "source_sha256": "e86a1d06bfe69f66ff56b8a1bee40bdfa7026194471a0e75883c3b0338547c75"
+  },
+  "preparation_source_sha256": "3203e01b1d9e05d81da337c01e49f0d2799e7ff646259536e2418a572affc713",
+  "split_audit": {
+    "alias_policy": "any reserved alias excludes; any development alias assigns development",
+    "benchmark_exclusion_entry_count": 172,
+    "benchmark_exclusion_path": "/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2/reports/research/q25_code_cpt_r2/excluded_benchmark_repositories.json",
+    "benchmark_exclusion_sha256": "afa1501dceb8eda249a0c7c78c6c70a8f4c1d048a036fd2b1f7b7da7747c4d70",
+    "benchmark_overlap_selected_rows_after_exclusion": 0,
+    "benchmark_overlap_source_rows_by_language": {
+      "go": 20,
+      "python": 20,
+      "rust": 23,
+      "typescript": 23
+    },
+    "benchmark_reserved_hash_count": 1398,
+    "benchmark_reserved_repository_count": 172,
+    "hash": "sha256(repository_identity)[:8] big-endian modulo 1000",
+    "historical_reserved_buckets": [
+      0,
+      30
+    ],
+    "new_development_buckets": [
+      970,
+      1000
+    ],
+    "test_access": false,
+    "train_buckets": [
+      30,
+      970
+    ]
+  },
+  "train_feeder_documents": 6121,
+  "train_unique_primary_repositories": 6031
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "revision": 2,
+    "reason": "CPU source audit found86 rows whose repositories overlap unchanged evaluationfixtures; add explicit benchmarkrepository/alias exclusion before data preparation ormodeloutputs.",
+    "previous_plan_sha256": "6274947997c3aec175dc37b90e24f31b544198d1938e5f07ba117f90189b2ab8"
+  },
+  {
+    "revision": 3,
+    "reason": "Before corpus preparation/training, distinguish8M logical one-pass dataset from12M total processed-token cap including up to4M failed-tail replay. Resuming checkpoint every64updates can repeat lost work; runner must charge that exposure. No additional sourcepasses planned.",
+    "previous_plan_sha256": "f1579542feb47d1bcc7e95138233ee8583e412ee7e182815e912ab8d5297f3c9"
+  }
+]

@@ -1,0 +1,106 @@
+schema: q25-code-cpt-plan-v1
+plan_revision: 3
+branch: research/q25-code-cpt-r2
+base_commit: 0047e18
+model:
+  id: Qwen/Qwen2.5-Coder-0.5B
+  revision: 8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301
+  initializer: untouched_pretrained
+  weight_sha256: aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80
+  tokenizer_sha256: c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539
+  license: Apache-2.0
+data:
+  source: bigcode/the-stack-dedup
+  revision: 17cad72c886a2858e08d4c349a00d6466f54df63
+  reuse_pool: /mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/pool
+  languages:
+    python: 0.4
+    rust: 0.25
+    typescript: 0.2
+    go: 0.15
+  train_tokens: 8000000
+  development_tokens: 131072
+  sequence_length: 1024
+  original_reserved_buckets:
+  - 0
+  - 30
+  new_q25_development_buckets:
+  - 970
+  - 1000
+  train_buckets:
+  - 30
+  - 970
+  test_access: false
+  duplicate_policy: content_sha256_and_repository_alias_boundaries
+  source_policy: existing_public_pool_only_no_external_teacher
+  allowed_licenses:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - 0BSD
+  - Unlicense
+  - CC0-1.0
+  excluded_repositories_path: reports/research/q25_code_cpt_r2/excluded_benchmark_repositories.json
+  excluded_repositories_sha256: afa1501dceb8eda249a0c7c78c6c70a8f4c1d048a036fd2b1f7b7da7747c4d70
+training:
+  sequence_length: 1024
+  effective_batch: 16
+  microbatch_examples: 1
+  max_input_tokens: 8000000
+  epochs: 1
+  learning_rate: 3.0e-06
+  seed: 314159
+  checkpoint_every_updates: 64
+  gradient_checkpointing: true
+  max_output_bytes: 10737418240
+  master_weights: fp32
+  compute: fp16
+  optimizer: AdamW8bit
+  weight_decay: 0.01
+  gradient_clip: 1.0
+  loss: example_mean_causal_all_source_positions_except_first
+  warmup_fraction: 0.03
+  cosine_floor_fraction: 0.1
+  initial_loss_scale: 128
+  attention: sdpa
+runtime:
+  transformers: 5.17.0
+  bitsandbytes: 0.50.2
+  torch: kaggle_preinstalled_record_actual_before_training
+  datasets_preparation: 4.5.0
+  network_models: disabled
+budget:
+  aggregate_session_seconds: 72000
+  session_seconds: 14400
+  finalization_reserve_seconds: 1800
+  quota_account_gpu_hours_cap: 40
+  conservative_quota_multiplier: 2
+  quota_renewal: '2026-10-10T00:00:00'
+  new_artifact_bytes_cap: 12884901888
+  minimum_free_bytes: 2147483648
+  automatic_renewal_use: false
+  paid_compute: false
+  maximum_additional_training_input_tokens: 12000000
+  maximum_discarded_replay_input_tokens: 4000000
+evaluation:
+  causal_suite: data/benchmarks/code_completion_v2.jsonl
+  causal_suite_sha256: ed28739b302e4c0d3f9f45e859e7ccd68a1e8594a62eb7b13ee8425b92a439a4
+  causal_cases: 200
+  line_suite: /mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl
+  line_suite_sha256: 2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead
+  line_cases: 180
+  prompt: raw_causal_no_chat_template
+  sampling: greedy
+  max_output_tokens: 96
+  line_stopping: existing_incremental_first_newline_or_eos
+  synthetic_edit_probe: reports/research/one_line_r1/calibration_cases.json
+  synthetic_edit_probe_is_general_quality_evidence: false
+selection:
+  automatic_editor_promotion: false
+  next_edit_ability_not_established_by_code_cpt: true
+  baseline: untouched_same_q25_checkpoint_same_runtime_precision_and_fixtures
+  analysis: paired_case_outcomes_and_same_tokenizer_development_nll
+  stable_served_model_unchanged: true
+  automatic_personalization_enabled: false
