@@ -1,0 +1,79 @@
+{
+  "collector_bun": {
+    "failed": 0,
+    "passed": 59
+  },
+  "collector_typescript": "pass",
+  "gateway_bun": {
+    "failed": 0,
+    "passed": 16
+  },
+  "gateway_typescript": "pass",
+  "logs": {
+    "gate-collector-bun.log": {
+      "bytes": 5418,
+      "sha256": "d78c082eb204ce2d37d34298d8efba5bfeaa7cf098da6dc7d15343616f709a87"
+    },
+    "gate-collector-tsc.log": {
+      "bytes": 15,
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    "gate-gateway-bun.log": {
+      "bytes": 1396,
+      "sha256": "8471b73c24e49be79eb90878996c0b2589ad3f78d2a45a1209aea7294c4e1e8c"
+    },
+    "gate-gateway-tsc.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gate-lua-bounded.log": {
+      "bytes": 4352,
+      "sha256": "c0f737c3ab9babfa8eeabd911930451a4d0f705d95303d96793323d68d942c1f"
+    },
+    "gate-mypy-final.log": {
+      "bytes": 376,
+      "sha256": "bace9271e8349bf609f425f858578f4fcf934c58e7dff86b89702f82a1c69ea6"
+    },
+    "gate-native-build.log": {
+      "bytes": 8006,
+      "sha256": "d1506ef9f0b2e9a62215cd39fc023b0be0ae62c82144c8211dc20c3803399f4c"
+    },
+    "gate-python-final.log": {
+      "bytes": 1849,
+      "sha256": "fc93d23e0998beac25af24e24a623a8302dabc89bbfba14d13a14434e7ebdd6f"
+    },
+    "gate-ruff-final.log": {
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "gate-rust-final.log": {
+      "bytes": 10723,
+      "sha256": "8b2bb101e1448c99bd72f63d2086d64d179611b367f2be3c6f798b3aa7aedc0f"
+    }
+  },
+  "mypy": {
+    "source_files": 88,
+    "status": "pass"
+  },
+  "native_release_binary": {
+    "bytes": 9554360,
+    "sha256": "c9d7901a20ed72fc390cb72b13b37f88d99d67b1735c05f140706419652e52d2"
+  },
+  "neovim": {
+    "failed": 0,
+    "passed": 86
+  },
+  "observed_at": "2026-10-04T07:54:18.162237+00:00",
+  "python": {
+    "passed": 1124,
+    "seconds": 90.3,
+    "warnings": 2
+  },
+  "ruff": "pass",
+  "rust": {
+    "failed": 0,
+    "passed": 36
+  },
+  "schema": "q25-fim-preconversion-verification-v1",
+  "scope": "Source/mechanics verification only. Selected Q4 inference and deployment remain pending. Additional launcher/embedded changes require their own gates."
+}

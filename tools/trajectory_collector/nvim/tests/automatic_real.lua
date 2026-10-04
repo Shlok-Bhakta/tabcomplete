@@ -12,6 +12,16 @@ local case
 if vim.env.TABCOMPLETE_AUTO_CASE then
   case = vim.json.decode(table.concat(vim.fn.readfile(vim.env.TABCOMPLETE_AUTO_CASE), "\n"))
 end
+local model_alias = vim.env.TABCOMPLETE_MODEL_ALIAS or "q25-coder"
+local protocol = vim.env.TABCOMPLETE_MODEL_PROTOCOL
+  or (case and "single-line-edit-v1" or "compact-next-edit-v1")
+local allowed_models
+if vim.env.TABCOMPLETE_MODEL_SPEC_FILE then
+  local spec = vim.json.decode(table.concat(vim.fn.readfile(vim.env.TABCOMPLETE_MODEL_SPEC_FILE), "\n"))
+  assert(spec.model_sha256 == revision and spec.model_protocol == protocol,
+    "real smoke model specification differs from the selected artifact")
+  allowed_models = { [model_alias] = spec }
+end
 vim.cmd("filetype on")
 vim.cmd("edit " .. vim.fn.fnameescape(fixture))
 local collector = require("tabcomplete_trajectory").setup({
@@ -22,12 +32,13 @@ local predict = require("tabcomplete_trajectory.predict").setup({
   backend = backend, url = predictor_url,
   mode = "automatic", experimental_auto_opt_in = true,
   automatic_quality_validated = false, automatic_personalization_enabled = false,
-  persist_mode = false, synthetic = true, model = "q25-coder", model_revision = revision,
+  persist_mode = false, synthetic = true, model = model_alias, model_revision = revision,
+  allowed_models = allowed_models,
   precision = vim.env.TABCOMPLETE_MODEL_PRECISION or "Q4_K_M",
   runtime_config_hash = assert(vim.env.TABCOMPLETE_RUNTIME_CONFIG_SHA256),
   adapter_identity = "full-weight", debounce_ms = 250,
-  protocol_version = case and "single-line-edit-v1" or "compact-next-edit-v1",
-  automatic_prefix_guard = case ~= nil,
+  protocol_version = protocol,
+  automatic_prefix_guard = protocol == "single-line-edit-v1",
 })
 assert(predict.status().mode == "automatic")
 assert(predict.status().acceptance_key == "<M-l>", "acceptance mapping changed")

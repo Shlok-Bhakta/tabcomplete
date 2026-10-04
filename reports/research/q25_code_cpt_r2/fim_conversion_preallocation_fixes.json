@@ -1,0 +1,30 @@
+{
+  "actual_failing_run_query": {
+    "query_sha256": "3c90fd54a2b1433c8444abb2df9850d3ac8465b370eef1793cd7d3e6bf49641b",
+    "result": "no failures; controller preparation had not created a conversion run ID",
+    "run_id": "run-af49853a32ad56891191cf2d46ec9cee"
+  },
+  "dataset_payload_files": 5,
+  "gpu_sessions_used": 0,
+  "issues": [
+    {
+      "fix": "Resolve only inside the pinned cache root, verify frozen hash, copy regular files",
+      "issue": "HF cached config/tokenizer use symlinks into verified blobs"
+    },
+    {
+      "evidence_sha256": "dc30b14edded7f9a377d1e7a13940a5b5318b348142f64b6eb1a87752aafba87",
+      "fix": "Compare only five payload paths/sizes remotely; worker hashes all four manifest-bound files",
+      "issue": "Kaggle consumes dataset-metadata.json instead of publishing it"
+    },
+    {
+      "evidence": "Installed kaggle_api_extended.py kernels_push request.text = script_body",
+      "issue": "kernels_push uploads only code_file text, not adjacent source files",
+      "status": "source-only embedding fix in progress before allocation"
+    }
+  ],
+  "local_staging_files": 6,
+  "model_weights_downloaded": 0,
+  "schema": "q25-fim-conversion-preallocation-fixes-v1",
+  "scientific_quality_outputs_changed": false,
+  "training_plan_or_fixtures_changed": false
+}

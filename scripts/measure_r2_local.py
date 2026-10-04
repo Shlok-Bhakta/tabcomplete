@@ -119,6 +119,7 @@ class NativeProvider:
         # Legacy llama-server requests retain their existing payload.
         self.editor_window = None
         self.repository_identity = None
+        self.editor_request_binding = None
 
     def generate_line_detailed(self, prompt, max_new_tokens):
         self.stop_first_line = True
@@ -148,6 +149,13 @@ class NativeProvider:
             payload["repository_identity"] = self.repository_identity
         if self.editor_window is not None:
             payload["window"] = self.editor_window
+        if self.editor_request_binding is not None:
+            binding = self.editor_request_binding
+            if set(binding) != {"request_id", "context_hash", "completion_mode"} or any(
+                not isinstance(value, str) or not value for value in binding.values()
+            ):
+                raise ValueError("native editor request binding is invalid")
+            payload.update(binding)
         with httpx.stream(
             "POST",
             self.url + "/completion",
@@ -198,6 +206,7 @@ class NativeProvider:
             "model_protocol": final.get("model_protocol"),
             "model_sha256": final.get("model_sha256"),
             "terminal_observed": bool(final.get("stop")),
+            "terminal_event": final,
         }
         return DetailedGeneration(
             text,

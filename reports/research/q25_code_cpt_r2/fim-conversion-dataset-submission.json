@@ -1,0 +1,11 @@
+{
+  "dataset": "shlokbhakta/tabcomplete-q25-fim-conversion-r1-inputs",
+  "input_manifest_sha256": "f200c93f51c13a7c6cb695c0481b73276f9b8cda5491c15c04855a65b2b06a01",
+  "remote_verification": {
+    "hashes_verified_by_worker": false,
+    "paths_and_sizes_verified": true,
+    "remote_files": 5,
+    "verified_files": 5
+  },
+  "state": "verified"
+}
