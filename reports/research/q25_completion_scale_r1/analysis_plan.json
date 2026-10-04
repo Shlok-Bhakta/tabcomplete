@@ -1,0 +1,56 @@
+{
+  "additional_reporting": [
+    "input and response/EOS training tokens separately",
+    "termination, invalid control tokens, cap hit, output length",
+    "raw causal functional results, raw/FIM line exact results",
+    "source parse regression where source reconstruction and parser are available",
+    "first and last sixteen update losses plus skipped/overflow counts"
+  ],
+  "automatic_personalization_enabled": false,
+  "frozen_at": "2026-10-04T14:35:18.201927+00:00",
+  "further_tuning_against_primary_development": false,
+  "interpretation_rules": [
+    "Report gains, losses and separate denominators.",
+    "No universal quality claim from exact source reconstruction.",
+    "Equal exposures and matched length bins are approximate compute control; report actual tokens and wall-time.",
+    "If repetition helps but distinct states do not, repeat optimization is promising on this task, not proof of a universal compute bottleneck.",
+    "If distinct states outperform repetition, broader data is the stronger tested tradeoff.",
+    "If neither improves, preserve stable model; report intervals, do not call nonsignificance equivalence."
+  ],
+  "primary_metric": "exact_and_terminated on all new development states, same complete fixture for both variants",
+  "schema": "q25-completion-scale-analysis-v1",
+  "strata": {
+    "input_tokens_bins": [
+      128,
+      256,
+      512,
+      768,
+      1024
+    ],
+    "language": [
+      "python",
+      "rust",
+      "typescript",
+      "go"
+    ],
+    "mode": [
+      "whole_logical_line",
+      "remaining_logical_line_after_utf8_cursor"
+    ],
+    "response_tokens_including_eos_bins": [
+      8,
+      16,
+      32,
+      64,
+      96
+    ],
+    "target_content": "punctuation-only if all target characters are whitespace or one of []{}(),;:. Other targets are content-bearing by this lexical rule. This is descriptive, not a functional-quality label."
+  },
+  "uncertainty": {
+    "bootstrap_samples": 2000,
+    "bootstrap_unit": "repository_identity_sha256",
+    "confidence": 0.95,
+    "paired": true,
+    "seed": 271828
+  }
+}

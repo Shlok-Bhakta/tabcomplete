@@ -1,0 +1,18 @@
+{
+  "gpu_executed": false,
+  "mypy": {
+    "command": "uv run --no-sync mypy scripts/analyze_q25_completion_scale.py",
+    "passed": true,
+    "source_files": 1
+  },
+  "observed_at": "2026-10-04T14:40:21.061545+00:00",
+  "pytest": {
+    "command": "PYTHONPATH=src:scripts uv run --no-sync pytest -q tests/test_analyze_q25_completion_scale.py",
+    "passed": 5
+  },
+  "ruff": {
+    "command": "uv run --no-sync ruff check scripts/analyze_q25_completion_scale.py tests/test_analyze_q25_completion_scale.py",
+    "passed": true
+  },
+  "scope": "readonly paired-analysis helper only, not training/worker acceptance"
+}
