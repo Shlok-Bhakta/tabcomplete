@@ -385,6 +385,35 @@ return function(ok, assert_eq, assert_true)
       "status retains a bounded identity error")
   end)
 
+  case("fim-plugin-entry-preserves-protocol-and-registers-commands", function()
+    fresh_model_identity()
+    open_buffer("plugin entry state")
+    local service = new_service("auto", "auto")
+    setup("manual", 5)
+    assert_true(vim.wait(1000, function()
+      return predict.status().model_alias == "q25-fim-synthetic"
+    end), "FIM identity is ready before the plugin entry reload")
+    assert_eq(predict.status().protocol_version, fim.WIRE_VERSION)
+
+    local plugin_path = vim.api.nvim_get_runtime_file("plugin/tabcomplete_predict.lua", false)[1]
+    assert_true(plugin_path ~= nil, "prediction plugin entry is on the runtime path")
+    dofile(plugin_path)
+
+    local status = predict.status()
+    assert_eq(status.protocol_version, fim.WIRE_VERSION,
+      "no-argument setup retained the selected FIM protocol")
+    assert_eq(status.model_protocol, fim.WIRE_VERSION,
+      "no-argument setup retained the validated FIM identity")
+    assert_eq(status.selected_model, "q25-fim-synthetic",
+      "no-argument setup retained the selected model")
+    assert_eq(service.health_calls, 1, "plugin setup did not start a second identity refresh")
+    assert_eq(service.tokenizer_calls, 1, "plugin setup retained the validated tokenizer contract")
+    assert_true(vim.api.nvim_get_commands({}).TabCompletePredict ~= nil,
+      "plugin entry registered the explicit prediction command")
+    assert_true(vim.api.nvim_get_commands({}).TabCompleteStatus ~= nil,
+      "plugin entry registered the status command")
+  end)
+
   cleanup()
   util.current_mode = previous_current_mode
 end

@@ -2212,8 +2212,12 @@ function M.setup(options)
     if not (options and options.url) and previous_backend ~= "rust-editor-v1" then
       opts.url = vim.env.TABCOMPLETE_PREDICTOR_URL or "http://127.0.0.1:19094"
     end
-    opts.protocol_version = requested_protocol == fim_v1.WIRE_VERSION
-      and fim_v1.WIRE_VERSION or single_line_v1.WIRE_VERSION
+    -- Plugin entry points can call setup() with no options after protocol setup.
+    if requested_protocol == fim_v1.WIRE_VERSION then
+      opts.protocol_version = fim_v1.WIRE_VERSION
+    elseif requested_protocol ~= nil or previous_backend ~= "rust-editor-v1" then
+      opts.protocol_version = single_line_v1.WIRE_VERSION
+    end
   end
   opts.allowed_models = opts.allowed_models or default_allowed_models
   if opts.protocol_version ~= "compact-next-edit-v1"
