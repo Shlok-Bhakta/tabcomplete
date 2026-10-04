@@ -569,3 +569,354 @@ def test_rust_feedback_retains_actual_model_and_context_identity(tmp_path: Path)
         assert evidence[key] == payload[key]
     assert result["readiness"]["enabled"] is False
     assert result["candidate_preference_pairs"] == []
+
+def test_q25_fim_feedback_uses_verified_line_action_and_keeps_wire_identity(
+    tmp_path: Path,
+) -> None:
+    from export_personalization_feedback import FIM_LINE_PROTOCOL_VERSION
+
+    db = tmp_path / "collector.sqlite"
+    source = "repo:demo:src/example.py"
+    context = b"synthetic FIM prompt"
+    context_blob_hash = hashlib.sha256(context).hexdigest()
+    context_hash = "e" * 64
+    model_hash = "a" * 64
+    artifact_hash = "9" * 64
+    tokenizer_hash = "b" * 64
+    tokenizer_contract_hash = "c" * 64
+    tokenizer_vocab_hash = "d" * 64
+    with sqlite3.connect(db) as conn:
+        conn.execute(
+            "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+            "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE blobs (sha256 TEXT PRIMARY KEY, original_bytes INTEGER, "
+            "stored_bytes INTEGER, compression TEXT, content BLOB)"
+        )
+        conn.execute(
+            "INSERT INTO blobs VALUES (?,?,?,?,?)",
+            (context_blob_hash, len(context), len(context), "raw", context),
+        )
+        conn.execute(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            (
+                "buffer-anchor",
+                "fim-session",
+                1,
+                "buffer_write",
+                1,
+                json.dumps(
+                    {
+                        "path": source,
+                        "blob_uploaded": True,
+                        "content_hash": context_blob_hash,
+                    }
+                ),
+            ),
+        )
+
+        def event(event_id: str, sequence: int, kind: str, payload: dict) -> None:
+            conn.execute(
+                "INSERT INTO events VALUES (?,?,?,?,?,?)",
+                (event_id, "fim-session", sequence, kind, sequence, json.dumps(payload)),
+            )
+
+        actions = [
+            {
+                "prediction_id": "empty-replacement",
+                "kind": "replace_line",
+                "text": "",
+                "outcome": "prediction_accepted",
+                "start": 0,
+                "end": 3,
+            },
+            {
+                "prediction_id": "virtual-insertion",
+                "kind": "insert_before",
+                "text": "new_call()",
+                "outcome": "prediction_dismissed",
+                "start": 0,
+                "end": 0,
+            },
+        ]
+        sequence = 2
+        for item in actions:
+            prediction_id = item["prediction_id"]
+            action = {"kind": item["kind"], "text": item["text"]}
+            action_bytes = json.dumps(action, ensure_ascii=False, separators=(",", ":")).encode(
+                "utf-8"
+            )
+            action_hash = hashlib.sha256(action_bytes).hexdigest()
+            raw = b"synthetic FIM completion"
+            raw_hash = hashlib.sha256(raw).hexdigest()
+            for digest, content in ((action_hash, action_bytes), (raw_hash, raw)):
+                conn.execute(
+                    "INSERT OR IGNORE INTO blobs VALUES (?,?,?,?,?)",
+                    (digest, len(content), len(content), "raw", content),
+                )
+
+            identity = {
+                "prediction_id": prediction_id,
+                "synthetic": True,
+                "file": source,
+                "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                "model_protocol": FIM_LINE_PROTOCOL_VERSION,
+                "model_alias": "q25-fim",
+                "model_gguf_sha256": model_hash,
+                "artifact_manifest_sha256": artifact_hash,
+                "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+                "tokenizer_revision": "test-revision",
+                "tokenizer_sha256": tokenizer_hash,
+                "tokenizer_contract_sha256": tokenizer_contract_hash,
+                "tokenizer_vocab_ids_sha256": tokenizer_vocab_hash,
+                "tokenizer_vocab_size": 151936,
+                "context_layout": "q25-fim-psm-bounded-v2",
+                "context_policy_version": "q25-fim-psm-cursor-to-line-end-bounded640-256-v2",
+                "runtime_config_hash": "e" * 64,
+                "context_hash": context_hash,
+                "context_blob_hash": context_blob_hash,
+                "pre_state_hash": "f" * 64,
+            }
+            event(f"{prediction_id}-request", sequence, "prediction_requested", identity)
+            sequence += 1
+            event(
+                f"{prediction_id}-generated",
+                sequence,
+                "prediction_generated",
+                {
+                    "prediction_id": prediction_id,
+                    "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                    "model_protocol": FIM_LINE_PROTOCOL_VERSION,
+                    "model_sha256": model_hash,
+                    "artifact_manifest_sha256": artifact_hash,
+                    "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+                    "tokenizer_revision": "test-revision",
+                    "tokenizer_sha256": tokenizer_hash,
+                    "tokenizer_contract_sha256": tokenizer_contract_hash,
+                    "tokenizer_vocab_ids_sha256": tokenizer_vocab_hash,
+                    "tokenizer_vocab_size": 151936,
+                    "context_hash": context_hash,
+                    "canonical_action": item["kind"],
+                    "action_blob_hash": action_hash,
+                    "raw_response_hash": raw_hash,
+                },
+            )
+            sequence += 1
+            shown = {
+                "prediction_id": prediction_id,
+                "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                "action": item["kind"],
+                "proposed_text": item["text"],
+                "proposed_start": {"row": 0, "col": 0},
+                "proposed_end": {"row": 0, "col": item["end"]},
+                "proposed_start_byte": 0,
+                "proposed_end_byte": item["end"],
+                "proposed_range_end_exclusive": True,
+                "proposed_range_includes_terminator": False,
+                "context_hash": context_hash,
+                "pre_state_hash": "f" * 64,
+                "active_buffer": True,
+                "focused": True,
+            }
+            event(f"{prediction_id}-shown", sequence, "prediction_shown", shown)
+            sequence += 1
+            if item["outcome"] == "prediction_accepted":
+                resolution = {
+                    "prediction_id": prediction_id,
+                    "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                    "action": item["kind"],
+                    "editable_range": {
+                        "start_row": 0,
+                        "start_col": 0,
+                        "end_row": 0,
+                        "end_col": item["end"],
+                        "start_byte": 0,
+                        "end_byte": item["end"],
+                        "end_exclusive": True,
+                        "includes_terminator": False,
+                    },
+                }
+            else:
+                resolution = {
+                    "prediction_id": prediction_id,
+                    "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                    "outcome": "rejected_explicit",
+                }
+            event(f"{prediction_id}-resolution", sequence, item["outcome"], resolution)
+            sequence += 1
+
+    result = extract(db)
+    evidence = {row["prediction_id"]: row for row in result["evidence"]}
+    deleted_body = evidence["empty-replacement"]
+    assert deleted_body["proposal_protocol_version"] == FIM_LINE_PROTOCOL_VERSION
+    assert deleted_body["canonical_action_kind"] == "replace_line"
+    assert deleted_body["proposal_action_source"] == "verified_action_blob"
+    assert (
+        deleted_body["proposal_identity_sha256"]
+        == hashlib.sha256(
+            json.dumps(
+                {
+                    "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                    "action": {"kind": "replace_line", "text": ""},
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+    )
+    assert (
+        deleted_body["proposal_identity_sha256"]
+        != hashlib.sha256(
+            json.dumps(
+                {
+                    "wire_version": "single-line-edit-v1",
+                    "action": {"kind": "replace_line", "text": ""},
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+    )
+    assert deleted_body["proposal_sha256_semantics"] == (
+        "fim_canonical_line_action_comparison_only"
+    )
+    assert (
+        deleted_body["proposal_sha256"]
+        == hashlib.sha256(b'{"kind":"replace_line","text":""}').hexdigest()
+    )
+    assert deleted_body["accepted_action_byte_range"] == deleted_body["proposed_byte_range"]
+
+    inserted = evidence["virtual-insertion"]
+    assert inserted["canonical_action_kind"] == "insert_before"
+    assert inserted["proposal_action_source"] == "verified_action_blob"
+    assert "accepted_action_range_mismatch" not in inserted["ambiguity_flags"]
+    for row in evidence.values():
+        assert row["model_gguf_sha256"] == model_hash
+        assert row["artifact_manifest_sha256"] == artifact_hash
+        assert row["tokenizer_id"] == "Qwen/Qwen2.5-Coder-0.5B"
+        assert row["tokenizer_revision"] == "test-revision"
+        assert row["tokenizer_sha256"] == tokenizer_hash
+        assert row["tokenizer_contract_sha256"] == tokenizer_contract_hash
+        assert row["tokenizer_vocab_ids_sha256"] == tokenizer_vocab_hash
+        assert row["tokenizer_vocab_size"] == 151936
+        assert row["context_hash"] == context_hash
+        assert row["context_blob_hash"] == context_blob_hash
+        assert "tokenizer_identity_unverified" not in row["ambiguity_flags"]
+        assert row["human_review_confirmed"] is False
+    assert result["candidate_preference_pairs"] == []
+    assert result["readiness"]["enabled"] is False
+
+
+def test_q25_fim_feedback_marks_identity_mismatch_and_missing_tokenizer(
+    tmp_path: Path,
+) -> None:
+    from export_personalization_feedback import FIM_LINE_PROTOCOL_VERSION
+
+    db = tmp_path / "collector.sqlite"
+    action_bytes = b'{"kind":"replace_line","text":""}'
+    action_hash = hashlib.sha256(action_bytes).hexdigest()
+    raw = b"synthetic response"
+    raw_hash = hashlib.sha256(raw).hexdigest()
+    with sqlite3.connect(db) as conn:
+        conn.execute(
+            "CREATE TABLE events (event_id TEXT, session_id TEXT, sequence_number INTEGER, "
+            "event_type TEXT, timestamp_ms INTEGER, payload_json TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE blobs (sha256 TEXT PRIMARY KEY, original_bytes INTEGER, "
+            "stored_bytes INTEGER, compression TEXT, content BLOB)"
+        )
+        for digest, content in ((action_hash, action_bytes), (raw_hash, raw)):
+            conn.execute(
+                "INSERT INTO blobs VALUES (?,?,?,?,?)",
+                (digest, len(content), len(content), "raw", content),
+            )
+        events = [
+            (
+                "request",
+                "prediction_requested",
+                {
+                    "prediction_id": "p",
+                    "synthetic": True,
+                    "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                    "model_protocol": FIM_LINE_PROTOCOL_VERSION,
+                    "model_gguf_sha256": "a" * 64,
+                    "context_hash": "c" * 64,
+                    "pre_state_hash": "d" * 64,
+                },
+            ),
+            (
+                "generated",
+                "prediction_generated",
+                {
+                    "prediction_id": "p",
+                    "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                    "canonical_action": "replace_line",
+                    "action_blob_hash": action_hash,
+                    "raw_response_hash": raw_hash,
+                    "model_sha256": "b" * 64,
+                    "context_hash": "e" * 64,
+                },
+            ),
+            (
+                "shown",
+                "prediction_shown",
+                {
+                    "prediction_id": "p",
+                    "wire_version": "single-line-edit-v1",
+                    "action": "replace_line",
+                    "proposed_text": "",
+                    "proposed_start": {"row": 0, "col": 0},
+                    "proposed_end": {"row": 0, "col": 1},
+                    "proposed_start_byte": 0,
+                    "proposed_end_byte": 1,
+                    "proposed_range_end_exclusive": True,
+                    "proposed_range_includes_terminator": False,
+                },
+            ),
+        ]
+        conn.executemany(
+            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            [
+                (event_id, "s", index, event_type, index, json.dumps(payload))
+                for index, (event_id, event_type, payload) in enumerate(events, start=1)
+            ],
+        )
+
+    row = extract(db)["evidence"][0]
+    assert row["proposal_identity_sha256"] is None
+    assert "action_protocol_mismatch" in row["ambiguity_flags"]
+    assert "tokenizer_identity_unverified" in row["ambiguity_flags"]
+    assert "model_identity_mismatch" in row["ambiguity_flags"]
+    assert "context_identity_mismatch" in row["ambiguity_flags"]
+
+
+def test_q25_fim_feedback_rejects_disagreeing_action_blob_references() -> None:
+    from export_personalization_feedback import (
+        FIM_LINE_PROTOCOL_VERSION,
+        _proposal_evidence,
+    )
+
+    flags: list[str] = []
+    evidence = _proposal_evidence(
+        {
+            "payload": {
+                "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                "canonical_action": "replace_line",
+                "action_blob_hash": "a" * 64,
+            }
+        },
+        {
+            "payload": {
+                "wire_version": FIM_LINE_PROTOCOL_VERSION,
+                "action_blob_hash": "b" * 64,
+            }
+        },
+        lambda _: None,
+        flags,
+    )
+    assert evidence["proposal_identity_sha256"] is None
+    assert "action_blob_event_mismatch" in flags

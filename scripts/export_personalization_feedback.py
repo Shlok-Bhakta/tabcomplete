@@ -22,6 +22,7 @@ from typing import cast
 SCHEMA_VERSION = "personalization-feedback-evidence-v6"
 LEGACY_PROTOCOL_VERSION = "compact-next-edit-v1"
 SINGLE_LINE_PROTOCOL_VERSION = "single-line-edit-v1"
+FIM_LINE_PROTOCOL_VERSION = "q25-fim-line-completion-v1"
 ACTION_BLOB_MAX_BYTES = 8192
 PREDICTION_TYPES = {
     "prediction_requested",
@@ -140,10 +141,25 @@ def _proposal_evidence(
             "proposal_sha256_semantics": "protocol_mismatch_unusable",
         }
 
-    if protocol == SINGLE_LINE_PROTOCOL_VERSION:
-        action_hash = generated_payload.get("action_blob_hash") or shown_payload.get(
-            "action_blob_hash"
-        )
+    if protocol in {SINGLE_LINE_PROTOCOL_VERSION, FIM_LINE_PROTOCOL_VERSION}:
+        generated_action_hash = generated_payload.get("action_blob_hash")
+        shown_action_hash = shown_payload.get("action_blob_hash")
+        if (
+            protocol == FIM_LINE_PROTOCOL_VERSION
+            and isinstance(generated_action_hash, str)
+            and isinstance(shown_action_hash, str)
+            and generated_action_hash != shown_action_hash
+        ):
+            flags.append("action_blob_event_mismatch")
+            return {
+                "proposal_sha256": None,
+                "proposal_identity_sha256": None,
+                "proposal_protocol_version": protocol,
+                "canonical_action_kind": generated_payload.get("canonical_action"),
+                "proposal_action_source": None,
+                "proposal_sha256_semantics": "fim_canonical_line_action_unverified",
+            }
+        action_hash = generated_action_hash or shown_action_hash
         action = (
             action_blob_loader(action_hash)
             if action_blob_loader is not None and isinstance(action_hash, str)
@@ -157,9 +173,26 @@ def _proposal_evidence(
                 "proposal_protocol_version": protocol,
                 "canonical_action_kind": generated_payload.get("canonical_action"),
                 "proposal_action_source": None,
-                "proposal_sha256_semantics": "legacy_replacement_equivalence_comparison_only",
+                "proposal_sha256_semantics": (
+                    "legacy_replacement_equivalence_comparison_only"
+                    if protocol == SINGLE_LINE_PROTOCOL_VERSION
+                    else "fim_canonical_line_action_unverified"
+                ),
             }
         kind = action["kind"]
+        if protocol == FIM_LINE_PROTOCOL_VERSION and kind not in {
+            "replace_line",
+            "insert_before",
+        }:
+            flags.append("fim_action_kind_unverified")
+            return {
+                "proposal_sha256": None,
+                "proposal_identity_sha256": None,
+                "proposal_protocol_version": protocol,
+                "canonical_action_kind": kind,
+                "proposal_action_source": "verified_action_blob",
+                "proposal_sha256_semantics": "fim_line_action_unverified",
+            }
         if generated_payload.get("canonical_action") not in (None, kind):
             flags.append("action_blob_event_mismatch")
             return {
@@ -168,7 +201,11 @@ def _proposal_evidence(
                 "proposal_protocol_version": protocol,
                 "canonical_action_kind": kind,
                 "proposal_action_source": "verified_action_blob",
-                "proposal_sha256_semantics": "legacy_replacement_equivalence_comparison_only",
+                "proposal_sha256_semantics": (
+                    "legacy_replacement_equivalence_comparison_only"
+                    if protocol == SINGLE_LINE_PROTOCOL_VERSION
+                    else "fim_canonical_line_action_unverified"
+                ),
             }
         if shown:
             shown_kind = shown_payload.get("action")
@@ -180,6 +217,10 @@ def _proposal_evidence(
             )
             if (
                 shown_kind != kind
+                or (
+                    protocol == FIM_LINE_PROTOCOL_VERSION
+                    and shown_payload.get("wire_version") != protocol
+                )
                 or shown_text != expected_shown_text
                 or kind == "keep"
                 or invalid_byte_range
@@ -191,25 +232,42 @@ def _proposal_evidence(
                     "proposal_protocol_version": protocol,
                     "canonical_action_kind": kind,
                     "proposal_action_source": "verified_action_blob",
-                    "proposal_sha256_semantics": "legacy_replacement_equivalence_comparison_only",
+                    "proposal_sha256_semantics": (
+                        "legacy_replacement_equivalence_comparison_only"
+                        if protocol == SINGLE_LINE_PROTOCOL_VERSION
+                        else "fim_canonical_line_action_unverified"
+                    ),
                 }
-            # Keep the legacy proposal hash's semantic shape stable. A v1 line
-            # action is represented as its equivalent replacement text, with
-            # deletion represented by the empty string. The separate identity
-            # hash retains the precise v1 action and protocol.
-            legacy_text = "" if kind == "delete_line" else action["text"]
-            legacy_hash = hashlib.sha256(
-                json.dumps(
-                    {"action": "replace", "text": legacy_text}, sort_keys=True
-                ).encode("utf-8")
-            ).hexdigest()
+            if protocol == SINGLE_LINE_PROTOCOL_VERSION:
+                # Keep the legacy proposal hash's semantic shape stable. A v1
+                # action is represented as its replacement equivalent; the
+                # separate identity hash retains the wire protocol and action.
+                legacy_text = "" if kind == "delete_line" else action["text"]
+                legacy_hash = hashlib.sha256(
+                    json.dumps(
+                        {"action": "replace", "text": legacy_text}, sort_keys=True
+                    ).encode("utf-8")
+                ).hexdigest()
+                hash_semantics = "legacy_replacement_equivalence_comparison_only"
+            else:
+                # FIM line completion has its own canonical action hash, even
+                # where its replacement text matches a single-line action.
+                legacy_hash = hashlib.sha256(
+                    json.dumps(
+                        action,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest()
+                hash_semantics = "fim_canonical_line_action_comparison_only"
             return {
                 "proposal_sha256": legacy_hash,
                 "proposal_identity_sha256": _proposal_identity_sha256(protocol, action),
                 "proposal_protocol_version": protocol,
                 "canonical_action_kind": kind,
                 "proposal_action_source": "verified_action_blob",
-                "proposal_sha256_semantics": "legacy_replacement_equivalence_comparison_only",
+                "proposal_sha256_semantics": hash_semantics,
             }
         return {
             "proposal_sha256": None,
@@ -217,7 +275,11 @@ def _proposal_evidence(
             "proposal_protocol_version": protocol,
             "canonical_action_kind": kind,
             "proposal_action_source": "verified_action_blob",
-            "proposal_sha256_semantics": "legacy_replacement_equivalence_comparison_only",
+            "proposal_sha256_semantics": (
+                "legacy_replacement_equivalence_comparison_only"
+                if protocol == SINGLE_LINE_PROTOCOL_VERSION
+                else "fim_canonical_line_action_comparison_only"
+            ),
         }
 
     action = shown_payload.get("action")
@@ -676,14 +738,113 @@ def extract(db_path: Path) -> dict:
         if generated and generated["payload"].get("action_blob_hash") not in blob_hashes:
             flags.append("action_blob_missing")
         proposal_action = _proposal_evidence(generated, shown, action_blob_loader, flags)
+        action_protocol = proposal_action["proposal_protocol_version"]
+        generated_payload = generated["payload"] if generated else {}
+        shown_payload = shown["payload"] if shown else {}
+        resolution_payload = resolution["payload"] if resolution else {}
+        protocol_observations = [
+            value
+            for value in (
+                payload.get("wire_version"),
+                generated_payload.get("wire_version"),
+                shown_payload.get("wire_version"),
+                resolution_payload.get("wire_version"),
+            )
+            if isinstance(value, str) and value
+        ]
+        if (
+            action_protocol in {SINGLE_LINE_PROTOCOL_VERSION, FIM_LINE_PROTOCOL_VERSION}
+            and any(value != action_protocol for value in protocol_observations)
+            and "action_protocol_mismatch" not in flags
+        ):
+            flags.append("action_protocol_mismatch")
+        model_protocol_observations = [
+            value
+            for value in (
+                payload.get("model_protocol"),
+                generated_payload.get("model_protocol"),
+            )
+            if isinstance(value, str) and value
+        ]
+        if (
+            action_protocol in {SINGLE_LINE_PROTOCOL_VERSION, FIM_LINE_PROTOCOL_VERSION}
+            and any(value != action_protocol for value in model_protocol_observations)
+            and "action_protocol_mismatch" not in flags
+        ):
+            flags.append("action_protocol_mismatch")
+
+        model_hashes = [
+            value
+            for value in (
+                payload.get("model_gguf_sha256"),
+                generated_payload.get("model_gguf_sha256"),
+                generated_payload.get("model_sha256"),
+            )
+            if isinstance(value, str) and value
+        ]
+        if len(set(model_hashes)) > 1:
+            flags.append("model_identity_mismatch")
+        artifact_hashes = [
+            value
+            for value in (
+                payload.get("artifact_manifest_sha256"),
+                generated_payload.get("artifact_manifest_sha256"),
+            )
+            if isinstance(value, str) and value
+        ]
+        if len(set(artifact_hashes)) > 1:
+            flags.append("model_artifact_identity_mismatch")
+
+        context_hashes = [
+            value
+            for value in (
+                payload.get("context_hash"),
+                generated_payload.get("context_hash"),
+                shown_payload.get("context_hash"),
+            )
+            if isinstance(value, str) and value
+        ]
+        if len(set(context_hashes)) > 1:
+            flags.append("context_identity_mismatch")
+
+        tokenizer_hashes = [
+            value
+            for value in (
+                payload.get("tokenizer_sha256"),
+                generated_payload.get("tokenizer_sha256"),
+            )
+            if isinstance(value, str) and value
+        ]
+        if len(set(tokenizer_hashes)) > 1:
+            flags.append("tokenizer_identity_mismatch")
+        for tokenizer_hash_field in (
+            "tokenizer_contract_sha256",
+            "tokenizer_vocab_ids_sha256",
+        ):
+            observations = [
+                value
+                for value in (
+                    payload.get(tokenizer_hash_field),
+                    generated_payload.get(tokenizer_hash_field),
+                )
+                if isinstance(value, str) and value
+            ]
+            if len(set(observations)) > 1:
+                flags.append("tokenizer_identity_mismatch")
+        if action_protocol == FIM_LINE_PROTOCOL_VERSION and not tokenizer_hashes:
+            # Historical or partial FIM records may omit the tokenizer
+            # digest. Preserve that gap instead of inferring it from a model
+            # alias or a context hash.
+            flags.append("tokenizer_identity_unverified")
+
         accepted_action_range = _accepted_action_range(resolution)
         if (
-            proposal_action["proposal_protocol_version"] == SINGLE_LINE_PROTOCOL_VERSION
+            action_protocol in {SINGLE_LINE_PROTOCOL_VERSION, FIM_LINE_PROTOCOL_VERSION}
             and resolution
             and resolution["type"] == "prediction_accepted"
         ):
             if (
-                resolution["payload"].get("wire_version") != SINGLE_LINE_PROTOCOL_VERSION
+                resolution["payload"].get("wire_version") != action_protocol
                 or resolution["payload"].get("action")
                 != proposal_action["canonical_action_kind"]
             ):
@@ -723,7 +884,6 @@ def extract(db_path: Path) -> dict:
             "human_review_confirmed": bool(verified_review),
             "request_id": payload.get("request_id"),
             "pre_state_sequence": payload.get("pre_state_sequence"),
-            "context_blob_hash": payload.get("context_blob_hash"),
             "raw_response_hash": generated["payload"].get("raw_response_hash")
             if generated
             else None,
@@ -732,9 +892,27 @@ def extract(db_path: Path) -> dict:
             "context_policy_version": payload.get("context_policy_version"),
             "context_layout": payload.get("context_layout"),
             "model_alias": payload.get("model_alias"),
-            "model_protocol": payload.get("model_protocol"),
-            "model_gguf_sha256": payload.get("model_gguf_sha256"),
-            "context_hash": payload.get("context_hash"),
+            "model_protocol": payload.get("model_protocol")
+            or generated_payload.get("model_protocol"),
+            "model_gguf_sha256": payload.get("model_gguf_sha256")
+            or generated_payload.get("model_gguf_sha256")
+            or generated_payload.get("model_sha256"),
+            "artifact_manifest_sha256": payload.get("artifact_manifest_sha256")
+            or generated_payload.get("artifact_manifest_sha256"),
+            "tokenizer_id": payload.get("tokenizer_id") or generated_payload.get("tokenizer_id"),
+            "tokenizer_revision": payload.get("tokenizer_revision")
+            or generated_payload.get("tokenizer_revision"),
+            "tokenizer_sha256": payload.get("tokenizer_sha256")
+            or generated_payload.get("tokenizer_sha256"),
+            "tokenizer_contract_sha256": payload.get("tokenizer_contract_sha256")
+            or generated_payload.get("tokenizer_contract_sha256"),
+            "tokenizer_vocab_ids_sha256": payload.get("tokenizer_vocab_ids_sha256")
+            or generated_payload.get("tokenizer_vocab_ids_sha256"),
+            "tokenizer_vocab_size": payload.get("tokenizer_vocab_size")
+            or generated_payload.get("tokenizer_vocab_size"),
+            "context_hash": payload.get("context_hash") or generated_payload.get("context_hash"),
+            "context_blob_hash": payload.get("context_blob_hash")
+            or generated_payload.get("context_blob_hash"),
             "pre_state_hash": payload.get("pre_state_hash"),
             "file_sha256": hashlib.sha256(file_path.encode()).hexdigest()
             if isinstance(file_path, str)
