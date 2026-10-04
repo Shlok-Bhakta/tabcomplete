@@ -1,0 +1,27 @@
+{
+  "dependency_reuse": "Existing node_modules from completed parent, matching package.json and bun.lock hashes; temporary local symlinks removed after verification.",
+  "logs_sha256": {
+    "analysis-tests.log": "2cd66aa31830ec1a3739e9a50560b24a5c68ed8b974b5270178c2c672fb28f06",
+    "gateway-tests.log": "1ec2a3612273eb059afe843f008bd406e1a149f866fe203480849764552068ea",
+    "server-tests.log": "51af6f3b455202d58aa57cf0d59735f1db94a595b042d5c13f8320a2b723ad77"
+  },
+  "observed_at": "2026-10-04T14:46:08.457100+00:00",
+  "scope": "New-branch run of existing collector and gateway tests, no deployed services changed",
+  "suites": {
+    "collector_analysis": {
+      "failed": 0,
+      "passed": 38,
+      "typecheck_passed": true
+    },
+    "collector_server": {
+      "failed": 0,
+      "passed": 59,
+      "typecheck_passed": true
+    },
+    "observability_gateway": {
+      "failed": 0,
+      "passed": 16,
+      "typecheck_passed": true
+    }
+  }
+}

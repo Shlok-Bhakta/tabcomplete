@@ -12,6 +12,13 @@ exact completion with observed EOS rose from 47/240 to 130/240. Response NLL
 fell from 1.030 to 0.534 with the same tokenizer. The first and last sixteen
 training updates averaged losses of 0.662 and 0.535.
 
+A post-hoc lexical breakdown of that historical development slice found 200
+content-bearing targets, with exact/EOS completion improving from36 to94.
+The other40 targets contained only punctuation and whitespace, improving
+from11 to36. This is a coarse text classification, not a functional check.
+It shows that the aggregate gain was not entirely closing punctuation. The new
+comparison reports these strata under a plan frozen before its outputs.
+
 Those measurements do not establish a compute bottleneck. There is no
 intermediate development curve, and a source-completion target does not reveal
 what a human wanted to edit. The audited collector export contains no defensible
