@@ -235,14 +235,19 @@ def _write_bundle(
     return input_root, bundle, session, plan
 
 
-def _write_nvidia_inventory(host_site: Path, *, version_override: int | None = None) -> Path:
+def _write_nvidia_inventory(
+    host_site: Path,
+    *,
+    version_override: int | None = None,
+    include_python_extension: bool = False,
+) -> Path:
     host_site.mkdir(parents=True)
     requirements = host_site.parent / "requirements.lock"
     lines: list[str] = []
     for index in range(15):
-        name = f"nvidia-cuda-{index:03d}"
+        name = "nvidia-nvshmem-cu12" if index == 0 else f"nvidia-cuda-{index:03d}"
         lines.extend((f"{name}==1.0 \\", "    --hash=sha256:" + "a" * 64))
-        component = f"cuda_{index:03d}"
+        component = "nvshmem" if index == 0 else f"cuda_{index:03d}"
         library = Path("nvidia") / component / "lib" / f"libnvidia_test_{index:03d}.so"
         library_path = host_site / library
         library_path.parent.mkdir(parents=True, exist_ok=True)
@@ -250,6 +255,16 @@ def _write_nvidia_inventory(host_site: Path, *, version_override: int | None = N
         elf[:6] = b"\x7fELF\x02\x01"
         elf[18:20] = (62).to_bytes(2, "little")
         library_path.write_bytes(elf)
+        recorded_files = [library]
+        if index == 0:
+            plugin = Path("nvidia/nvshmem/lib/nvshmem_bootstrap_mpi.so.3")
+            plugin_path = host_site / plugin
+            plugin_path.write_bytes(elf)
+            recorded_files.append(plugin)
+            if include_python_extension:
+                extension = Path("nvidia/nvshmem/lib/nvshmem_fake.cpython-313-x86_64-linux-gnu.so")
+                (host_site / extension).write_bytes(elf)
+                recorded_files.append(extension)
         pycache = library_path.parent.parent / "__pycache__"
         pycache.mkdir()
         (pycache / "test.cpython-313.pyc").write_bytes(b"host bytecode")
@@ -263,12 +278,12 @@ def _write_nvidia_inventory(host_site: Path, *, version_override: int | None = N
             encoding="utf-8",
         )
         record = "\n".join(
-            (
-                f"{library.as_posix()},,",
+            [
+                *(f"{recorded_file.as_posix()},," for recorded_file in recorded_files),
                 f"{dist_info_name}/METADATA,,",
                 f"{dist_info_name}/RECORD,,",
                 "",
-            )
+            ]
         )
         (dist_info / "RECORD").write_text(record, encoding="utf-8")
     requirements.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -338,14 +353,45 @@ def test_nvidia_inventory_links_only_exact_host_wheels(tmp_path: Path) -> None:
     )
     assert inventory["status"] == "verified_and_linked"
     assert inventory["expected_distribution_count"] == 15
-    assert inventory["shared_library_bytes_reused"] == 15 * 20
+    assert inventory["shared_library_bytes_reused"] == 16 * 20
     assert all(record["status"] == "verified" for record in inventory["distributions"])
-    assert (venv_site / "nvidia/cuda_000/lib/libnvidia_test_000.so").is_symlink()
-    assert not (venv_site / "nvidia/cuda_000/__pycache__").exists()
-    metadata_file = venv_site / "nvidia_cuda_000-1.0.dist-info/METADATA"
+    assert (venv_site / "nvidia/nvshmem/lib/libnvidia_test_000.so").is_symlink()
+    assert (venv_site / "nvidia/nvshmem/lib/nvshmem_bootstrap_mpi.so.3").is_symlink()
+    assert not (venv_site / "nvidia/nvshmem/__pycache__").exists()
+    metadata_file = venv_site / "nvidia_nvshmem_cu12-1.0.dist-info/METADATA"
     assert metadata_file.is_symlink()
     assert json.loads(inventory_path.read_text(encoding="utf-8")) == inventory
     assert module._runtime_regular_bytes(venv_site) == 0
+
+
+def test_nvidia_inventory_rejects_python_extension_even_for_vendor_lib_path(
+    tmp_path: Path,
+) -> None:
+    module = _load_worker()
+    host_site = tmp_path / "host-site"
+    requirements = _write_nvidia_inventory(host_site, include_python_extension=True)
+    venv_site = tmp_path / "venv-site"
+    venv_site.mkdir()
+    inventory_path = tmp_path / "runtime_inventory.json"
+
+    with pytest.raises(module.WorkerError, match="runtime_nvidia_host_platform_inventory_mismatch"):
+        module.link_verified_nvidia_libraries(
+            requirements,
+            host_site,
+            venv_site,
+            inventory_path,
+            host_python="3.13.15",
+        )
+
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    nvshmem = next(
+        record for record in inventory["distributions"] if record["name"] == "nvidia-nvshmem-cu12"
+    )
+    assert nvshmem["status"] == "platform_file_inventory_mismatch"
+    assert nvshmem["offending_relative_file"] == (
+        "nvidia/nvshmem/lib/nvshmem_fake.cpython-313-x86_64-linux-gnu.so"
+    )
+    assert not (venv_site / "nvidia").exists()
 
 
 def test_nvidia_version_mismatch_writes_inventory_and_fails_before_linking(

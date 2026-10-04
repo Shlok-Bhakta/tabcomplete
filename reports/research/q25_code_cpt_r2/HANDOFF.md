@@ -101,7 +101,11 @@ input staging/receipt are preserved under `fim_training_plan.r1.json` and
 `/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/history/plan-r1`. CPU preflight fixed
 ordinary reserved FIM token handling and semantically equivalent Transformers 5
 config serialization before any FIM generation. The revised private input dataset
-is `shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3`; both initializer preflights pass. Revision 2 remains in `fim_training_plan.r2.json` and `fim/history/plan-r2`. Revision 3 fixes a runtime-report checksum typo found by CPU tests before any FIM generation. The resolved wheels, runtime versions, examples, weights and tokenizer IDs are unchanged.
+is `shlokbhakta/tabcomplete-q25-fim-r2-inputs-r3`; both initializer preflights
+pass. Revision 2 remains in `fim_training_plan.r2.json` and `fim/history/plan-r2`.
+Revision 3 fixes a runtime-report checksum typo found by CPU tests before any
+FIM generation. The wheels, versions, examples, weights and tokenizer IDs stay
+unchanged.
 
 Run CPU preflight against the frozen full plan for both initializers. Commit and
 push the completed source and upload receipts before GPU allocation. Then launch
@@ -142,3 +146,24 @@ CPU cases, including explicit persisted training-start status. A zero-training
 FIM failure can retry with immediate allocation lineage and its unchanged
 initializer or older verified checkpoint. An unknown post-start state cannot
 claim zero work. Upload staging rejects all unlisted files before copying.
+
+## Current completion allocation state
+
+Attempt 1 of the untouched arm failed before training after 12.176 worker
+seconds: all 15 NVIDIA versions matched, but NVSHMEM failed the strict file
+layout check. `fim-verified-untouched_q25_to_fim-1.json` is a verified zero-work
+receipt. No completion quality outputs exist. Fix the vendor layout check on
+CPU, preserve the frozen lock, and retry with attempt 2 and
+`--resume-source shlokbhakta/tc-q25-fim-r2-0-a1`. This records authorization
+lineage while retaining no checkpoint source, since training never started.
+Never relaunch attempt 1 or count it as trained. Refresh quota before allocation.
+
+The serving audit confirmed that the new PSM checkpoint needs a separate
+`q25-fim-line-completion-v1` route, with an exact cursor-to-line-ending range.
+Its target includes original LF/CRLF, or no newline at EOF; trim/repair would
+change the trained contract. The native converter revision `f072b103` reads
+normalized RoPE theta 1,000,000 correctly, but has no direct Q4 writer. Account
+for temporary F16 and Q4 artifacts even when tmpfs holds the intermediate.
+If local cap headroom is insufficient, use an owned CPU-only research conversion
+job attached to the selected training output, then retrieve only its Q4 artifact.
+Do not quantize/deploy until actual paired completion results support selection.

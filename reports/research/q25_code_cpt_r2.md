@@ -241,3 +241,26 @@ the deadline and storage budget. An incompatible host library fails before
 training with a bounded inventory. The CPT arm mounts only its completed export;
 partial runs save resumable state without producing an unused inference export.
 The 10 GiB output cap and 12 GiB aggregate artifact cap both remain enforced.
+
+## First completion allocation setup failure
+
+Kernel `shlokbhakta/tc-q25-fim-r2-0-a1`, pinned to `a78a5f6`, stopped after
+12.176 worker seconds before training. All 15 expected NVIDIA distribution
+versions matched; the NVSHMEM file inventory failed the strict platform check.
+Fourteen other distributions passed ELF checks. The worker recorded 1.057 GB
+of combined input/setup/output artifacts and 20.94 GB free space. Training
+input tokens and quality outputs are zero. The existing telemetry query
+returned `no_runs`; no training run ID existed before setup stopped.
+
+The controller collected a verified zero-work receipt. A retry must retain
+this lineage, refresh authenticated quota and fix the file-layout check using
+actual vendor evidence. The runtime lock, examples and model weights stay
+unchanged. See `q25_code_cpt_r2/fim_setup_failure_untouched_a1.json`.
+
+The vendor-wheel RECORD confirms native NVSHMEM bootstrap/transport plugins
+without a `lib` filename prefix. The worker now permits those two prefixes only
+in that vendor distribution and directory, retaining exact versions, ELF checks
+and Python ABI exclusions. This setup-only fix changes no training data,
+weights, prompt, decoding or runtime package selection. The corrected worker
+passed 993 Python tests, Ruff and mypy; the last 992-test run remains historical.
+The retry uses the same frozen plan and records a new pinned worker commit.

@@ -425,12 +425,18 @@ def link_verified_nvidia_libraries(
                 item_invalid = True
                 break
             if ".so" in relative.name:
+                is_nvshmem_plugin = (
+                    name == "nvidia-nvshmem-cu12"
+                    and relative.parts[:3] == ("nvidia", "nvshmem", "lib")
+                    and relative.name.startswith(("nvshmem_bootstrap_", "nvshmem_transport_"))
+                )
                 if (
                     ".cpython-" in relative.name
                     or ".abi3" in relative.name
-                    or not relative.name.startswith("lib")
+                    or not (relative.name.startswith("lib") or is_nvshmem_plugin)
                     or not _elf_is_x86_64(resolved)
                 ):
+                    record["offending_relative_file"] = relative.as_posix()[:200]
                     item_invalid = True
                     break
                 reused_realpaths.add(resolved)
