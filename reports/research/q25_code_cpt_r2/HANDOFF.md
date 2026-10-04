@@ -356,3 +356,46 @@ Actual Q4 quality, latency, collector/Neovim smoke and installer remain pending.
 ThinkPad known SSH alias still unreachable at latest check; no activation claimed.
 Automatic personalization stays disabled. Continue through conversion and local
 verified preview; do not stop after the matched pilot.
+
+
+## Native delivery checkpoint at 2026-10-04 08:35 UTC
+
+Both trained arms remain complete and selected direct FIM remains unchanged.
+CPU conversion attempt 1, `shlokbhakta/tc-q25-fim-q4-conversion-r1`, pinned to
+`c5ef7b0`, failed in its launcher at 0.798 seconds. Its pulled source is
+byte-identical to the staged launcher; remote metadata confirms both expected
+attachments and GPU disabled. No worker conversion manifest exists. The actual
+SigNoz run query returned `no_runs`. Preserve `fim-conversion-failed-1.json`,
+job/watch/quota and private log. An explicit audited retry is being implemented;
+never blindly push the original reference again or erase its receipt.
+
+The integrated controller requires branch `research/q25-code-cpt-r2`. Its exact
+five plan-hashed worker files are embedded in the single uploaded script, with
+bounded nested-mount discovery. The temporary root must be safely created before
+extracting those files. The worker's source hashes, selected export, tokenizer,
+training plan and fixtures are unchanged.
+
+Native evaluator correction is committed as `1302b8b`: it now reproduces the
+original 640/256 training crops and complete Rust context-v2 digest. Root reran
+32 focused tests and actual 240-case preparation. The case SHA remains
+`57cef82cc1a8cc5d4ddfdc25201b7e54f7f33ec6d2860acf14166bb5537127bc`.
+The old full-file checker mismatched 83 prompts; no native model outputs existed
+before correction. Do not reuse the obsolete context-v1 names or digest.
+
+Opt-in executable packaging merged as `b48f245`. Root independently passed 40
+Rust tests and the synthetic appender/tampering/cap tests, then rebuilt release.
+The root generic engine SHA is
+`d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074`.
+This differs from the agent's historical build hash; attest the actual binary.
+The installer profile helper emits `embedded-profile.json` with full sorted
+vocabulary/control IDs, alongside compact `editor-model.json` and registry.
+The separate opt-in Nix candidate leaves Qwen/Sweep defaults unchanged.
+Actual selected-GGUF mapping, quality, inference latency and SQLite/Neovim smoke
+are still pending. Never call synthetic footer tests actual model inference.
+
+Next continue the explicit CPU retry, retrieve only Q4 and compact manifests,
+freeze actual native identities, run all 240 cases, then the bounded changed-state
+replay and real synthetic editor/collector smoke. Temporarily stop only the owned
+old predictor before loading the candidate and restore it on exit. ThinkPad's
+known SSH alias still times out; don't claim installation there. Automatic
+personalization remains disabled.
