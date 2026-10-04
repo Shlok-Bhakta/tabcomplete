@@ -240,8 +240,18 @@ return function(ok, assert_eq, assert_true)
     assert_true(requested and generated and shown, "FIM lifecycle events were recorded")
     assert_eq(requested.wire_version, fim.WIRE_VERSION)
     assert_eq(requested.context_policy_version, fim.CONTEXT_POLICY_VERSION)
+    assert_eq(requested.context_blob_hash,
+      util.sha256hex(prepared_context.prompt),
+      "blob identity hashes actual prompt bytes rather than request-bound context")
+    assert_true(requested.context_blob_hash ~= requested.context_hash,
+      "FIM binding digest and content-addressed prompt remain distinct")
+    assert_eq(requested.tokenizer_sha256, tokenizer.tokenizer_sha256)
+    assert_eq(requested.tokenizer_contract_sha256, tokenizer.tokenizer_contract_sha256)
+    assert_eq(requested.artifact_manifest_sha256, profile.artifact_manifest_sha256)
     assert_eq(requested.max_output_tokens, fim.MAX_OUTPUT_TOKENS)
     assert_eq(generated.wire_version, fim.WIRE_VERSION)
+    assert_eq(generated.tokenizer_sha256, tokenizer.tokenizer_sha256)
+    assert_eq(generated.tokenizer_contract_sha256, tokenizer.tokenizer_contract_sha256)
     assert_eq(generated.filetype_training_scope, "uncalibrated_language")
     assert_eq(shown.wire_version, fim.WIRE_VERSION)
     assert_eq(shown.action, "replace_line")

@@ -241,6 +241,7 @@ end
 local function record_request(state)
   collector.anchor_prediction(state.bufnr)
   collector.store_prediction_blob(state.prompt, function() end)
+  local context_blob_hash = util.sha256hex(state.prompt)
   local is_v1 = is_contract_protocol()
   local identity = state.model_identity or opts.current_model_identity or {}
   local rust = opts.backend == "rust-editor-v1"
@@ -250,6 +251,12 @@ local function record_request(state)
     model_gguf_sha256 = rust and identity.model_sha256 or opts.model_revision,
     model_alias = rust and identity.alias or nil,
     model_protocol = rust and identity.model_protocol or nil,
+    tokenizer_sha256 = rust and identity.tokenizer_sha256 or nil,
+    tokenizer_revision = rust and identity.tokenizer_revision or nil,
+    tokenizer_contract_sha256 = rust and identity.tokenizer_contract_sha256 or nil,
+    tokenizer_vocab_ids_sha256 = rust and identity.tokenizer_vocab_ids_sha256 or nil,
+    artifact_manifest_sha256 = rust and identity.fim_profile
+      and identity.fim_profile.artifact_manifest_sha256 or nil,
     context_layout = rust and identity.context_layout or nil,
     filetype_training_scope = state.filetype_training_scope,
     syntax_validation = rust and identity.syntax_validation,
@@ -259,7 +266,7 @@ local function record_request(state)
     context_policy_version = state.context_policy_version
       or (is_v1 and single_line_v1.CONTEXT_POLICY_VERSION or opts.context_policy_version),
     requested_at_ms = state.requested_at_ms,
-    context_hash = state.context_hash, context_blob_hash = state.context_hash,
+    context_hash = state.context_hash, context_blob_hash = context_blob_hash,
     pre_state_hash = state.content_hash, pre_state_sequence = state.pre_state_sequence,
     file_identity = state.file_identity, cursor = state.cursor,
     editable_range = state.editable_range or { start_row = state.row, start_col = state.start_col,
@@ -976,6 +983,12 @@ local function finished(request, result)
             model_alias = is_rust and state.model_identity.alias or nil,
             model_sha256 = is_rust and state.model_identity.model_sha256 or nil,
             model_protocol = is_rust and state.model_identity.model_protocol or nil,
+            tokenizer_sha256 = is_rust and state.model_identity.tokenizer_sha256 or nil,
+            tokenizer_revision = is_rust and state.model_identity.tokenizer_revision or nil,
+            tokenizer_contract_sha256 = is_rust and state.model_identity.tokenizer_contract_sha256 or nil,
+            tokenizer_vocab_ids_sha256 = is_rust and state.model_identity.tokenizer_vocab_ids_sha256 or nil,
+            artifact_manifest_sha256 = is_rust and state.model_identity.fim_profile
+              and state.model_identity.fim_profile.artifact_manifest_sha256 or nil,
             context_layout = is_rust and state.model_identity.context_layout or nil,
             action_validation = is_rust and request.parser.terminal.action_validation or nil,
             runtime_config_hash = is_rust and state.model_identity.runtime_config_hash or nil,
