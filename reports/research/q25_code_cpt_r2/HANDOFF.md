@@ -300,3 +300,29 @@ The checkpoint was collected locally; conversion/export retrieval must continue
 to respect the aggregate artifact cap and remove only owned temporary build
 cache when safe. Generic functional replay and source-syntax diagnostics remain
 pending. Automatic personalization remains disabled.
+
+The CPT-initialized arm is submitted as `shlokbhakta/tc-q25-fim-r2-1-a1`,
+pinned to `99bcfd3f6baab8c8ff59086b238e816ba3927969`, at 06:35:16 UTC.
+Fresh pre-submit quota observed 06:34:38 UTC was 41.71 remaining account
+GPU-hours, 3.29 used, no active jobs and the unchanged October 10 renewal.
+Its observer uses `--phase fim --arm completed_cpt_q25_to_fim --attempt 1 --watch`.
+Do not launch another GPU allocation while this one is running.
+
+CPU source diagnostics for the untouched FIM arm completed: parser regressions
+against originally passing source declined from 94/238 to 11/238. The strict
+post-FIM raw causal suite passed 11/200 functional, 19/200 compile and 22/200
+parse cases with all eight frozen Docker image IDs unchanged. Do not call the
+small causal difference a clean paired gain over the earlier runtime.
+The worker offline bundle imported 4,102 spans; a second import returned duplicate
+with zero spans. The training run was fully paginated through four pages and
+357 unique spans, including its completed state. Full worker bundle spans include
+separate evaluation runs. See the diagnostic and monitoring records.
+
+The FIM route commits `703fdf2` and `1948c196` have been cherry-picked into the
+campaign branch. Root independently reran the Neovim suite: 85 passed, zero failed.
+Agent verification also passed 29 Rust tests, but selected-model/native Unicode
+parity and actual SQLite integration remain pending. Preserve those distinctions.
+The shared debug Cargo cache was removed after its owner confirmed tests finished.
+Only owned temporary build artifacts were removed; all research checkpoints remain.
+A smaller release-only native build cache is now under the campaign artifact root
+and therefore counted by its cap.

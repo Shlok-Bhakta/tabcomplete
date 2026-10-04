@@ -1,0 +1,381 @@
+{
+  "automatic_syntax_filter_enabled": false,
+  "causal_functional_after": {
+    "sha256": "313aaf1d8e5f73e72cc7e37ab96f5a23eadcf4a2f44814d810bd218a4f440e61",
+    "summary": {
+      "by_category": {
+        "algorithms": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.15384615384615385,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96,
+          "median_latency_seconds": 2.571564667000075,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.15384615384615385,
+          "test_availability_rate": 0.15384615384615385,
+          "test_pass_rate": 0.15384615384615385,
+          "timeout_count": 0,
+          "total": 39
+        },
+        "control_flow": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.03125,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.57740325650002,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.09375,
+          "test_availability_rate": 0.03125,
+          "test_pass_rate": 0.03125,
+          "timeout_count": 0,
+          "total": 32
+        },
+        "data_structures": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.08333333333333333,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.576550647999966,
+          "nonempty_rate": 0.9722222222222222,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.1388888888888889,
+          "test_availability_rate": 0.08333333333333333,
+          "test_pass_rate": 0.05555555555555555,
+          "timeout_count": 0,
+          "total": 36
+        },
+        "error_handling": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.1,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 81.0,
+          "median_latency_seconds": 2.2531821334998767,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.1,
+          "test_availability_rate": 0.1,
+          "test_pass_rate": 0.05,
+          "timeout_count": 0,
+          "total": 20
+        },
+        "parsing": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.15,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.573246920499969,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.15,
+          "test_availability_rate": 0.15,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 20
+        },
+        "repository_api": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.0,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96,
+          "median_latency_seconds": 2.582450568999775,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.0,
+          "test_availability_rate": 0.0,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 35
+        },
+        "standard_library": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.2222222222222222,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 72.0,
+          "median_latency_seconds": 1.9849504489998253,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.16666666666666666,
+          "test_availability_rate": 0.2222222222222222,
+          "test_pass_rate": 0.05555555555555555,
+          "timeout_count": 0,
+          "total": 18
+        }
+      },
+      "by_language": {
+        "c": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.0,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.5783824404998086,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.045454545454545456,
+          "test_availability_rate": 0.0,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "cpp": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.0,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 75.0,
+          "median_latency_seconds": 2.0360858379997353,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.0,
+          "test_availability_rate": 0.0,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "csharp": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.0,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 87.5,
+          "median_latency_seconds": 2.3558905214997594,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.0,
+          "test_availability_rate": 0.0,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "go": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.045454545454545456,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.5983521725001992,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.18181818181818182,
+          "test_availability_rate": 0.045454545454545456,
+          "test_pass_rate": 0.045454545454545456,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "java": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.0,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 41.5,
+          "median_latency_seconds": 1.1238181085000178,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.0,
+          "test_availability_rate": 0.0,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "javascript": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.2727272727272727,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 83.5,
+          "median_latency_seconds": 2.235930384999847,
+          "nonempty_rate": 0.9545454545454546,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.045454545454545456,
+          "test_availability_rate": 0.2727272727272727,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "python": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.4782608695652174,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96,
+          "median_latency_seconds": 2.582450568999775,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.4782608695652174,
+          "test_availability_rate": 0.4782608695652174,
+          "test_pass_rate": 0.391304347826087,
+          "timeout_count": 0,
+          "total": 23
+        },
+        "rust": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.0,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.583084941999914,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.0,
+          "test_availability_rate": 0.0,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 22
+        },
+        "typescript": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.043478260869565216,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96,
+          "median_latency_seconds": 2.6086878609999076,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.21739130434782608,
+          "test_availability_rate": 0.043478260869565216,
+          "test_pass_rate": 0.043478260869565216,
+          "timeout_count": 0,
+          "total": 23
+        }
+      },
+      "by_repository_context": {
+        "repository_context": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.05,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.5877210250000644,
+          "nonempty_rate": 0.95,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.05,
+          "test_availability_rate": 0.05,
+          "test_pass_rate": 0.0,
+          "timeout_count": 0,
+          "total": 20
+        },
+        "standalone": {
+          "compile_availability_rate": 1.0,
+          "compile_pass_rate": 0.1,
+          "exact_match_rate": 0.0,
+          "median_generated_tokens": 96.0,
+          "median_latency_seconds": 2.5710174855000787,
+          "nonempty_rate": 1.0,
+          "normalized_exact_match_rate": 0.0,
+          "parse_pass_rate": 0.11666666666666667,
+          "test_availability_rate": 0.1,
+          "test_pass_rate": 0.06111111111111111,
+          "timeout_count": 0,
+          "total": 180
+        }
+      },
+      "compile_availability_rate": 1.0,
+      "compile_pass_rate": 0.095,
+      "exact_match_rate": 0.0,
+      "median_generated_tokens": 96.0,
+      "median_latency_seconds": 2.5748330325000097,
+      "nonempty_rate": 0.995,
+      "normalized_exact_match_rate": 0.0,
+      "parse_pass_rate": 0.11,
+      "test_availability_rate": 0.095,
+      "test_pass_rate": 0.055,
+      "timeout_count": 0,
+      "total": 200
+    }
+  },
+  "docker_image_ids_unchanged": true,
+  "quality_caveat": "Source-completion diagnostic only; no human-edit intent or production accuracy claim.",
+  "schema": "q25-fim-untouched-diagnostics-v1",
+  "source_syntax_after": {
+    "sha256": "7485c0e794c868d9bd0ff9f4cc0b4378a8dee1373d2fea93778c57116cd60f56",
+    "summary": {
+      "cases": 240,
+      "development_row_count": 240,
+      "development_sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+      "generated_parse_unavailable_after_original_pass": 0,
+      "generated_source_parse_status_counts": {
+        "fail": 13,
+        "pass": 227
+      },
+      "gpu_results_sha256": "ffe6357a89a2b1f93dad0a6a8c05e5d90f55649c485bcbc382f4ad0c529170b5",
+      "interpretation": "Descriptive whole-source parser outcome only. Original-source status is the control. This is not compilation, functional behavior, observed edit intent, or a display gate.",
+      "model_sha256": "2f464bbc82f4106a02221d031ee3360c6116494cfb0965441063c4d138fdbada",
+      "original_parse_pass_cases": 238,
+      "original_source_parse_status_counts": {
+        "fail": 2,
+        "pass": 238
+      },
+      "parent_cpt_plan_sha256": "1aaff2ee4f4e0adeeafb87e616f99e657f7ff0be4fa438f40ecbb1150aeed1f9",
+      "parser": "tree-sitter-language-pack",
+      "parser_regression_cases": 11,
+      "parser_regression_denominator": 238,
+      "parser_regression_rate": 0.046218487394957986,
+      "parser_version": "1.20.0",
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "preparation_plan_sha256": "460770a6bab77eeecd7b31eb2c8da278c5c29cea98cc872d8fbd36b22a6dc6de",
+      "protocol": "q25-fim-source-syntax-v1",
+      "raw_source_pool_file_hashes": {
+        "go": {
+          "sha256": "1dbca27bf3cf40513e19aa88180955f40e79ed51f72676d3c20605b360310ba2",
+          "sidecar_sha256": "dbc1fc05a6fe5dbf51cad0c02f6c93539d8bcc1732b31413397d009d134cecc3"
+        },
+        "python": {
+          "sha256": "991ff59e26bba6191abd2d3017b0a7aaa6e089882d9cbb92c87563da846e0c37",
+          "sidecar_sha256": "3880e7e65f2a5eab932790a11556f9cc996fda256a7f64bed4fd533da2a22c85"
+        },
+        "rust": {
+          "sha256": "676cc14204029bff85a9c692e52ca7dc99504fc0389472cd879e5ebb9c388735",
+          "sidecar_sha256": "cd032256e19c213f9486db8a91dfe0ff14456191821c9d0a5e2bdcbed2d0a183"
+        },
+        "typescript": {
+          "sha256": "f54d113d17c40d0997da6567e95ac18204a3ac7c443f3b390a0f28d45a63a16a",
+          "sidecar_sha256": "ace70e4b7abea5b73ff73cf5f6340d9928f9743cd44ad836359596bc1a9214d8"
+        }
+      },
+      "regression_definition": "Generated full source fails Tree-sitter after the original full source passes; denominator requires both parses to return pass/fail.",
+      "schema": "q25-fim-source-syntax-diagnostic-v1"
+    }
+  },
+  "source_syntax_before": {
+    "sha256": "053f0ea16f2cfffa698a596cc6b8b73f1a140997061983f3e4d5e29b133d2d0d",
+    "summary": {
+      "cases": 240,
+      "development_row_count": 240,
+      "development_sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+      "generated_parse_unavailable_after_original_pass": 0,
+      "generated_source_parse_status_counts": {
+        "fail": 96,
+        "pass": 144
+      },
+      "gpu_results_sha256": "91aa45077e355c5b8240dd24648c25b5e68226f231d82dd920dab1ffb2f3414b",
+      "interpretation": "Descriptive whole-source parser outcome only. Original-source status is the control. This is not compilation, functional behavior, observed edit intent, or a display gate.",
+      "model_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+      "original_parse_pass_cases": 238,
+      "original_source_parse_status_counts": {
+        "fail": 2,
+        "pass": 238
+      },
+      "parent_cpt_plan_sha256": "1aaff2ee4f4e0adeeafb87e616f99e657f7ff0be4fa438f40ecbb1150aeed1f9",
+      "parser": "tree-sitter-language-pack",
+      "parser_regression_cases": 94,
+      "parser_regression_denominator": 238,
+      "parser_regression_rate": 0.3949579831932773,
+      "parser_version": "1.20.0",
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "preparation_plan_sha256": "460770a6bab77eeecd7b31eb2c8da278c5c29cea98cc872d8fbd36b22a6dc6de",
+      "protocol": "q25-fim-source-syntax-v1",
+      "raw_source_pool_file_hashes": {
+        "go": {
+          "sha256": "1dbca27bf3cf40513e19aa88180955f40e79ed51f72676d3c20605b360310ba2",
+          "sidecar_sha256": "dbc1fc05a6fe5dbf51cad0c02f6c93539d8bcc1732b31413397d009d134cecc3"
+        },
+        "python": {
+          "sha256": "991ff59e26bba6191abd2d3017b0a7aaa6e089882d9cbb92c87563da846e0c37",
+          "sidecar_sha256": "3880e7e65f2a5eab932790a11556f9cc996fda256a7f64bed4fd533da2a22c85"
+        },
+        "rust": {
+          "sha256": "676cc14204029bff85a9c692e52ca7dc99504fc0389472cd879e5ebb9c388735",
+          "sidecar_sha256": "cd032256e19c213f9486db8a91dfe0ff14456191821c9d0a5e2bdcbed2d0a183"
+        },
+        "typescript": {
+          "sha256": "f54d113d17c40d0997da6567e95ac18204a3ac7c443f3b390a0f28d45a63a16a",
+          "sidecar_sha256": "ace70e4b7abea5b73ff73cf5f6340d9928f9743cd44ad836359596bc1a9214d8"
+        }
+      },
+      "regression_definition": "Generated full source fails Tree-sitter after the original full source passes; denominator requires both parses to return pass/fail.",
+      "schema": "q25-fim-source-syntax-diagnostic-v1"
+    }
+  }
+}

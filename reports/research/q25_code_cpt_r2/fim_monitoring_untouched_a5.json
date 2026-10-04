@@ -1,0 +1,47 @@
+{
+  "fully_paginated": true,
+  "observed_at": "2026-10-04T06:37:54.847097+00:00",
+  "observed_states": [
+    "active",
+    "completed",
+    "started"
+  ],
+  "offline_import": {
+    "bundle_sha256": "63455c13fa6aa29fb61e0f8c1c536eba0f4d10e3f4f44493d1c6a4344dca8414",
+    "duplicate": false,
+    "imported_spans": 4102,
+    "schema_version": 1
+  },
+  "pages": [
+    {
+      "file": "monitoring-run-untouched-a5-page-1.json",
+      "rows": 100,
+      "sha256": "a1b0400501c2112c88a4641891a4cd1810f28af0c22956400d00744ba6bd58a5"
+    },
+    {
+      "file": "monitoring-run-untouched-a5-page-2.json",
+      "rows": 100,
+      "sha256": "f7563de7eb7d0a85261ac523d796bacff9f0429cf9c65959487de13112d9644a"
+    },
+    {
+      "file": "monitoring-run-untouched-a5-page-3.json",
+      "rows": 100,
+      "sha256": "9bb1b5bee4b6a7afeb797a34d31aac146d8f32a5b06c98f730511a591c55ef6e"
+    },
+    {
+      "file": "monitoring-run-untouched-a5-page-4.json",
+      "rows": 57,
+      "sha256": "af168f77e0cf142dbce9114c89d48b2f5995af3f153c85f07942ed39f38e0d16"
+    }
+  ],
+  "payload_capture_enabled": false,
+  "repeat_import": {
+    "bundle_sha256": "63455c13fa6aa29fb61e0f8c1c536eba0f4d10e3f4f44493d1c6a4344dca8414",
+    "duplicate": true,
+    "imported_spans": 0,
+    "schema_version": 1
+  },
+  "run_id": "run-af49853a32ad56891191cf2d46ec9cee",
+  "schema": "q25-fim-monitoring-verification-v1",
+  "unique_spans": 357
+}

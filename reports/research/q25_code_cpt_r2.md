@@ -7,6 +7,12 @@ The completed raw-code pass reduced same-tokenizer development NLL and improved
 some syntax scores. Functional success stayed at 10/200. It has not established
 better practical completion quality.
 
+The first matched completion arm has now finished. Supervised FIM training on
+the untouched base raised exact, EOS-terminated synthetic development completion
+from 47/240 to 130/240. The arm initialized from the completed code-pretraining
+checkpoint is running. That comparison will determine whether the extra source
+pass helped completion. No new candidate has replaced the working editor model.
+
 The [frozen plan](q25_code_cpt_r2/plan.json) binds the source pool, model and
 tokenizer hashes, fixture hashes, split policy, decoding, runtime choices,
 training schedule and limits. The initial cap is 8,000,000 nonpadding input
@@ -72,12 +78,35 @@ exception or consume a renewed allocation.
 
 | Path | Completed training | Development completion | General code regression |
 | --- | --- | --- | --- |
-| Untouched Qwen → FIM | Pending | Pending | Pending |
-| Qwen → raw-code CPT → FIM | Pending | Pending | Pending |
+| Untouched Qwen → FIM | 4,096 states; 1,776,908 input tokens | Exact+EOS 47/240 → 130/240 | Causal functional 11/200 after FIM; raw line exact 16/180 |
+| Qwen → raw-code CPT → FIM | Running | Pending | Pending |
 
 The final training plan must bind the actual completed CPT artifact and runtime
 before either FIM allocation. Existing tests and CPU data checks are not evidence
 of a model improvement.
+
+The current comparison uses frozen evaluation revision 4. The untouched arm's
+paired exact+EOS improvement was 83/240, with 87 gains and four losses across
+119 held-out repository groups. Its registered repository bootstrap interval is
+27.73 to 41.25 percentage points. Observed EOS rose from 122/240 to 240/240.
+Whole-source parser failures after an originally passing source fell from 94/238
+to 11/238. These are source-completion diagnostics, not observed editing intent,
+human acceptance or a syntax-based display gate.
+
+The FIM line diagnostic rose from 79/180 to 85/180 exact matches. Its registered
+stopping rule accepts newline termination, whereas the new native editor route
+requires actual EOS. Keep these denominators and termination rules distinct.
+The post-FIM raw causal score was 11/200 functional, 19/200 compile and 22/200
+parse passes with the same eight frozen Docker images. This is not a pure
+before/after causal ablation against the earlier Python 3.13/backend run.
+The second arm will use the same current runtime and evaluation rules.
+
+The completed worker took 2,677.064 seconds including setup and evaluations;
+the training subprocess took 1,375.464 seconds. It completed 256 updates without
+skips or replay, supervising 34,405 response/EOS tokens. Its full checkpoint
+was retrieved and hash verified. Detailed identities and paired outcomes are in
+`q25_code_cpt_r2/fim_results_untouched_a5.json`. Neither quantized deployment
+quality nor target-device latency has been measured for this new candidate yet.
 
 The full training plan is now frozen at revision 3. Both actual initializer
 preflights passed all 4,336 prepared states, with 1,776,908 total training input

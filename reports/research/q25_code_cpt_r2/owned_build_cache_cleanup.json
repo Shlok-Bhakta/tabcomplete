@@ -1,0 +1,18 @@
+{
+  "artifact_regular_file_bytes_after": 7429138988,
+  "existing_research_checkpoints_deleted": false,
+  "observed_at": "2026-10-04T06:37:15.006511+00:00",
+  "owned_storage_record_sha256": "4d8cb5ffe3f73f5bee52c6f0703e29d663df501f39c69d5f8a93495b1de4e2aa",
+  "owner_confirmation": "cpt_data_audit Rust29 and Lua85 passed; no active build",
+  "path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim-preview-build-cache",
+  "reason": "Required Rust tests finished; free aggregate campaign headroom for the second complete checkpoint.",
+  "regular_file_bytes_removed": 2585275517,
+  "schema": "q25-owned-build-cache-cleanup-v1",
+  "test_binaries": [
+    {
+      "bytes": 115203024,
+      "name": "tabcomplete_engine-3dae30ca4c30ad0f",
+      "sha256": "55ad203ef619be5dda260029b55587b6f582af03c1c0120fe5e4c1313a8af8d0"
+    }
+  ]
+}
