@@ -45,9 +45,9 @@ Hub revision at this check. This bounded subset is an ablation, not an
 entire-corpus campaign. [Qwen's model card](https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B)
 reports 5.5 trillion training tokens for the coder family. Extra raw code may
 have little effect on editor intent. The unchanged 200-case causal suite and 180-case continuation suite are
-code diagnostics. They do not establish next-edit ability. A future matched
-completion adaptation must compare the untouched base with this CPT candidate
-using the same ordered training examples and separate development data.
+code diagnostics. They do not establish next-edit ability. The matched completion
+adaptation below compares the untouched base with this CPT candidate using the
+same ordered training examples and separate development data.
 
 ## Matched completion follow-up
 

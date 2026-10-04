@@ -4,101 +4,48 @@ Worktree: `/home/crabcake/Projects/tabcomplete-q25-code-cpt-r2`.
 Branch: `research/q25-code-cpt-r2`, from `0047e18`.
 Private artifacts: `/mnt/ssd/tabcomplete-q25-code-cpt-r2`.
 
-## Current execution at 2026-10-04T09:08:00.390553+00:00
+## Current execution at 2026-10-04 09:54 UTC
 
-Raw CPT and both matched FIM arms are COMPLETE. Do not restart training.
-The selected direct FIM candidate scored 130/240 exact+EOS development states;
-CPT→FIM scored 127/240, with an inconclusive paired difference. Native Q4 is
-still pending. Selected kernel remains `shlokbhakta/tc-q25-fim-r2-0-a5`.
+Raw CPT and both matched FIM arms are complete. Do not restart training. Direct
+FIM remains selected at 130/240 exact+EOS versus CPT→FIM 127/240, with an
+inconclusive paired difference. Actual native Q4 is still pending.
 
-CPU conversion r1 attempt 1 failed in the launcher. Explicit r1 attempt 2
-reached the worker but failed before any manifest. Both terminal receipts,
-private logs, submitted source and quota observations are preserved. Actual
-SigNoz queries returned `no_runs`; do not invent worker traces. Root reproduced
-the untouched initializer provenance mismatch from actual manifests and fixed
-only the three-vs-four file-map comparison, retaining every shared bytes/hash.
-Bounded pre-manifest stage/class diagnostics are added without exception text.
-The old r1 plan still pins old sources and must stay immutable. An isolated
-agent is adding explicit conversion revision 2 with one new CPU allocation,
-using the SAME verified configuration dataset and selected weights. Wait for
-root tests, new r2 plan freeze and exact clean source push before allocation.
-Both old CPU reservations still count; another three-hour CPU session fits the
-existing shared cap. There is no active Kaggle job at this checkpoint.
+CPU conversion R2, reference `shlokbhakta/tc-q25-fim-q4-conversion-r2`, launched
+from pushed `2d4275c` at 09:30:39 UTC and reached verified source/storage setup.
+It failed after 13.1695 worker seconds immediately after pinned uv installation.
+The remote launcher hash matches staging; GPU was disabled and no additional
+training occurred. Failed manifest and compact logs are under
+`fim/conversion-failure-r2`; the actual SigNoz query returned `no_runs`.
+`fim-conversion-failed-r2-1.json` binds its job/watch/failed-manifest hashes.
+The original 10,800-second job reservation is preserved. The runner validates
+and charges 333 seconds covering submission to observed terminal plus 60 seconds.
+Both older R1 CPU reservations remain fully charged. A new explicit 3-hour CPU
+reservation fits the unchanged 20-hour campaign limit; no automatic retry.
 
-Integrated opt-in native installer, executable embedding and 144-request FIM
-latency replay are present. Runtime source remains the root release binary
-`d9912725b657c4806e01c592537133222a59dfc79f0d25083e2c1d9ae0fb4074`.
-A replay bytes-vs-file hashing bug was fixed BEFORE outputs. A follow-up is
-adding hard replay deadlines and full sampling coverage before plan freeze.
-FIM request events now distinguish actual prompt blob SHA from request-bound
-context digest and carry the validated tokenizer identities. Root Lua86,
-installer/replay20 and exporter17 focused tests passed. Full Python gate had
-1159 passes and three controller test-isolation failures due to archived history
-under the real report root; the controller agent is fixing those. Do not report
-that full gate as passed. Ruff excludes immutable archived uploaded source.
+Root controller now supports separate explicit `--conversion-revision3` with
+one attempt, isolated plan/ref/paths, preserved R1/R2 evidence, and tested budget
+settlement. The isolated campaign agent has tested direct bounded extraction of
+only uv from its SHA-pinned wheel, rather than pip-prefix path assumptions.
+Await its worker/test commit, merge, freeze the R3 plan, run focused gates, and
+push exact clean source BEFORE allocation. The configuration dataset, selected
+checkpoint, tokenizer, training plan and fixtures must remain unchanged.
 
-Existing SQLite online backup is under `fim/native/collector-before-native.sqlite`,
-integrity check `ok`; no database migration or wipe is required. Stable desktop
-service/config are unchanged. ThinkPad known SSH alias timed out again. Do not
-claim new target installation. Personalization remains disabled. Complete Q4
-retrieval, actual native quality/latency, real synthetic Neovim/SQLite replay,
-and opt-in desktop deployment before a completion claim.
+Root merged replay safeguards as `2ed6817`: hard SIGALRM wall deadline, normal
+sampler exit and monotonic full-window coverage, explicit warm cache-on start
+from the final fresh prompt, and continuous cache trajectories. Root 181 combined
+controller/replay tests passed. Earlier full Python gate passed 1178 tests,
+but rerun after these new source changes. Root Ruff and expanded mypy passed
+before the latest settlement hardening; recheck them. Native quality/latency
+plans must be frozen only after current serving/evaluator identities are final.
 
-Read `plan.json` and the scientific report before resuming. Preserve the running
-ThinkPad/editor configuration and stable weights. Do not consume a renewed
-Kaggle allocation automatically or download a different model.
-
-The controller freezes identities, stages the CPU-prepared corpus, uploads private
-inputs, submits one bounded session, and verifies retrieved complete checkpoints:
-
-```bash
-uv run python scripts/run_q25_code_cpt.py --bundle --upload
-uv run python scripts/run_q25_code_cpt.py --execute
-uv run python scripts/run_q25_code_cpt.py --watch --attempt 1
-uv run python scripts/run_q25_code_cpt.py --collect --attempt 1
-```
-
-A later attempt must refer to the immediately previous exited campaign kernel
-with a verified complete checkpoint. Preserve the fixed total learning-rate
-horizon and batch order. Do not start again at example zero when resuming.
-An ambiguous submission must be reconciled against authenticated kernel status;
-never retry a push blindly.
-
-CPU preparation is complete. The immutable private input dataset is
-`shlokbhakta/tabcomplete-q25-code-cpt-r2-inputs`. It contains 7,872,512 training
-input tokens and 131,072 development tokens. The worker also mounts the existing
-`shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-inputs` dataset for the exact
-untouched Qwen weights. No new weights were downloaded.
-
-The trainer preflight passed and resolves 481 updates. Actual corpus files live
-in `/mnt/ssd/tabcomplete-q25-code-cpt-r2/corpus`. The data and trainer entry points
-are `scripts/prepare_q25_code_cpt.py` and `python -m tinycomplete.code_cpt.q25`.
-Do not regenerate the corpus or upload replacement files for a resumed run.
-
-Use the existing shared development environment when running verification:
-`UV_PROJECT_ENVIRONMENT=/home/crabcake/Projects/tabcomplete-product-r2/.venv`.
-CPU PyTorch is available through
-`/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages`; include
-it after `src:scripts` in `PYTHONPATH` for trainer tests. Local CUDA is unavailable.
-
-Do not describe an allocation or a model gain as completed based on this handoff
-alone. Commit and push the campaign code before submission; the controller
-enforces that the remote branch matches the local commit.
-
-Attempt 1 completed at the actual Kaggle reference
-`shlokbhakta/tabcomplete-q25-code-cpt-r2-attempt-1`, launched from `fce293d`.
-The verified final cursor contains 481 completed updates and 7,872,512 input
-tokens, with no skips or replayed tail. The full state and FP16 inference export
-are collected in the private artifact directory. Do not resume this completed
-source pass. The short requested ID was not created; do not retry under that ID.
-Refresh authenticated quota and active jobs before either FIM allocation.
-
-The optional watcher retrieves terminal output without starting another job. It
-stops after three consecutive transport failures or its observation deadline.
-The GPU worker still enforces its own deadline if the watcher disconnects. Watch
-state is operational evidence, not a completed training-token count. Five watcher
-tests and the submission URL test passed at that milestone. The later controller
-suite has 78 passing tests.
+The existing SQLite prompt blob hash is now distinct from bound FIM context
+hash. Its online backup is retained and no migration/wipe is required. A public
+synthetic Python/Go smoke fixture is prepared under `fim/native/editor-smoke`
+using preselected case `fim-development-4154`; no native model output exists yet.
+Stable desktop service/config are unchanged. ThinkPad SSH still times out.
+Personalization stays disabled. Continue through Q4 retrieval, actual native
+quality/latency, real synthetic Neovim/SQLite replay, and verified experimental
+desktop deployment before calling delivery complete.
 
 ## Matched completion follow-up
 
