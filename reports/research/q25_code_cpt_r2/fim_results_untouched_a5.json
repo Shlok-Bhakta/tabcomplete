@@ -1,0 +1,644 @@
+{
+  "arm": "untouched_q25_to_fim",
+  "caveats": [
+    "Synthetic source completion, not observed next-edit intent or human acceptance.",
+    "FIM line suite accepts newline termination; native editor route requires explicit EOS.",
+    "Generic causal functional replay and source syntax diagnostics remain pending.",
+    "Second matched arm must complete before selection."
+  ],
+  "checkpoint_receipt": {
+    "arm": "untouched_q25_to_fim",
+    "attempt": 5,
+    "checkpoint_path": "/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim/output-untouched_q25_to_fim-5/q25_fim_r2/training/resume-step-000256.pt",
+    "checkpoint_sha256": "6f82f28a83c366b782bdb0629b2810a08bbf69fbf43d889a48be0fd94aafb6e2",
+    "checkpoint_verified": true,
+    "commit": "52a31de7ea1af7b125ddac53a6ff4d2b71a46e9f",
+    "cursor": {
+      "attempted_updates": 256,
+      "completed_updates": 256,
+      "epoch": 1,
+      "next_example_index": 4096,
+      "skipped_updates": 0,
+      "supervised_target_tokens": 34405,
+      "training_input_tokens": 1776908
+    },
+    "discarded_logged_tail_tokens": 0,
+    "fingerprint": "4a92442a82f133b659b4ef6b5024c9dd293422e12e84993de332ab5dad433d0d",
+    "input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
+    "observed_at": "2026-10-04T06:33:15.242410+00:00",
+    "other_phase_processed_tokens_at_submission": 7872512,
+    "own_discarded_tokens_for_resume": 0,
+    "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+    "processed_arm_input_tokens_conservative": 1776908,
+    "reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+    "status": "shlokbhakta/tc-q25-fim-r2-0-a5 has status \"KernelWorkerStatus.COMPLETE\"",
+    "training_status": "complete",
+    "truncated_last_update_record": false,
+    "unlogged_inflight_input_token_reservation": 0
+  },
+  "files": {
+    "after/development/predictions.jsonl.metadata.json": {
+      "bytes": 1336,
+      "sha256": "d6f9bf3ccd4bab834355be29d73cdef33babc3b0b60e3e2885006b64221e8897"
+    },
+    "after/development/summary.json": {
+      "bytes": 499,
+      "sha256": "1142e32388085d0f278b480b9f98334b8aa1a9e77f26d0c72e9872e61ccf1614"
+    },
+    "after/line/predictions.jsonl.metadata.json": {
+      "bytes": 1337,
+      "sha256": "f4c2956850ec1aaa401bc26f971f7e855dc4b845c9eba27c70852e8bfede0310"
+    },
+    "after/line/summary.json": {
+      "bytes": 519,
+      "sha256": "74f3b16d543b29c67857d95da45c574aa560ddd50b4f01976c97983b1800e5e3"
+    },
+    "attention-smoke/attention-smoke.json": {
+      "bytes": 543,
+      "sha256": "6f82887b877f7d8aa0d2974e54a00d1dac46f3c5621b6c898b7e6f125c13bade"
+    },
+    "baseline/identity.json": {
+      "bytes": 1970,
+      "sha256": "c85769e2ed3c7ff8991fd95908e5356771e7b848614f87b229eb0b7e9d8ffea5"
+    },
+    "before/development/predictions.jsonl.metadata.json": {
+      "bytes": 1337,
+      "sha256": "448d79412822df54a8bd1c743bfa48d29d5c7666d827fa72ec1b24f7842889a1"
+    },
+    "before/development/summary.json": {
+      "bytes": 556,
+      "sha256": "b04cd2c55c2bac15cca08ac28404c9c2a240c2f8a3415ff0cf9201d30b011c2c"
+    },
+    "before/line/predictions.jsonl.metadata.json": {
+      "bytes": 1338,
+      "sha256": "9f5d7c5fa5513ca455ff2155ba22941e55d2cca7c726f65e30a638fff36d0c52"
+    },
+    "before/line/summary.json": {
+      "bytes": 577,
+      "sha256": "269af769fd3632513ff2436d43c2c42fc220be337f6b93ac0c4ecea213accbfc"
+    },
+    "initializer-identity.json": {
+      "bytes": 485,
+      "sha256": "d7b038a986c501eec226b51bf11743c49113dbd1f8ed3f5318fe9c98bf0da5eb"
+    },
+    "regression/causal/inventory.json": {
+      "bytes": 31738,
+      "sha256": "9b0125366d98ed0a71a0af7ff3653c6f428cd34e62a522c80961d1c33e05c14a"
+    },
+    "regression/causal/predictions.jsonl.metadata.json": {
+      "bytes": 1030,
+      "sha256": "d6bd1e54f4d2f94f1035a66326909b7ef59b59a2ece0a95bd6b9d6a8a7eae3a8"
+    },
+    "regression/line/predictions.jsonl.metadata.json": {
+      "bytes": 1363,
+      "sha256": "92b090cc02d9c06fc65d2edac258c302e6ab9f8df7dccccc243c6ef152da5097"
+    },
+    "regression/line/summary.json": {
+      "bytes": 212,
+      "sha256": "a66ee6cccc0d8f6eb7cd952aa8b1be8d1ecbec845350efdf6d549e9c2ecad950"
+    },
+    "runtime-identity.json": {
+      "bytes": 748,
+      "sha256": "a8a574795887f1aee35b95ce5b9cd5f3ea1544bd4f9c1b0f60fb395323ce7e1e"
+    },
+    "runtime_inventory.json": {
+      "bytes": 4203,
+      "sha256": "e3badb779f386f694806111ea01e6a589f4f2062720ec5a912d07d39c2940369"
+    },
+    "training/fim-development-after.json": {
+      "bytes": 398,
+      "sha256": "7eb71b5a07d8584a05b94d0ecad52c4fc8356a41a8427c51084dc88bf0c33503"
+    },
+    "training/fim-development-before.json": {
+      "bytes": 398,
+      "sha256": "26e7fdd009f562e59baeac71b4cc648d7dfcbc6637a3f4dd0f3a40de352a26b3"
+    },
+    "training/inference-f16/artifact_manifest.json": {
+      "bytes": 2349,
+      "sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9"
+    },
+    "training/inference-f16/config.json": {
+      "bytes": 1284,
+      "sha256": "32f65bf9489178e70fff5ba7da6138c7df5092b14740e9f90c7dfa927b9e8802"
+    },
+    "training/inference-f16/generation_config.json": {
+      "bytes": 139,
+      "sha256": "689c1e2b6769259cc773777319bae6f2bd6020ea1aa432b437578da46c994e8a"
+    },
+    "training/inference-f16/tokenizer.json": {
+      "bytes": 11421892,
+      "sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8"
+    },
+    "training/inference-f16/tokenizer_config.json": {
+      "bytes": 694,
+      "sha256": "31f3ca2a2b90487393bdc778c41bfc6dab379646865aeef19068e726804126f1"
+    },
+    "training/latest.json": {
+      "bytes": 517,
+      "sha256": "71d6a387012fb66e027d28a4821dff703908b9b778fc600ed2e776e9080a43d5"
+    },
+    "training/observability-run.json": {
+      "bytes": 110,
+      "sha256": "8924325b51815d7f703f97ba4e4ba404eac7be1a58cf95f8954816965ed2a136"
+    },
+    "training/resume-step-000256.pt.complete.json": {
+      "bytes": 176,
+      "sha256": "43cab7576b9fcfb817b62efc4e56f923cc3b7b2de15297f85c2eba95c971560b"
+    },
+    "training/run_manifest.json": {
+      "bytes": 4237,
+      "sha256": "11e81deaefe8164469b520ed7f8748b564ecdee77b7a9d3263e8f6a58b0cfdf8"
+    },
+    "training/run_result.json": {
+      "bytes": 7766,
+      "sha256": "1f09ca07024f38fd90497475b7fc42713441603dc187870facb98e3088a16964"
+    },
+    "worker-status.json": {
+      "bytes": 7465,
+      "sha256": "7d0ee10b0af0a0df64b420635ac66a65a6be79dc8d1f898f56d65d7c2324c096"
+    }
+  },
+  "paired_development": {
+    "bootstrap_samples": 2000,
+    "bootstrap_seed": 271828,
+    "bootstrap_unit": "repository identity",
+    "cases": 240,
+    "difference_second_minus_first": 0.3458333333333333,
+    "first_successes": 47,
+    "interpretation": "Synthetic completion. A small or inconclusive difference is not equivalence.",
+    "losses": [
+      "fim-development-4111",
+      "fim-development-4136",
+      "fim-development-4141",
+      "fim-development-4169"
+    ],
+    "metric": "exact_and_terminated",
+    "paired_repository_bootstrap_95ci": [
+      0.2773109243697479,
+      0.4125
+    ],
+    "repository_groups": 119,
+    "second_successes": 130,
+    "shared_successes": [
+      "fim-development-4105",
+      "fim-development-4106",
+      "fim-development-4107",
+      "fim-development-4110",
+      "fim-development-4117",
+      "fim-development-4125",
+      "fim-development-4127",
+      "fim-development-4135",
+      "fim-development-4138",
+      "fim-development-4147",
+      "fim-development-4151",
+      "fim-development-4152",
+      "fim-development-4156",
+      "fim-development-4164",
+      "fim-development-4165",
+      "fim-development-4170",
+      "fim-development-4172",
+      "fim-development-4175",
+      "fim-development-4184",
+      "fim-development-4185",
+      "fim-development-4188",
+      "fim-development-4202",
+      "fim-development-4206",
+      "fim-development-4226",
+      "fim-development-4235",
+      "fim-development-4236",
+      "fim-development-4238",
+      "fim-development-4240",
+      "fim-development-4243",
+      "fim-development-4249",
+      "fim-development-4257",
+      "fim-development-4261",
+      "fim-development-4264",
+      "fim-development-4269",
+      "fim-development-4272",
+      "fim-development-4273",
+      "fim-development-4287",
+      "fim-development-4291",
+      "fim-development-4295",
+      "fim-development-4304",
+      "fim-development-4319",
+      "fim-development-4326",
+      "fim-development-4329"
+    ],
+    "wins": [
+      "fim-development-4096",
+      "fim-development-4097",
+      "fim-development-4099",
+      "fim-development-4100",
+      "fim-development-4104",
+      "fim-development-4108",
+      "fim-development-4112",
+      "fim-development-4113",
+      "fim-development-4118",
+      "fim-development-4120",
+      "fim-development-4121",
+      "fim-development-4123",
+      "fim-development-4129",
+      "fim-development-4131",
+      "fim-development-4137",
+      "fim-development-4139",
+      "fim-development-4142",
+      "fim-development-4143",
+      "fim-development-4146",
+      "fim-development-4149",
+      "fim-development-4153",
+      "fim-development-4155",
+      "fim-development-4162",
+      "fim-development-4166",
+      "fim-development-4167",
+      "fim-development-4171",
+      "fim-development-4173",
+      "fim-development-4174",
+      "fim-development-4177",
+      "fim-development-4180",
+      "fim-development-4181",
+      "fim-development-4182",
+      "fim-development-4190",
+      "fim-development-4192",
+      "fim-development-4193",
+      "fim-development-4194",
+      "fim-development-4195",
+      "fim-development-4208",
+      "fim-development-4209",
+      "fim-development-4211",
+      "fim-development-4212",
+      "fim-development-4214",
+      "fim-development-4215",
+      "fim-development-4217",
+      "fim-development-4218",
+      "fim-development-4222",
+      "fim-development-4224",
+      "fim-development-4225",
+      "fim-development-4230",
+      "fim-development-4231",
+      "fim-development-4232",
+      "fim-development-4234",
+      "fim-development-4241",
+      "fim-development-4244",
+      "fim-development-4248",
+      "fim-development-4251",
+      "fim-development-4255",
+      "fim-development-4256",
+      "fim-development-4259",
+      "fim-development-4262",
+      "fim-development-4265",
+      "fim-development-4267",
+      "fim-development-4274",
+      "fim-development-4276",
+      "fim-development-4277",
+      "fim-development-4279",
+      "fim-development-4280",
+      "fim-development-4285",
+      "fim-development-4289",
+      "fim-development-4290",
+      "fim-development-4296",
+      "fim-development-4300",
+      "fim-development-4301",
+      "fim-development-4303",
+      "fim-development-4306",
+      "fim-development-4308",
+      "fim-development-4309",
+      "fim-development-4310",
+      "fim-development-4311",
+      "fim-development-4314",
+      "fim-development-4316",
+      "fim-development-4321",
+      "fim-development-4325",
+      "fim-development-4328",
+      "fim-development-4330",
+      "fim-development-4332",
+      "fim-development-4334"
+    ]
+  },
+  "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+  "reference": "shlokbhakta/tc-q25-fim-r2-0-a5",
+  "schema": "q25-fim-untouched-results-v1",
+  "status": "complete",
+  "summaries": {
+    "after/development": {
+      "cases": 240,
+      "empty_outputs": 0,
+      "exact": 130,
+      "exact_and_terminated": 130,
+      "finish_reasons": {
+        "eos": 240
+      },
+      "model_sha256": "2f464bbc82f4106a02221d031ee3360c6116494cfb0965441063c4d138fdbada",
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "quality_caveat": "Synthetic source completion; no general next-edit or human acceptance claim.",
+      "syntax_denominator": 0,
+      "syntax_pass": 0,
+      "terminated": 240,
+      "valid_output_tokens": 240
+    },
+    "after/line": {
+      "cases": 180,
+      "empty_outputs": 0,
+      "exact": 85,
+      "exact_and_terminated": 85,
+      "finish_reasons": {
+        "eos": 2,
+        "newline": 178
+      },
+      "model_sha256": "2f464bbc82f4106a02221d031ee3360c6116494cfb0965441063c4d138fdbada",
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "quality_caveat": "Synthetic source completion; no general next-edit or human acceptance claim.",
+      "syntax_denominator": 180,
+      "syntax_pass": 173,
+      "terminated": 180,
+      "valid_output_tokens": 180
+    },
+    "before/development": {
+      "cases": 240,
+      "empty_outputs": 0,
+      "exact": 47,
+      "exact_and_terminated": 47,
+      "finish_reasons": {
+        "eos": 122,
+        "invalid_control_or_vocabulary": 48,
+        "length": 70
+      },
+      "model_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "quality_caveat": "Synthetic source completion; no general next-edit or human acceptance claim.",
+      "syntax_denominator": 0,
+      "syntax_pass": 0,
+      "terminated": 122,
+      "valid_output_tokens": 192
+    },
+    "before/line": {
+      "cases": 180,
+      "empty_outputs": 0,
+      "exact": 79,
+      "exact_and_terminated": 79,
+      "finish_reasons": {
+        "eos": 89,
+        "invalid_control_or_vocabulary": 10,
+        "length": 2,
+        "newline": 79
+      },
+      "model_sha256": "aff8914ec707fcaf9e2d4dc97197cded50b1c63e1d3a7a82e56f54d83ea47f80",
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "quality_caveat": "Synthetic source completion; no general next-edit or human acceptance claim.",
+      "syntax_denominator": 180,
+      "syntax_pass": 164,
+      "terminated": 168,
+      "valid_output_tokens": 170
+    },
+    "regression/line": {
+      "exact": 16,
+      "model": "untouched-q25-after-fim",
+      "protocol": "causal_line_v1",
+      "suite_sha256": "2eb55e7db35957007572cb15db2d27cd597b25322e85ae776ff4e723ddec2ead",
+      "syntax_pass": 151,
+      "total": 180
+    }
+  },
+  "worker": {
+    "after_evaluation_seconds": 665.0030842790002,
+    "arm": "untouched_q25_to_fim",
+    "attempt": 5,
+    "attention_smoke": {
+      "dense_fp32_attention_score_bytes": 10509105656,
+      "head_dim": 64,
+      "key_value_head_expansion": "explicit-repeat",
+      "key_value_heads": 2,
+      "peak_allocated_bytes": 119952384,
+      "query_heads": 14,
+      "query_tokens": 13699,
+      "sha256": "6f82887b877f7d8aa0d2974e54a00d1dac46f3c5621b6c898b7e6f125c13bade"
+    },
+    "baseline": {
+      "arm": "untouched_q25_to_fim",
+      "files": {
+        "before/development/predictions.jsonl": {
+          "bytes": 118640,
+          "sha256": "9a1ddf311352523978f982310a4b5676cd177d283a02116388d1c65d9c631e7b"
+        },
+        "before/development/predictions.jsonl.metadata.json": {
+          "bytes": 1337,
+          "sha256": "448d79412822df54a8bd1c743bfa48d29d5c7666d827fa72ec1b24f7842889a1"
+        },
+        "before/development/results.jsonl": {
+          "bytes": 396439,
+          "sha256": "91aa45077e355c5b8240dd24648c25b5e68226f231d82dd920dab1ffb2f3414b"
+        },
+        "before/development/summary.json": {
+          "bytes": 556,
+          "sha256": "b04cd2c55c2bac15cca08ac28404c9c2a240c2f8a3415ff0cf9201d30b011c2c"
+        },
+        "before/development/token_evidence.jsonl": {
+          "bytes": 224388,
+          "sha256": "85689fad862eec1075aea97848b6a926883e57ac14ed9c02d2e5176c2e804c84"
+        },
+        "before/line/predictions.jsonl": {
+          "bytes": 43637,
+          "sha256": "391e620076b997bda089d1c94bc7a93b6eb00ab0d027600bd85cdaf7ae725570"
+        },
+        "before/line/predictions.jsonl.metadata.json": {
+          "bytes": 1338,
+          "sha256": "9f5d7c5fa5513ca455ff2155ba22941e55d2cca7c726f65e30a638fff36d0c52"
+        },
+        "before/line/results.jsonl": {
+          "bytes": 228589,
+          "sha256": "f8e23ebd68173dae16cfd1731f202dcfb76f58a6cfe1e837fbbdaad36f5b952e"
+        },
+        "before/line/summary.json": {
+          "bytes": 577,
+          "sha256": "269af769fd3632513ff2436d43c2c42fc220be337f6b93ac0c4ecea213accbfc"
+        },
+        "before/line/token_evidence.jsonl": {
+          "bytes": 91913,
+          "sha256": "e1ac44116648a067882eea081a97c99fc523593e980227ed11e3a620a80c442f"
+        }
+      },
+      "initializer_identity_sha256": "b76cb7d8990b519a7e4ed2d134444a2d582b6e806adab8de34bac14125ec5646",
+      "input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
+      "measured_seconds": 499.31262112999997,
+      "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+      "schema": "q25-fim-baseline-v1"
+    },
+    "baseline_source": "evaluated_frozen_initializer",
+    "before_evaluation_seconds": 499.31262112999997,
+    "commit": "52a31de7ea1af7b125ddac53a6ff4d2b71a46e9f",
+    "elapsed_seconds": 2677.064210858,
+    "hardware": {
+      "cuda_devices_visible": 1,
+      "other_devices_unused": true,
+      "torch": "2.11.0+cu128",
+      "training_device": "Tesla T4",
+      "world_size": 1
+    },
+    "input": {
+      "directory": "/kaggle/input/datasets/shlokbhakta/tabcomplete-q25-fim-r2-inputs-r4",
+      "file_count": 6,
+      "initializer_identity_sha256": "b76cb7d8990b519a7e4ed2d134444a2d582b6e806adab8de34bac14125ec5646",
+      "mounted_bytes": 1013426809,
+      "mounted_extra_bytes": 2800527380,
+      "nvidia_shared_library_bytes_reused": 4353932793,
+      "python_runtime_bytes": 2755579845,
+      "repository_bytes": 43590848
+    },
+    "input_manifest_sha256": "f9e6e4aaf462fa46965ba534e9b79ae1e147253ff6bc43b59f938a6ae935600a",
+    "plan_sha256": "743abfc02b4161ac56c6e35aeed3c0868341f3bde987a5ee990613ea0411e780",
+    "runtime": {
+      "bitsandbytes": "0.50.2",
+      "cuda_runtime": "12.8",
+      "nvidia_shared_library_bytes_reused": 4353932793,
+      "python": "3.11.15",
+      "requirements_lock_sha256": "c84aeaafc81059b2bd4bafd7b8fe819dea93462a7f3423e38246f6e2eae699de",
+      "torch": "2.11.0+cu128",
+      "transformers": "5.17.0"
+    },
+    "runtime_inventory": {
+      "expected_distribution_count": 15,
+      "shared_library_bytes_reused": 4353932793,
+      "status": "verified_and_linked"
+    },
+    "runtime_probe": {
+      "bitsandbytes": "0.50.2",
+      "cuda_runtime": "12.8",
+      "gpu_name": "Tesla T4",
+      "identity_valid": true,
+      "nvidia_count": 15,
+      "python": "3.11.15",
+      "torch": "2.11.0+cu128",
+      "transformers": "5.17.0"
+    },
+    "schema": "q25-fim-kaggle-worker-status-v1",
+    "stages": [
+      {
+        "elapsed_seconds": 2.2208436679999863,
+        "exit_code": 0,
+        "name": "checkout-repository"
+      },
+      {
+        "elapsed_seconds": 0.21446479999997337,
+        "exit_code": 0,
+        "name": "pin-repository"
+      },
+      {
+        "elapsed_seconds": 0.007826879999981884,
+        "exit_code": 0,
+        "name": "verify-repository-commit"
+      },
+      {
+        "elapsed_seconds": 2.169337654000003,
+        "exit_code": 0,
+        "name": "setup-uv-bootstrap"
+      },
+      {
+        "elapsed_seconds": 0.032267164000018056,
+        "exit_code": 0,
+        "name": "verify-uv-bootstrap"
+      },
+      {
+        "elapsed_seconds": 1.7179406729999869,
+        "exit_code": 0,
+        "name": "setup-managed-python311"
+      },
+      {
+        "elapsed_seconds": 0.164463617000024,
+        "exit_code": 0,
+        "name": "setup-python311-venv"
+      },
+      {
+        "elapsed_seconds": 25.176862126999993,
+        "exit_code": 0,
+        "name": "setup-python311-packages"
+      },
+      {
+        "elapsed_seconds": 20.71584770100003,
+        "exit_code": 0,
+        "name": "verify-python311-runtime"
+      },
+      {
+        "elapsed_seconds": 4.375824905999991,
+        "exit_code": 0,
+        "name": "verify-model-initializer"
+      },
+      {
+        "elapsed_seconds": 20.571497091000026,
+        "exit_code": 0,
+        "name": "trainer-preflight"
+      },
+      {
+        "elapsed_seconds": 12.39874365899999,
+        "exit_code": 0,
+        "name": "attention-smoke"
+      },
+      {
+        "elapsed_seconds": 391.258166647,
+        "exit_code": 0,
+        "name": "eval-before-development"
+      },
+      {
+        "elapsed_seconds": 108.052766497,
+        "exit_code": 0,
+        "name": "eval-before-line"
+      },
+      {
+        "elapsed_seconds": 1375.46369164,
+        "exit_code": 0,
+        "name": "training"
+      },
+      {
+        "elapsed_seconds": 95.63149333899992,
+        "exit_code": 0,
+        "name": "eval-after-development"
+      },
+      {
+        "elapsed_seconds": 76.86930335199986,
+        "exit_code": 0,
+        "name": "eval-after-line"
+      },
+      {
+        "elapsed_seconds": 438.1286855999997,
+        "exit_code": 0,
+        "name": "regression-causal"
+      },
+      {
+        "elapsed_seconds": 51.24123689600037,
+        "exit_code": 0,
+        "name": "regression-line"
+      }
+    ],
+    "state": "complete",
+    "storage": {
+      "cap_bytes": 12884901888,
+      "combined_bytes": 8073958694,
+      "free_bytes": 16678727680,
+      "mounted_bytes": 1013426809,
+      "runtime_setup_bytes": 2799170693,
+      "worker_output_bytes": 4261361192
+    },
+    "timing_reserves": {
+      "post_evaluation_reserve_seconds": 1800,
+      "trainer_reserve_seconds": 1800,
+      "trainer_session_seconds": 8308
+    },
+    "trainer_mounted_artifact_bytes": 2803949432,
+    "training": {
+      "actual_campaign_input_tokens": 9649420,
+      "cursor": {
+        "attempted_updates": 256,
+        "completed_updates": 256,
+        "epoch": 1,
+        "next_example_index": 4096,
+        "skipped_updates": 0,
+        "supervised_target_tokens": 34405,
+        "training_input_tokens": 1776908
+      },
+      "fingerprint": "4a92442a82f133b659b4ef6b5024c9dd293422e12e84993de332ab5dad433d0d",
+      "logical_training_input_tokens": 1776908,
+      "status": "complete",
+      "training_updates": 256
+    },
+    "training_exit_code": 0,
+    "training_started": true
+  }
+}

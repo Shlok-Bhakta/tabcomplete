@@ -278,3 +278,25 @@ replacement and request/context/model identity checks. The conversion agent
 owns the separate preview worktree's CPU-only conversion helper. Neither is
 deployed or selected yet. The exact current stable artifact's header and native
 source show no BOS insertion mismatch; see `stable_bos_audit.json`.
+
+## Untouched completion arm completed
+
+Attempt 5 completed the full 4,096-state pass with 256 updates, zero skips and
+1,776,908 input / 34,405 supervised response/EOS tokens. The verified complete
+checkpoint SHA is `6f82f28a83c366b782bdb0629b2810a08bbf69fbf43d889a48be0fd94aafb6e2`.
+Development exact+EOS improved from 47/240 to 130/240; observed EOS rose from
+122/240 to 240/240. FIM line exact rose from 79/180 to 85/180; that historical
+line diagnostic accepts newline stops and is not the native EOS serving gate.
+Worker elapsed time was 2,677.064 seconds, including 1,375.464 seconds for the
+training subprocess and before/after/regression evaluation. Pinned Python
+3.11.15 and efficient attention completed successfully, including the unchanged
+13,699-token line fixture. These are synthetic completion results, not general
+next-edit accuracy or human acceptance. See `fim_results_untouched_a5.json`.
+
+Next refresh authenticated quota and launch the CPT-initialized arm sequentially.
+Preserve its exact frozen plan, order and runtime. Do not retrain the completed
+untouched pass, select before the matched comparison, or change the stable editor.
+The checkpoint was collected locally; conversion/export retrieval must continue
+to respect the aggregate artifact cap and remove only owned temporary build
+cache when safe. Generic functional replay and source-syntax diagnostics remain
+pending. Automatic personalization remains disabled.
