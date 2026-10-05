@@ -1,0 +1,711 @@
+{
+  "schema": "thinkpad-bounded-changing-state-replay-v1",
+  "phase": "fim-four-threads",
+  "identity": {
+    "active_slots": 1,
+    "alias": "q25-fim",
+    "backend": "llama.cpp CPU via Rust",
+    "batch_size": 256,
+    "cache_type": "f16",
+    "completion_mode": "remaining_logical_line_after_utf8_cursor",
+    "context_layout": "q25-fim-psm-bounded-v2",
+    "context_size": 2304,
+    "fim_profile": {
+      "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+      "tokenizer": {
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "eos_id": 151643,
+        "fim_middle_id": 151660,
+        "fim_prefix_id": 151659,
+        "fim_suffix_id": 151661,
+        "special_tokens": [
+          {
+            "id": 151643,
+            "spelling": "<|endoftext|>"
+          },
+          {
+            "id": 151644,
+            "spelling": "<|im_start|>"
+          },
+          {
+            "id": 151645,
+            "spelling": "<|im_end|>"
+          },
+          {
+            "id": 151646,
+            "spelling": "<|object_ref_start|>"
+          },
+          {
+            "id": 151647,
+            "spelling": "<|object_ref_end|>"
+          },
+          {
+            "id": 151648,
+            "spelling": "<|box_start|>"
+          },
+          {
+            "id": 151649,
+            "spelling": "<|box_end|>"
+          },
+          {
+            "id": 151650,
+            "spelling": "<|quad_start|>"
+          },
+          {
+            "id": 151651,
+            "spelling": "<|quad_end|>"
+          },
+          {
+            "id": 151652,
+            "spelling": "<|vision_start|>"
+          },
+          {
+            "id": 151653,
+            "spelling": "<|vision_end|>"
+          },
+          {
+            "id": 151654,
+            "spelling": "<|vision_pad|>"
+          },
+          {
+            "id": 151655,
+            "spelling": "<|image_pad|>"
+          },
+          {
+            "id": 151656,
+            "spelling": "<|video_pad|>"
+          },
+          {
+            "id": 151657,
+            "spelling": "<tool_call>"
+          },
+          {
+            "id": 151658,
+            "spelling": "</tool_call>"
+          },
+          {
+            "id": 151659,
+            "spelling": "<|fim_prefix|>"
+          },
+          {
+            "id": 151660,
+            "spelling": "<|fim_middle|>"
+          },
+          {
+            "id": 151661,
+            "spelling": "<|fim_suffix|>"
+          },
+          {
+            "id": 151662,
+            "spelling": "<|fim_pad|>"
+          },
+          {
+            "id": 151663,
+            "spelling": "<|repo_name|>"
+          },
+          {
+            "id": 151664,
+            "spelling": "<|file_sep|>"
+          }
+        ],
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665
+      }
+    },
+    "fim_token_ids": {
+      "eos": 151643,
+      "fim_middle": 151660,
+      "fim_prefix": 151659,
+      "fim_suffix": 151661
+    },
+    "fim_tokenizer_runtime_policy": "q25-fim-pinned-hf-eos-normal-eog-alias-v1",
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 326.842745,
+    "microbatch_size": 64,
+    "model_embedded": true,
+    "model_protocol": "q25-fim-line-completion-v1",
+    "model_selection": "declarative",
+    "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+    "model_storage": "executable-mmap",
+    "model_switch_supported": false,
+    "output_tokens": 96,
+    "prompt_threads": 4,
+    "runtime_config_hash": "42f401297e7d6dc88488b3ce4fb2484ab8280c8171a8274f2a8f444f860ac642",
+    "saved_contexts": 0,
+    "status": "ok",
+    "syntax_validation": false,
+    "threads": 4,
+    "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+    "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+    "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+    "tokenizer_vocab_size": 151665
+  },
+  "pid": 488833,
+  "condition": "normal user workload; existing editors and applications retained",
+  "samples": [
+    {
+      "phase": "fim-four-threads",
+      "repetition": 0,
+      "transition": 0,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 643,
+      "context_ms": 3.3247929968638346,
+      "client_completed_ms": 3708.965484001965,
+      "first_chunk_ms": 3655.5414009999367,
+      "first_token_ms": 3655.566955996619,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "930dd464d88d47ddbce26396da20a5e235ded1aa1f9b27b138dae069e2f9daea",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-f4311cbd-0506-45c8-bf13-ae2d6d2c6bbe",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 0,
+          "predicted_ms": 49.763485,
+          "predicted_n": 2,
+          "prompt_ms": 3652.457525,
+          "prompt_n": 643,
+          "total_ms": 3704.08042
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 2
+      },
+      "action_sha256": "488d3d8a304b18ce27faa4deeca4002fdec6d04cdd399a8f97357fd2a2f12920",
+      "output_bytes": 3,
+      "peak_process_bytes": {
+        "Rss": 592420864,
+        "Pss": 588269568,
+        "Pss_Anon": 97669120,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592420864,
+        "Pss": 588269568,
+        "Pss_Anon": 97669120,
+        "Pss_File": 490600448,
+        "Anonymous": 97669120,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 0,
+      "transition": 1,
+      "synthetic": true,
+      "source_sha256": "d1a0e76cf0832b1fd85a28c9ca711fd57b3cebc5feed8c8cc6d6ed00412de063",
+      "prompt_tokens": 643,
+      "context_ms": 2.8097560061723925,
+      "client_completed_ms": 3763.2919760071672,
+      "first_chunk_ms": 3735.545995994471,
+      "first_token_ms": 3735.5725419984083,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "aa0d90553253d6814c74a2b3476570248f7941f0b57e74d4e7e41ee66f58bd13",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-61a8b21e-efa8-40c1-84f5-8b9454b3f528",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 1,
+          "predicted_ms": 22.022644,
+          "predicted_n": 1,
+          "prompt_ms": 3733.797739,
+          "prompt_n": 642,
+          "total_ms": 3756.5914660000003
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 1
+      },
+      "action_sha256": "488d3d8a304b18ce27faa4deeca4002fdec6d04cdd399a8f97357fd2a2f12920",
+      "output_bytes": 1,
+      "peak_process_bytes": {
+        "Rss": 592420864,
+        "Pss": 588269568,
+        "Pss_Anon": 97669120,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592420864,
+        "Pss": 588269568,
+        "Pss_Anon": 97669120,
+        "Pss_File": 490600448,
+        "Anonymous": 97669120,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 0,
+      "transition": 2,
+      "synthetic": true,
+      "source_sha256": "4fa6a694161e4788fba04ae3f2ac4e4762b349bfc0bded962543a8dcc0923d3f",
+      "prompt_tokens": 643,
+      "context_ms": 2.857177001715172,
+      "client_completed_ms": 3794.8261210040073,
+      "first_chunk_ms": 3743.356106999272,
+      "first_token_ms": 3743.383104003442,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "6103874c1b948e48309942588ff3979a99fb8bdbede50202e67af2c3fcb02902",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-dd3da445-54a5-4019-b414-73fa2a422c3d",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 1,
+          "predicted_ms": 48.401316,
+          "predicted_n": 2,
+          "prompt_ms": 3741.709432,
+          "prompt_n": 642,
+          "total_ms": 3790.8546210000004
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 2
+      },
+      "action_sha256": "5049e771e42ab3676888aeb02be8066812224a53802f41eda08396db519e4a3d",
+      "output_bytes": 3,
+      "peak_process_bytes": {
+        "Rss": 592420864,
+        "Pss": 588269568,
+        "Pss_Anon": 97669120,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592420864,
+        "Pss": 588269568,
+        "Pss_Anon": 97669120,
+        "Pss_File": 490600448,
+        "Anonymous": 97669120,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 0,
+      "transition": 3,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 643,
+      "context_ms": 2.9265999983181246,
+      "client_completed_ms": 94.12643899850082,
+      "first_chunk_ms": 41.82083399791736,
+      "first_token_ms": 41.84944799635559,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "51a9543730645f4accf1572cb85f31b17dcf44f7ae828bd897ad96d1ec173e68",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-58e01203-7ddf-4265-8dd1-634679fbb54d",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 640,
+          "predicted_ms": 49.412663,
+          "predicted_n": 2,
+          "prompt_ms": 40.140328000000004,
+          "prompt_n": 3,
+          "total_ms": 90.196046
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 2
+      },
+      "action_sha256": "488d3d8a304b18ce27faa4deeca4002fdec6d04cdd399a8f97357fd2a2f12920",
+      "output_bytes": 3,
+      "peak_process_bytes": {
+        "Rss": 592424960,
+        "Pss": 588273664,
+        "Pss_Anon": 97673216,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592424960,
+        "Pss": 588273664,
+        "Pss_Anon": 97673216,
+        "Pss_File": 490600448,
+        "Anonymous": 97673216,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 1,
+      "transition": 0,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 643,
+      "context_ms": 2.7406079971115105,
+      "client_completed_ms": 79.59805199789116,
+      "first_chunk_ms": 24.522277002688497,
+      "first_token_ms": 24.55359800660517,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "8b243e58680968e9017181138269a952d9e9009a73ac73d1a840d4d7f289e87e",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-3732fe7e-a515-4d23-aac9-a9fc2783c1bb",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 642,
+          "predicted_ms": 52.333172,
+          "predicted_n": 2,
+          "prompt_ms": 22.945723,
+          "prompt_n": 1,
+          "total_ms": 75.972208
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 2
+      },
+      "action_sha256": "488d3d8a304b18ce27faa4deeca4002fdec6d04cdd399a8f97357fd2a2f12920",
+      "output_bytes": 3,
+      "peak_process_bytes": {
+        "Rss": 592424960,
+        "Pss": 588273664,
+        "Pss_Anon": 97673216,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592424960,
+        "Pss": 588273664,
+        "Pss_Anon": 97673216,
+        "Pss_File": 490600448,
+        "Anonymous": 97673216,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 1,
+      "transition": 1,
+      "synthetic": true,
+      "source_sha256": "d1a0e76cf0832b1fd85a28c9ca711fd57b3cebc5feed8c8cc6d6ed00412de063",
+      "prompt_tokens": 643,
+      "context_ms": 2.826105002895929,
+      "client_completed_ms": 3676.5716040026746,
+      "first_chunk_ms": 3652.1709420048865,
+      "first_token_ms": 3652.198813004361,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "9202a228df11f0c643066bf7533dbfdcd394c0b07d4ccd98b74c230db233c5a0",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-a4ba4dd9-e2b6-4431-8935-871d7c7fb6aa",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 1,
+          "predicted_ms": 21.487223,
+          "predicted_n": 1,
+          "prompt_ms": 3650.18135,
+          "prompt_n": 642,
+          "total_ms": 3672.4377179999997
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 1
+      },
+      "action_sha256": "488d3d8a304b18ce27faa4deeca4002fdec6d04cdd399a8f97357fd2a2f12920",
+      "output_bytes": 1,
+      "peak_process_bytes": {
+        "Rss": 592424960,
+        "Pss": 588273664,
+        "Pss_Anon": 97673216,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592424960,
+        "Pss": 588273664,
+        "Pss_Anon": 97673216,
+        "Pss_File": 490600448,
+        "Anonymous": 97673216,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 1,
+      "transition": 2,
+      "synthetic": true,
+      "source_sha256": "4fa6a694161e4788fba04ae3f2ac4e4762b349bfc0bded962543a8dcc0923d3f",
+      "prompt_tokens": 643,
+      "context_ms": 2.8557100013131276,
+      "client_completed_ms": 3823.96868300566,
+      "first_chunk_ms": 3772.1765189999132,
+      "first_token_ms": 3772.206008005014,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "9b418d96fd0c707e6a4bfadb7c5b954853559bdb005612c07263a290df3b48f4",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-9d6a6495-a701-475e-9e3c-92c8eefbe45f",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 1,
+          "predicted_ms": 49.022588,
+          "predicted_n": 2,
+          "prompt_ms": 3770.388399,
+          "prompt_n": 642,
+          "total_ms": 3820.16421
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 2
+      },
+      "action_sha256": "5049e771e42ab3676888aeb02be8066812224a53802f41eda08396db519e4a3d",
+      "output_bytes": 3,
+      "peak_process_bytes": {
+        "Rss": 592429056,
+        "Pss": 588277760,
+        "Pss_Anon": 97677312,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592429056,
+        "Pss": 588277760,
+        "Pss_Anon": 97677312,
+        "Pss_File": 490600448,
+        "Anonymous": 97677312,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "fim-four-threads",
+      "repetition": 1,
+      "transition": 3,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 643,
+      "context_ms": 2.8496160011854954,
+      "client_completed_ms": 95.29028800170636,
+      "first_chunk_ms": 41.93663299520267,
+      "first_token_ms": 41.97455599933164,
+      "terminal": {
+        "action_validation": {
+          "policy": "q25-fim-completion-v1",
+          "status": "not_applicable"
+        },
+        "artifact_manifest_sha256": "cbec4bb0859bf9952fbc8f6a020546e134d9444603663fb0027145848130d1a9",
+        "completion_mode": "remaining_logical_line_after_utf8_cursor",
+        "context_hash": "218d9c0ef16dac9582ef29ab954fe99c89f5cb2a55bc39154fba53a332f89315",
+        "context_layout": "q25-fim-psm-bounded-v2",
+        "fim_token_ids": {
+          "eos": 151643,
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "model_protocol": "q25-fim-line-completion-v1",
+        "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+        "request_id": "thinkpad-synthetic-cec4bd8e-27d0-4eca-8b2c-8fbffa9e8635",
+        "stop": true,
+        "stop_type": "eos",
+        "terminal_token_id": 151643,
+        "timings": {
+          "cache_n": 640,
+          "predicted_ms": 50.544575,
+          "predicted_n": 2,
+          "prompt_ms": 40.024747,
+          "prompt_n": 3,
+          "total_ms": 91.376249
+        },
+        "tokenizer_contract_sha256": "cc462b12ef061ed0026f3834e8b4ab1f771f41aef04f1f633326b76212ce6df6",
+        "tokenizer_id": "Qwen/Qwen2.5-Coder-0.5B",
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "tokenizer_vocab_ids_sha256": "fb6def16ccc33cf6a2f0fc12b5e17d42f5b953d47c6c4a90fbd03aff3646fc98",
+        "tokenizer_vocab_size": 151665,
+        "tokens_predicted": 2
+      },
+      "action_sha256": "488d3d8a304b18ce27faa4deeca4002fdec6d04cdd399a8f97357fd2a2f12920",
+      "output_bytes": 3,
+      "peak_process_bytes": {
+        "Rss": 592429056,
+        "Pss": 588277760,
+        "Pss_Anon": 97677312,
+        "Pss_File": 490600448,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 592429056,
+        "Pss": 588277760,
+        "Pss_Anon": 97677312,
+        "Pss_File": 490600448,
+        "Anonymous": 97677312,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    }
+  ],
+  "start_counters": {
+    "pswpin": 0,
+    "pswpout": 259,
+    "pgmajfault": 4114
+  },
+  "end_counters": {
+    "pswpin": 0,
+    "pswpout": 259,
+    "pgmajfault": 4114
+  },
+  "start_pressure": {
+    "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=73575\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=67382",
+    "io": "some avg10=2.48 avg60=2.27 avg300=1.97 total=1453800763\nfull avg10=2.48 avg60=2.23 avg300=1.94 total=1426004687",
+    "cpu": "some avg10=0.00 avg60=0.00 avg300=0.03 total=234702327\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0"
+  },
+  "end_pressure": {
+    "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=73575\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=67382",
+    "io": "some avg10=0.39 avg60=1.67 avg300=1.85 total=1453909023\nfull avg10=0.39 avg60=1.64 avg300=1.82 total=1426110189",
+    "cpu": "some avg10=0.00 avg60=0.00 avg300=0.03 total=234757070\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0"
+  }
+}

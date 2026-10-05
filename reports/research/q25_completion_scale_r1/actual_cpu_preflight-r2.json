@@ -1,0 +1,26 @@
+{
+  "repeat": {
+    "code_commit": "d95ae304b142742bb2ccdb567bf495866fca87f7",
+    "evaluator_inputs": "PASS",
+    "first256_batches_match": true,
+    "input_manifest_sha256": "7960d0b81eba944b4d9023d531d9b12839187a3817a17ea73a744a84ec6ef94a",
+    "plan_sha256": "0e571b371ab986a9f141275bd5338f91b666d9922f91af48f7b467bbb087ba4a",
+    "supervised_target_tokens": 68810,
+    "trainer_corpus": "PASS",
+    "training_input_tokens": 3553816,
+    "updates": 512,
+    "worker_plan": "PASS"
+  },
+  "scaled": {
+    "code_commit": "d95ae304b142742bb2ccdb567bf495866fca87f7",
+    "evaluator_inputs": "PASS",
+    "first256_batches_match": true,
+    "input_manifest_sha256": "00530eebe5ead29d1d4c0003004595f664e9ba783dc345928f2112f203f2d43d",
+    "plan_sha256": "720a6253e882a98d9f47cbb36840edfbadc3350c076cfc65fef0aff6ed787118",
+    "supervised_target_tokens": 68720,
+    "trainer_corpus": "PASS",
+    "training_input_tokens": 3551513,
+    "updates": 512,
+    "worker_plan": "PASS"
+  }
+}
