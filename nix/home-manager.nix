@@ -44,7 +44,9 @@ let
     url = "http://127.0.0.1:${toString cfg.port}";
     model = package.modelName or "local-model";
     model_revision = sha256;
-    protocol_version = "single-line-edit-v1";
+    protocol_version = protocol;
+    precision = package.precision or "Q4_K_M";
+    adapter_identity = package.adapterIdentity or "full-weight";
     single_line_input_tokens = cfg.inputTokens;
     max_prompt_tokens = cfg.inputTokens;
     target_prompt_tokens = cfg.inputTokens;
@@ -90,7 +92,7 @@ in
         inherit pkgs;
         modelVariant = cfg.modelVariant;
       };
-      description = "Two executable-embedded models and the matching Neovim plugin.";
+      description = "An executable-embedded model package and its matching Neovim plugin.";
     };
     modelVariant = lib.mkOption {
       type = lib.types.enum [
@@ -120,8 +122,9 @@ in
       type = lib.types.enum [
         "trained-v2"
         "cursor-last-v1"
+        "q25-fim-psm-bounded-v2"
       ];
-      default = "cursor-last-v1";
+      default = package.contextLayout or "cursor-last-v1";
       description = "Qwen context layout; Sweep always uses its fixed sweep-window-v1 layout.";
     };
     inputTokens = lib.mkOption {
@@ -204,6 +207,11 @@ in
         assertion = builtins.match "[0-9a-f]{64}" sha256 != null;
         message = "The TabComplete package model hash must be a lowercase hexadecimal SHA-256.";
       }
+      {
+        assertion =
+          protocol != "q25-fim-line-completion-v1" || cfg.contextLayout == "q25-fim-psm-bounded-v2";
+        message = "The FIM candidate requires its trained q25-fim-psm-bounded-v2 layout.";
+      }
     ];
 
     home.packages = [ package ];
@@ -272,7 +280,9 @@ in
                       server_url = vim.env.TABCOMPLETE_COLLECTOR_URL or ${builtins.toJSON cfg.neovim.collectorUrl},
                     })
                     local predictor_options = vim.json.decode(${builtins.toJSON (builtins.toJSON predictorOptions)})
-                    predictor_options.mode_state_path = vim.fn.stdpath("state") .. "/tabcomplete-rust-editor-mode.json"
+                    predictor_options.mode_state_path = vim.fn.stdpath("state") .. ${
+                      builtins.toJSON ("/" + (package.modeStateFile or "tabcomplete-rust-editor-mode.json"))
+                    }
                     require("tabcomplete_trajectory.predict").setup(predictor_options)
                   end,
                 },
