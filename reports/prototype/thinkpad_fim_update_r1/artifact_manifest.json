@@ -63,6 +63,11 @@
       "sha256": "0fc80674db8247e97c182ffdae6008e01ad318204817a8db90ae0a6b428992eb"
     },
     {
+      "path": "reports/prototype/thinkpad_fim_update_r1/post_user_feedback_aggregate.json",
+      "bytes": 880,
+      "sha256": "2dd0591e4627ba2710b811797ff357b09b68ac1c16681fe6ba393ba059a2425c"
+    },
+    {
       "path": "reports/prototype/thinkpad_fim_update_r1/post_user_switch_health.json",
       "bytes": 576,
       "sha256": "83402a24a0c885af57d29840dcabbef9b6da0e6f346b17e99cf47ba64aa3ce79"

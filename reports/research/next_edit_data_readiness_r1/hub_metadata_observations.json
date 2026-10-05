@@ -1,0 +1,68 @@
+[
+  {
+    "data_downloaded": false,
+    "file_count": 12,
+    "gated": false,
+    "license_metadata": "apache-2.0",
+    "metadata_url": "https://huggingface.co/api/datasets/continuedev/instinct-data",
+    "observed_at": "2026-10-05T03:47:01.935555+00:00",
+    "repository": "continuedev/instinct-data",
+    "revision": "e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29"
+  },
+  {
+    "data_downloaded": false,
+    "file_count": 617,
+    "gated": false,
+    "license_metadata": "apache-2.0",
+    "metadata_url": "https://huggingface.co/api/datasets/zed-industries/zeta",
+    "observed_at": "2026-10-05T03:47:02.075744+00:00",
+    "repository": "zed-industries/zeta",
+    "revision": "0f41422bc56fa0f9a5b3096e7e6f42905497d793"
+  },
+  {
+    "data_downloaded": false,
+    "file_count": 351,
+    "gated": false,
+    "license_metadata": "cc0-1.0",
+    "metadata_url": "https://huggingface.co/api/datasets/p-doom/crowd-code-dataset-0.1",
+    "observed_at": "2026-10-05T03:47:02.242832+00:00",
+    "repository": "p-doom/crowd-code-dataset-0.1",
+    "revision": "8ba8613628dcb96bbc70817656908ab76212f2d2"
+  },
+  {
+    "data_downloaded": false,
+    "file_count": 215,
+    "gated": false,
+    "license_metadata": "cc-by-4.0",
+    "metadata_url": "https://huggingface.co/api/datasets/nvidia/Open-SWE-Traces",
+    "observed_at": "2026-10-05T03:47:02.367422+00:00",
+    "repository": "nvidia/Open-SWE-Traces",
+    "revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef"
+  },
+  {
+    "data_downloaded": false,
+    "file_count": 4,
+    "gated": "manual",
+    "license_metadata": null,
+    "metadata_url": "https://huggingface.co/api/datasets/jtliang/decode",
+    "observed_at": "2026-10-05T03:47:02.538281+00:00",
+    "repository": "jtliang/decode",
+    "revision": "146f016c223e44647a89d908b47a6570bba4e52b"
+  },
+  {
+    "data_downloaded": false,
+    "error_class": "ValueError",
+    "observed_at": "2026-10-05T03:47:02.736985+00:00",
+    "repository": "SALT-NLP/SWE-chat"
+  },
+  {
+    "data_downloaded": false,
+    "file_count": 3,
+    "gated": false,
+    "license_metadata": "mit",
+    "metadata_url": "https://huggingface.co/api/datasets/nuprl/EditPackFT",
+    "observed_at": "2026-10-05T03:47:02.858317+00:00",
+    "repository": "nuprl/EditPackFT",
+    "revision": "067b4c882f44eca19329fedd275438fc3c060f3f"
+  }
+]

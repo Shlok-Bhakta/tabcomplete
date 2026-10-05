@@ -1,0 +1,20 @@
+{
+  "schema": "tabcomplete-next-edit-data-audit-artifacts-v1",
+  "files": [
+    {
+      "path": "/mnt/ssd/tabcomplete-next-edit-readiness-r1/public_data_audit.md",
+      "bytes": 11580,
+      "sha256": "8dff09c83e17c3bcc0d5bcb8a26ce1fa8130f90ed1db8e75858a70ad74957795"
+    },
+    {
+      "path": "/mnt/ssd/tabcomplete-next-edit-readiness-r1/source_inventory.json",
+      "bytes": 19163,
+      "sha256": "552f3d0d332036bb604c9587e977098c9f34e818c80fedf868ff205cc2b5fb2a"
+    },
+    {
+      "path": "/mnt/ssd/tabcomplete-next-edit-readiness-r1/hub_metadata_observations.json",
+      "bytes": 2293,
+      "sha256": "89a59a434665f30e1f3847480273bab83512239754d21bbcf85e315b8a957b80"
+    }
+  ]
+}

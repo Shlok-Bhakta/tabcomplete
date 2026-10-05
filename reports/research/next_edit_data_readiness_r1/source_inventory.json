@@ -1,0 +1,411 @@
+{
+  "audit_scope": "Read-only existing artifacts and primary-source metadata/documentation. Current R3 FIM campaign unchanged.",
+  "current_campaign_modified": false,
+  "decision": "No newly cleared large bank of human next-edit intent. Reuse available public traces for narrow mechanics, re-audit cached Instinct train data, and keep any synthetic latest-intent pilot explicitly scoped. Do not start another training run from this audit.",
+  "existing_artifacts": [
+    {
+      "id": "existing-synthetic-action-pilot",
+      "kind": "synthetic_trajectory",
+      "limits": [
+        "Four action templates repeated with language/name/number variants. Existing grouped family IDs do not establish new task-family generalization.",
+        "Keep existing development/heldout groups reserved; no raw rows were opened."
+      ],
+      "provenance": {
+        "bytes": 9413,
+        "path": "/home/crabcake/Projects/tabcomplete-q25-completion-scale-r1/scripts/build_small_edit_data.py",
+        "sha256": "46c5fdcdf4aab917f934d7a6930d52532dd5eee22da72854d7fe259d511b97c8"
+      },
+      "reserved_splits_preserved": true,
+      "rows": {
+        "development": 1024,
+        "heldout": 1024,
+        "train": 4096
+      }
+    },
+    {
+      "dataset_revision": "e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29",
+      "id": "existing-instinct-typescript",
+      "kind": "observed_chunked_human_edits",
+      "limits": [
+        "0 no-edit rows",
+        "Whole intermediate history not verified",
+        "File license unverified",
+        "Only file-path split, no independent repository/session identity",
+        "Student-visible inferability not audited"
+      ],
+      "native_test_accessed": false,
+      "prepared_manifest": {
+        "bytes": 2194,
+        "path": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/prepared/instinct-v1/manifest.json",
+        "sha256": "50582c7cc14219b40608cb87c43c5a81da4bfe8eb1c5e585cc328abb7e8c3b8c"
+      },
+      "raw_file": {
+        "bytes": 25052002,
+        "path": "/mnt/ssd/tabcomplete-one-line-gpu-pilot-r1/raw/instinct-train-typescript-e557e3e.parquet",
+        "sha256": "29b21939a3f1abc242a4b461105ba2444e310547755211117a82c397c53f3c3d"
+      },
+      "rows": {
+        "converted_development": 210,
+        "converted_train": 720,
+        "raw_official_train": 4371
+      },
+      "training_ready": false
+    },
+    {
+      "artifact": {
+        "bytes": 1273605,
+        "path": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/audit/current_feedback_evidence.json",
+        "sha256": "f0f1a7e55b22bf0c6f7254acbd90024b8acd19ae22c3697b95249ed4216b8d36"
+      },
+      "automatic_personalization_enabled": false,
+      "content_exported": false,
+      "defensible_preference_pairs": 0,
+      "id": "existing-personal-feedback",
+      "kind": "private_collector_export",
+      "limits": [
+        "Historical snapshot, not asserted current database balance",
+        "Synthetic editor smoke outcomes are not human feedback",
+        "Do not derive rejection from navigation/unseen cancellation or infer that every subsequent delta corrects a proposal"
+      ],
+      "observed_at": "2026-10-04T14:31:09.307269+00:00",
+      "proposals": 292,
+      "sequence_gaps": 8,
+      "sessions": 96,
+      "training_ready": false
+    },
+    {
+      "accepted_training": 0,
+      "candidate_count": 4,
+      "human_chronology_observed": false,
+      "id": "existing-commitpack-prefix-siblings",
+      "inferability_reviewed": false,
+      "kind": "commit_derived_proxy",
+      "limits": [
+        "Do not read answers_private.jsonl or transfer reserved siblings to training",
+        "Objective validity alone does not establish observable next-edit intent"
+      ],
+      "manifest": {
+        "bytes": 8964,
+        "path": "/mnt/ssd/tabcomplete-product-r2/commitpackft/python-prefix-noedit-siblings-v3/manifest.json",
+        "sha256": "a2f1e624acce2bd4e4b84c6381b14e56f3bbcba79e01aeb6bb0463a3a3d4867f"
+      },
+      "objective_verified": 4
+    },
+    {
+      "exact_replay": true,
+      "id": "existing-josephg-trace-audit",
+      "kind": "observed_ordered_text_patches",
+      "limits": [
+        "Both traces share one author",
+        "Cursor/selection/acceptance/undo intent unavailable",
+        "CC-BY-4.0 attribution required",
+        "Transactions are not one-line semantic edit labels"
+      ],
+      "patches": 59922,
+      "report": {
+        "bytes": 5807,
+        "path": "/home/crabcake/Projects/tabcomplete-q25-completion-scale-r1/reports/research/q25_code_cpt_r2/public_edit_replay_summary.json",
+        "sha256": "07093a49797bfd9d0c719332f7b573faa228843de98012fb1bc5db7c3aeedab9"
+      },
+      "trace_count": 2,
+      "training_rows_created": 0,
+      "transactions": 55316
+    }
+  ],
+  "future_synthetic_proposal": {
+    "canonical_actions": [
+      {
+        "action": "no_edit"
+      },
+      {
+        "action": "replace",
+        "text": ""
+      },
+      {
+        "action": "replace",
+        "text": "exact replacement"
+      }
+    ],
+    "compact_codec": {
+      "deletion": "R\\n + EOS",
+      "insertion": "replace with zero-width editable byte range",
+      "no_edit": "N\\n + EOS",
+      "replace": "R\\n + exact replacement + EOS"
+    },
+    "fixture_bank": {
+      "evidence_type": "deliberately synthetic trajectories, never human feedback",
+      "example_families": [
+        "latest declared identifier rename propagation",
+        "matching function call rename",
+        "parameter rename inside return",
+        "field rename across initializer/use",
+        "consistent argument removal",
+        "debug statement deletion",
+        "matching schema optionality change",
+        "return type/use update",
+        "import symbol adjustment",
+        "latest literal/config value propagation",
+        "paired condition change",
+        "matching assertion update",
+        "Unicode identifier history",
+        "whitespace-only change contract",
+        "undo/revert history boundary",
+        "finished edit no-edit control"
+      ],
+      "languages": [
+        "python",
+        "typescript",
+        "rust",
+        "go"
+      ],
+      "proposal_distinct_states": 256,
+      "semantic_task_families": 16,
+      "split_group": "Whole semantic task family across all languages, seeds and lexical variants; additionally group repository/session/commit ancestry where applicable."
+    },
+    "goal": "Verify history-conditioned next-action mechanics and latest-intent propagation before claiming broad editor usefulness.",
+    "implemented": false,
+    "no_edit_policy": "Only explicit terminal synthetic states with all declared dependency checks satisfied, or regions outside a defined task scope with a stated objective. No label from arbitrary inactivity, navigation, cancellation, shadow output or an unshown proposal.",
+    "quality_limits": [
+      "Mechanical replay/exact action success does not establish human next-edit quality.",
+      "Separate semantic edit-required and no-edit denominators, latest-intent reversals, unnecessary edits, coverage and EOS termination.",
+      "Check history ablations and contrast pairs so a model cannot win through fixed header/template memorization.",
+      "Do not extend reserved benchmarks or old test groups into training."
+    ],
+    "rename_example": {
+      "contradictions": "Counterexamples include choosing value3 directly, reversing3->2, changing an unrelated numeric literal, and moving to an unrelated region. Preserve latest actual edit; earlier mappings are not permanent goals.",
+      "history": "Declaration changes value0 -> value1, then value1 -> value2, then value2 -> value3 in explicitly recorded states.",
+      "stop": "Once all corresponding references match latest declaration, no edit. Do not predict a future value4 without new visible intent.",
+      "target": "Replace a selected remaining reference with the latest currently declared name."
+    },
+    "required_fields": [
+      "repository/source identity",
+      "synthetic/session/task-family identity",
+      "current file and filetype",
+      "cursor in UTF-8 bytes",
+      "deterministically selected region from current cursor/state",
+      "pre-state/content hash",
+      "ordered recent edits and anchors sufficient for reconstruction",
+      "exact canonical action",
+      "after-state hash",
+      "actual EOS target token",
+      "history/source/region policy version"
+    ],
+    "teacher_calls": 0,
+    "training_authorized_by_this_audit": false
+  },
+  "gpu_allocations": 0,
+  "models_downloaded": false,
+  "observed_at": "2026-10-05T03:50:13.769058+00:00",
+  "schema": "tabcomplete-next-edit-public-source-audit-v1",
+  "source_datasets_downloaded": false,
+  "sources": [
+    {
+      "data_downloaded_this_audit": false,
+      "format": "Recent five edits, context, editable region and target rewrite encoded in messages. TypeScript original; other languages translated.",
+      "gated": false,
+      "id": "continuedev/instinct-data",
+      "kind": "observed_chunked_human_edits_with_synthetic_translations",
+      "license_metadata": "apache-2.0",
+      "limits": [
+        "Publisher filters repeated back-and-forth line changes, so latest-intent reversals are undersampled.",
+        "No demonstrated full-file/session reconstruction or per-file licensing in current converted shard.",
+        "Keep native tests sealed and existing 210 converted development rows reserved.",
+        "Translations must remain in the same source-example group."
+      ],
+      "metadata_observed_at": "2026-10-05T03:47:01.935555+00:00",
+      "primary_urls": [
+        "https://huggingface.co/datasets/continuedev/instinct-data/blob/e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29/README.md",
+        "https://blog.continue.dev/instinct/"
+      ],
+      "recommendation": "Re-audit existing official TypeScript train cache before any new adaptation.",
+      "revision": "e557e3ed1ea2c28b9c6b7cc46d670aa3cd451c29"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "format": "Events, editable-region/cursor-marked input, rewritten output; distinct train/eval/DPO releases.",
+      "gated": false,
+      "id": "zed-industries/zeta",
+      "kind": "published_edit_prediction_examples",
+      "license_metadata": "apache-2.0",
+      "limits": [
+        "Viewer reports 418 train examples.",
+        "Actual event history and file/group provenance must be checked per example.",
+        "Do not treat small constructed examples as independent real repositories.",
+        "Do not use eval or DPO reservations as new train examples."
+      ],
+      "metadata_observed_at": "2026-10-05T03:47:02.075744+00:00",
+      "primary_urls": [
+        "https://huggingface.co/datasets/zed-industries/zeta",
+        "https://github.com/zed-industries/zed/blob/main/docs/src/ai/ai-improvement.md"
+      ],
+      "recommendation": "Small format/control bank; not a large independent trajectory corpus.",
+      "revision": "0f41422bc56fa0f9a5b3096e7e6f42905497d793"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "format": "Sequence/time/file/range offsets/length/text/language/type. Raw edits mixed with terminal/navigation activity.",
+      "gated": false,
+      "id": "p-doom/crowd-code-dataset-0.1",
+      "kind": "raw_ide_event_stream",
+      "license_metadata": "cc0-1.0",
+      "limits": [
+        "CC0 metadata does not validate all recorded source-file rights.",
+        "Unfiltered material contains terminal activity and machine paths.",
+        "Single project/team, weak independent-group evaluation.",
+        "Upstream crowd-code 2.0 documents 1.0 cache corruption from agent writes and git operations, and missing actor labels.",
+        "Current 2.0 collector improvements do not repair the historical 0.1 release."
+      ],
+      "metadata_observed_at": "2026-10-05T03:47:02.242832+00:00",
+      "primary_urls": [
+        "https://huggingface.co/datasets/p-doom/crowd-code-dataset-0.1",
+        "https://github.com/p-doom/crowd-code"
+      ],
+      "recommendation": "No training ingestion. Future bounded local reconstruction audit only.",
+      "revision": "8ba8613628dcb96bbc70817656908ab76212f2d2"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "format": "Ordered tool/message trajectories with repository license metadata and resolved flag.",
+      "gated": false,
+      "id": "nvidia/Open-SWE-Traces",
+      "kind": "agent_authored_issue_conditioned_trajectory",
+      "license_metadata": "cc-by-4.0",
+      "limits": [
+        "Prior fixed100-row probe yielded24 single-line replacement calls in12 trajectories, zero reconstructed accepted labels.",
+        "Resolved trajectory is not proof that an intermediate edit is inferable from code/history without the issue.",
+        "Do not execute shell/tool calls.",
+        "Reconstruct pre-state from pinned repository and explicit prior deltas; rights and hidden-context checks needed."
+      ],
+      "metadata_observed_at": "2026-10-05T03:47:02.367422+00:00",
+      "primary_urls": [
+        "https://huggingface.co/datasets/nvidia/Open-SWE-Traces",
+        "https://huggingface.co/datasets/nvidia/Open-SWE-Traces/blob/f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef/data_distribution.md"
+      ],
+      "recommendation": "Separate agent-edit proxy; direct one-line route already failed prior expansion gate.",
+      "revision": "f8fb5b3d2c787f85f8a00f5fe04fe3f1a11088ef"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "format": "User/completion/edit IDs, timestamps, full-file/snippet states for edits of AI completions.",
+      "gated": "manual",
+      "id": "jtliang/decode",
+      "kind": "observed_human_post_completion_edits",
+      "license_metadata": null,
+      "limits": [
+        "Manual access approval; research-only privacy commitments.",
+        "No standard license metadata currently exposed.",
+        "Observed AI-completion correction task differs from generic next-edit intent.",
+        "User/trajectory split and timestamp ordering still need audit."
+      ],
+      "metadata_observed_at": "2026-10-05T03:47:02.538281+00:00",
+      "primary_urls": [
+        "https://huggingface.co/datasets/jtliang/decode"
+      ],
+      "recommendation": "Unavailable unless separately approved under the publisher terms.",
+      "revision": "146f016c223e44647a89d908b47a6570bba4e52b"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "format": "Before/after source, instruction, commit and repository aliases, row license.",
+      "gated": false,
+      "id": "nuprl/EditPackFT",
+      "kind": "commit_diff_instructional_edit_proxy",
+      "license_metadata": "mit",
+      "limits": [
+        "22,602 rows reported.",
+        "MIT dataset metadata coexists with source-row licenses including AGPL; per-file filtering required.",
+        "Future commit message unavailable to a natural next-edit predictor unless deliberately included as instruction.",
+        "Alias components, commit groups and near-duplicate source must be kept together."
+      ],
+      "metadata_observed_at": "2026-10-05T03:47:02.858317+00:00",
+      "primary_urls": [
+        "https://huggingface.co/datasets/nuprl/EditPackFT"
+      ],
+      "recommendation": "Potential future proxy using explicitly supplied instructions, not observed editor chronology.",
+      "revision": "067b4c882f44eca19329fedd275438fc3c060f3f"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "format": "Start/end content, ordered transactions of [codepoint offset, deleted length, inserted text].",
+      "id": "josephg/editing-traces",
+      "kind": "observed_ordered_text_patches",
+      "license_metadata": "CC-BY-4.0 for selected rustcode/sveltecomponent traces",
+      "limits": [
+        "No explicit cursor, selection, acceptance or human judgment.",
+        "Do not split patches inside a transaction into invented user order.",
+        "A target-location-derived region is an oracle region; natural cursor-region accuracy must be reported separately.",
+        "No idle no-edit labels can be inferred.",
+        "Single author and two files do not establish population generalization."
+      ],
+      "primary_urls": [
+        "https://github.com/josephg/editing-traces/blob/762fa6c51605c88a05ebe5c4b9d4540caca30b97/sequential_traces/README.md"
+      ],
+      "recommendation": "Reuse cached traces for Unicode/transaction replay mechanics, or narrowly labeled sequential-patch prediction pilot.",
+      "revision": "762fa6c51605c88a05ebe5c4b9d4540caca30b97"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "id": "MrVPlusOne/Coeditor-PyCommits",
+      "kind": "commit_history_proxy",
+      "limits": [
+        "Full histories cloned by publisher notebook, not a compact editor trace bank.",
+        "Python-only; within-commit edit order is constructed.",
+        "Per-file source license and pinned revisions required before retrieval."
+      ],
+      "primary_urls": [
+        "https://github.com/MrVPlusOne/Coeditor",
+        "https://raw.githubusercontent.com/MrVPlusOne/Coeditor/main/notebooks/download_data.ipynb"
+      ],
+      "recommendation": "Commit-grouped auxiliary task only.",
+      "revision": null
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "id": "IDE Action Log Dataset from a CS1 MOOC",
+      "kind": "educational_ide_log_metadata_candidate",
+      "license_metadata": "CC-BY-4.0 at Aalto publisher",
+      "limits": [
+        "Publisher says some logs are keystroke-level.",
+        "This audit could not access the Zenodo content/schema; code-state availability, language, replay format and privacy scope unknown.",
+        "Course/deadline/outcome logs alone do not provide exact source edits."
+      ],
+      "primary_urls": [
+        "https://research.aalto.fi/en/datasets/ide-action-log-dataset-from-a-cs1-mooc/",
+        "https://doi.org/10.5281/zenodo.6903967"
+      ],
+      "recommendation": "Metadata candidate only, no reconstructable code proven.",
+      "revision": "doi:10.5281/zenodo.6903967"
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "id": "TutorTrace/VizPI",
+      "kind": "educational_ide_telemetry_metadata_candidate",
+      "limits": [
+        "Search-indexed publisher page describes fine-grained student IDE interactions.",
+        "Direct page requires JavaScript, so this audit did not verify a downloadable schema or license.",
+        "Do not treat participant/student data as cleared training code."
+      ],
+      "primary_urls": [
+        "https://vizpi.org/dataset"
+      ],
+      "recommendation": "No acquisition; provenance and license unresolved.",
+      "revision": null
+    },
+    {
+      "data_downloaded_this_audit": false,
+      "id": "SALT-NLP/SWE-chat",
+      "kind": "agent_trace_metadata_candidate",
+      "limits": [
+        "No current metadata observation or content download accepted.",
+        "Agent issue context and file rights remain unresolved."
+      ],
+      "primary_urls": [
+        "https://huggingface.co/datasets/SALT-NLP/SWE-chat"
+      ],
+      "recommendation": "Prior audit gated; this metadata request exceeded1MiB cap and was discarded.",
+      "revision": null
+    }
+  ],
+  "teacher_calls": 0,
+  "training_examples_created": 0
+}
