@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import sys
 from datetime import UTC, datetime
@@ -33,8 +34,8 @@ def _freeze_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str
     corpus = artifacts / "corpus"
     base_report = repository / "reports/research/q25_code_cpt_r2"
     training_plans = {
-        "repeat": report / "training_plan_repeat.json",
-        "scaled": report / "training_plan_scaled.json",
+        "repeat": report / "training_plan_repeat-r2.json",
+        "scaled": report / "training_plan_scaled-r2.json",
     }
     for name in ("repeat_train", "scaled_train", "development_new", "development_previous"):
         _write(corpus / f"{name}.jsonl", f"fixture:{name}\n")
@@ -75,10 +76,10 @@ def _freeze_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str
     previous_train_sha = records["repeat_train"]["sha256"]
     previous_dev_sha = records["development_previous"]["sha256"]
     experiment = {
-        "variants": {
-            "repeat": {"distinct_states": 4096, "epochs": 2, "example_exposures": 8192},
-            "scaled": {"distinct_states": 8192, "epochs": 1, "example_exposures": 8192},
-        }
+        "repeat": {"distinct_states": 4096, "epochs": 2, "example_exposures": 8192},
+        "scaled": {"distinct_states": 8192, "epochs": 1, "example_exposures": 8192},
+        "matched_batch_schedule": "frozen two-stage ordered batches",
+        "limitations": ["synthetic completion is not human intent"],
     }
     preparation_path = report / "preparation_plan-r2.json"
     runtime_lock_path = base_report / "fim_runtime_lock.json"
@@ -266,6 +267,14 @@ def test_freeze_preserves_initializer_evaluation_contract_and_analysis_fingerpri
 
     plan = scale.freeze("repeat")
 
+    assert plan["plan_revision"] == 2
+    assert scale.TRAINING_PLANS["repeat"].name == "training_plan_repeat-r2.json"
+    assert plan["experiment"]["variants"] == {
+        variant: fixture["prep"]["experiment"][variant] for variant in scale.VARIANTS
+    }
+    assert "repeat" not in plan["experiment"]
+    assert "scaled" not in plan["experiment"]
+    assert plan["experiment"]["limitations"] == fixture["prep"]["experiment"]["limitations"]
     assert plan["initializers"][scale.TRAIN_ARM]["model_id"] == "Qwen/Qwen2.5-Coder-0.5B"
     assert (
         plan["initializers"][scale.TRAIN_ARM]["revision"]
@@ -369,7 +378,7 @@ def _complete_collection_fixture(
     report = tmp_path / "reports"
     artifacts = tmp_path / "artifacts"
     plan_path = report / "training_plan_repeat.json"
-    input_manifest = artifacts / "input-bundle-repeat/input-manifest.json"
+    input_manifest = artifacts / "input-bundle-repeat-r2/input-manifest.json"
     _write(plan_path, "plan")
     _write(input_manifest, '{"schema":"test"}\n')
     plan = {
@@ -651,3 +660,75 @@ def test_watch_does_not_consume_renewed_quota_after_original_deadline(
     scale.save(report / "job-repeat.json", job)
     with pytest.raises(TimeoutError, match="observer deadline"):
         scale.watch("repeat")
+
+
+@pytest.mark.parametrize("variant", ["repeat", "scaled"])
+def test_actual_preparation_shape_freezes_into_worker_compatible_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, variant: str
+) -> None:
+    _freeze_fixture(tmp_path, monkeypatch)
+    plan = scale.freeze(variant)
+    worker_path = ROOT / "kaggle/q25_code_cpt_r2/run_fim.py"
+    spec = importlib.util.spec_from_file_location("scale_controller_worker_roundtrip", worker_path)
+    assert spec is not None and spec.loader is not None
+    worker = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = worker
+    source = worker_path.read_text().replace("__SESSION_JSON__", "{}")
+    exec(compile(source, str(worker_path), "exec"), worker.__dict__)
+    files = {
+        name: {"sha256": scale.digest(path), "bytes": path.stat().st_size}
+        for name, path in scale._bundle_paths(plan).items()
+    }
+    # Toy fixtures cannot reproduce historical corpus bytes. Substitute only
+    # these two pinned baseline references; all generated protocol fields pass
+    # directly from freeze into the real worker validator.
+    plan["data"]["previous_training_sha256"] = (
+        "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690"
+    )
+    plan["data"]["previous_development_sha256"] = (
+        "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+    )
+    session = {
+        "commit": plan["base_commit"],
+        "plan_sha256": scale.digest(scale.TRAINING_PLANS[variant]),
+        "input_manifest_sha256": "c" * 64,
+        "arm": scale.TRAIN_ARM,
+        "attempt": 1,
+        "session_seconds": scale.SESSION_SECONDS,
+        "resume_source": None,
+        "external_campaign_tokens": 0,
+        "scale_variant": variant,
+    }
+    worker.validate_session(session)
+    worker.verify_scale_plan(plan, session, files)
+
+
+@pytest.mark.parametrize("counts", [{}, {"epochs": True}, {"distinct_states": 4095}])
+def test_freeze_validates_both_preparation_variant_records(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, counts: dict[str, Any]
+) -> None:
+    fixture = _freeze_fixture(tmp_path, monkeypatch)
+    preparation = fixture["prep"]
+    preparation["experiment"]["scaled"] = counts
+    with pytest.raises(ValueError, match="variant counts differ"):
+        scale._normalized_experiment(preparation)
+
+
+@pytest.mark.parametrize("variant", ["repeat", "scaled"])
+def test_revision_two_bundle_preserves_historical_staging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, variant: str
+) -> None:
+    _freeze_fixture(tmp_path, monkeypatch)
+    historical = scale.ARTIFACTS / f"input-bundle-{variant}/plan.json"
+    _write(historical, "historical invalid revision one\n")
+    historical_bytes = historical.read_bytes()
+    plan = scale.freeze(variant)
+    monkeypatch.setattr(scale, "_check_storage", lambda **_kwargs: None)
+
+    directory = scale.build_bundle(plan)
+
+    assert directory == scale.ARTIFACTS / f"input-bundle-{variant}-r2"
+    assert historical.read_bytes() == historical_bytes
+    assert scale.read_json(directory / "input-manifest.json")["plan_sha256"] == scale.digest(
+        scale.TRAINING_PLANS[variant]
+    )

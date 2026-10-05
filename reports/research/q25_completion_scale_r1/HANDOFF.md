@@ -68,3 +68,12 @@ selected FIM model, not either newtrainingcandidate. Nix sourcepin a86bd478
 was pushed. Remote dirtyconfig preserved; its baseline HM build exactlymatches
 activegeneration. ThinkPad status lives in
 `reports/prototype/thinkpad_fim_update_r1/HANDOFF.md`.
+
+Full training plans now use `training_plan_repeat-r2.json` and
+`training_plan_scaled-r2.json`, with private staging `input-bundle-*-r2`.
+Revision1 fullplans were rejected byactualCPUworkerpreflight beforeallocation;
+`training_plan_revision_2.json` records the normalization fix. CPUplan/data
+unchanged. FreshfullPython1274pass. Next commit/push source, freeze bothr2
+plans atthatCODEcommit, actualworker+trainer+evaluatordata preflight, commit
+plan receipts, uploadprivateinputs, execute repeat andwatch, thenverify/collect
+beforeallocatingscaled. Refreshauthenticatedquota withresolvedallstatuses.

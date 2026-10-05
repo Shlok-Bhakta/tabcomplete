@@ -1,0 +1,25 @@
+{
+  "analysis_plan_unchanged": true,
+  "new_full_plan_files": [
+    "training_plan_repeat-r2.json",
+    "training_plan_scaled-r2.json"
+  ],
+  "new_input_bundle_paths": [
+    "input-bundle-repeat-r2",
+    "input-bundle-scaled-r2"
+  ],
+  "new_plan_revision": 2,
+  "no_candidate_outputs_at_revision": true,
+  "no_gpu_allocation_before_revision": true,
+  "observed_at": "2026-10-05T03:15:15.856771+00:00",
+  "old_private_input_bundles_preserved": true,
+  "preparation_plan_unchanged": true,
+  "previous_full_plans": {
+    "training_plan_repeat.json": "eb4ba721c52345897cdf27f07cf790cd6b455ab34d2fc5d4c7f93184c95d3b77",
+    "training_plan_scaled.json": "d59d2b00909ce6bacccecf47d9f59addd666458f46a671ef5bebb512d1f9d198"
+  },
+  "reason": "Actual CPU worker preflight found the full-plan controller copied preparation experiment.repeat/scaled without normalizing to the trainer/worker-required experiment.variants. Revision2 explicitly normalizes the records, validates counts and preserves metadata. Unit fixtures now represent the real preparation shape and freeze-to-worker contract tests cover both arms.",
+  "schema": "q25-completion-scale-plan-revision-v1",
+  "scoring_and_decoding_unchanged": true,
+  "source_data_unchanged": true
+}

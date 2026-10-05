@@ -30,8 +30,8 @@ CONFIG = ROOT / "configs/research/q25_completion_scale_r1.yaml"
 PREPARATION_PLAN = REPORT / "preparation_plan-r2.json"
 ANALYSIS_PLAN = REPORT / "analysis_plan-r2.json"
 TRAINING_PLANS = {
-    "repeat": REPORT / "training_plan_repeat.json",
-    "scaled": REPORT / "training_plan_scaled.json",
+    "repeat": REPORT / "training_plan_repeat-r2.json",
+    "scaled": REPORT / "training_plan_scaled-r2.json",
 }
 CORPUS = ARTIFACTS / "corpus-r3"
 BASE_REPORT = ROOT / "reports/research/q25_code_cpt_r2"
@@ -54,6 +54,7 @@ LINE_FIXTURE = Path(
     "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl"
 )
 PLAN_SCHEMA = "q25-completion-scale-training-plan-v1"
+PLAN_REVISION = 2
 CORPUS_SCHEMA = "q25-completion-scale-corpus-v1"
 INPUT_SCHEMA = "q25-completion-scale-input-v1"
 LEDGER_SCHEMA = "q25-completion-scale-budget-v1"
@@ -323,6 +324,27 @@ def _plan_common_fields(plan: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in plan.items() if key not in {"scale_variant", "frozen_at"}}
 
 
+def _normalized_experiment(preparation: dict[str, Any]) -> dict[str, Any]:
+    experiment = preparation.get("experiment")
+    if not isinstance(experiment, dict) or "variants" in experiment:
+        raise ValueError("completion-scale preparation experiment shape differs")
+    expected = {
+        "repeat": {"distinct_states": 4096, "epochs": 2, "example_exposures": 8192},
+        "scaled": {"distinct_states": 8192, "epochs": 1, "example_exposures": 8192},
+    }
+    for variant, counts in expected.items():
+        record = experiment.get(variant)
+        if not isinstance(record, dict) or any(
+            type(record.get(key)) is not int or record[key] != value
+            for key, value in counts.items()
+        ):
+            raise ValueError("completion-scale preparation variant counts differ")
+    return {
+        **{key: deepcopy(value) for key, value in experiment.items() if key not in VARIANTS},
+        "variants": {variant: deepcopy(experiment[variant]) for variant in VARIANTS},
+    }
+
+
 def freeze(variant: str) -> dict[str, Any]:
     if variant not in VARIANTS:
         raise ValueError("unknown completion-scale variant")
@@ -406,7 +428,7 @@ def freeze(variant: str) -> dict[str, Any]:
     }
     plan = {
         "schema": PLAN_SCHEMA,
-        "plan_revision": 1,
+        "plan_revision": PLAN_REVISION,
         "branch": configuration["branch"],
         "base_commit": cli("git", "-C", str(ROOT), "rev-parse", "HEAD"),
         "frozen_at": datetime.now(UTC).isoformat(),
@@ -427,7 +449,7 @@ def freeze(variant: str) -> dict[str, Any]:
             "previous_training_sha256": preparation["previous_training"]["sha256"],
             "previous_development_sha256": preparation["previous_development"]["sha256"],
         },
-        "experiment": deepcopy(preparation["experiment"]),
+        "experiment": _normalized_experiment(preparation),
         "initializers": {TRAIN_ARM: initializer},
         "evaluation": evaluation,
         "analysis_plan_sha256": digest(ANALYSIS_PLAN),
@@ -468,6 +490,7 @@ def load_plan(variant: str) -> dict[str, Any]:
     _config()
     if (
         plan.get("schema") != PLAN_SCHEMA
+        or plan.get("plan_revision") != PLAN_REVISION
         or plan.get("scale_variant") != variant
         or plan.get("gpu_execution_authorized") is not True
         or plan.get("preparation_plan_sha256") != digest(PREPARATION_PLAN)
@@ -500,11 +523,17 @@ def _bundle_paths(plan: dict[str, Any]) -> dict[str, Path]:
     }
 
 
+def _bundle_directory(variant: str) -> Path:
+    if variant not in VARIANTS:
+        raise ValueError("unknown completion-scale variant")
+    return ARTIFACTS / f"input-bundle-{variant}-r{PLAN_REVISION}"
+
+
 def build_bundle(plan: dict[str, Any]) -> Path:
     variant = plan.get("scale_variant")
     if variant not in VARIANTS or plan != load_plan(variant):
         raise ValueError("bundle requires the exact frozen variant plan")
-    output = ARTIFACTS / f"input-bundle-{variant}"
+    output = _bundle_directory(variant)
     output.mkdir(parents=True, exist_ok=True)
     sources = _bundle_paths(plan)
     allowed = set(sources) | {"input-manifest.json", "dataset-metadata.json"}
@@ -756,6 +785,8 @@ def _git_identity(plan: dict[str, Any]) -> tuple[str, str]:
     allowed_report_files = {
         "training_plan_repeat.json",
         "training_plan_scaled.json",
+        "training_plan_repeat-r2.json",
+        "training_plan_scaled-r2.json",
         "campaign_budget.json",
         "quota-before-repeat.json",
         "quota-before-scaled.json",
@@ -850,7 +881,7 @@ def submit(variant: str) -> dict[str, Any]:
     if not (ARTIFACTS / f"dataset-submission-{variant}.json").exists():
         raise FileNotFoundError("verified completion-scale input upload is required")
     submission = read_json(ARTIFACTS / f"dataset-submission-{variant}.json")
-    manifest = ARTIFACTS / f"input-bundle-{variant}/input-manifest.json"
+    manifest = _bundle_directory(variant) / "input-manifest.json"
     if (
         submission.get("state") != "verified"
         or submission.get("input_manifest_sha256") != digest(manifest)
@@ -1027,7 +1058,7 @@ def collect(variant: str) -> dict[str, Any]:
         or job.get("attempt") != 1
         or job.get("plan_sha256") != digest(TRAINING_PLANS[variant])
         or job.get("input_manifest_sha256")
-        != digest(ARTIFACTS / f"input-bundle-{variant}/input-manifest.json")
+        != digest(_bundle_directory(variant) / "input-manifest.json")
         or job.get("commit") != plan.get("base_commit")
         or job.get("reference") != reference
     ):

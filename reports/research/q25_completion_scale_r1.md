@@ -106,3 +106,13 @@ These are real distinct file/region states that occasionally become identical
 after bounded context construction. They are not claimed as unique model inputs.
 There is zero exact encoded-state overlap between training and either development
 slice. The frozen fixtures remain unchanged; paired analysis retains every case.
+
+## Full-plan compatibility revision
+
+Actual CPU worker preflight rejected the first full-plan revision because the
+preparation records needed normalization into the trainer's `experiment.variants`
+structure. Revision 2 fixes this interface, preserves the first frozen plans
+and input bundles, and changes no data, prompt, decoding or scoring rules.
+It preceded every new GPU allocation and candidate output. Full Python tests
+passed 1,274 tests; controller contract tests passed 23, with Ruff and mypy
+passing. The new input bundle directories end in `-r2`.
