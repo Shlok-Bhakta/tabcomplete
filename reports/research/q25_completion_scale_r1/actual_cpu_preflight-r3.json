@@ -1,0 +1,267 @@
+{
+  "gpu_allocated": false,
+  "implementations_mocked": false,
+  "isolated_clone": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/audit/actual-preflight-r3-perun7dk/repository",
+  "model_loaded": false,
+  "observed_at": "2026-10-05T03:44:00.200810+00:00",
+  "schema": "q25-completion-scale-actual-cpu-preflight-v1",
+  "script_sha256": "f40354dc2c77f7e0a7def6b697242d4136bde58282814bbf7482db226ac2e8aa",
+  "source_commit": "baacd9a5803471b193a3b821af88b77c3bae15c3",
+  "status": "passed",
+  "variants": {
+    "repeat": {
+      "actual_checkout_commit": "baacd9a5803471b193a3b821af88b77c3bae15c3",
+      "bundle_manifest_sha256": "d069edd3f56566f7520e970405577eb9c37ddcd22195f4352969785b9143d41a",
+      "data_identity": {
+        "eos_token_id": 151643,
+        "files": {
+          "development_new": {
+            "bytes": 1513304,
+            "file": "development_new.jsonl",
+            "input_tokens": 226184,
+            "row_count": 512,
+            "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf",
+            "target_tokens": 4159
+          },
+          "development_previous": {
+            "bytes": 627395,
+            "file": "development_previous.jsonl",
+            "input_tokens": 91434,
+            "row_count": 240,
+            "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+            "target_tokens": 1999
+          },
+          "repeat_train": {
+            "bytes": 11595941,
+            "file": "repeat_train.jsonl",
+            "input_tokens": 1776908,
+            "row_count": 4096,
+            "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690",
+            "target_tokens": 34405
+          },
+          "scaled_train": {
+            "bytes": 23570231,
+            "file": "scaled_train.jsonl",
+            "input_tokens": 3551513,
+            "row_count": 8192,
+            "sha256": "c98d7a9012a7f86b07b89fa44cdb17155a192d2c167bc48f51c5fe71fbe1129e",
+            "target_tokens": 68720
+          }
+        },
+        "fim_marker_ids": {
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "metadata_sha256": "3d1212065b56f38dbf02192538c91d9b59cd5d4938f2ebc16b0b2b657e36f654",
+        "preparation_plan_sha256": "be920b0e4e598ae35ad5e5cca85f1a2bc220d0446e2a8f8ba170689230befa2d",
+        "splits": {
+          "development_new": {
+            "input_tokens": 226184,
+            "rows": 512,
+            "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf",
+            "target_tokens": 4159
+          },
+          "development_previous": {
+            "input_tokens": 91434,
+            "rows": 240,
+            "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+            "target_tokens": 1999
+          },
+          "repeat_train": {
+            "input_tokens": 1776908,
+            "rows": 4096,
+            "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690",
+            "target_tokens": 34405
+          },
+          "scaled_train": {
+            "input_tokens": 3551513,
+            "rows": 8192,
+            "sha256": "c98d7a9012a7f86b07b89fa44cdb17155a192d2c167bc48f51c5fe71fbe1129e",
+            "target_tokens": 68720
+          },
+          "selected_train": {
+            "input_tokens": 1776908,
+            "name": "repeat_train",
+            "rows": 4096,
+            "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690",
+            "target_tokens": 34405
+          }
+        },
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "variant": "repeat"
+      },
+      "development_rows": 512,
+      "eval_inputs": {
+        "development_new": {
+          "bytes": 1513304,
+          "rows": 512,
+          "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf"
+        },
+        "development_previous": {
+          "bytes": 627395,
+          "rows": 240,
+          "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+        }
+      },
+      "evaluator_module": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/audit/actual-preflight-r3-perun7dk/repository/scripts/evaluate_q25_fim.py",
+      "exposures": 8192,
+      "first_stage_order_sha256": "af826e2e4c65e8be462c71dde0817a500373de2a2fb9dec9b3b3d86bbaf1f3e0",
+      "historical_rows": 240,
+      "plan_sha256": "2c2482068835191908d50f21f085a67ca624eeeacbfa25bcbc7bbe6a6fc6c970",
+      "session_seconds": 10726,
+      "trainer_module": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/audit/actual-preflight-r3-perun7dk/repository/src/tinycomplete/code_cpt/q25_fim.py",
+      "training_rows": 4096,
+      "updates": 512,
+      "worker_stages": [
+        {
+          "elapsed_seconds": 0.3655302932020277,
+          "exit_code": 0,
+          "name": "pin-repository"
+        },
+        {
+          "elapsed_seconds": 0.003953122068196535,
+          "exit_code": 0,
+          "name": "verify-repository-commit"
+        }
+      ],
+      "worker_storage": {
+        "cap_bytes": 12884901888,
+        "combined_bytes": 56341128,
+        "free_bytes": 31516635136,
+        "mounted_bytes": 0,
+        "runtime_setup_bytes": 56339484,
+        "worker_output_bytes": 1644
+      }
+    },
+    "scaled": {
+      "actual_checkout_commit": "baacd9a5803471b193a3b821af88b77c3bae15c3",
+      "bundle_manifest_sha256": "3ac5f3fb569adcb304d936480c444fdc2ee3183ea6d4d912e4593ef93d770b79",
+      "data_identity": {
+        "eos_token_id": 151643,
+        "files": {
+          "development_new": {
+            "bytes": 1513304,
+            "file": "development_new.jsonl",
+            "input_tokens": 226184,
+            "row_count": 512,
+            "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf",
+            "target_tokens": 4159
+          },
+          "development_previous": {
+            "bytes": 627395,
+            "file": "development_previous.jsonl",
+            "input_tokens": 91434,
+            "row_count": 240,
+            "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+            "target_tokens": 1999
+          },
+          "repeat_train": {
+            "bytes": 11595941,
+            "file": "repeat_train.jsonl",
+            "input_tokens": 1776908,
+            "row_count": 4096,
+            "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690",
+            "target_tokens": 34405
+          },
+          "scaled_train": {
+            "bytes": 23570231,
+            "file": "scaled_train.jsonl",
+            "input_tokens": 3551513,
+            "row_count": 8192,
+            "sha256": "c98d7a9012a7f86b07b89fa44cdb17155a192d2c167bc48f51c5fe71fbe1129e",
+            "target_tokens": 68720
+          }
+        },
+        "fim_marker_ids": {
+          "fim_middle": 151660,
+          "fim_prefix": 151659,
+          "fim_suffix": 151661
+        },
+        "metadata_sha256": "3d1212065b56f38dbf02192538c91d9b59cd5d4938f2ebc16b0b2b657e36f654",
+        "preparation_plan_sha256": "be920b0e4e598ae35ad5e5cca85f1a2bc220d0446e2a8f8ba170689230befa2d",
+        "splits": {
+          "development_new": {
+            "input_tokens": 226184,
+            "rows": 512,
+            "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf",
+            "target_tokens": 4159
+          },
+          "development_previous": {
+            "input_tokens": 91434,
+            "rows": 240,
+            "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+            "target_tokens": 1999
+          },
+          "repeat_train": {
+            "input_tokens": 1776908,
+            "rows": 4096,
+            "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690",
+            "target_tokens": 34405
+          },
+          "scaled_train": {
+            "input_tokens": 3551513,
+            "rows": 8192,
+            "sha256": "c98d7a9012a7f86b07b89fa44cdb17155a192d2c167bc48f51c5fe71fbe1129e",
+            "target_tokens": 68720
+          },
+          "selected_train": {
+            "input_tokens": 3551513,
+            "name": "scaled_train",
+            "rows": 8192,
+            "sha256": "c98d7a9012a7f86b07b89fa44cdb17155a192d2c167bc48f51c5fe71fbe1129e",
+            "target_tokens": 68720
+          }
+        },
+        "tokenizer_revision": "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301",
+        "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "variant": "scaled"
+      },
+      "development_rows": 512,
+      "eval_inputs": {
+        "development_new": {
+          "bytes": 1513304,
+          "rows": 512,
+          "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf"
+        },
+        "development_previous": {
+          "bytes": 627395,
+          "rows": 240,
+          "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+        }
+      },
+      "evaluator_module": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/audit/actual-preflight-r3-perun7dk/repository/scripts/evaluate_q25_fim.py",
+      "exposures": 8192,
+      "first_stage_order_sha256": "af826e2e4c65e8be462c71dde0817a500373de2a2fb9dec9b3b3d86bbaf1f3e0",
+      "historical_rows": 240,
+      "plan_sha256": "6acf405660f0fa6d5b5d57d50b42a1356381b4bb2acc52a3a161036ad3af8ef6",
+      "session_seconds": 10800,
+      "trainer_module": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/audit/actual-preflight-r3-perun7dk/repository/src/tinycomplete/code_cpt/q25_fim.py",
+      "training_rows": 8192,
+      "updates": 512,
+      "worker_stages": [
+        {
+          "elapsed_seconds": 0.16498755081556737,
+          "exit_code": 0,
+          "name": "pin-repository"
+        },
+        {
+          "elapsed_seconds": 0.008058498846367002,
+          "exit_code": 0,
+          "name": "verify-repository-commit"
+        }
+      ],
+      "worker_storage": {
+        "cap_bytes": 12884901888,
+        "combined_bytes": 56340549,
+        "free_bytes": 31516614656,
+        "mounted_bytes": 0,
+        "runtime_setup_bytes": 56339484,
+        "worker_output_bytes": 1065
+      }
+    }
+  },
+  "weights_downloaded": false,
+  "worker_globals_redirected_to_scratch_only": true
+}

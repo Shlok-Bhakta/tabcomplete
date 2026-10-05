@@ -1,0 +1,13 @@
+{
+  "created_at": "2026-10-05T03:41:50.708773+00:00",
+  "dataset": "shlokbhakta/tabcomplete-q25-completion-scale-r1-repeat-r3",
+  "input_manifest_sha256": "d069edd3f56566f7520e970405577eb9c37ddcd22195f4352969785b9143d41a",
+  "remote_verification": {
+    "hashes_verified_by_worker": false,
+    "paths_and_sizes_verified": true,
+    "remote_files": 9,
+    "verified_files": 9
+  },
+  "state": "verified",
+  "variant": "repeat"
+}
