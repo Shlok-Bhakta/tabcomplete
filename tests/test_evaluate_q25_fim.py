@@ -20,6 +20,7 @@ from evaluate_q25_fim import (  # noqa: E402
     decoded_completion,
     development_case,
     run_source_syntax_diagnostic,
+    validated_development_input,
 )
 
 
@@ -299,8 +300,12 @@ def test_source_syntax_rejects_prediction_identity_mismatch(field: str) -> None:
         _source_syntax_rows([row], [prediction], [document], parse_status=lambda *_: "pass")
 
 
+@pytest.mark.parametrize(
+    ("development_split", "count", "offset"),
+    [(None, 1, 4096), ("development_new", 512, 8192), ("development_previous", 240, 4096)],
+)
 def test_source_syntax_cli_path_validates_frozen_files_without_a_model(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, development_split: str | None, count: int, offset: int
 ) -> None:
     import prepare_q25_fim
 
@@ -314,19 +319,25 @@ def test_source_syntax_cli_path_validates_frozen_files_without_a_model(
     )
     preparation_sha = hashlib.sha256(preparation_plan.read_bytes()).hexdigest()
     monkeypatch.setattr("evaluate_q25_fim.FIM_PREPARATION_PLAN", preparation_plan)
+    monkeypatch.setattr("evaluate_q25_fim.SCALE_PREPARATION_PLAN", preparation_plan)
 
-    development = tmp_path / "development.jsonl"
-    development_bytes = (json.dumps(row, sort_keys=True) + "\n").encode("utf-8")
+    split_name = development_split or "development"
+    development = tmp_path / f"{split_name}.jsonl"
+    development_bytes = "".join(
+        json.dumps({**row, "id": offset + index}, sort_keys=True) + "\n"
+        for index in range(count)
+    ).encode("utf-8")
     development.write_bytes(development_bytes)
     development_sha = hashlib.sha256(development_bytes).hexdigest()
     metadata = {
+        **({"schema": "q25-completion-scale-corpus-v1"} if development_split else {}),
         "preparation_plan_sha256": preparation_sha,
         "parent_cpt_plan_sha256": parent_sha,
         "splits": {
-            "development": {
+            split_name: {
                 "file": development.name,
                 "sha256": development_sha,
-                "row_count": 1,
+                "row_count": count,
             }
         },
         "files": {development.name: {"sha256": development_sha, "bytes": len(development_bytes)}},
@@ -337,31 +348,47 @@ def test_source_syntax_cli_path_validates_frozen_files_without_a_model(
 
     gpu_results = tmp_path / "gpu" / "results.jsonl"
     gpu_results.parent.mkdir()
-    gpu_results.write_text(json.dumps({**prediction, "exact": False}) + "\n", encoding="utf-8")
+    gpu_results.write_text(
+        "".join(
+            json.dumps(
+                {**prediction, "case_id": f"fim-development-{offset + index}", "exact": False}
+            )
+            + "\n"
+            for index in range(count)
+        ),
+        encoding="utf-8",
+    )
     model_sha = _sha("local model export")
     gpu_summary = {
         "plan_sha256": "pending",
-        "cases": 1,
+        "cases": count,
         "model_sha256": model_sha,
     }
     result_summary = gpu_results.parent / "summary.json"
     result_summary.write_text(json.dumps(gpu_summary) + "\n", encoding="utf-8")
 
     full_plan = {
-        "schema": "q25-fim-training-plan-v1",
+        "schema": (
+            "q25-completion-scale-training-plan-v1"
+            if development_split is not None
+            else "q25-fim-training-plan-v1"
+        ),
         "gpu_execution_authorized": True,
         "parent_cpt_plan_sha256": parent_sha,
         "preparation_plan_sha256": preparation_sha,
         "data": {
-            "development": {
+            split_name: {
                 "sha256": development_sha,
-                "row_count": 1,
+                "row_count": count,
                 "bytes": len(development_bytes),
             },
             "corpus_metadata_sha256": metadata_sha,
         },
         "evaluation": {
-            "source_syntax": {"protocol": SOURCE_SYNTAX_PROTOCOL},
+            "source_syntax": {
+                "protocol": SOURCE_SYNTAX_PROTOCOL,
+                "development_splits": ["development_new", "development_previous"],
+            },
         },
     }
     plan_path = tmp_path / "fim-training-plan.json"
@@ -373,7 +400,12 @@ def test_source_syntax_cli_path_validates_frozen_files_without_a_model(
     monkeypatch.setattr(
         prepare_q25_fim,
         "_load_pinned_inputs",
-        lambda _path: ({}, {"pool_hashes": pool_hashes}, [], [document]),
+        lambda _path: (
+            {},
+            {"pool_hashes": pool_hashes},
+            [document] if development_split is not None else [],
+            [] if development_split is not None else [document],
+        ),
     )
     args = argparse.Namespace(
         mode="development",
@@ -388,7 +420,7 @@ def test_source_syntax_cli_path_validates_frozen_files_without_a_model(
 
     summary = run_source_syntax_diagnostic(args)
     report_text = (args.output / "source-syntax-results.jsonl").read_text(encoding="utf-8")
-    assert summary["cases"] == 1
+    assert summary["cases"] == count
     assert summary["model_sha256"] == model_sha
     assert summary["raw_source_pool_file_hashes"] == pool_hashes
     assert "value =" not in report_text
@@ -498,3 +530,87 @@ def test_attention_smoke_initializes_cuda_before_reset_or_tensor_allocation(
     assert events.index("cuda.set_device") < events.index("cuda.reset_peak_memory_stats")
     assert events.index("cuda.reset_peak_memory_stats") < events.index("tensor.zeros")
     assert events.index("tensor.zeros_like") < events.index("attention.forward")
+
+
+@pytest.mark.parametrize(
+    ("split", "count", "offset"),
+    [("development_new", 512, 8192), ("development_previous", 240, 4096)],
+)
+def test_scale_development_input_binds_size_hash_count_and_ids(
+    tmp_path: Path, split: str, count: int, offset: int
+) -> None:
+    path = tmp_path / f"{split}.jsonl"
+    rows = [{"id": offset + index, "split": "development"} for index in range(count)]
+    payload = "".join(json.dumps(row) + "\n" for row in rows).encode()
+    path.write_bytes(payload)
+    record = {
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "bytes": len(payload),
+        "row_count": count,
+    }
+    plan = {"schema": "q25-completion-scale-training-plan-v1", "data": {split: record}}
+    actual, selected, name = validated_development_input(plan, path)
+    assert actual == rows and selected == record and name == split
+    other = "development_previous" if split == "development_new" else "development_new"
+    with pytest.raises(ValueError, match="exact named development split"):
+        validated_development_input(plan, path, selected_split=other)
+    record["bytes"] += 1
+    with pytest.raises(ValueError, match="size, count, or ordered IDs"):
+        validated_development_input(plan, path)
+    record["bytes"] -= 1
+    rows[0]["id"] += 1
+    changed = "".join(json.dumps(row) + "\n" for row in rows).encode()
+    path.write_bytes(changed)
+    record.update(sha256=hashlib.sha256(changed).hexdigest(), bytes=len(changed))
+    with pytest.raises(ValueError, match="size, count, or ordered IDs"):
+        validated_development_input(plan, path)
+
+
+def test_scale_attention_smoke_cli_selects_new_development_before_cuda(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import evaluate_q25_fim as evaluation
+
+    development = tmp_path / "development_new.jsonl"
+    payload = "".join(
+        json.dumps({"id": 8192 + index, "split": "development"}) + "\n"
+        for index in range(512)
+    ).encode()
+    development.write_bytes(payload)
+    line = tmp_path / "line180.jsonl"
+    line.write_bytes(b"fixed line fixture\n")
+    plan = {
+        "schema": evaluation.SCALE_PLAN_SCHEMA,
+        "data": {
+            "development_new": {
+                "sha256": hashlib.sha256(payload).hexdigest(),
+                "bytes": len(payload),
+                "row_count": 512,
+            }
+        },
+        "evaluation": {
+            "attention_backend": evaluation.ATTENTION_BACKEND,
+            "fixtures": {"line": {"sha256": hashlib.sha256(line.read_bytes()).hexdigest()}},
+        },
+    }
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan))
+    observed: dict[str, Any] = {}
+
+    def smoke(**kwargs: Any) -> dict[str, Any]:
+        observed.update(kwargs)
+        return {"success": True}
+
+    monkeypatch.setattr(evaluation, "_attention_smoke", smoke)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "evaluate_q25_fim.py", "--mode", "development", "--input", str(development),
+            "--output", str(tmp_path / "output"), "--plan", str(plan_path),
+            "--model", str(tmp_path / "model"), "--attention-smoke", "--line-input", str(line),
+        ],
+    )
+    evaluation.main()
+    assert observed["development_path"] == development
+    assert observed["plan_sha256"] == hashlib.sha256(plan_path.read_bytes()).hexdigest()

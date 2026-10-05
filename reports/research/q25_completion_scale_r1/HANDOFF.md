@@ -44,3 +44,27 @@ downloads. Scientific evidence: `bottleneck_evidence.json`; authenticated quota
 receipt: `quota-before-preparation.json`; actual prior SigNoz query:
 `prior_monitoring_query.json`. The OpenCode question was answered: no Claude
 calls recorded overnight, earlier OpenCode teacher work used Muse Spark.
+
+## Continued October4/5
+
+Final CPU corpus `corpus-r3` verifies4096/8192/512/240 source states.
+Exposures input3553816 vs3551513, target68810 vs68720.
+Encoded-input duplicate counts are disclosed in `encoded_state_audit.json`;
+no encoded train/development overlap. No fixtures changed after outputs.
+
+Controller/trainer/evaluator integration finished. The evaluator accepts both
+new512 and historical240 splits and registered source-syntax diagnostics.
+Fresh full Python1267pass, Ruffpass, mypy92filespass; workercompiles.
+Observer restart works; fresh GPU retries are not implemented by this narrow
+two-allocation controller. Complete checkpoint payload reload still requires
+actual collected checkpoint verification.
+
+Fresh quota observation before freeze at2026-10-05T02:59:30.346625+00:00
+found41.08 accountGPUhours, noactivejobs, renewalOctober10. Refresh again
+inexecute. No newGPUallocation at this reportcheckpoint.
+
+ThinkPad is online. A separate declarative update is building to the already
+selected FIM model, not either newtrainingcandidate. Nix sourcepin a86bd478
+was pushed. Remote dirtyconfig preserved; its baseline HM build exactlymatches
+activegeneration. ThinkPad status lives in
+`reports/prototype/thinkpad_fim_update_r1/HANDOFF.md`.

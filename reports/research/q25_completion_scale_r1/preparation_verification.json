@@ -1,0 +1,63 @@
+{
+  "aggregate_input_tokens": 7105329,
+  "corpus_directory": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/corpus-r3",
+  "gpu_allocations_for_this_experiment": 0,
+  "historical_data_byte_identity_verified": true,
+  "metadata_sha256": "3d1212065b56f38dbf02192538c91d9b59cd5d4938f2ebc16b0b2b657e36f654",
+  "observed_at": "2026-10-05T02:57:15.170268+00:00",
+  "preparation_and_analysis_tests": {
+    "failed": 0,
+    "passed": 15
+  },
+  "preparation_mypy": "passed",
+  "preparation_ruff": "passed",
+  "producer_sha256": "6f4f46819a99f24044b479fb21fee7f7cbcb9edabd6a6ccb3010d92b52eed5c3",
+  "repeat_exposure_input_tokens": 3553816,
+  "scaled_exposure_input_tokens": 3551513,
+  "schema": "q25-completion-scale-preparation-verification-v1",
+  "sealed_data_accessed": false,
+  "splits": {
+    "development_new": {
+      "bytes": 1513304,
+      "file": "development_new.jsonl",
+      "input_tokens": 226184,
+      "row_count": 512,
+      "sha256": "e545b4735b0f46cdeec8a37f6aedfcf77dd21258698fb632021d2e15107712cf",
+      "target_tokens": 4159
+    },
+    "development_previous": {
+      "bytes": 627395,
+      "file": "development_previous.jsonl",
+      "input_tokens": 91434,
+      "row_count": 240,
+      "sha256": "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac",
+      "target_tokens": 1999
+    },
+    "repeat_train": {
+      "bytes": 11595941,
+      "file": "repeat_train.jsonl",
+      "input_tokens": 1776908,
+      "row_count": 4096,
+      "sha256": "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690",
+      "target_tokens": 34405
+    },
+    "scaled_train": {
+      "bytes": 23570231,
+      "file": "scaled_train.jsonl",
+      "input_tokens": 3551513,
+      "row_count": 8192,
+      "sha256": "c98d7a9012a7f86b07b89fa44cdb17155a192d2c167bc48f51c5fe71fbe1129e",
+      "target_tokens": 68720
+    }
+  },
+  "training_data_semantics": "Public synthetic completion states, not human next-edit intent.",
+  "verification": {
+    "corpus_sha256": "340eb965b37ecb09b73e6d5930259943929a9c9f74cd90529c735e3fa87b0793",
+    "new_development_rows": 512,
+    "output_dir": "/mnt/ssd/tabcomplete-q25-completion-scale-r1/corpus-r3",
+    "plan_sha256": "be920b0e4e598ae35ad5e5cca85f1a2bc220d0446e2a8f8ba170689230befa2d",
+    "repeat_train_rows": 4096,
+    "scaled_train_rows": 8192,
+    "status": "PASS"
+  }
+}

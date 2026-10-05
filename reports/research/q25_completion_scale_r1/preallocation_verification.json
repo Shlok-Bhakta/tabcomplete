@@ -1,0 +1,25 @@
+{
+  "bun_typescript_receipt": "bun_verification.json; collector/gateway source unchanged",
+  "external_teacher_calls": 0,
+  "gpu_allocation_yet": false,
+  "historical_ignored_fixtures_reused": [
+    "author_pilot_plan10.jsonl",
+    "author_pilot_plan10_unsettled_failure.json"
+  ],
+  "mypy": {
+    "passed": true,
+    "source_files": 92
+  },
+  "nix_embedded_appender": "passed",
+  "observed_at": "2026-10-05T03:09:10.013170+00:00",
+  "python": {
+    "command": "PATH=/opt/nvim-linux-x86_64/bin:$PATH UV_PROJECT_ENVIRONMENT=/home/crabcake/Projects/tabcomplete-product-r2/.venv PYTHONPATH=src:scripts:/home/crabcake/Projects/tabcomplete/.venv/lib/python3.11/site-packages uv run python -m pytest -q",
+    "failed": 0,
+    "log_sha256": "28d1e7b5fa025f9f66697cc9c134a6d689201f8434c694e39771c41d1520a831",
+    "passed": 1267,
+    "warnings": 2
+  },
+  "ruff": "passed repository",
+  "schema": "q25-completion-scale-preallocation-verification-v1",
+  "worker_compile": "passed"
+}

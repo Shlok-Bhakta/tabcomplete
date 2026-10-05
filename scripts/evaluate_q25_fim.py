@@ -40,6 +40,53 @@ FIM_PREPARATION_PLAN = (
     Path(__file__).resolve().parents[1]
     / "reports/research/q25_code_cpt_r2/fim_preparation_plan.json"
 )
+SCALE_PLAN_SCHEMA = "q25-completion-scale-training-plan-v1"
+SCALE_PREPARATION_PLAN = (
+    Path(__file__).resolve().parents[1]
+    / "reports/research/q25_completion_scale_r1/preparation_plan-r2.json"
+)
+SCALE_DEVELOPMENT_SPLITS = {
+    "development_new": (512, 8192),
+    "development_previous": (240, 4096),
+}
+
+
+def validated_development_input(
+    plan: dict[str, Any], path: Path, *, selected_split: str | None = None
+) -> tuple[list[dict[str, Any]], dict[str, Any], str]:
+    """Bind each versioned dev group before loading a model or starting CUDA."""
+    schema = plan.get("schema")
+    if schema == "q25-fim-training-plan-v1":
+        if selected_split is not None:
+            raise ValueError("scale development split cannot be used with the original FIM plan")
+        split = "development"
+    elif schema == SCALE_PLAN_SCHEMA:
+        split = selected_split or path.stem
+        if split not in SCALE_DEVELOPMENT_SPLITS or path.name != f"{split}.jsonl":
+            raise ValueError("scale evaluation requires an exact named development split")
+    else:
+        raise ValueError("a frozen FIM training/evaluation plan is required")
+    data = plan.get("data")
+    record = data.get(split) if isinstance(data, dict) else None
+    if not isinstance(record, dict) or file_sha256(path) != record.get("sha256"):
+        raise ValueError("FIM evaluation input identity differs")
+    rows = _read_jsonl(path, "FIM development input")
+    if len(rows) != record.get("row_count"):
+        raise ValueError("FIM development state count differs")
+    if schema == SCALE_PLAN_SCHEMA:
+        expected_count, offset = SCALE_DEVELOPMENT_SPLITS[split]
+        if (
+            len(rows) != expected_count
+            or path.stat().st_size != record.get("bytes")
+            or any(
+                type(row.get("id")) is not int
+                or row["id"] != offset + index
+                or row.get("split") != "development"
+                for index, row in enumerate(rows)
+            )
+        ):
+            raise ValueError("scale development size, count, or ordered IDs differ")
+    return rows, record, split
 
 
 def paired_development(
@@ -439,8 +486,9 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
     if args.predictions is None or args.parent_cpt_plan is None:
         raise ValueError("source-syntax mode requires saved FIM results and the parent CPT plan")
     plan = _read_json(args.plan, "FIM plan")
+    scale_profile = plan.get("schema") == SCALE_PLAN_SCHEMA
     if (
-        plan.get("schema") != "q25-fim-training-plan-v1"
+        plan.get("schema") not in ("q25-fim-training-plan-v1", SCALE_PLAN_SCHEMA)
         or plan.get("gpu_execution_authorized") is not True
     ):
         raise ValueError("source-syntax mode requires the frozen full FIM plan")
@@ -456,19 +504,24 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
     if plan.get("parent_cpt_plan_sha256") != parent_sha:
         raise ValueError("parent CPT plan hash differs from the frozen FIM plan")
     _read_json(args.parent_cpt_plan, "parent CPT plan")
-    preparation_sha = file_sha256(FIM_PREPARATION_PLAN)
+    preparation_path = SCALE_PREPARATION_PLAN if scale_profile else FIM_PREPARATION_PLAN
+    preparation_sha = file_sha256(preparation_path)
     if plan.get("preparation_plan_sha256") != preparation_sha:
         raise ValueError("FIM preparation plan hash differs from the frozen full plan")
-    preparation = _read_json(FIM_PREPARATION_PLAN, "FIM preparation plan")
+    preparation = _read_json(preparation_path, "FIM preparation plan")
     if preparation.get("parent_cpt_plan_sha256") != parent_sha:
         raise ValueError("parent CPT identity differs from the FIM preparation plan")
 
     data_plan = plan.get("data")
     if not isinstance(data_plan, dict):
         raise ValueError("full FIM plan has no development data identity")
-    development_plan = data_plan.get("development")
-    if not isinstance(development_plan, dict):
-        raise ValueError("full FIM plan has no development data identity")
+    development_rows, development_plan, development_split = validated_development_input(
+        plan, args.input, selected_split=getattr(args, "development_split", None)
+    )
+    if scale_profile and development_split not in source_registration.get(
+        "development_splits", []
+    ):
+        raise ValueError("scale plan does not register source syntax for this development split")
     development_sha = development_plan.get("sha256")
     expected_rows = development_plan.get("row_count")
     expected_bytes = development_plan.get("bytes")
@@ -484,9 +537,6 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
         or file_sha256(args.input) != development_sha
     ):
         raise ValueError("development input file differs from the frozen FIM plan")
-    development_rows = _read_jsonl(args.input, "FIM development input")
-    if len(development_rows) != expected_rows:
-        raise ValueError("development row count differs from the frozen FIM plan")
 
     metadata_path = args.input.parent / "corpus_metadata.json"
     if file_sha256(metadata_path) != data_plan.get("corpus_metadata_sha256"):
@@ -495,7 +545,7 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
     metadata_splits = metadata.get("splits")
     metadata_files = metadata.get("files")
     metadata_split = (
-        metadata_splits.get("development") if isinstance(metadata_splits, dict) else None
+        metadata_splits.get(development_split) if isinstance(metadata_splits, dict) else None
     )
     metadata_file = (
         metadata_files.get(args.input.name) if isinstance(metadata_files, dict) else None
@@ -510,12 +560,19 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
         or metadata_split.get("row_count") != expected_rows
         or metadata_file.get("sha256") != development_sha
         or metadata_file.get("bytes") != expected_bytes
+        or (scale_profile and metadata.get("schema") != "q25-completion-scale-corpus-v1")
     ):
         raise ValueError("FIM corpus metadata does not match the frozen development inputs")
 
     from prepare_q25_fim import _load_pinned_inputs
 
-    _, preparation_inputs, _, development_documents = _load_pinned_inputs(FIM_PREPARATION_PLAN)
+    _, preparation_inputs, train_documents, development_documents = _load_pinned_inputs(
+        FIM_PREPARATION_PLAN
+    )
+    if scale_profile:
+        # New reserved groups were selected from the already pinned public
+        # training source pool. Evaluation still uses only the frozen dev rows.
+        development_documents = [*train_documents, *development_documents]
     pool_hashes = preparation_inputs.get("pool_hashes")
     if not isinstance(pool_hashes, dict):
         raise ValueError("pinned original source-pool identities are missing")
@@ -551,6 +608,14 @@ def run_source_syntax_diagnostic(args: argparse.Namespace) -> dict[str, Any]:
         preparation_plan_sha256=preparation_sha,
         development_sha256=development_sha,
         development_row_count=expected_rows,
+        **(
+            {
+                "development_split": development_split,
+                "source_pool_lookup": "pinned public train and original development documents",
+            }
+            if scale_profile
+            else {}
+        ),
         gpu_results_sha256=file_sha256(args.predictions),
         model_sha256=result_summary["model_sha256"],
         parser="tree-sitter-language-pack",
@@ -742,6 +807,7 @@ def main() -> None:
     parser.add_argument("--source-syntax", action="store_true")
     parser.add_argument("--predictions", type=Path)
     parser.add_argument("--parent-cpt-plan", type=Path)
+    parser.add_argument("--development-split", choices=tuple(SCALE_DEVELOPMENT_SPLITS))
     args = parser.parse_args()
     if args.source_syntax:
         summary = run_source_syntax_diagnostic(args)
@@ -749,17 +815,22 @@ def main() -> None:
         current_runtime().shutdown()
         return
     plan = json.loads(args.plan.read_text())
-    if plan.get("schema") != "q25-fim-training-plan-v1":
+    if plan.get("schema") not in ("q25-fim-training-plan-v1", SCALE_PLAN_SCHEMA):
         raise ValueError("a frozen FIM training/evaluation plan is required")
     evaluation = plan.get("evaluation")
     if not isinstance(evaluation, dict) or evaluation.get("attention_backend") != ATTENTION_BACKEND:
         raise ValueError("frozen FIM plan does not bind the supported attention backend")
-    expected = (
-        plan["data"]["development"]["sha256"] if args.mode == "development" else LINE_SUITE_SHA
-    )
-    if file_sha256(args.input) != expected:
-        raise ValueError("FIM evaluation input identity differs")
-    rows = [json.loads(line) for line in args.input.read_text().splitlines() if line.strip()]
+    development_split = None
+    if args.mode == "development":
+        rows, _, development_split = validated_development_input(
+            plan, args.input, selected_split=args.development_split
+        )
+    else:
+        if args.development_split is not None:
+            parser.error("development split is only valid for development evaluation")
+        if file_sha256(args.input) != LINE_SUITE_SHA:
+            raise ValueError("FIM evaluation input identity differs")
+        rows = _read_jsonl(args.input, "FIM line input")
     if args.attention_smoke:
         if args.mode != "development" or args.line_input is None or args.model is None:
             parser.error("attention smoke requires development input, line input, and local model")
@@ -782,8 +853,6 @@ def main() -> None:
         raise ValueError("FIM evaluation requires existing local weights; downloads are forbidden")
     if args.mode == "line" and len(rows) != 180:
         raise ValueError("the unchanged line suite must contain 180 cases")
-    if args.mode == "development" and len(rows) != plan["data"]["development"]["row_count"]:
-        raise ValueError("FIM development state count differs")
     provider = StrictFimProvider(
         str(args.model),
         newline_stop=args.mode == "line",
@@ -832,6 +901,11 @@ def main() -> None:
         stopping="observed EOS only" if args.mode == "development" else "registered newline or EOS",
         control_tokens="retained and invalidated; only terminal EOS removed",
         task="synthetic FIM completion, not observed next-edit intent",
+        **(
+            {"development_split": development_split}
+            if plan.get("schema") == SCALE_PLAN_SCHEMA and development_split is not None
+            else {}
+        ),
     )
     predictions = generate_predictions(
         prepared,
@@ -897,6 +971,11 @@ def main() -> None:
         ),
         "plan_sha256": metadata["plan_sha256"],
         "model_sha256": metadata["model_revision"],
+        **(
+            {"development_split": development_split}
+            if plan.get("schema") == SCALE_PLAN_SCHEMA and development_split is not None
+            else {}
+        ),
     }
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
     current_runtime().shutdown()

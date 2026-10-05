@@ -1,0 +1,39 @@
+{
+  "before_candidate_outputs": true,
+  "counts": {
+    "development_new": {
+      "largest_multiplicity": 2,
+      "repeated_encoded_states": 2,
+      "source_states": 512,
+      "unique_encoded_prompt_target_states": 510
+    },
+    "development_previous": {
+      "largest_multiplicity": 1,
+      "repeated_encoded_states": 0,
+      "source_states": 240,
+      "unique_encoded_prompt_target_states": 240
+    },
+    "repeat_train": {
+      "largest_multiplicity": 2,
+      "repeated_encoded_states": 7,
+      "source_states": 4096,
+      "unique_encoded_prompt_target_states": 4089
+    },
+    "scaled_train": {
+      "largest_multiplicity": 2,
+      "repeated_encoded_states": 17,
+      "source_states": 8192,
+      "unique_encoded_prompt_target_states": 8175
+    }
+  },
+  "cross_split_identical_encoded_states": {
+    "repeat_train:development_new": 0,
+    "scaled_train:development_new": 0,
+    "scaled_train:development_previous": 0
+  },
+  "definition": "Identical full input_ids sequence and prompt_tokens boundary. Distinct source states may share bounded encoded context and target.",
+  "fixture_change": false,
+  "interpretation": "Frozen source-state counts are preserved, and are not claimed as counts of unique model inputs. No train/development exact encoded-state overlap exists.",
+  "observed_at": "2026-10-05T03:02:44.130115+00:00",
+  "schema": "q25-completion-scale-encoded-state-audit-v1"
+}

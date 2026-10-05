@@ -48,6 +48,11 @@ PYTHON311_READY_ENV = "TABCOMPLETE_FIM_PYTHON311_READY"
 MAX_SESSION_SECONDS = 10_800
 MAX_CAMPAIGN_TOKENS = 32_000_000
 MAX_ARM_TOKENS = 4_194_304
+SCALE_PLAN_SCHEMA = "q25-completion-scale-training-plan-v1"
+SCALE_BRANCH = "research/q25-completion-scale-r1"
+SCALE_VARIANTS = {"repeat", "scaled"}
+SCALE_MAX_CAMPAIGN_TOKENS = 10_000_000
+SCALE_MAX_ARM_TOKENS = 8_000_000
 MAX_ARTIFACT_BYTES = 12 * 1024**3
 MINIMUM_FREE_BYTES = 2 * 1024**3
 MINIMUM_FINAL_RESERVE_SECONDS = 1_800
@@ -58,6 +63,16 @@ REQUIRED_INPUT_FILES = {
     "plan.json",
     "train.jsonl",
     "development.jsonl",
+    "corpus_metadata.json",
+    "causal200.jsonl",
+    "line180.jsonl",
+}
+SCALE_REQUIRED_INPUT_FILES = {
+    "plan.json",
+    "repeat_train.jsonl",
+    "scaled_train.jsonl",
+    "development_new.jsonl",
+    "development_previous.jsonl",
     "corpus_metadata.json",
     "causal200.jsonl",
     "line180.jsonl",
@@ -564,6 +579,13 @@ def validate_session(session: Any) -> dict[str, Any]:
         or not 0 <= external_tokens <= MAX_CAMPAIGN_TOKENS
     ):
         raise WorkerError("session_identity_or_budget_invalid")
+    scale_variant = session.get("scale_variant")
+    if scale_variant is not None and (
+        scale_variant not in SCALE_VARIANTS or session["arm"] != TRAIN_ARM
+    ):
+        raise WorkerError("scale_session_identity_invalid")
+    if scale_variant is not None and external_tokens > SCALE_MAX_CAMPAIGN_TOKENS:
+        raise WorkerError("scale_session_token_carry_invalid")
     attempt = session["attempt"]
     if isinstance(attempt, bool) or not isinstance(attempt, int) or attempt < 1:
         raise WorkerError("session_identity_or_budget_invalid")
@@ -622,8 +644,12 @@ def verify_input_bundle(
     root: Path, manifest: dict[str, Any], session: dict[str, Any]
 ) -> tuple[dict[str, Path], dict[str, Any]]:
     files = manifest.get("files")
-    if not isinstance(files, dict) or set(files) != REQUIRED_INPUT_FILES:
+    if not isinstance(files, dict) or set(files) not in (
+        REQUIRED_INPUT_FILES,
+        SCALE_REQUIRED_INPUT_FILES,
+    ):
         raise WorkerError("input_manifest_file_set_invalid")
+    scale_bundle = set(files) == SCALE_REQUIRED_INPUT_FILES
     paths: dict[str, Path] = {}
     for name, identity in files.items():
         if not isinstance(identity, dict):
@@ -642,7 +668,7 @@ def verify_input_bundle(
             raise WorkerError("input_file_hash_or_size_mismatch")
         paths[name] = path
 
-    allowed = REQUIRED_INPUT_FILES | ALLOWED_INPUT_EXTRAS
+    allowed = set(files) | ALLOWED_INPUT_EXTRAS
     for path in root.rglob("*"):
         if path.is_symlink():
             raise WorkerError("input_bundle_contains_symlink")
@@ -660,12 +686,186 @@ def verify_input_bundle(
         or metadata.get("preparation_plan_sha256") != plan.get("preparation_plan_sha256")
         or metadata.get("parent_cpt_plan_sha256") != plan.get("parent_cpt_plan_sha256")
         or metadata.get("tokenizer_id") != "Qwen/Qwen2.5-Coder-0.5B"
+        or (
+            scale_bundle
+            and metadata.get("schema") != "q25-completion-scale-corpus-v1"
+        )
     ):
         raise WorkerError("fim_corpus_metadata_policy_mismatch")
+    if scale_bundle != (plan.get("schema") == SCALE_PLAN_SCHEMA):
+        raise WorkerError("frozen_scale_input_plan_mismatch")
     return paths, plan
 
 
+def verify_scale_plan(plan: dict[str, Any], session: dict[str, Any], files: dict[str, Any]) -> None:
+    if (
+        plan.get("schema") != SCALE_PLAN_SCHEMA
+        or plan.get("branch") != SCALE_BRANCH
+        or plan.get("gpu_execution_authorized") is not True
+        or plan.get("scale_variant") != session.get("scale_variant")
+        or session.get("arm") != TRAIN_ARM
+        or plan.get("base_commit") != session.get("commit")
+    ):
+        raise WorkerError("frozen_scale_plan_identity_invalid")
+    configuration = plan.get("configuration")
+    if not isinstance(configuration, dict):
+        raise WorkerError("frozen_scale_plan_incomplete")
+    budget = configuration.get("budget")
+    training = configuration.get("training")
+    runtime = configuration.get("runtime")
+    runtime_lock = configuration.get("runtime_lock")
+    data = plan.get("data")
+    experiment = plan.get("experiment")
+    initializers = plan.get("initializers")
+    evaluation = plan.get("evaluation")
+    if not all(
+        isinstance(value, dict)
+        for value in (budget, training, runtime_lock, data, experiment, initializers, evaluation)
+    ):
+        raise WorkerError("frozen_scale_plan_incomplete")
+    assert isinstance(budget, dict)
+    assert isinstance(training, dict)
+    assert isinstance(data, dict)
+    assert isinstance(runtime_lock, dict)
+    assert isinstance(initializers, dict)
+    assert isinstance(evaluation, dict)
+    assert isinstance(experiment, dict)
+    expected_training = {
+        "sequence_length": 1024,
+        "effective_batch": 16,
+        "microbatch_examples": 1,
+        "checkpoint_every_updates": 64,
+        "seed": 314159,
+        "attention": "sdpa",
+        "gradient_checkpointing": True,
+        "master_weights": "fp32",
+        "compute": "fp16",
+        "optimizer": "AdamW8bit",
+        "objective": "example_mean_response_only_FIM_target_and_EOS",
+        "learning_rate": 1e-5,
+        "warmup_fraction": 0.03,
+        "cosine_floor_fraction": 0.1,
+        "gradient_clip": 1.0,
+        "weight_decay": 0.01,
+        "initial_loss_scale": 128,
+        "max_input_tokens": SCALE_MAX_ARM_TOKENS,
+    }
+    max_campaign = budget.get("maximum_campaign_input_tokens")
+    aggregate_seconds = budget.get("aggregate_session_seconds")
+    account_gpu_hours = budget.get("conservative_account_gpu_hours")
+    quota_multiplier = budget.get("conservative_quota_multiplier")
+    session_limit = budget.get("session_seconds")
+    storage_cap = budget.get("new_artifact_bytes_cap")
+    input_cap = training.get("max_input_tokens")
+    if (
+        any(training.get(key) != value for key, value in expected_training.items())
+        or "epochs" in training
+        or isinstance(max_campaign, bool)
+        or not isinstance(max_campaign, int)
+        or not 1 <= max_campaign <= SCALE_MAX_CAMPAIGN_TOKENS
+        or isinstance(session_limit, bool)
+        or not isinstance(session_limit, int)
+        or not MINIMUM_FINAL_RESERVE_SECONDS < session["session_seconds"] <= session_limit
+        or session_limit > MAX_SESSION_SECONDS
+        or isinstance(aggregate_seconds, bool)
+        or not isinstance(aggregate_seconds, int)
+        or not 1 <= aggregate_seconds <= 21_600
+        or isinstance(account_gpu_hours, bool)
+        or not isinstance(account_gpu_hours, int)
+        or not 1 <= account_gpu_hours <= 12
+        or quota_multiplier != 2
+        or isinstance(storage_cap, bool)
+        or not isinstance(storage_cap, int)
+        or not 1 <= storage_cap <= MAX_ARTIFACT_BYTES
+        or isinstance(input_cap, bool)
+        or not isinstance(input_cap, int)
+        or not 1 <= input_cap <= SCALE_MAX_ARM_TOKENS
+        or budget.get("paid_compute") is not False
+        or budget.get("automatic_renewal_use") is not False
+        or budget.get("minimum_finalization_reserve_seconds", 0)
+        < MINIMUM_FINAL_RESERVE_SECONDS
+        or budget.get("minimum_free_bytes", 0) < MINIMUM_FREE_BYTES
+        or budget.get("runtime_setup_reserve_seconds") != 1_800
+        or runtime != EXPECTED_RUNTIME
+        or evaluation.get("attention_backend")
+        != "torch-efficient-sdpa-explicit-kv-repeat-v1"
+        or not _is_sha256(runtime_lock.get("runtime_lock_sha256"))
+        or not _is_sha256(runtime_lock.get("requirements_lock_sha256"))
+        or runtime_lock.get("bootstrap_uv_version") != "0.12.3"
+        or runtime_lock.get("bootstrap_uv_wheel_sha256") != UV_WHEEL_SHA256
+        or session["external_campaign_tokens"] > max_campaign
+    ):
+        raise WorkerError("frozen_scale_budget_or_training_invalid")
+    variant_records = experiment.get("variants")
+    selected_variant = session["scale_variant"]
+    selected_record = (
+        variant_records.get(selected_variant) if isinstance(variant_records, dict) else None
+    )
+    expected_variant = (
+        {"distinct_states": 4096, "epochs": 2, "example_exposures": 8192}
+        if selected_variant == "repeat"
+        else {"distinct_states": 8192, "epochs": 1, "example_exposures": 8192}
+    )
+    if not isinstance(selected_record, dict) or any(
+        selected_record.get(key) != value for key, value in expected_variant.items()
+    ):
+        raise WorkerError("frozen_scale_variant_counts_invalid")
+    initializer = initializers.get(TRAIN_ARM)
+    if (
+        not isinstance(initializer, dict)
+        or initializer.get("kind", initializer.get("initializer")) != "untouched_pretrained"
+        or initializer.get("model_id") != "Qwen/Qwen2.5-Coder-0.5B"
+        or initializer.get("revision") != "8123ea2e9354afb7ffcc6c8641d1b2f5ecf18301"
+    ):
+        raise WorkerError("frozen_scale_initializer_invalid")
+    if not _is_sha256(data.get("corpus_metadata_sha256")) or data.get(
+        "corpus_metadata_sha256"
+    ) != files["corpus_metadata.json"].get("sha256"):
+        raise WorkerError("frozen_scale_metadata_identity_mismatch")
+    if (
+        data.get("previous_training_sha256")
+        != "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690"
+        or data.get("previous_development_sha256")
+        != "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+    ):
+        raise WorkerError("frozen_scale_previous_data_identity_mismatch")
+    for split, filename, row_count in (
+        ("repeat_train", "repeat_train.jsonl", 4096),
+        ("scaled_train", "scaled_train.jsonl", 8192),
+        ("development_new", "development_new.jsonl", 512),
+        ("development_previous", "development_previous.jsonl", 240),
+    ):
+        record = data.get(split)
+        file_identity = files.get(filename)
+        if (
+            not isinstance(record, dict)
+            or not isinstance(file_identity, dict)
+            or record.get("sha256") != file_identity.get("sha256")
+            or record.get("bytes") != file_identity.get("bytes")
+            or record.get("row_count") != row_count
+            or any(
+                isinstance(record.get(key), bool)
+                or not isinstance(record.get(key), int)
+                or record[key] < 0
+                for key in ("input_tokens", "target_tokens")
+            )
+        ):
+            raise WorkerError("frozen_scale_split_identity_mismatch")
+    fixtures = evaluation.get("fixtures")
+    if not isinstance(fixtures, dict):
+        raise WorkerError("frozen_scale_fixtures_missing")
+    for key, filename in (("causal", "causal200.jsonl"), ("line", "line180.jsonl")):
+        record = fixtures.get(key)
+        if not isinstance(record, dict) or record.get("sha256") != files[filename].get("sha256"):
+            raise WorkerError("frozen_scale_fixture_identity_mismatch")
+
+
 def verify_plan(plan: dict[str, Any], session: dict[str, Any], files: dict[str, Any]) -> None:
+    if plan.get("schema") == SCALE_PLAN_SCHEMA:
+        verify_scale_plan(plan, session, files)
+        return
+    if session.get("scale_variant") is not None:
+        raise WorkerError("scale_session_requires_scale_plan")
     if plan.get("schema") != "q25-fim-training-plan-v1":
         raise WorkerError("frozen_fim_plan_schema_invalid")
     if plan.get("gpu_execution_authorized") is not True:
@@ -995,6 +1195,7 @@ def trainer_command(
     mounted_bytes: int,
     resume: Path | None,
     execute: bool,
+    scale_variant: str | None = None,
 ) -> list[str]:
     command = [
         str(python),
@@ -1025,6 +1226,19 @@ def trainer_command(
     ]
     if resume is not None:
         command.extend(("--resume", str(resume)))
+    if scale_variant is not None:
+        command.extend(
+            (
+                "--scale-variant",
+                scale_variant,
+                "--repeat-train",
+                str(paths["repeat_train.jsonl"]),
+                "--scaled-train",
+                str(paths["scaled_train.jsonl"]),
+                "--historical-development",
+                str(paths["development_previous.jsonl"]),
+            )
+        )
     if execute:
         command.append("--execute")
     return command
@@ -1147,17 +1361,30 @@ class Worker:
         self.started = time.monotonic()
         self.deadline = self.started + self.session["session_seconds"]
         self.status: dict[str, Any] = {
-            "schema": "q25-fim-kaggle-worker-status-v1",
+            "schema": (
+                "q25-completion-scale-kaggle-worker-status-v1"
+                if self.session.get("scale_variant") is not None
+                else "q25-fim-kaggle-worker-status-v1"
+            ),
             "state": "setup",
             "commit": self.session["commit"],
             "attempt": self.session["attempt"],
             "arm": self.session["arm"],
+            **(
+                {"scale_variant": self.session["scale_variant"]}
+                if self.session.get("scale_variant") is not None
+                else {}
+            ),
             "plan_sha256": self.session["plan_sha256"],
             "input_manifest_sha256": self.session["input_manifest_sha256"],
             "training_started": False,
             "stages": [],
         }
-        self.out = OUT
+        self.out = (
+            WORK_ROOT / f"q25_completion_scale_r1-{self.session['scale_variant']}"
+            if self.session.get("scale_variant") is not None
+            else OUT
+        )
         self.python311: Path | None = None
         self.runtime_lock: dict[str, Any] | None = None
         self.runtime_requirements: Path | None = None
@@ -1191,13 +1418,18 @@ class Worker:
         if REPO.exists() and (REPO.is_symlink() or not (REPO / ".git").is_dir()):
             raise WorkerError("repository_checkout_path_not_clean")
         if not REPO.exists():
+            branch = (
+                SCALE_BRANCH
+                if self.session.get("scale_variant") is not None
+                else "research/q25-code-cpt-r2"
+            )
             if (
                 self._setup_stage(
                     [
                         "git",
                         "clone",
                         "--branch",
-                        "research/q25-code-cpt-r2",
+                        branch,
                         "https://github.com/Shlok-Bhakta/tabcomplete.git",
                         str(REPO),
                     ],
@@ -1235,6 +1467,38 @@ class Worker:
             raise WorkerError("repository_commit_check_failed") from None
         if revision != self.session["commit"]:
             raise WorkerError("repository_commit_mismatch")
+        if self.session.get("scale_variant") is not None:
+            source_identity = plan.get("source_identity")
+            source_files = (
+                source_identity.get("files") if isinstance(source_identity, dict) else None
+            )
+            if (
+                not isinstance(source_identity, dict)
+                or source_identity.get("commit") != revision
+                or not isinstance(source_files, dict)
+                or not source_files
+            ):
+                raise WorkerError("scale_repository_source_identity_invalid")
+            for relative, record in source_files.items():
+                path = Path(relative) if isinstance(relative, str) else Path("..")
+                if (
+                    path.is_absolute()
+                    or ".." in path.parts
+                    or not path.parts
+                    or not isinstance(record, dict)
+                    or not _is_sha256(record.get("sha256"))
+                    or isinstance(record.get("bytes"), bool)
+                    or not isinstance(record.get("bytes"), int)
+                ):
+                    raise WorkerError("scale_repository_source_identity_invalid")
+                source_path = REPO / path
+                if (
+                    source_path.is_symlink()
+                    or not source_path.is_file()
+                    or source_path.stat().st_size != record["bytes"]
+                    or sha256_file(source_path) != record["sha256"]
+                ):
+                    raise WorkerError("scale_repository_source_hash_mismatch")
         if self._runtime_artifact_bytes() < _runtime_regular_bytes(REPO):
             raise WorkerError("repository_storage_inventory_invalid")
 
@@ -1817,6 +2081,16 @@ class Worker:
                 INPUT_ROOT, self.session["input_manifest_sha256"]
             )
             paths, plan = verify_input_bundle(input_dir, manifest, self.session)
+            scale_variant = self.session.get("scale_variant")
+            if scale_variant is not None:
+                selected_name = (
+                    "repeat_train.jsonl"
+                    if scale_variant == "repeat"
+                    else "scaled_train.jsonl"
+                )
+                paths["train.jsonl"] = paths[selected_name]
+                paths["development.jsonl"] = paths["development_new.jsonl"]
+                paths["historical_development.jsonl"] = paths["development_previous.jsonl"]
             plan_path = paths["plan.json"]
             arm = self.session["arm"]
             initializer_entry = plan["initializers"][arm]
@@ -1877,6 +2151,15 @@ class Worker:
                     "corpus_metadata.json",
                 )
             ]
+            if scale_variant is not None:
+                trainer_files.extend(
+                    paths[name]
+                    for name in (
+                        "repeat_train.jsonl",
+                        "scaled_train.jsonl",
+                        "development_previous.jsonl",
+                    )
+                )
             mounted_extra = mounted_artifact_bytes(
                 INPUT_ROOT,
                 initializer=model,
@@ -1919,6 +2202,7 @@ class Worker:
                 mounted_bytes=mounted_extra,
                 resume=resume_checkpoint,
                 execute=False,
+                scale_variant=scale_variant,
             )
             if (
                 self.run_stage(preflight_command, "trainer-preflight", env=env, reserve_seconds=60)
@@ -1987,21 +2271,31 @@ class Worker:
             self.save_status()
 
             alias = "untouched-q25" if arm == TRAIN_ARM else "completed-cpt-q25"
+            if scale_variant is not None:
+                alias = f"{alias}-completion-scale-{scale_variant}"
             before_started = time.monotonic()
             if inherited_baseline is None:
                 self.status["state"] = "baseline_evaluation"
                 self.save_status()
-                for mode, filename in (
+                baseline_modes = [
                     ("development", "development.jsonl"),
                     ("line", "line180.jsonl"),
-                ):
+                ]
+                if scale_variant is not None:
+                    baseline_modes.append(("development", "development_previous.jsonl"))
+                for mode, filename in baseline_modes:
+                    stage = (
+                        "before/historical-development"
+                        if filename == "development_previous.jsonl"
+                        else f"before/{mode}"
+                    )
                     self._run_evaluation(
                         model=model,
                         input_path=paths[filename],
                         plan_path=plan_path,
                         alias=f"{alias}-before-fim",
                         mode=mode,
-                        stage=f"before/{mode}",
+                        stage=stage,
                         env=env,
                         reserve_seconds=MINIMUM_FINAL_RESERVE_SECONDS,
                     )
@@ -2057,6 +2351,7 @@ class Worker:
                 mounted_bytes=trainer_mounted_bytes,
                 resume=resume_checkpoint,
                 execute=True,
+                scale_variant=scale_variant,
             )
             self.status["state"] = "training"
             self.status["training_started"] = True
@@ -2098,17 +2393,25 @@ class Worker:
             self.status["state"] = "candidate_evaluation"
             self.save_status()
             after_started = time.monotonic()
-            for mode, filename in (
+            after_modes = [
                 ("development", "development.jsonl"),
                 ("line", "line180.jsonl"),
-            ):
+            ]
+            if scale_variant is not None:
+                after_modes.append(("development", "development_previous.jsonl"))
+            for mode, filename in after_modes:
+                stage = (
+                    "after/historical-development"
+                    if filename == "development_previous.jsonl"
+                    else f"after/{mode}"
+                )
                 self._run_evaluation(
                     model=export,
                     input_path=paths[filename],
                     plan_path=plan_path,
                     alias=f"{alias}-after-fim",
                     mode=mode,
-                    stage=f"after/{mode}",
+                    stage=stage,
                     env=env,
                     reserve_seconds=30,
                 )

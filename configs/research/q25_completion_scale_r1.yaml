@@ -1,6 +1,7 @@
 schema: q25-completion-scale-config-v1
 branch: research/q25-completion-scale-r1
 artifact_root: /mnt/ssd/tabcomplete-q25-completion-scale-r1
+corpus_dir: /mnt/ssd/tabcomplete-q25-completion-scale-r1/corpus-r3
 report_root: reports/research/q25_completion_scale_r1
 preparation_plan: reports/research/q25_completion_scale_r1/preparation_plan-r2.json
 preparation_plan_sha256: be920b0e4e598ae35ad5e5cca85f1a2bc220d0446e2a8f8ba170689230befa2d

@@ -1,7 +1,9 @@
 # Q25 completion training: repetition versus new states
 
-Status: CPU preparation and implementation in progress. No GPU session has been
-allocated for this experiment yet. The desktop's served model is unchanged.
+Status: CPU data preparation is verified; trainer and controller integration are
+under test. No GPU session has been allocated for this experiment yet. The
+desktop's served model is unchanged. The newly reachable ThinkPad is being
+inspected for a separate declarative update to that existing tested model.
 
 ## Why run this experiment
 
@@ -80,3 +82,27 @@ Training candidates have separate paths, plans and process identities. Any
 candidate improvement must survive fixed quality and regression checks before
 an export is considered for deployment. A good result here establishes source
 completion performance on these fixtures, not production next-edit accuracy.
+
+## Verified preparation
+
+The final private corpus is `corpus-r3`. It contains the exact original 4,096
+training rows, 4,096 distinct additional states, 512 new development states and
+the original 240 development rows. All language quotas were met without
+oversampling. The two training arms expose 3,553,816 and 3,551,513 nonpadding
+input tokens respectively, a difference of 2,303 tokens. Their supervised
+response/EOS totals are 68,810 and 68,720. Equal exposure still does not prove
+identical FLOPs. New development groups share no repository aliases with
+either training arm.
+
+`--verify-existing` passed against the final producer and frozen plan hashes.
+Preparation and paired-analysis tests passed 15 tests, with Ruff and preparation
+mypy passing. Earlier private corpus revisions are preserved; data file hashes
+match the final revision. No candidate outputs were used to choose states.
+
+An additional audit found 4,089 unique encoded prompt/target states among the
+4,096 preserved source states, and 8,175 among the 8,192 scaled source states.
+The new development slice has 510 unique encoded states among 512 source states.
+These are real distinct file/region states that occasionally become identical
+after bounded context construction. They are not claimed as unique model inputs.
+There is zero exact encoded-state overlap between training and either development
+slice. The frozen fixtures remain unchanged; paired analysis retains every case.

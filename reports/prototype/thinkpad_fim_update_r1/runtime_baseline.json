@@ -1,0 +1,455 @@
+{
+  "schema": "thinkpad-bounded-changing-state-replay-v1",
+  "phase": "baseline",
+  "identity": {
+    "active_slots": 1,
+    "alias": "q25",
+    "backend": "llama.cpp CPU via Rust",
+    "batch_size": 256,
+    "cache_type": "f16",
+    "context_layout": "cursor-last-v1",
+    "context_size": 2304,
+    "input_tokens": 1024,
+    "llama_cpp_2": "0.1.157",
+    "llama_cpp_sys_2": "0.1.158",
+    "load_ms": 291.593392,
+    "microbatch_size": 64,
+    "model_embedded": true,
+    "model_protocol": "single-line-edit-v1",
+    "model_selection": "declarative",
+    "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+    "model_storage": "executable-mmap",
+    "model_switch_supported": false,
+    "output_tokens": 64,
+    "prompt_threads": 4,
+    "runtime_config_hash": "ea99e08ae73197743f29cc6ebb4b623da58ac621ad4a7806744f53836d0bdc8e",
+    "saved_contexts": 0,
+    "status": "ok",
+    "syntax_validation": false,
+    "threads": 4
+  },
+  "pid": 400748,
+  "condition": "normal user workload; existing editors and applications retained",
+  "samples": [
+    {
+      "phase": "baseline",
+      "repetition": 0,
+      "transition": 0,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 392,
+      "context_ms": 8.326760005729739,
+      "client_completed_ms": 2672.0994410061394,
+      "first_chunk_ms": 2254.693820999819,
+      "first_token_ms": 2254.719747994386,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 0,
+          "predicted_ms": 409.12417,
+          "predicted_n": 16,
+          "prompt_ms": 2251.4298479999998,
+          "prompt_n": 392,
+          "total_ms": 2662.557311
+        },
+        "tokens_predicted": 16
+      },
+      "action_sha256": "13cf39c38c9476e77642ff639342e16891b45cca6ba438f9ee9f68b4d6726bee",
+      "output_bytes": 40,
+      "peak_process_bytes": {
+        "Rss": 581095424,
+        "Pss": 576936960,
+        "Pss_Anon": 86552576,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581095424,
+        "Pss": 576936960,
+        "Pss_Anon": 86552576,
+        "Pss_File": 490384384,
+        "Anonymous": 86552576,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 0,
+      "transition": 1,
+      "synthetic": true,
+      "source_sha256": "d1a0e76cf0832b1fd85a28c9ca711fd57b3cebc5feed8c8cc6d6ed00412de063",
+      "prompt_tokens": 393,
+      "context_ms": 8.110677001241129,
+      "client_completed_ms": 609.0496240067296,
+      "first_chunk_ms": 283.76864900201326,
+      "first_token_ms": 283.79462900193175,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 352,
+          "predicted_ms": 317.455103,
+          "predicted_n": 12,
+          "prompt_ms": 281.814503,
+          "prompt_n": 41,
+          "total_ms": 600.1461300000001
+        },
+        "tokens_predicted": 12
+      },
+      "action_sha256": "24dc83bd4345055cfe3efc62ac885ceda072950d8dfbb85fbb70f1cc111051ba",
+      "output_bytes": 33,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 0,
+      "transition": 2,
+      "synthetic": true,
+      "source_sha256": "4fa6a694161e4788fba04ae3f2ac4e4762b349bfc0bded962543a8dcc0923d3f",
+      "prompt_tokens": 392,
+      "context_ms": 8.086571004241705,
+      "client_completed_ms": 700.9023999999044,
+      "first_chunk_ms": 276.8909820006229,
+      "first_token_ms": 276.91728900390444,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 351,
+          "predicted_ms": 409.276796,
+          "predicted_n": 16,
+          "prompt_ms": 275.405217,
+          "prompt_n": 41,
+          "total_ms": 685.100327
+        },
+        "tokens_predicted": 16
+      },
+      "action_sha256": "13cf39c38c9476e77642ff639342e16891b45cca6ba438f9ee9f68b4d6726bee",
+      "output_bytes": 40,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 0,
+      "transition": 3,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 392,
+      "context_ms": 8.013676997506991,
+      "client_completed_ms": 700.2874059980968,
+      "first_chunk_ms": 284.47880600288045,
+      "first_token_ms": 284.50526900269324,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 351,
+          "predicted_ms": 408.004887,
+          "predicted_n": 16,
+          "prompt_ms": 283.023398,
+          "prompt_n": 41,
+          "total_ms": 691.528869
+        },
+        "tokens_predicted": 16
+      },
+      "action_sha256": "a735f66d0e8eea70de7cdf5c7d3c25b54f99492fdd8418b454c89699b68414ee",
+      "output_bytes": 40,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 1,
+      "transition": 0,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 392,
+      "context_ms": 9.483123001700733,
+      "client_completed_ms": 434.9164099985501,
+      "first_chunk_ms": 25.808587000938132,
+      "first_token_ms": 25.858756998786703,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 391,
+          "predicted_ms": 399.737722,
+          "predicted_n": 16,
+          "prompt_ms": 24.19595,
+          "prompt_n": 1,
+          "total_ms": 424.416297
+        },
+        "tokens_predicted": 16
+      },
+      "action_sha256": "13cf39c38c9476e77642ff639342e16891b45cca6ba438f9ee9f68b4d6726bee",
+      "output_bytes": 40,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 1,
+      "transition": 1,
+      "synthetic": true,
+      "source_sha256": "d1a0e76cf0832b1fd85a28c9ca711fd57b3cebc5feed8c8cc6d6ed00412de063",
+      "prompt_tokens": 393,
+      "context_ms": 8.166109000740107,
+      "client_completed_ms": 592.6474009975209,
+      "first_chunk_ms": 286.8054319988005,
+      "first_token_ms": 286.8314389997977,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 352,
+          "predicted_ms": 297.85445100000004,
+          "predicted_n": 12,
+          "prompt_ms": 285.23577900000004,
+          "prompt_n": 41,
+          "total_ms": 583.595925
+        },
+        "tokens_predicted": 12
+      },
+      "action_sha256": "24dc83bd4345055cfe3efc62ac885ceda072950d8dfbb85fbb70f1cc111051ba",
+      "output_bytes": 33,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 1,
+      "transition": 2,
+      "synthetic": true,
+      "source_sha256": "4fa6a694161e4788fba04ae3f2ac4e4762b349bfc0bded962543a8dcc0923d3f",
+      "prompt_tokens": 392,
+      "context_ms": 8.919210005842615,
+      "client_completed_ms": 703.5796760028461,
+      "first_chunk_ms": 280.3442369986442,
+      "first_token_ms": 280.37004000361776,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 351,
+          "predicted_ms": 412.36891399999996,
+          "predicted_n": 16,
+          "prompt_ms": 278.593087,
+          "prompt_n": 41,
+          "total_ms": 691.623807
+        },
+        "tokens_predicted": 16
+      },
+      "action_sha256": "13cf39c38c9476e77642ff639342e16891b45cca6ba438f9ee9f68b4d6726bee",
+      "output_bytes": 40,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    },
+    {
+      "phase": "baseline",
+      "repetition": 1,
+      "transition": 3,
+      "synthetic": true,
+      "source_sha256": "b9a42bca5feeabb766e3632fac3f79ded63e0f92e3049e5d220948ddcbd30ea1",
+      "prompt_tokens": 392,
+      "context_ms": 8.118013000057545,
+      "client_completed_ms": 702.2926329955226,
+      "first_chunk_ms": 282.8277029984747,
+      "first_token_ms": 282.8548719990067,
+      "terminal": {
+        "action_validation": {
+          "policy": "rust-syntax-v1",
+          "status": "disabled"
+        },
+        "context_layout": "cursor-last-v1",
+        "model_protocol": "single-line-edit-v1",
+        "model_sha256": "4b83699a7d64b2163315138f4b590113e5d579296642d88853897612754f9acb",
+        "stop": true,
+        "stop_type": "eos",
+        "timings": {
+          "cache_n": 351,
+          "predicted_ms": 406.27978399999995,
+          "predicted_n": 16,
+          "prompt_ms": 280.91013,
+          "prompt_n": 41,
+          "total_ms": 687.963831
+        },
+        "tokens_predicted": 16
+      },
+      "action_sha256": "a735f66d0e8eea70de7cdf5c7d3c25b54f99492fdd8418b454c89699b68414ee",
+      "output_bytes": 40,
+      "peak_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Swap": 0
+      },
+      "retained_process_bytes": {
+        "Rss": 581107712,
+        "Pss": 576949248,
+        "Pss_Anon": 86564864,
+        "Pss_File": 490384384,
+        "Anonymous": 86564864,
+        "Swap": 0,
+        "SwapPss": 0
+      }
+    }
+  ],
+  "start_counters": {
+    "pswpin": 0,
+    "pswpout": 0,
+    "pgmajfault": 4017
+  },
+  "end_counters": {
+    "pswpin": 0,
+    "pswpout": 0,
+    "pgmajfault": 4017
+  },
+  "start_pressure": {
+    "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=6572\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=6385",
+    "io": "some avg10=1.86 avg60=2.24 avg300=1.86 total=1433444176\nfull avg10=1.85 avg60=2.21 avg300=1.82 total=1406432325",
+    "cpu": "some avg10=0.00 avg60=0.00 avg300=0.03 total=229964011\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0"
+  },
+  "end_pressure": {
+    "memory": "some avg10=0.00 avg60=0.00 avg300=0.00 total=6572\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=6385",
+    "io": "some avg10=1.33 avg60=2.11 avg300=1.85 total=1433506692\nfull avg10=1.33 avg60=2.08 avg300=1.81 total=1406490823",
+    "cpu": "some avg10=0.00 avg60=0.00 avg300=0.02 total=229994039\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0"
+  }
+}

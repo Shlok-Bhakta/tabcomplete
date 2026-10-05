@@ -49,6 +49,23 @@ MAX_TRAIN_EXAMPLES = 4096
 MAX_DEVELOPMENT_EXAMPLES = 512
 MAX_TARGET_TOKENS = 96
 MAX_CAMPAIGN_INPUT_TOKENS = 32_000_000
+SCALE_PLAN_SCHEMA = "q25-completion-scale-training-plan-v1"
+SCALE_CORPUS_SCHEMA = "q25-completion-scale-corpus-v1"
+SCALE_REPEAT_VARIANT = "repeat"
+SCALE_SCALED_VARIANT = "scaled"
+SCALE_VARIANTS = (SCALE_REPEAT_VARIANT, SCALE_SCALED_VARIANT)
+SCALE_STAGE_EXAMPLES = 4096
+SCALE_TOTAL_EXPOSURES = 8192
+SCALE_DEVELOPMENT_ID_OFFSET = 8192
+SCALE_PREVIOUS_DEVELOPMENT_ID_OFFSET = 4096
+SCALE_MAX_ARM_INPUT_TOKENS = 8_000_000
+SCALE_MAX_CAMPAIGN_INPUT_TOKENS = 10_000_000
+SCALE_PREVIOUS_TRAIN_SHA256 = (
+    "341f2d54da2d3c64299c18a918049ded75235ed375137012df71a9ce737fd690"
+)
+SCALE_PREVIOUS_DEVELOPMENT_SHA256 = (
+    "43c56d113a819256c7e175ef1f863b9f622a8119f4d3d01b24d455a010fed4ac"
+)
 CPT_EXPECTED_COMPLETE_UPDATES = 481
 CPT_EXPECTED_TRAINING_INPUT_TOKENS = 7_872_512
 Q25_CONFIG_SEMANTICS: dict[str, Any] = {
@@ -170,6 +187,60 @@ def validate_training_configuration(value: dict[str, Any]) -> dict[str, Any]:
     return value
 
 
+def validate_scale_training_configuration(value: dict[str, Any]) -> dict[str, Any]:
+    """Validate the versioned 512-update comparison without loosening FIM v1."""
+    expected: dict[str, Any] = {
+        "sequence_length": MAX_SEQUENCE_LENGTH,
+        "effective_batch": 16,
+        "microbatch_examples": 1,
+        "checkpoint_every_updates": 64,
+        "seed": 314159,
+        "attention": "sdpa",
+        "gradient_checkpointing": True,
+        "master_weights": "fp32",
+        "compute": "fp16",
+        "optimizer": "AdamW8bit",
+        "objective": "example_mean_response_only_FIM_target_and_EOS",
+        "learning_rate": 1e-5,
+        "warmup_fraction": 0.03,
+        "cosine_floor_fraction": 0.1,
+        "gradient_clip": 1.0,
+        "weight_decay": 0.01,
+        "initial_loss_scale": 128,
+    }
+    for key, expected_value in expected.items():
+        if value.get(key) != expected_value:
+            raise ValueError(f"scale training setting differs from the frozen plan: {key}")
+    max_input_tokens = value.get("max_input_tokens")
+    if (
+        not isinstance(max_input_tokens, int)
+        or isinstance(max_input_tokens, bool)
+        or not 1 <= max_input_tokens <= SCALE_MAX_ARM_INPUT_TOKENS
+    ):
+        raise ValueError("scale per-arm input-token budget is invalid")
+    if "epochs" in value:
+        raise ValueError("scale profile derives its passes from the frozen variant")
+    return value
+
+
+def validate_scale_variant_plan(plan: dict[str, Any], variant: str) -> dict[str, int]:
+    if variant not in SCALE_VARIANTS or plan.get("scale_variant") != variant:
+        raise ValueError("scale plan is bound to another training variant")
+    experiment = plan.get("experiment")
+    variants = experiment.get("variants") if isinstance(experiment, dict) else None
+    record = variants.get(variant) if isinstance(variants, dict) else None
+    if not isinstance(record, dict):
+        raise ValueError("scale plan is missing the selected variant record")
+    expected = (
+        {"distinct_states": 4096, "epochs": 2, "example_exposures": 8192}
+        if variant == SCALE_REPEAT_VARIANT
+        else {"distinct_states": 8192, "epochs": 1, "example_exposures": 8192}
+    )
+    if any(record.get(key) != value for key, value in expected.items()):
+        raise ValueError("scale plan variant counts differ from the frozen comparison")
+    return expected
+
+
 def _split_manifest_record(metadata: dict[str, Any], split: str) -> dict[str, Any]:
     splits = metadata.get("splits")
     if not isinstance(splits, dict) or not isinstance(splits.get(split), dict):
@@ -177,19 +248,44 @@ def _split_manifest_record(metadata: dict[str, Any], split: str) -> dict[str, An
     return splits[split]
 
 
-def _row_source_keys(row: dict[str, Any]) -> set[str]:
+def _row_source_keys(row: dict[str, Any], *, require_group_hash: bool = False) -> set[str]:
     content_hash = row.get("source_content_sha256")
     repository_hash = row.get("repository_identity_sha256")
     aliases = row.get("repository_alias_sha256")
+    group_hash = row.get("repository_group_sha256")
     if not _is_sha256(content_hash) or not _is_sha256(repository_hash):
         raise ValueError("FIM row has invalid source-group hashes")
     if not isinstance(aliases, list) or any(not _is_sha256(alias) for alias in aliases):
         raise ValueError("FIM row has invalid repository alias hashes")
+    if require_group_hash and not _is_sha256(group_hash):
+        raise ValueError("completion-scale row has no transitive repository-group hash")
+    if group_hash is not None and not _is_sha256(group_hash):
+        raise ValueError("FIM row has an invalid transitive repository-group hash")
     return {
         f"content:{content_hash}",
         f"repository:{repository_hash}",
+        *({f"repository:{group_hash}"} if group_hash is not None else set()),
         *(f"repository:{x}" for x in aliases),
     }
+
+
+def _validate_distinct_scale_states(path: Path) -> None:
+    seen: set[tuple[Any, ...]] = set()
+    with path.open("r", encoding="utf-8") as stream:
+        for index, line in enumerate(stream):
+            row = json.loads(line)
+            if index >= SCALE_STAGE_EXAMPLES:
+                _row_source_keys(row, require_group_hash=True)
+            key = (
+                row.get("source_content_sha256"),
+                row.get("mode"),
+                row.get("region_start"),
+                row.get("region_end"),
+                row.get("target_sha256"),
+            )
+            if index >= SCALE_STAGE_EXAMPLES and key in seen:
+                raise ValueError("scaled new-state rows contain a duplicate completion state")
+            seen.add(key)
 
 
 def load_fim_examples(
@@ -200,6 +296,8 @@ def load_fim_examples(
     fim_marker_ids: dict[str, int],
     max_total_tokens: int = MAX_SEQUENCE_LENGTH,
     vocab_size: int = VOCAB_SIZE,
+    id_offset: int | None = None,
+    max_examples: int | None = None,
 ) -> tuple[EncodedExample, ...]:
     """Load prepared prompt+target+EOS IDs and derive prompt-masked labels."""
     if split not in ("train", "development"):
@@ -232,7 +330,14 @@ def load_fim_examples(
             if not isinstance(row, dict):
                 raise ValueError("FIM encoded-example row must be an object")
             identifier = row.get("id")
-            expected_identifier = (0 if split == "train" else MAX_TRAIN_EXAMPLES) + len(examples)
+            expected_offset = (
+                id_offset
+                if id_offset is not None
+                else 0
+                if split == "train"
+                else MAX_TRAIN_EXAMPLES
+            )
+            expected_identifier = expected_offset + len(examples)
             if (
                 not isinstance(identifier, int)
                 or isinstance(identifier, bool)
@@ -324,7 +429,9 @@ def load_fim_examples(
             )
     if not examples:
         raise ValueError(f"FIM {split} split is empty")
-    limit = MAX_TRAIN_EXAMPLES if split == "train" else MAX_DEVELOPMENT_EXAMPLES
+    limit = max_examples if max_examples is not None else (
+        MAX_TRAIN_EXAMPLES if split == "train" else MAX_DEVELOPMENT_EXAMPLES
+    )
     if len(examples) > limit:
         raise ValueError(f"FIM {split} split exceeds its frozen example cap")
     return tuple(examples)
@@ -470,6 +577,269 @@ def load_fim_corpus(
     return rows_by_split["train"], rows_by_split["development"], result_identity
 
 
+def load_scale_corpus(
+    *,
+    repeat_train_path: Path,
+    scaled_train_path: Path,
+    development_path: Path,
+    historical_development_path: Path,
+    metadata_path: Path,
+    plan: dict[str, Any],
+    variant: str,
+) -> tuple[
+    tuple[EncodedExample, ...],
+    tuple[EncodedExample, ...],
+    tuple[EncodedExample, ...],
+    tuple[EncodedExample, ...],
+    dict[str, Any],
+]:
+    """Load and bind the two scale variants plus common and historical dev sets."""
+    if plan.get("schema") != SCALE_PLAN_SCHEMA or plan.get("scale_variant") != variant:
+        raise ValueError("scale plan schema or selected variant differs")
+    if variant not in SCALE_VARIANTS:
+        raise ValueError("unknown completion-scale variant")
+    metadata = _read_json(metadata_path)
+    if metadata.get("schema") != SCALE_CORPUS_SCHEMA:
+        raise ValueError("completion-scale corpus schema is unknown")
+    if (
+        metadata.get("raw_source_content_emitted") is not False
+        or metadata.get("sealed_test_accessed") is not False
+        or metadata.get("preparation_plan_sha256") != plan.get("preparation_plan_sha256")
+        or metadata.get("parent_cpt_plan_sha256") != plan.get("parent_cpt_plan_sha256")
+        or metadata.get("tokenizer_id") != MODEL_ID
+        or metadata.get("tokenizer_revision") != MODEL_REVISION
+        or metadata.get("tokenizer_sha256") != TOKENIZER_SHA256
+    ):
+        raise ValueError("completion-scale corpus provenance differs from the frozen plan")
+    data = plan.get("data")
+    if not isinstance(data, dict):
+        raise ValueError("completion-scale plan has no data identity")
+    metadata_sha = data.get("corpus_metadata_sha256")
+    if not _is_sha256(metadata_sha) or sha256_file(metadata_path) != metadata_sha:
+        raise ValueError("completion-scale metadata hash differs from the frozen plan")
+
+    paths = {
+        "repeat_train": repeat_train_path,
+        "scaled_train": scaled_train_path,
+        "development_new": development_path,
+        "development_previous": historical_development_path,
+    }
+    metadata_splits = metadata.get("splits")
+    metadata_files = metadata.get("files")
+    expected_split_names = {
+        "repeat_train",
+        "scaled_train",
+        "development_new",
+        "development_previous",
+    }
+    expected_file_names = {f"{name}.jsonl" for name in expected_split_names}
+    if (
+        not isinstance(metadata_splits, dict)
+        or not isinstance(metadata_files, dict)
+        or set(metadata_splits) != expected_split_names
+        or set(metadata_files) != expected_file_names
+    ):
+        raise ValueError("completion-scale corpus file ledger is missing")
+    identities: dict[str, dict[str, Any]] = {}
+    for split, path in paths.items():
+        expected_filename = f"{split}.jsonl"
+        plan_record = data.get(split)
+        split_record = metadata_splits.get(split)
+        if not isinstance(plan_record, dict) or not isinstance(split_record, dict):
+            raise ValueError(f"completion-scale plan is missing {split} identity")
+        file_record = metadata_files.get(expected_filename)
+        if not isinstance(file_record, dict):
+            raise ValueError(f"completion-scale file ledger is missing {expected_filename}")
+        expected_sha = plan_record.get("sha256")
+        expected_bytes = plan_record.get("bytes")
+        if (
+            path.name != expected_filename
+            or not _is_sha256(expected_sha)
+            or isinstance(expected_bytes, bool)
+            or not isinstance(expected_bytes, int)
+            or split_record.get("file") != expected_filename
+            or split_record.get("sha256") != expected_sha
+            or split_record.get("bytes") != expected_bytes
+            or file_record.get("sha256") != expected_sha
+            or file_record.get("bytes") != expected_bytes
+            or path.stat().st_size != expected_bytes
+            or sha256_file(path) != expected_sha
+        ):
+            raise ValueError(f"completion-scale {split} file differs from its frozen identity")
+        identities[split] = {
+            "file": expected_filename,
+            "sha256": expected_sha,
+            "bytes": expected_bytes,
+            "row_count": plan_record.get("row_count"),
+            "input_tokens": plan_record.get("input_tokens"),
+            "target_tokens": plan_record.get("target_tokens"),
+        }
+        for key in ("row_count", "input_tokens", "target_tokens"):
+            if split_record.get(key) != plan_record.get(key):
+                raise ValueError(f"completion-scale {split} totals differ from its corpus metadata")
+
+    prior_train_sha = data.get("previous_training_sha256")
+    prior_development_sha = data.get("previous_development_sha256")
+    if (
+        prior_train_sha != SCALE_PREVIOUS_TRAIN_SHA256
+        or sha256_file(repeat_train_path) != prior_train_sha
+        or prior_development_sha != SCALE_PREVIOUS_DEVELOPMENT_SHA256
+        or sha256_file(historical_development_path) != prior_development_sha
+    ):
+        raise ValueError("completion-scale previous data identity changed")
+
+    try:
+        original_rows = repeat_train_path.read_bytes().splitlines(keepends=True)
+        scaled_rows = scaled_train_path.read_bytes().splitlines(keepends=True)
+    except OSError:
+        raise FileNotFoundError("completion-scale training input is missing") from None
+    if (
+        len(original_rows) != SCALE_STAGE_EXAMPLES
+        or len(scaled_rows) != SCALE_TOTAL_EXPOSURES
+        or scaled_rows[:SCALE_STAGE_EXAMPLES] != original_rows
+    ):
+        raise ValueError("scaled training must preserve the exact original first-stage rows")
+
+    eos_token_id = metadata.get("eos_token_id")
+    marker_ids = metadata.get("fim_marker_ids")
+    if not isinstance(eos_token_id, int) or isinstance(eos_token_id, bool):
+        raise ValueError("completion-scale corpus has no EOS ID")
+    if not isinstance(marker_ids, dict):
+        raise ValueError("completion-scale corpus has no FIM marker IDs")
+    repeat_examples = load_fim_examples(
+        repeat_train_path,
+        split="train",
+        eos_token_id=eos_token_id,
+        fim_marker_ids=marker_ids,
+        id_offset=0,
+        max_examples=SCALE_STAGE_EXAMPLES,
+    )
+    scaled_examples = load_fim_examples(
+        scaled_train_path,
+        split="train",
+        eos_token_id=eos_token_id,
+        fim_marker_ids=marker_ids,
+        id_offset=0,
+        max_examples=SCALE_TOTAL_EXPOSURES,
+    )
+    development_examples = load_fim_examples(
+        development_path,
+        split="development",
+        eos_token_id=eos_token_id,
+        fim_marker_ids=marker_ids,
+        id_offset=SCALE_DEVELOPMENT_ID_OFFSET,
+        max_examples=MAX_DEVELOPMENT_EXAMPLES,
+    )
+    historical_examples = load_fim_examples(
+        historical_development_path,
+        split="development",
+        eos_token_id=eos_token_id,
+        fim_marker_ids=marker_ids,
+        id_offset=SCALE_PREVIOUS_DEVELOPMENT_ID_OFFSET,
+        max_examples=MAX_DEVELOPMENT_EXAMPLES,
+    )
+
+    for split, examples in (
+        ("repeat_train", repeat_examples),
+        ("scaled_train", scaled_examples),
+        ("development_new", development_examples),
+        ("development_previous", historical_examples),
+    ):
+        record = data[split]
+        actual_input = sum(example.total_tokens for example in examples)
+        actual_targets = sum(example.response_tokens for example in examples)
+        if (
+            record.get("row_count") != len(examples)
+            or record.get("input_tokens") != actual_input
+            or record.get("target_tokens") != actual_targets
+        ):
+            raise ValueError(f"completion-scale {split} token totals differ from the frozen plan")
+
+    if (
+        len(repeat_examples) != SCALE_STAGE_EXAMPLES
+        or len(scaled_examples) != SCALE_TOTAL_EXPOSURES
+        or len(development_examples) != 512
+        or len(historical_examples) != 240
+    ):
+        raise ValueError("completion-scale training row counts differ from the frozen plan")
+    dev_groups: set[str] = set()
+    all_train_groups: set[str] = set()
+    for path, target in (
+        (repeat_train_path, all_train_groups),
+        (historical_development_path, dev_groups),
+    ):
+        with path.open("r", encoding="utf-8") as stream:
+            for line in stream:
+                target.update(_row_source_keys(json.loads(line)))
+    with scaled_train_path.open("r", encoding="utf-8") as stream:
+        for index, line in enumerate(stream):
+            row = json.loads(line)
+            all_train_groups.update(
+                _row_source_keys(row, require_group_hash=index >= SCALE_STAGE_EXAMPLES)
+            )
+    with development_path.open("r", encoding="utf-8") as stream:
+        for line in stream:
+            dev_groups.update(_row_source_keys(json.loads(line), require_group_hash=True))
+    if all_train_groups & dev_groups:
+        raise ValueError("completion-scale train and development source groups overlap")
+    _validate_distinct_scale_states(scaled_train_path)
+
+    selected_name = "repeat_train" if variant == SCALE_REPEAT_VARIANT else "scaled_train"
+    train_examples = repeat_examples if variant == SCALE_REPEAT_VARIANT else scaled_examples
+    tokenizer_examples = scaled_examples + development_examples + historical_examples
+
+    split_identity = {
+        "repeat_train": {
+            "sha256": identities["repeat_train"]["sha256"],
+            "rows": len(repeat_examples),
+            "input_tokens": sum(item.total_tokens for item in repeat_examples),
+            "target_tokens": sum(item.response_tokens for item in repeat_examples),
+        },
+        "scaled_train": {
+            "sha256": identities["scaled_train"]["sha256"],
+            "rows": len(scaled_examples),
+            "input_tokens": sum(item.total_tokens for item in scaled_examples),
+            "target_tokens": sum(item.response_tokens for item in scaled_examples),
+        },
+        "selected_train": {
+            "name": selected_name,
+            "sha256": identities[selected_name]["sha256"],
+            "rows": len(train_examples),
+            "input_tokens": sum(item.total_tokens for item in train_examples),
+            "target_tokens": sum(item.response_tokens for item in train_examples),
+        },
+        "development_new": {
+            "sha256": identities["development_new"]["sha256"],
+            "rows": len(development_examples),
+            "input_tokens": sum(item.total_tokens for item in development_examples),
+            "target_tokens": sum(item.response_tokens for item in development_examples),
+        },
+        "development_previous": {
+            "sha256": identities["development_previous"]["sha256"],
+            "rows": len(historical_examples),
+            "input_tokens": sum(item.total_tokens for item in historical_examples),
+            "target_tokens": sum(item.response_tokens for item in historical_examples),
+        },
+    }
+    return (
+        train_examples,
+        development_examples,
+        historical_examples,
+        tokenizer_examples,
+        {
+            "metadata_sha256": metadata_sha,
+            "preparation_plan_sha256": plan.get("preparation_plan_sha256"),
+            "tokenizer_revision": metadata.get("tokenizer_revision"),
+            "tokenizer_sha256": metadata.get("tokenizer_sha256"),
+            "eos_token_id": eos_token_id,
+            "fim_marker_ids": marker_ids,
+            "variant": variant,
+            "files": identities,
+            "splits": split_identity,
+        },
+    )
+
+
 def validate_fim_tokenizer(
     tokenizer: Any,
     metadata: dict[str, Any],
@@ -520,6 +890,42 @@ def training_batches(
     examples: tuple[EncodedExample, ...], *, effective_batch: int, seed: int
 ) -> tuple[tuple[int, ...], ...]:
     return q25.training_batches(examples, effective_batch=effective_batch, seed=seed)
+
+
+def scale_training_batches(
+    examples: tuple[EncodedExample, ...], *, variant: str, effective_batch: int, seed: int
+) -> tuple[tuple[int, ...], ...]:
+    """Use the exact old first-stage order, then replay or add a second stage."""
+    if variant not in SCALE_VARIANTS:
+        raise ValueError("unknown completion-scale training variant")
+    expected_rows = (
+        SCALE_STAGE_EXAMPLES
+        if variant == SCALE_REPEAT_VARIANT
+        else SCALE_TOTAL_EXPOSURES
+    )
+    if len(examples) != expected_rows:
+        raise ValueError("completion-scale training rows differ from the frozen variant")
+    if effective_batch != 16 or seed != 314159:
+        raise ValueError("completion-scale batch schedule differs from the frozen plan")
+    first_stage = examples[:SCALE_STAGE_EXAMPLES]
+    first_batches = training_batches(first_stage, effective_batch=effective_batch, seed=seed)
+    second_stage = (
+        first_stage
+        if variant == SCALE_REPEAT_VARIANT
+        else examples[SCALE_STAGE_EXAMPLES:SCALE_TOTAL_EXPOSURES]
+    )
+    second_batches = training_batches(
+        second_stage,
+        effective_batch=effective_batch,
+        seed=seed + 1,
+    )
+    offset = SCALE_STAGE_EXAMPLES if variant == SCALE_SCALED_VARIANT else 0
+    result = first_batches + tuple(
+        tuple(index + offset for index in batch) for batch in second_batches
+    )
+    if len(result) != 512 or any(len(batch) != effective_batch for batch in result):
+        raise ValueError("completion-scale schedule must contain 512 full updates")
+    return result
 
 
 def _initializer_kind(arm: str, entry: dict[str, Any]) -> str:
@@ -746,6 +1152,65 @@ def save_fim_training_cursor(
     return checkpoint
 
 
+def _record_scale_checkpoint(
+    output: Path, checkpoint: Path, *, fingerprint: str, cursor: TrainingCursor
+) -> None:
+    """Append only a committed pointer/marker identity; never hash model tensors."""
+    pointer_path = output / "latest.json"
+    marker_path = checkpoint.with_suffix(checkpoint.suffix + ".complete.json")
+    pointer = _read_json(pointer_path)
+    marker = _read_json(marker_path)
+    if (
+        pointer.get("fingerprint") != fingerprint
+        or pointer.get("path") != checkpoint.name
+        or pointer.get("cursor") != asdict(cursor)
+        or marker.get("fingerprint") != fingerprint
+        or pointer.get("sha256") != marker.get("sha256")
+        or not _is_sha256(marker.get("sha256"))
+    ):
+        raise ValueError("scale checkpoint history requires a committed matching marker")
+    history_path = output / "checkpoint_history.jsonl"
+    if history_path.exists():
+        prior_lines = history_path.read_bytes().splitlines(keepends=True)
+        if prior_lines and not prior_lines[-1].endswith(b"\n"):
+            prior_lines.pop()
+            # A killed append may leave an incomplete final record. Recover
+            # only the committed newline-delimited prefix before appending.
+            with history_path.open("r+b") as stream:
+                stream.truncate(sum(map(len, prior_lines)))
+                stream.flush()
+                os.fsync(stream.fileno())
+        for line in prior_lines:
+            try:
+                prior = json.loads(line)
+            except (json.JSONDecodeError, UnicodeError):
+                raise ValueError(
+                    "scale checkpoint history contains an invalid committed row"
+                ) from None
+            if not isinstance(prior, dict) or prior.get("fingerprint") != fingerprint:
+                raise ValueError("scale checkpoint history belongs to another run")
+            prior_cursor = prior.get("cursor")
+            if not isinstance(prior_cursor, dict):
+                raise ValueError("scale checkpoint history cursor is malformed")
+            if prior_cursor.get("attempted_updates") == cursor.attempted_updates:
+                if prior.get("checkpoint_sha256") != marker["sha256"]:
+                    raise ValueError("scale checkpoint history conflicts at the same update")
+                return
+    record = {
+        "schema": "q25-completion-scale-checkpoint-history-v1",
+        "fingerprint": fingerprint,
+        "cursor": asdict(cursor),
+        "checkpoint_sha256": marker["sha256"],
+        "checkpoint_bytes": checkpoint.stat().st_size,
+        "complete_marker_sha256": sha256_file(marker_path),
+        "complete_marker_bytes": marker_path.stat().st_size,
+    }
+    with history_path.open("ab") as stream:
+        stream.write(json.dumps(record, sort_keys=True, separators=(",", ":")).encode() + b"\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def checkpoint_weight_basis(model: Any, serialized_weight_bytes: int) -> int:
     """Bound the BF16 basis by unique parameters, excluding duplicated tied tensors.
 
@@ -852,6 +1317,7 @@ def _input_artifact_bytes(
     resume_path: Path | None,
     output: Path,
     mounted_artifact_bytes: int = 0,
+    additional_input_paths: tuple[Path, ...] = (),
 ) -> int:
     if mounted_artifact_bytes < 0:
         raise ValueError("mounted artifact bytes cannot be negative")
@@ -862,12 +1328,23 @@ def _input_artifact_bytes(
         if not marker_path.is_file():
             raise ValueError("resume checkpoint is missing its committed completion marker")
         resume_bytes = resume_path.stat().st_size + marker_path.stat().st_size
+    counted_paths = {
+        path.resolve()
+        for path in (train_path, development_path, metadata_path, plan_path)
+    }
+    additional_bytes = 0
+    for path in additional_input_paths:
+        resolved = path.resolve()
+        if resolved not in counted_paths:
+            additional_bytes += path.stat().st_size
+            counted_paths.add(resolved)
     return (
         model_bytes
         + train_path.stat().st_size
         + development_path.stat().st_size
         + metadata_path.stat().st_size
         + plan_path.stat().st_size
+        + additional_bytes
         + resume_bytes
         + mounted_artifact_bytes
     )
@@ -1024,6 +1501,10 @@ def run_training(
     resume: Path | None = None,
     external_campaign_tokens: int = 0,
     mounted_artifact_bytes: int = 0,
+    scale_variant: str | None = None,
+    repeat_train_path: Path | None = None,
+    scaled_train_path: Path | None = None,
+    historical_development_path: Path | None = None,
     execute: bool = False,
     invocation_started: float | None = None,
 ) -> dict[str, Any]:
@@ -1036,11 +1517,29 @@ def run_training(
     document = _read_json(plan_path)
     if arm not in ARMS:
         raise ValueError("unknown Q25 FIM training arm")
-    training = validate_training_configuration(_training_config(document))
+    plan_schema = document.get("schema")
+    scale_profile = plan_schema == SCALE_PLAN_SCHEMA
+    if scale_profile:
+        if arm != TRAIN_ARM or scale_variant not in SCALE_VARIANTS:
+            raise ValueError("completion-scale runs require the untouched Q25 base arm")
+        if repeat_train_path is None or scaled_train_path is None:
+            raise ValueError("completion-scale runs require both frozen training variants")
+        if historical_development_path is None:
+            raise ValueError("completion-scale runs require the historical development fixture")
+        scale_counts = validate_scale_variant_plan(document, scale_variant)
+        training = validate_scale_training_configuration(_training_config(document))
+    else:
+        if scale_variant is not None or any(
+            path is not None
+            for path in (repeat_train_path, scaled_train_path, historical_development_path)
+        ):
+            raise ValueError("scale-only inputs cannot be used with the existing FIM plan")
+        scale_counts = None
+        training = validate_training_configuration(_training_config(document))
     budget = _budget(document)
     if execute and document.get("gpu_execution_authorized") is not True:
         raise PermissionError("this plan does not authorize GPU execution")
-    if document.get("schema") != "q25-fim-training-plan-v1":
+    if plan_schema not in ("q25-fim-training-plan-v1", SCALE_PLAN_SCHEMA):
         if execute:
             raise ValueError("CPU preparation plan cannot authorize Q25 FIM training")
     plan_session = budget.get("session_seconds")
@@ -1063,7 +1562,10 @@ def run_training(
             budget.get("max_campaign_input_tokens", MAX_CAMPAIGN_INPUT_TOKENS),
         )
     )
-    if not 1 <= campaign_cap <= MAX_CAMPAIGN_INPUT_TOKENS:
+    maximum_campaign_cap = (
+        SCALE_MAX_CAMPAIGN_INPUT_TOKENS if scale_profile else MAX_CAMPAIGN_INPUT_TOKENS
+    )
+    if not 1 <= campaign_cap <= maximum_campaign_cap:
         raise ValueError("global campaign input-token cap is outside the frozen maximum")
 
     initializer_entries = document.get("initializers")
@@ -1072,16 +1574,55 @@ def run_training(
     ):
         raise ValueError("FIM plan does not identify the selected initializer")
     initializer_identity = verify_initializer(model_path, arm=arm, entry=initializer_entries[arm])
-    examples, development_examples, data_identity = load_fim_corpus(
-        train_path=train_path,
-        development_path=development_path,
-        metadata_path=metadata_path,
-        plan=document,
-    )
+    historical_examples: tuple[EncodedExample, ...] = ()
+    tokenizer_examples: tuple[EncodedExample, ...] = ()
+    scale_input_paths: tuple[Path, ...] = ()
+    if scale_profile:
+        assert scale_variant is not None
+        assert scale_counts is not None
+        assert repeat_train_path is not None
+        assert scaled_train_path is not None
+        assert historical_development_path is not None
+        scale_input_paths = (
+            repeat_train_path,
+            scaled_train_path,
+            historical_development_path,
+        )
+        expected_train_path = (
+            repeat_train_path if scale_variant == SCALE_REPEAT_VARIANT else scaled_train_path
+        )
+        if train_path.resolve() != expected_train_path.resolve():
+            raise ValueError("selected training file differs from the frozen scale variant")
+        (
+            examples,
+            development_examples,
+            historical_examples,
+            tokenizer_examples,
+            data_identity,
+        ) = load_scale_corpus(
+            repeat_train_path=repeat_train_path,
+            scaled_train_path=scaled_train_path,
+            development_path=development_path,
+            historical_development_path=historical_development_path,
+            metadata_path=metadata_path,
+            plan=document,
+            variant=scale_variant,
+        )
+    else:
+        examples, development_examples, data_identity = load_fim_corpus(
+            train_path=train_path,
+            development_path=development_path,
+            metadata_path=metadata_path,
+            plan=document,
+        )
+        tokenizer_examples = examples + development_examples
     corpus_metadata = _read_json(metadata_path)
-    validate_local_tokenizer_corpus(model_path, corpus_metadata, examples + development_examples)
-    input_tokens = sum(item.total_tokens for item in examples)
-    target_tokens = sum(item.response_tokens for item in examples)
+    validate_local_tokenizer_corpus(model_path, corpus_metadata, tokenizer_examples)
+    distinct_input_tokens = sum(item.total_tokens for item in examples)
+    distinct_target_tokens = sum(item.response_tokens for item in examples)
+    exposure_multiplier = 2 if scale_profile and scale_variant == SCALE_REPEAT_VARIANT else 1
+    input_tokens = distinct_input_tokens * exposure_multiplier
+    target_tokens = distinct_target_tokens * exposure_multiplier
     if input_tokens > int(training["max_input_tokens"]):
         raise ValueError("prepared FIM examples exceed the frozen per-arm token budget")
     actual_planned_campaign_tokens = q25.validate_campaign_token_budget(
@@ -1089,15 +1630,28 @@ def run_training(
         external_campaign_tokens=external_campaign_tokens,
         maximum_additional_tokens=campaign_cap,
     )
-    batches = training_batches(
-        examples,
-        effective_batch=int(training["effective_batch"]),
-        seed=int(training["seed"]),
-    )
-    if len(batches) != (len(examples) + int(training["effective_batch"]) - 1) // int(
-        training["effective_batch"]
-    ):
-        raise ValueError("FIM batch schedule is not a single pass")
+    if scale_profile:
+        assert scale_variant is not None
+        assert scale_counts is not None
+        batches = scale_training_batches(
+            examples,
+            variant=scale_variant,
+            effective_batch=int(training["effective_batch"]),
+            seed=int(training["seed"]),
+        )
+        exposure_count = sum(len(batch) for batch in batches)
+        if exposure_count != scale_counts["example_exposures"]:
+            raise ValueError("completion-scale schedule exposure count differs from the plan")
+    else:
+        batches = training_batches(
+            examples,
+            effective_batch=int(training["effective_batch"]),
+            seed=int(training["seed"]),
+        )
+        if len(batches) != (len(examples) + int(training["effective_batch"]) - 1) // int(
+            training["effective_batch"]
+        ):
+            raise ValueError("FIM batch schedule is not a single pass")
     plan_sha = sha256_file(plan_path)
     if not execute:
         return {
@@ -1107,6 +1661,15 @@ def run_training(
             "plan_sha256": plan_sha,
             "data": data_identity,
             "training_examples": len(examples),
+            **(
+                {
+                    "training_example_exposures": sum(len(batch) for batch in batches),
+                    "scale_variant": scale_variant,
+                    "historical_development_examples": len(historical_examples),
+                }
+                if scale_profile
+                else {}
+            ),
             "development_examples": len(development_examples),
             "training_input_tokens": input_tokens,
             "external_campaign_tokens": external_campaign_tokens,
@@ -1133,21 +1696,46 @@ def run_training(
     runtime["training"] = runtime_training
     runtime_config = _configuration(document).get("runtime", document.get("runtime"))
     _check_runtime_plan(runtime_config, runtime)
-    identity = {
-        "schema": FIM_SCHEMA,
-        "plan_sha256": plan_sha,
-        "arm": arm,
-        "initializer": initializer_identity,
-        "training_data": {
-            **data_identity["splits"]["train"],
-            "batch_order_sha256": batch_order_sha256(batches),
-            "batch_count": len(batches),
-        },
-        "development_data": data_identity["splits"]["development"],
-        "corpus_metadata": data_identity,
-        "training": training,
-        "runtime": runtime,
-    }
+    if scale_profile:
+        assert scale_variant is not None
+        selected_split = "repeat_train" if scale_variant == SCALE_REPEAT_VARIANT else "scaled_train"
+        identity = {
+            "schema": "q25-completion-scale-resume-v1",
+            "plan_sha256": plan_sha,
+            "scale_variant": scale_variant,
+            "arm": arm,
+            "initializer": initializer_identity,
+            "training_data": {
+                **data_identity["splits"][selected_split],
+                "distinct_examples": len(examples),
+                "example_exposures": sum(len(batch) for batch in batches),
+                "logical_input_tokens": input_tokens,
+                "logical_target_tokens": target_tokens,
+                "batch_order_sha256": batch_order_sha256(batches),
+                "batch_count": len(batches),
+            },
+            "development_data": data_identity["splits"]["development_new"],
+            "historical_development_data": data_identity["splits"]["development_previous"],
+            "corpus_metadata": data_identity,
+            "training": training,
+            "runtime": runtime,
+        }
+    else:
+        identity = {
+            "schema": FIM_SCHEMA,
+            "plan_sha256": plan_sha,
+            "arm": arm,
+            "initializer": initializer_identity,
+            "training_data": {
+                **data_identity["splits"]["train"],
+                "batch_order_sha256": batch_order_sha256(batches),
+                "batch_count": len(batches),
+            },
+            "development_data": data_identity["splits"]["development"],
+            "corpus_metadata": data_identity,
+            "training": training,
+            "runtime": runtime,
+        }
     fingerprint = canonical_sha256(identity)
     output_cap_bytes = min(
         int(training.get("max_output_bytes", 12 * 1024**3)),
@@ -1165,6 +1753,7 @@ def run_training(
         resume_path=resume_path,
         output=output,
         mounted_artifact_bytes=mounted_artifact_bytes,
+        additional_input_paths=scale_input_paths,
     )
     if output.exists() and resume is None and any(output.iterdir()):
         raise FileExistsError("existing FIM output requires an exact-resume checkpoint")
@@ -1254,6 +1843,10 @@ def run_training(
                         initializer_identity["files"]["model.safetensors"]["bytes"]
                     ),
                 )
+                if scale_profile:
+                    _record_scale_checkpoint(
+                        output, latest_path, fingerprint=fingerprint, cursor=value
+                    )
             finally:
                 max_checkpoint_save_seconds = max(
                     max_checkpoint_save_seconds, time.monotonic() - checkpoint_started
@@ -1308,12 +1901,26 @@ def run_training(
             on_update=log_update,
         )
         summary: dict[str, Any] = {
-            "schema": "q25-fim-response-only-run-v1",
+            "schema": (
+                "q25-completion-scale-response-only-run-v1"
+                if scale_profile
+                else "q25-fim-response-only-run-v1"
+            ),
             "status": result.status,
             "arm": arm,
+            **({"scale_variant": scale_variant} if scale_profile else {}),
             "fingerprint": fingerprint,
             "identity": identity,
             "cursor": asdict(result.cursor),
+            **(
+                {
+                    "distinct_training_examples": len(examples),
+                    "training_example_exposures": sum(len(batch) for batch in batches),
+                    "historical_development_examples": len(historical_examples),
+                }
+                if scale_profile
+                else {}
+            ),
             "logical_training_input_tokens": result.cursor.training_input_tokens,
             "external_campaign_tokens": external_campaign_tokens,
             "actual_campaign_input_tokens": (
@@ -1399,6 +2006,10 @@ def main() -> None:
     parser.add_argument("--data-metadata", type=Path, required=True)
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--arm", choices=ARMS, required=True)
+    parser.add_argument("--scale-variant", choices=SCALE_VARIANTS)
+    parser.add_argument("--repeat-train", type=Path)
+    parser.add_argument("--scaled-train", type=Path)
+    parser.add_argument("--historical-development", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--session-seconds", type=float, required=True)
     parser.add_argument("--reserve-seconds", type=float)
@@ -1420,6 +2031,10 @@ def main() -> None:
         resume=args.resume,
         external_campaign_tokens=args.external_campaign_tokens,
         mounted_artifact_bytes=args.mounted_artifact_bytes,
+        scale_variant=args.scale_variant,
+        repeat_train_path=args.repeat_train,
+        scaled_train_path=args.scaled_train,
+        historical_development_path=args.historical_development,
         execute=args.execute,
         invocation_started=invocation_started,
     )
