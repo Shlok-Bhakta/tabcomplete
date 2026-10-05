@@ -80,6 +80,9 @@ struct Args {
     protocol: String,
     #[arg(long, default_value = "cursor-last-v1")]
     context_layout: String,
+    #[arg(long, value_enum, default_value = "sliding-v2")]
+    #[serde(skip_serializing_if = "fim_v1::ContextWindow::is_sliding")]
+    fim_context_window: fim_v1::ContextWindow,
     #[arg(long, default_value = "f16")]
     cache_type: String,
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
@@ -655,6 +658,8 @@ fn worker(
                 "cache_type":args.cache_type,"syntax_validation":args.syntax_validation,
                 "saved_contexts":0,"active_slots":1,"load_ms":load.elapsed().as_secs_f64()*1000.});
             if let Some(fim_profile) = &profile.fim_profile {
+                identity["fim_context_window"] = json!(args.fim_context_window);
+                identity["context_policy_version"] = json!(args.fim_context_window.policy());
                 identity["fim_profile"] = json!(fim_profile);
                 identity["fim_tokenizer_runtime_policy"] = json!(FIM_RUNTIME_COMPATIBILITY_POLICY);
                 identity["completion_mode"] = json!(fim_v1::COMPLETION_MODE);
@@ -754,12 +759,13 @@ fn worker(
                                         [..prepared.model_hole_range.start_byte];
                                     let suffix_source =
                                         &request.state.source[prepared.model_hole_range.end_byte..];
-                                    let prefix_window = fim_v1::crop_context(
-                                        prefix_source,
-                                        fim_v1::PREFIX_CONTEXT_TOKEN_LIMIT,
-                                        fim_v1::ContextSide::KeepRight,
-                                        |segment| native_token_pieces(&model, segment),
-                                    )?;
+                                    let (prefix_window, prefix_metadata) =
+                                        fim_v1::crop_prefix_context(
+                                            prefix_source,
+                                            prepared.apply_range.start_byte,
+                                            args.fim_context_window,
+                                            |segment| native_token_pieces(&model, segment),
+                                        )?;
                                     let suffix_window = fim_v1::crop_context(
                                         suffix_source,
                                         fim_v1::SUFFIX_CONTEXT_TOKEN_LIMIT,
@@ -773,6 +779,9 @@ fn worker(
                                         prefix_window.token_count,
                                         suffix_window.token_count,
                                     )?;
+                                    prepared.context_policy_version =
+                                        args.fim_context_window.policy().into();
+                                    prepared.prefix_window = prefix_metadata;
                                     let prompt_tokens =
                                         verify_prompt_round_trip(&model, &prepared.prompt)?.len();
                                     ensure!(
@@ -1846,6 +1855,25 @@ mod worker_guard_tests {
             "disabling syntax checks must not invent a decoded action"
         );
         assert!(Args::try_parse_from(["engine"]).unwrap().syntax_validation);
+        let default = Args::try_parse_from(["engine"]).unwrap();
+        assert_eq!(default.fim_context_window, fim_v1::ContextWindow::SlidingV2);
+        assert!(
+            serde_json::to_value(&default)
+                .unwrap()
+                .get("fim_context_window")
+                .is_none()
+        );
+        let aligned =
+            Args::try_parse_from(["engine", "--fim-context-window", "aligned128-v1"]).unwrap();
+        assert_eq!(
+            aligned.fim_context_window.policy(),
+            fim_v1::ALIGNED_CONTEXT_POLICY_VERSION
+        );
+        assert_eq!(
+            serde_json::to_value(&aligned).unwrap()["fim_context_window"],
+            "aligned128-v1"
+        );
+        assert!(Args::try_parse_from(["engine", "--fim-context-window", "unknown"]).is_err());
         assert!(
             !Args::try_parse_from(["engine", "--syntax-validation", "false"])
                 .unwrap()

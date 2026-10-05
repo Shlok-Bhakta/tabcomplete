@@ -135,6 +135,24 @@ return function(ok, assert_eq, assert_true)
     tampered.prefix_context_tokens = fim_v1.PREFIX_CONTEXT_TOKEN_LIMIT + 1
     assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract, tampered),
       "per-side token limit is enforced")
+    local aligned = vim.deepcopy(response_value)
+    aligned.context_policy_version = fim_v1.ALIGNED_CONTEXT_POLICY_VERSION
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract, aligned),
+      "aligned policy requires an explicit configured opt-in")
+    local aligned_prepared = assert(fim_v1.verify_prepared(source, 1, 8, token_contract,
+      aligned, fim_v1.context_window_policy("aligned128-v1")))
+    assert_eq(aligned_prepared.prompt, prepared.prompt)
+    assert_true(fim_v1.context_digest("synthetic", source, 1, 8, aligned_prepared)
+      ~= fim_v1.context_digest("synthetic", source, 1, 8, verified),
+      "policy changes the request binding even when source ranges coincide")
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract,
+      response_value, fim_v1.ALIGNED_CONTEXT_POLICY_VERSION), "control policy is rejected by aligned client")
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract,
+      aligned, "untrusted-policy"), "unknown expected policies are rejected")
+    aligned.prompt = aligned.prompt .. "altered"
+    assert_true(not fim_v1.verify_prepared(source, 1, 8, token_contract,
+      aligned, fim_v1.ALIGNED_CONTEXT_POLICY_VERSION), "aligned prompt still requires exact source bytes")
+    assert_true(fim_v1.context_window_policy("unknown") == nil)
   end)
 
   ok("fim-crlf-completion-reuses-canonical-buffer-applier", function()

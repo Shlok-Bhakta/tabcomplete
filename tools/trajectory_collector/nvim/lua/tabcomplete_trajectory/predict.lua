@@ -161,7 +161,9 @@ local function model_spec(alias)
   elseif alias == "sweep" then
     layouts = { ["sweep-window-v1"] = "sweep-window-context-v1" }
   elseif (configured.model_protocol or configured.protocol) == fim_v1.WIRE_VERSION then
-    layouts = { [fim_v1.CONTEXT_LAYOUT] = fim_v1.CONTEXT_POLICY_VERSION }
+    local policy = fim_v1.context_window_policy(configured.fim_context_window)
+    if not policy then return nil end
+    layouts = { [fim_v1.CONTEXT_LAYOUT] = policy }
   else
     layouts = {}
   end
@@ -173,6 +175,7 @@ local function model_spec(alias)
     output_tokens = configured.output_tokens or configured.max_output_tokens,
     context_layout_policies = layouts,
     fim_profile = configured.fim_profile,
+    fim_context_window = configured.fim_context_window or "sliding-v2",
   }
 end
 local function expected_context_layout(identity, spec)
@@ -213,6 +216,13 @@ local function validate_model_identity(identity, expected_alias)
     return nil, "Rust model protocol does not match the allowlist"
   end
   if spec.model_protocol == fim_v1.WIRE_VERSION then
+    local _, expected_policy = expected_context_layout(identity, spec)
+    if (identity.fim_context_window ~= nil and identity.fim_context_window ~= spec.fim_context_window)
+        or (identity.context_policy_version ~= nil and identity.context_policy_version ~= expected_policy)
+        or (spec.fim_context_window ~= "sliding-v2"
+          and (identity.fim_context_window == nil or identity.context_policy_version == nil)) then
+      return nil, "Rust FIM context-window identity does not match the allowlist"
+    end
     local profile = spec.fim_profile
     if type(profile) ~= "table" or not is_sha256(profile.artifact_manifest_sha256)
         or type(profile.tokenizer) ~= "table"
@@ -441,7 +451,7 @@ local function buffer_state()
       state.fim_prepared = prepared
       state.fim_token_contract = token_contract
       state.model_identity = identity
-      state.context_policy_version = fim_v1.CONTEXT_POLICY_VERSION
+      state.context_policy_version = select(2, expected_context_layout(identity, model_spec(identity.alias)))
     end
     state.fingerprint = state_fingerprint(state)
     return state
@@ -1390,7 +1400,8 @@ local function validate_editor_context(state, response)
     local token_contract = state.model_identity and state.model_identity._fim_token_contract
     if not token_contract then return nil, "selected FIM tokenizer inventory is unavailable" end
     local prepared, prepare_err = fim_v1.verify_prepared(state.contract_state.source,
-      state.contract_state.target_row, state.contract_state.cursor_col, token_contract, response)
+      state.contract_state.target_row, state.contract_state.cursor_col, token_contract, response,
+      select(2, expected_context_layout(identity, model_spec(identity.alias))))
     local filetype_training_scope = fim_v1.filetype_training_scope(state.contract_state.filetype)
     if not prepared
         or response.request_id ~= state.request_id
@@ -2196,6 +2207,11 @@ function M.setup(options)
   local previous_protocol = opts.protocol_version
   local requested_protocol = options and options.protocol_version
   opts = vim.tbl_deep_extend("force", opts, options or {})
+  -- A supplied allowlist replaces the previous authority. Deep-merging would
+  -- retain a prior opt-in policy after its field was removed on reload.
+  if options and options.allowed_models ~= nil then
+    opts.allowed_models = vim.deepcopy(options.allowed_models)
+  end
   setup_generation = setup_generation + 1
   identity_bootstrap_intent_generation = identity_bootstrap_intent_generation + 1
   identity_bootstrap_attempts = 0
@@ -2205,7 +2221,8 @@ function M.setup(options)
   identity_bootstrap_automatic = false
   clear_identity_retry_timer()
   model_identity_refresh_generation = model_identity_refresh_generation + 1
-  if opts.backend ~= previous_backend or opts.protocol_version ~= previous_protocol then
+  if opts.backend ~= previous_backend or opts.protocol_version ~= previous_protocol
+      or (options and options.allowed_models ~= nil) then
     opts.current_model_identity = nil
   end
   if opts.backend == "rust-editor-v1" then

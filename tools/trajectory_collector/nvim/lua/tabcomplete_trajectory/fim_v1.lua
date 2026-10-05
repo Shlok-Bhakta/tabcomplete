@@ -4,6 +4,12 @@ local M = {}
 
 M.WIRE_VERSION = "q25-fim-line-completion-v1"
 M.CONTEXT_POLICY_VERSION = "q25-fim-psm-cursor-to-line-end-bounded640-256-v2"
+M.ALIGNED_CONTEXT_POLICY_VERSION = "q25-fim-psm-cursor-to-line-end-bounded640-256-align128-v1"
+function M.context_window_policy(window)
+  if window == nil or window == "sliding-v2" then return M.CONTEXT_POLICY_VERSION end
+  if window == "aligned128-v1" then return M.ALIGNED_CONTEXT_POLICY_VERSION end
+  return nil
+end
 M.CONTEXT_LAYOUT = "q25-fim-psm-bounded-v2"
 M.PREFIX_CONTEXT_TOKEN_LIMIT = 640
 M.SUFFIX_CONTEXT_TOKEN_LIMIT = 256
@@ -367,11 +373,16 @@ end
 -- Verify a bounded Rust-selected PSM window without local tokenization. The
 -- byte ranges are checked against the full source and the original line edit
 -- ranges before they can be used for generation or application.
-function M.verify_prepared(source, target_row, cursor_col, contract, response)
+function M.verify_prepared(source, target_row, cursor_col, contract, response, expected_policy)
+  expected_policy = expected_policy or M.CONTEXT_POLICY_VERSION
+  if expected_policy ~= M.CONTEXT_POLICY_VERSION
+      and expected_policy ~= M.ALIGNED_CONTEXT_POLICY_VERSION then
+    return nil, "FIM context policy is not allowlisted"
+  end
   local base, prepare_err = M.prepare(source, target_row, cursor_col, contract)
   if not base then return nil, prepare_err end
   if type(response) ~= "table"
-      or response.context_policy_version ~= M.CONTEXT_POLICY_VERSION
+      or response.context_policy_version ~= expected_policy
       or response.context_layout ~= M.CONTEXT_LAYOUT
       or response.tokenizer_sha256 ~= base.tokenizer_sha256
       or response.tokenizer_contract_sha256 ~= base.tokenizer_contract_sha256

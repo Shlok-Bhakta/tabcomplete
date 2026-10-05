@@ -350,4 +350,41 @@ return function(ok, assert_eq, assert_true)
     buffers.detach(buf)
     vim.api.nvim_buf_delete(buf, { force = true })
   end)
+
+  ok("q25-fim-context-window-identity-requires-matched-explicit-policy", function()
+    for _, fixture in ipairs({
+      { configured = nil, served = nil, policy = nil, accepted = true },
+      { configured = "aligned128-v1", served = "aligned128-v1", policy = fim.ALIGNED_CONTEXT_POLICY_VERSION, accepted = true },
+      { configured = "aligned128-v1", served = "sliding-v2", policy = fim.CONTEXT_POLICY_VERSION, accepted = false },
+      { configured = nil, served = "aligned128-v1", policy = fim.ALIGNED_CONTEXT_POLICY_VERSION, accepted = false },
+      { configured = "aligned128-v1", served = nil, policy = nil, accepted = false },
+      { configured = "unknown", served = nil, policy = nil, accepted = false },
+    }) do
+      local configured = vim.deepcopy(model)
+      configured.fim_context_window = fixture.configured
+      predict._backend_get_impl = function(path, callback)
+        if path == "/health" then
+          local served = identity()
+          served.fim_context_window = fixture.served
+          served.context_policy_version = fixture.policy
+          callback(true, served)
+        elseif path == "/v1/fim-tokenizer" then
+          callback(true, { alias = "q25-fim-synthetic", model_sha256 = model.model_sha256,
+            artifact_manifest_sha256 = profile.artifact_manifest_sha256,
+            tokenizer = vim.deepcopy(tokenizer), tokenizer_vocab_ids = vim.deepcopy(vocab_ids) })
+        else error("unexpected identity endpoint") end
+        return { kill = function() end }
+      end
+      predict.setup({ backend = "rust-editor-v1", protocol_version = fim.WIRE_VERSION,
+        url = "http://127.0.0.1:19094", mode = "manual", synthetic = true, persist_mode = false,
+        allowed_models = { ["q25-fim-synthetic"] = configured }, single_line_input_tokens = 1024 })
+      local result
+      assert_true(predict.refresh_model_identity(function(success) result = success end))
+      assert_true(vim.wait(1000, function() return result ~= nil end))
+      assert_eq(result, fixture.accepted, "configured and served policies must match")
+    end
+    predict._backend_get_impl = nil
+    predict.setup({ backend = "llama-cpp-legacy", protocol_version = "compact-next-edit-v1",
+      url = "http://127.0.0.1:9", mode = "manual", synthetic = true, persist_mode = false, allowed_models = {} })
+  end)
 end

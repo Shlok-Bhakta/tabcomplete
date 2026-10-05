@@ -1,0 +1,30 @@
+{
+  "schema": "q25-fim-context-window-implementation-verification-v1",
+  "base_commit": "baacd9a5803471b193a3b821af88b77c3bae15c3",
+  "branch": "prototype/q25-fim-context-window-r1",
+  "deployed": false,
+  "quality_inference_run": false,
+  "rust_tests": {
+    "passed": 49,
+    "failed": 0
+  },
+  "lua_tests": {
+    "passed": 94,
+    "failed": 0
+  },
+  "default": "sliding-v2",
+  "candidate": "aligned128-v1",
+  "new_weight_files": 0,
+  "artifacts": [
+    {
+      "path": "reports/prototype/context_window_audit_r1/rust_tests.log",
+      "bytes": 11885,
+      "sha256": "c37f25848dddbc2f99a067db8ca082f78c7a07c864f0e2c2e3bf5f9999b8f92f"
+    },
+    {
+      "path": "reports/prototype/context_window_audit_r1/lua_tests.log",
+      "bytes": 5045,
+      "sha256": "5bdbd8ee502fa21754fe238db1d2cb8903e5eba6cfdb9532ae98698edf9d31b7"
+    }
+  ]
+}

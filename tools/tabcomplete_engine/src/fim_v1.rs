@@ -8,6 +8,8 @@ use unicode_normalization::is_nfc;
 
 pub const WIRE_VERSION: &str = "q25-fim-line-completion-v1";
 pub const CONTEXT_POLICY_VERSION: &str = "q25-fim-psm-cursor-to-line-end-bounded640-256-v2";
+pub const ALIGNED_CONTEXT_POLICY_VERSION: &str =
+    "q25-fim-psm-cursor-to-line-end-bounded640-256-align128-v1";
 pub const CONTEXT_LAYOUT: &str = "q25-fim-psm-bounded-v2";
 pub const PREFIX_CONTEXT_TOKEN_LIMIT: usize = 640;
 pub const SUFFIX_CONTEXT_TOKEN_LIMIT: usize = 256;
@@ -23,6 +25,121 @@ pub const FIM_SUFFIX: &str = "<|fim_suffix|>";
 pub const FIM_MIDDLE: &str = "<|fim_middle|>";
 pub const EOS_SPELLING: &str = "<|endoftext|>";
 pub const COMPLETION_MODE: &str = "remaining_logical_line_after_utf8_cursor";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, clap::ValueEnum)]
+#[serde(rename_all = "kebab-case")]
+pub enum ContextWindow {
+    SlidingV2,
+    Aligned128V1,
+}
+
+impl ContextWindow {
+    pub fn is_sliding(&self) -> bool {
+        *self == Self::SlidingV2
+    }
+    pub fn policy(self) -> &'static str {
+        match self {
+            Self::SlidingV2 => CONTEXT_POLICY_VERSION,
+            Self::Aligned128V1 => ALIGNED_CONTEXT_POLICY_VERSION,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct PrefixWindowMetadata {
+    pub full_prefix_tokens: usize,
+    pub control_start_byte: usize,
+    pub control_prefix_tokens: usize,
+    pub aligned_start_token: usize,
+    pub fallback_reason: Option<&'static str>,
+}
+
+/// The default path is exactly the existing crop. The opt-in path sacrifices
+/// older context to hold an absolute native-token boundary across nearby edits.
+pub fn crop_prefix_context<F>(
+    text: &str,
+    editable_line_start: usize,
+    window: ContextWindow,
+    mut tokenize: F,
+) -> Result<(CroppedContext, Option<PrefixWindowMetadata>)>
+where
+    F: FnMut(&str) -> Result<Vec<Vec<u8>>>,
+{
+    ensure!(
+        editable_line_start <= text.len() && text.is_char_boundary(editable_line_start),
+        "invalid editable line start"
+    );
+    if window == ContextWindow::SlidingV2 {
+        return Ok((
+            crop_context(
+                text,
+                PREFIX_CONTEXT_TOKEN_LIMIT,
+                ContextSide::KeepRight,
+                tokenize,
+            )?,
+            None,
+        ));
+    }
+    let full_pieces = tokenize(text)?;
+    let boundaries = piece_boundaries(text, &full_pieces)?;
+    ensure!(
+        full_pieces.iter().flatten().eq(text.as_bytes().iter()),
+        "native prefix pieces do not round-trip the source bytes"
+    );
+    let control = crop_context(
+        text,
+        PREFIX_CONTEXT_TOKEN_LIMIT,
+        ContextSide::KeepRight,
+        |part| {
+            if part == text {
+                Ok(full_pieces.clone())
+            } else {
+                tokenize(part)
+            }
+        },
+    )?;
+    let full_count = full_pieces.len();
+    let aligned_start_token = full_count
+        .saturating_sub(PREFIX_CONTEXT_TOKEN_LIMIT)
+        .div_ceil(128)
+        * 128;
+    let start_byte = ceil_char_boundary(text, boundaries[aligned_start_token]);
+    let mut metadata = PrefixWindowMetadata {
+        full_prefix_tokens: full_count,
+        control_start_byte: control.start_byte,
+        control_prefix_tokens: control.token_count,
+        aligned_start_token,
+        fallback_reason: None,
+    };
+    // Do not remove any editable-line prefix retained by the control, including
+    // the tail of a line already longer than the control budget.
+    if start_byte > editable_line_start && start_byte > control.start_byte {
+        metadata.fallback_reason = Some("editable_line_prefix");
+        return Ok((control, Some(metadata)));
+    }
+    if full_count <= PREFIX_CONTEXT_TOKEN_LIMIT {
+        return Ok((control, Some(metadata)));
+    }
+    let retained = &text[start_byte..];
+    let pieces = tokenize(retained)?;
+    piece_boundaries(retained, &pieces)?;
+    ensure!(
+        pieces.iter().flatten().eq(retained.as_bytes().iter()),
+        "native retained prefix pieces do not round-trip the source bytes"
+    );
+    if pieces.len() > PREFIX_CONTEXT_TOKEN_LIMIT {
+        metadata.fallback_reason = Some("retokenized_budget");
+        return Ok((control, Some(metadata)));
+    }
+    Ok((
+        CroppedContext {
+            start_byte,
+            end_byte: text.len(),
+            token_count: pieces.len(),
+        },
+        Some(metadata),
+    ))
+}
 
 pub fn filetype_training_scope(filetype: &str) -> &'static str {
     if matches!(
@@ -561,6 +678,8 @@ pub struct Prepared {
     /// It excludes the line ending, which Neovim retains as buffer metadata.
     pub apply_range: ByteRange,
     pub line_ending: LineEnding,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix_window: Option<PrefixWindowMetadata>,
     #[serde(skip)]
     prefix_before_cursor: String,
     #[serde(skip)]
@@ -735,6 +854,7 @@ pub fn prepare(
         model_hole_range: ByteRange::new(cursor_byte, line_end),
         apply_range: ByteRange::new(line_start, content_end),
         line_ending: ending,
+        prefix_window: None,
         prefix_before_cursor,
         virtual_empty_file,
     })
@@ -1131,6 +1251,160 @@ mod tests {
         let metadata = serde_json::to_value(&prepared).unwrap();
         assert_eq!(metadata["line_ending"], "LF");
         assert_eq!(metadata["model_hole_range"]["end_exclusive"], true);
+    }
+
+    #[test]
+    fn aligned_prefix_boundaries_keep_absolute_token_buckets() {
+        let scalar_pieces = |text: &str| -> Result<Vec<Vec<u8>>> {
+            Ok(text.chars().map(|c| c.to_string().into_bytes()).collect())
+        };
+        for (count, start, retained) in [
+            (640, 0, 640),
+            (641, 128, 513),
+            (768, 128, 640),
+            (769, 256, 513),
+        ] {
+            let source = "a".repeat(count - 1) + "\n";
+            let (aligned, metadata) = crop_prefix_context(
+                &source,
+                source.len(),
+                ContextWindow::Aligned128V1,
+                scalar_pieces,
+            )
+            .unwrap();
+            assert_eq!(aligned.start_byte, start);
+            assert_eq!(aligned.token_count, retained);
+            assert_eq!(metadata.unwrap().fallback_reason, None);
+            let (default, metadata) = crop_prefix_context(
+                &source,
+                source.len(),
+                ContextWindow::SlidingV2,
+                scalar_pieces,
+            )
+            .unwrap();
+            assert_eq!(
+                default,
+                crop_context(&source, 640, ContextSide::KeepRight, scalar_pieces).unwrap()
+            );
+            assert!(metadata.is_none());
+        }
+    }
+
+    #[test]
+    fn aligned_prefix_utf8_pieces_and_editable_line_fallback_are_exact() {
+        let byte_pieces = |text: &str| -> Result<Vec<Vec<u8>>> {
+            Ok(text.as_bytes().iter().map(|byte| vec![*byte]).collect())
+        };
+        let source = "a".repeat(127) + "🙂" + &"b".repeat(514);
+        let (crop, metadata) = crop_prefix_context(
+            &source,
+            source.len(),
+            ContextWindow::Aligned128V1,
+            byte_pieces,
+        )
+        .unwrap();
+        assert_eq!(crop.start_byte, 131);
+        assert_eq!(crop.token_count, 514);
+        assert!(source.is_char_boundary(crop.start_byte));
+        assert_eq!(metadata.unwrap().aligned_start_token, 128);
+
+        for (source, line_start) in [
+            ("a".repeat(50) + "\n" + &"b".repeat(620), 51),
+            ("b".repeat(700), 0),
+        ] {
+            let (crop, metadata) = crop_prefix_context(
+                &source,
+                line_start,
+                ContextWindow::Aligned128V1,
+                byte_pieces,
+            )
+            .unwrap();
+            assert_eq!(
+                crop,
+                crop_context(&source, 640, ContextSide::KeepRight, byte_pieces).unwrap()
+            );
+            assert_eq!(
+                metadata.unwrap().fallback_reason,
+                Some("editable_line_prefix")
+            );
+        }
+    }
+
+    #[test]
+    fn aligned_prefix_retokenization_budget_falls_back_without_repair() {
+        let source = "x".repeat(1300);
+        let tokenize = |part: &str| -> Result<Vec<Vec<u8>>> {
+            Ok(if part == source {
+                part.as_bytes()
+                    .chunks(2)
+                    .map(|piece| piece.to_vec())
+                    .collect()
+            } else {
+                part.as_bytes().iter().map(|byte| vec![*byte]).collect()
+            })
+        };
+        let (crop, metadata) =
+            crop_prefix_context(&source, source.len(), ContextWindow::Aligned128V1, tokenize)
+                .unwrap();
+        assert_eq!(crop.token_count, 640);
+        assert_eq!(crop.start_byte, 660);
+        assert_eq!(
+            metadata.unwrap().fallback_reason,
+            Some("retokenized_budget")
+        );
+        let bad_pieces = |part: &str| -> Result<Vec<Vec<u8>>> {
+            Ok(part.as_bytes().iter().map(|_| vec![b'z']).collect())
+        };
+        assert!(
+            crop_prefix_context(
+                &source,
+                source.len(),
+                ContextWindow::Aligned128V1,
+                bad_pieces
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn aligned_policy_keeps_crlf_eof_application_ranges_and_changes_digest() {
+        for ending in ["\r\n", ""] {
+            let source = "a".repeat(700) + "\nleft" + ending + "tail";
+            let mut prepared = prepare(&source, 1, 2, &tokens()).unwrap();
+            prepared.tokenizer_contract_sha256 = "c".repeat(64);
+            let original = prepared.clone();
+            let scalar_pieces = |text: &str| -> Result<Vec<Vec<u8>>> {
+                Ok(text.chars().map(|c| c.to_string().into_bytes()).collect())
+            };
+            let (prefix, metadata) = crop_prefix_context(
+                &source[..prepared.model_hole_range.start_byte],
+                prepared.apply_range.start_byte,
+                ContextWindow::Aligned128V1,
+                scalar_pieces,
+            )
+            .unwrap();
+            prepared
+                .set_bounded_window(
+                    &source,
+                    prefix.start_byte,
+                    source.len(),
+                    prefix.token_count,
+                    source[prepared.model_hole_range.end_byte..].chars().count(),
+                )
+                .unwrap();
+            let baseline_digest = context_digest("test", &source, 1, 2, &prepared).unwrap();
+            prepared.context_policy_version = ALIGNED_CONTEXT_POLICY_VERSION.into();
+            prepared.prefix_window = metadata;
+            assert_ne!(
+                baseline_digest,
+                context_digest("test", &source, 1, 2, &prepared).unwrap()
+            );
+            assert_eq!(prepared.apply_range, original.apply_range);
+            assert_eq!(prepared.model_hole_range, original.model_hole_range);
+            assert_eq!(prepared.line_ending, original.line_ending);
+            assert!(prepared.prompt.starts_with(FIM_PREFIX));
+            assert!(prepared.prompt.ends_with(FIM_MIDDLE));
+        }
     }
 
     #[test]

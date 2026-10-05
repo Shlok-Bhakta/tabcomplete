@@ -1,0 +1,111 @@
+PASS module-loads
+[tabcomplete-trajectory] server_url is not set and $TABCOMPLETE_COLLECTOR_URL is empty; events are spooled locally
+PASS missing-url-no-crash
+PASS machine-id-persists
+PASS attach-works
+PASS insert-delta
+PASS delete-delta
+PASS replace-multiline-delta
+PASS multi-delta-shadow-replay
+PASS cursor-and-file-jump
+PASS secret-terminal-exclusions
+PASS batch-serialization
+PASS transport-failure-spools
+PASS retry-success-removes-spool
+PASS queue-limit-flush
+PASS session-events
+PASS prediction-logging
+PASS spool-cap-keeps-newest
+PASS pause-resume-status-commands
+[tabcomplete-trajectory] spool exceeded cap; dropped 2 oldest batch(es), kept newest (57 bytes remain)
+PASS curl-argv-no-dev-stdout
+PASS enumerate-files-nul-split
+PASS stale-anchor-dropped
+PASS empty-line-delete-emits
+PASS expected-total-helper
+PASS random-ops-shadow-matches-live
+PASS divergent-shadow-resyncs
+PASS rapid-buffer-switch-mid-typing
+[tabcomplete-trajectory] tabcomplete-trajectory: skipped a divergent buffer delta and resynced shadow (count=1)2 fewer lines; before #1  1 second ago
+2 more lines; after #1  1 second ago
+PASS undo-redo-shadow-replay
+PASS formatter-interleave-chains
+PASS dd-nonempty-exact
+PASS dd-empty-line-exact
+PASS o-line-creation-below
+PASS O-line-creation-above
+PASS paste-linewise-p
+PASS paste-charwise-p
+PASS x-single-char-delete
+PASS multiline-delete-2dd-range
+PASS substitute-range-s
+PASS unicode-multibyte-exact
+PASS unicode-emoji-x-delete
+PASS crlf-deltas-chain
+PASS empty-file-first-insert
+PASS single-empty-line-canonicalisation
+PASS very-long-line-50k
+PASS attach-detach-reattach-cycle
+PASS rapid-fire-200-inserts-ordered
+PASS anchor-reason-write
+PASS periodic-anchor-small-N
+PASS cursor-coalescing-single-flush
+PASS file-jump-from-to-on-switch
+PASS spool-cap-boundary-near-full
+PASS spool-malformed-ignored
+PASS session-payload-shapes-machine-repo-branch
+PASS prediction-fns-field-completeness
+PASS exclusion-edit-emits-nothing
+PASS resync-counter-increments
+PASS paused-status-emits-nothing
+PASS forced-buffer-reload-captures-discarded-edit
+PASS single-line-v1-context-golden-parity
+PASS single-line-v1-bounded-context-selection-parity
+PASS single-line-v1-wire-decode-and-byte-application-parity
+PASS single-line-v1-action-ranges-match-lf-crlf-and-eof-byte-effects
+PASS single-line-v1-neovim-line-application-and-undo
+PASS single-line-v1-empty-file-insert-and-unrepresentable-eol-transition
+PASS single-line-v1-application-refuses-stale-buffer
+PASS fim-golden-psm-lf-unicode-byte-ranges
+PASS fim-bounded-context-v2-reconstructs-source-without-tokenizing-locally
+PASS fim-crlf-completion-reuses-canonical-buffer-applier
+PASS fim-eof-has-no-synthesized-newline-and-keeps-old-wire-literal
+PASS fim-empty-file-uses-validated-insertion
+PASS fim-eos-at-step-96-valid-and-incomplete-or-late-eos-rejected
+PASS fim-rejects-wrong-eog-added-controls-and-model-identity-mismatch
+PASS fim-rejects-special-source-invalid-cursor-and-newline-repair
+PASS fim-rejects-stale-buffer-through-canonical-applier
+PASS single-line-v1-predict-path-is-explicit-and-legacy-default-remains
+PASS single-line-v1-request-records-exact-prompt-and-history-before-display
+PASS rust-editor-context-rpc-validates-identity-and-switches-model-safely
+PASS rust-specific-mode-state-persists-off-without-reading-legacy-state
+PASS rust-sse-requires-eos-model-match-and-canonical-single-line-action
+PASS single-line-v1-manual-normal-cursor-navigation-dismisses-once
+PASS single-line-v1-insert-delete-and-no-edit-semantics
+PASS single-line-v1-empty-file-insertion-is-one-undoable-acceptance
+PASS single-line-v1-diff-preview-is-byte-safe-and-accepts-exact-source
+PASS single-line-v1-rejects-cutoff-cap-stale-and-unrepresentable-edits
+PASS buffer-reload-dismissal-is-not-a-typing-rejection
+PASS automatic-prefix-policy-preserves-unicode-and-does-not-label-suppression-rejection
+TabComplete: preview ready; accept with <M-l>
+TabComplete: invalid FIM completion: fim_line_ending_mismatch
+TabComplete: invalid FIM completion: fim_terminal_not_eos
+TabComplete: FIM context unsupported: retained prompt text is not NFC-normalized; source was left unchanged.
+E211: File "/tmp/nvim.crabcake/NBNhcB/2.py" no longer available
+PASS q25-fim-editor-binds-profile-context-and-terminal-before-preview
+PASS q25-fim-context-window-identity-requires-matched-explicit-policy
+PASS fim-automatic-cold-start-refreshes-then-uses-latest-buffer
+TabComplete: requesting prediction
+TabComplete: preview ready; accept with <M-l>
+PASS fim-manual-first-request-waits-for-identity-without-extra-command
+TabComplete: requesting prediction
+PASS fim-manual-bootstrap-cancels-request-after-buffer-navigation
+PASS fim-off-prevents-a-delayed-identity-callback-from-starting-prediction
+PASS fim-stale-setup-waits-for-old-fetch-then-refreshes-current-setup
+TabComplete: requesting prediction
+PASS fim-identity-outage-uses-bounded-retry-and-explicit-retry
+PASS fim-plugin-entry-preserves-protocol-and-registers-commands
+explicit review event linkage passed (scripted test only)
+--
+94 passed, 0 failed
+ALL GREEN

@@ -1,0 +1,232 @@
+warning: missing documentation for the crate
+ --> vendor/llama-cpp-2/build.rs:1:1
+  |
+1 | / fn main() {
+2 | |     if let Ok(dir) = std::env::var("DEP_LLAMA_BACKENDS_DIR") {
+3 | |         println!("cargo:rustc-env=GGML_BACKENDS_DIR={}", dir);
+4 | |     }
+5 | | }
+  | |_^
+  |
+  = note: requested on the command line with `-W missing-docs`
+
+warning: `llama-cpp-2` (build script) generated 1 warning
+warning: unused imports: `CStr` and `CString`
+  --> vendor/llama-cpp-2/src/lib.rs:17:24
+   |
+17 | use std::ffi::{c_char, CStr, CString, NulError};
+   |                        ^^^^  ^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `self`
+ --> vendor/llama-cpp-2/src/model.rs:6:16
+  |
+6 | use std::ptr::{self, NonNull};
+  |                ^^^^
+
+warning: unused import: `std::slice`
+ --> vendor/llama-cpp-2/src/model.rs:7:5
+  |
+7 | use std::slice;
+  |     ^^^^^^^^^^
+
+warning: unused import: `crate::context::params::LlamaContextParams`
+ --> vendor/llama-cpp-2/src/model/params.rs:3:5
+  |
+3 | use crate::context::params::LlamaContextParams;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `SamplerAcceptError`
+  --> vendor/llama-cpp-2/src/sampling.rs:14:27
+   |
+14 | use crate::{GrammarError, SamplerAcceptError};
+   |                           ^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated enum `model::Special`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:216:18
+    |
+216 |         special: Special,
+    |                  ^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated unit variant `model::Special::Tokenize`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:223:40
+    |
+223 |             matches!(special, Special::Tokenize),
+    |                                        ^^^^^^^^
+
+warning: use of deprecated enum `model::Special`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:241:18
+    |
+241 |         special: Special,
+    |                  ^^^^^^^
+
+warning: use of deprecated unit variant `model::Special::Tokenize`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:244:78
+    |
+244 |         match self.token_to_piece_bytes(token, 8, matches!(special, Special::Tokenize), None) {
+    |                                                                              ^^^^^^^^
+
+warning: use of deprecated unit variant `model::Special::Tokenize`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:248:44
+    |
+248 |                 matches!(special, Special::Tokenize),
+    |                                            ^^^^^^^^
+
+warning: use of deprecated enum `model::Special`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:267:18
+    |
+267 |         special: Special,
+    |                  ^^^^^^^
+
+warning: use of deprecated unit variant `model::Special::Tokenize`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:273:81
+    |
+273 |             .map(|t| self.token_to_piece_bytes(t, 8, matches!(special, Special::Tokenize), None))
+    |                                                                                 ^^^^^^^^
+
+warning: use of deprecated enum `model::Special`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:477:18
+    |
+477 |         special: Special,
+    |                  ^^^^^^^
+
+warning: use of deprecated unit variant `model::Special::Tokenize`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:482:40
+    |
+482 |             matches!(special, Special::Tokenize),
+    |                                        ^^^^^^^^
+
+warning: use of deprecated enum `model::Special`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:507:18
+    |
+507 |         special: Special,
+    |                  ^^^^^^^
+
+warning: use of deprecated unit variant `model::Special::Tokenize`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:526:22
+    |
+526 |             Special::Tokenize => true,
+    |                      ^^^^^^^^
+
+warning: use of deprecated unit variant `model::Special::Plaintext`: This enum is a mixture of options for llama cpp providing less flexibility it only used with deprecated methods and will be removed in the future.
+   --> vendor/llama-cpp-2/src/model.rs:527:22
+    |
+527 |             Special::Plaintext => false,
+    |                      ^^^^^^^^^
+
+warning: variant `Mtmd` is never constructed
+  --> vendor/llama-cpp-2/src/log.rs:75:5
+   |
+71 | pub(super) enum Module {
+   |                 ------ variant in this enum
+...
+75 |     Mtmd,
+   |     ^^^^
+   |
+   = note: `Module` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `tensor_split` is never read
+   --> vendor/llama-cpp-2/src/model/params.rs:163:5
+    |
+158 | pub struct LlamaModelParams {
+    |            ---------------- field in this struct
+...
+163 |     tensor_split: Vec<f32>,
+    |     ^^^^^^^^^^^^
+
+warning: associated function `sanitize_trigger_words` is never used
+   --> vendor/llama-cpp-2/src/sampling.rs:458:8
+    |
+ 27 | impl LlamaSampler {
+    | ----------------- associated function in this implementation
+...
+458 |     fn sanitize_trigger_words(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> vendor/llama-cpp-2/src/model.rs:100:5
+    |
+100 |     Norm,
+    |     ^^^^
+    |
+    = note: requested on the command line with `-W missing-docs`
+
+warning: missing documentation for a variant
+   --> vendor/llama-cpp-2/src/model.rs:101:5
+    |
+101 |     NeoX,
+    |     ^^^^
+
+warning: missing documentation for a variant
+   --> vendor/llama-cpp-2/src/model.rs:102:5
+    |
+102 |     MRope,
+    |     ^^^^^
+
+warning: missing documentation for a variant
+   --> vendor/llama-cpp-2/src/model.rs:103:5
+    |
+103 |     Vision,
+    |     ^^^^^^
+
+warning: `llama-cpp-2` (lib) generated 24 warnings (run `cargo fix --lib -p llama-cpp-2` to apply 5 suggestions)
+   Compiling tabcomplete-engine v0.1.0 (/home/crabcake/Projects/tabcomplete-q25-context-window-r1/tools/tabcomplete_engine)
+    Finished `release` profile [optimized] target(s) in 17.08s
+     Running unittests src/main.rs (/mnt/ssd/tabcomplete-q25-code-cpt-r2/fim-native-build-cache/release/deps/tabcomplete_engine-9291b5ecc2c3265c)
+
+running 49 tests
+test context::tests::budget_and_exclusions ... ok
+test context::tests::cursor_last_layout_moves_only_the_cursor_header_and_keeps_unicode ... ok
+test context::tests::cursor_last_layout_rejects_malformed_prompts_and_sweep_stays_unchanged ... ok
+test context::tests::fim_editor_validation_allows_uncalibrated_languages_but_keeps_path_guards ... ok
+test context::tests::cursor_last_layout_recounts_and_rejects_over_budget ... ok
+test context::tests::strict_wire ... ok
+test context::tests::safe_sweep_mapping ... ok
+test context::tests::trained_layout_preserves_the_control_prompt ... ok
+test context::tests::python_context_golden ... ok
+test embedded::tests::embedded_profiles_and_defaults ... ok
+test embedded::tests::rejects_truncation_tampering_and_bounds ... ok
+test context::tests::unicode_boundary ... ok
+test embedded::tests::opens_the_appended_gguf_in_place_without_extracting_a_sidecar ... ok
+test fim_v1::tests::bounded_crop_matches_utf8_offset_windows_for_unicode_whitespace_and_crlf ... ok
+test fim_v1::tests::aligned_prefix_retokenization_budget_falls_back_without_repair ... ok
+test fim_v1::tests::byte_fallback_offsets_expand_to_utf8_boundaries_then_retokenize ... ok
+test fim_v1::tests::aligned_prefix_utf8_pieces_and_editable_line_fallback_are_exact ... ok
+test fim_v1::tests::aligned_prefix_boundaries_keep_absolute_token_buckets ... ok
+test fim_v1::tests::context_digest_binds_request_source_cursor_prompt_and_tokenizer ... ok
+test fim_v1::tests::crlf_hole_includes_exact_terminator_and_suffix_starts_after_it ... ok
+test fim_v1::tests::eof_and_empty_file_have_no_invented_terminator ... ok
+test fim_v1::tests::aligned_policy_keeps_crlf_eof_application_ranges_and_changes_digest ... ok
+test fim_v1::tests::bound_invalid_completions_have_stable_failure_codes ... ok
+test fim_v1::tests::golden_psm_prompt_uses_utf8_byte_offsets_and_separate_ranges ... ok
+test fim_v1::tests::context_and_decode_are_bound_to_tokenizer_file_identity ... ok
+test fim_v1::tests::nfc_guard_checks_only_the_retained_prompt_segments ... ok
+test fim_v1::tests::rejects_wrong_marker_tokenization_and_control_inventory ... ok
+test fim_v1::tests::serving_profile_binds_tokenizer_and_known_vocabulary_ids ... ok
+test syntax_guard::tests::fixing_bad_source_is_allowed_and_crlf_bytes_survive ... ok
+test syntax_guard::tests::guard_application_matches_python_lua_golden_bytes ... ok
+test syntax_guard::tests::legitimate_backslashes_raw_strings_unicode_comments_are_preserved ... ok
+test syntax_guard::tests::other_languages_and_keep_do_not_claim_rust_validation ... ok
+test worker_guard_tests::context_refusal_exposes_only_the_nfc_unsupported_code ... ok
+test syntax_guard::tests::preexisting_unrelated_errors_do_not_disqualify_valid_edit ... ok
+test syntax_guard::tests::screenshot_escaped_quotes_are_rejected_without_repair ... ok
+test fim_v1::tests::eos_at_step_96_is_valid_but_missing_or_late_eos_is_not ... ok
+test worker_guard_tests::fim_eos_is_distinct_from_declared_controls_and_normal_eog_alias ... ok
+test worker_guard_tests::fim_tokenizer_failure_codes_are_typed_static_and_allowlisted ... ok
+test worker_guard_tests::embedded_fim_profile_must_match_the_verified_footer ... ok
+test worker_guard_tests::native_special_inventory_stays_exact_after_the_one_runtime_alias ... ok
+test worker_guard_tests::only_fim_generation_renders_control_token_spellings ... ok
+test worker_guard_tests::q25_runtime_eog_alias_is_only_the_known_normal_token ... ok
+test worker_guard_tests::startup_failure_codes_distinguish_load_tokenizer_and_context_stages ... ok
+test worker_guard_tests::experimental_syntax_opt_out_preserves_proposal ... ok
+test worker_guard_tests::syntax_guard_requires_the_exact_prepared_prompt ... ok
+test fim_v1::tests::rejects_eog_other_than_eos_added_tokens_and_old_wire_is_not_decoded ... ok
+test fim_v1::tests::rejects_ambiguous_source_specials_invalid_ranges_and_line_endings ... ok
+test embedded::tests::accepts_full_fim_profile_and_vocabulary_inventory ... ok
+test embedded::tests::fim_profile_is_required_and_bound_to_metadata ... ok
+
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
