@@ -35,6 +35,9 @@ pkgs.runCommand "tabcomplete-q25-fim-candidate-${engine.version}"
       modelName = "q25-fim";
       protocol = "q25-fim-line-completion-v1";
       contextLayout = "q25-fim-psm-bounded-v2";
+      # This runtime's generic CLI accepts only the legacy layouts. Embedded
+      # FIM serving always selects its fixed trained layout from the profile.
+      contextLayoutArgument = "cursor-last-v1";
       precision = "Q4_K_M";
       adapterIdentity = "full-weight";
       outputTokens = 96;

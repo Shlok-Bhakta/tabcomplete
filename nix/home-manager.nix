@@ -26,7 +26,7 @@ let
     "--context-size"
     (toString cfg.contextSize)
     "--context-layout"
-    cfg.contextLayout
+    (package.contextLayoutArgument or cfg.contextLayout)
     "--input-tokens"
     (toString cfg.inputTokens)
     "--batch-size"
