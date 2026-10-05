@@ -1,0 +1,24 @@
+{
+  "cuda_local": false,
+  "gpu_allocation_in_this_verification": false,
+  "lint": {
+    "command": "uv run ruff check .",
+    "result": "PASS"
+  },
+  "observed_at": "2026-10-05T03:40:32.997544+00:00",
+  "python": {
+    "command": "UV_PROJECT_ENVIRONMENT=product-r2/.venv PYTHONPATH=src:scripts:existing-local-torch-site-packages uv run pytest -q",
+    "elapsed_seconds": 102.17,
+    "failed": 0,
+    "log_sha256": "ca279939427cf2a119fa8d913ef3e034c7387994a4bfd34c53f4c1794bbb5efa",
+    "passed": 1281,
+    "warnings": 2
+  },
+  "revision": 3,
+  "schema": "q25-completion-scale-preallocation-verification-v1",
+  "typecheck": {
+    "command": "uv run mypy src scripts",
+    "result": "PASS",
+    "source_files": 198
+  }
+}

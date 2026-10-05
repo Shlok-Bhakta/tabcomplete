@@ -1,0 +1,22 @@
+{
+  "automatic_retry": false,
+  "data_prompt_decoding_scoring_changed": false,
+  "monitoring": {
+    "limitation": "No failed training run context was created before bootstrap source verification. This page is not proof of a failing trace. Worker status and source hashes are authoritative.",
+    "queried_at": 1791170955363,
+    "query": "tabcomplete-observe runs --since 24h --limit 20 --json",
+    "query_sha256": "344cce2d582829e664653c1f4158f651a9ee1b7132d8467a8b271930461ba302",
+    "returned_rows": 20,
+    "state": "ok"
+  },
+  "observed_at": "2026-10-05T03:39:18.299957+00:00",
+  "prior_failure_gpu_session_seconds_upper_bound": 74,
+  "r2_scaled": "cancelled_before_allocation",
+  "reason": "R2 worker failed closed before model loading because source hashes were encoded differently by controller and worker. The worker now verifies the actual controller SHA256 map; complete CPU preflight includes real checkout validation.",
+  "repeat_session_seconds": 10726,
+  "revision": 3,
+  "scaled_session_seconds": 10800,
+  "schema": "q25-completion-scale-plan-revision-v1",
+  "total_session_seconds_cap": 21600,
+  "training_input_token_cap": 10000000
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "thinkpad-acknowledged-event-retry-verification-v1",
+  "synthetic": true,
+  "session_id": "8fd95af8-42a2-4419-82cc-c7b5add06131",
+  "replayed_reverse_order_events": 47,
+  "response": {
+    "ingested": 0,
+    "skipped_duplicate": 47,
+    "total": 47
+  },
+  "projection_rows_before": 4,
+  "projection_rows_after": 4,
+  "duplicate_terminal_outcomes": false
+}

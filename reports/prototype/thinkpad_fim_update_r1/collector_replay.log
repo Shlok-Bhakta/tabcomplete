@@ -1,0 +1,6 @@
+# replay (READ-ONLY, db=/mnt/ssd/collector-data/collector.sqlite)
+# file: sample.py
+# session: 8fd95af8-42a2-4419-82cc-c7b5add06131
+# anchors: 15  deltas replayed: 8  unanchored: 0  delta mismatches: 0
+# rebuilt bytes: 276  target bytes: 276
+REPLAY-OK: anchor + deltas byte-equal the final anchor

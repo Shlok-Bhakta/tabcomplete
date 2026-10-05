@@ -1,0 +1,38 @@
+{
+  "host": "shlokthinkpad",
+  "machine": "x86_64",
+  "kernel": "6.18.35",
+  "observed_at_unix_seconds": 1791169656.9626763,
+  "cpu_model": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
+  "logical_processors": 8,
+  "physical_cores": 4,
+  "memory": {
+    "MemTotal": "MemTotal:       24347828 kB",
+    "MemAvailable": "MemAvailable:   17054332 kB"
+  },
+  "other_workloads_counts": {
+    "nvim": 4,
+    "firefox": 0,
+    "chromium": 0,
+    "chrome": 0,
+    "rust-analyzer": 1,
+    "clangd": 0,
+    "node": 0,
+    "nix": 1,
+    "cc1plus": 2,
+    "rustc": 0
+  },
+  "temperature": [
+    {
+      "name": "coretemp",
+      "temperatures_millicelsius": {
+        "temp3_input": 76000,
+        "temp4_input": 81000,
+        "temp1_input": 89000,
+        "temp5_input": 89000,
+        "temp2_input": 85000
+      }
+    }
+  ],
+  "condition": "existing user applications retained; Nix candidate build active at inventory time"
+}

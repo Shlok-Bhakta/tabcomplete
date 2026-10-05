@@ -1,0 +1,15 @@
+{
+  "agent_ran_nixos_rebuild_switch": false,
+  "alias": "q25-fim",
+  "health_status": "ok",
+  "model_protocol": "q25-fim-line-completion-v1",
+  "model_sha256": "ff43d25913e982c3580614ad0528722d9b261b6575d4e06349f9b8509b368682",
+  "observed_at": "2026-10-05T03:39:18.300463+00:00",
+  "open_neovim_restart_required": true,
+  "reboot_required_for_tabcomplete": false,
+  "schema": "thinkpad-post-user-switch-health-v1",
+  "service": "tabcomplete-engine.service",
+  "service_active_state": "active",
+  "service_sub_state": "running",
+  "user_reported_nixos_rebuild_switch": true
+}

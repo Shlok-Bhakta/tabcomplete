@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "acceptance_key_dispatched": "<M-l>",
+  "force_key_dispatched": "<M-p>",
+  "undo_verified": true,
+  "requested": 2,
+  "schema": "thinkpad-fim-normal-force-real-v1",
+  "navigation_outcome": "dismissed_navigation",
+  "session_id": "14939e18-81ad-430c-9ad9-25f5f018467d",
+  "actual_normal_mode": true,
+  "automatic_prediction_id": "ffddafb4-bc5b-4e48-8d2e-ff3f98c201e6",
+  "forced_prediction_id": "c5f1e47e-b26a-40c2-ba18-f2baa04709b8"
+}

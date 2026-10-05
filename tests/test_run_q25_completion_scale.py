@@ -27,6 +27,17 @@ def _write(path: Path, value: bytes | str) -> None:
     path.write_bytes(value.encode() if isinstance(value, str) else value)
 
 
+def _prior_charge_fixture() -> dict[str, Any]:
+    return {
+        "revision": 2,
+        "session_wall_seconds_upper_bound": 120,
+        "conservative_account_gpu_hours": 120 / 3600 * 2,
+        "processed_input_tokens_conservative": 0,
+        "maximum_additional_repeat_allocations": 1,
+        "automatic_retry": False,
+    }
+
+
 def _freeze_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     repository = tmp_path / "repo"
     report = repository / "reports/research/q25_completion_scale_r1"
@@ -34,8 +45,8 @@ def _freeze_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str
     corpus = artifacts / "corpus"
     base_report = repository / "reports/research/q25_code_cpt_r2"
     training_plans = {
-        "repeat": report / "training_plan_repeat-r2.json",
-        "scaled": report / "training_plan_scaled-r2.json",
+        "repeat": report / "training_plan_repeat-r3.json",
+        "scaled": report / "training_plan_scaled-r3.json",
     }
     for name in ("repeat_train", "scaled_train", "development_new", "development_previous"):
         _write(corpus / f"{name}.jsonl", f"fixture:{name}\n")
@@ -247,6 +258,7 @@ def _freeze_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str
     monkeypatch.setattr(scale, "ANALYSIS_PLAN", analysis_path)
     monkeypatch.setattr(scale, "TRAINING_PLANS", training_plans)
     monkeypatch.setattr(scale, "CORPUS", corpus)
+    monkeypatch.setattr(scale, "_prior_failure_charge", _prior_charge_fixture)
     monkeypatch.setattr(scale, "BASE_REPORT", base_report)
     monkeypatch.setattr(scale, "BASE_PLAN", base_plan_path)
     monkeypatch.setattr(scale, "RUNTIME_LOCK", runtime_lock_path)
@@ -267,8 +279,8 @@ def test_freeze_preserves_initializer_evaluation_contract_and_analysis_fingerpri
 
     plan = scale.freeze("repeat")
 
-    assert plan["plan_revision"] == 2
-    assert scale.TRAINING_PLANS["repeat"].name == "training_plan_repeat-r2.json"
+    assert plan["plan_revision"] == 3
+    assert scale.TRAINING_PLANS["repeat"].name == "training_plan_repeat-r3.json"
     assert plan["experiment"]["variants"] == {
         variant: fixture["prep"]["experiment"][variant] for variant in scale.VARIANTS
     }
@@ -378,7 +390,7 @@ def _complete_collection_fixture(
     report = tmp_path / "reports"
     artifacts = tmp_path / "artifacts"
     plan_path = report / "training_plan_repeat.json"
-    input_manifest = artifacts / "input-bundle-repeat-r2/input-manifest.json"
+    input_manifest = artifacts / "input-bundle-repeat-r3/input-manifest.json"
     _write(plan_path, "plan")
     _write(input_manifest, '{"schema":"test"}\n')
     plan = {
@@ -411,9 +423,10 @@ def _complete_collection_fixture(
         "commit": plan["base_commit"],
         "reference": scale.KERNELS["repeat"],
         "external_campaign_tokens": 0,
+        "session_seconds": 10680,
     }
-    scale.save(report / "job-repeat.json", job)
-    output = artifacts / "output-repeat/q25_completion_scale_r1-repeat"
+    scale.save(report / "job-repeat-r3.json", job)
+    output = artifacts / "output-repeat-r3/q25_completion_scale_r1-repeat"
     training = output / "training"
     checkpoint_bytes = b"checkpoint-data"
     checkpoint = training / "resume-step-000512.pt"
@@ -485,7 +498,7 @@ def _complete_collection_fixture(
             "scaled": {"state": "reserved"},
         }
     }
-    scale.save(report / "campaign_budget.json", ledger)
+    scale.save(report / "campaign_budget-r3.json", ledger)
     monkeypatch.setattr(scale, "REPORT", report)
     monkeypatch.setattr(scale, "ARTIFACTS", artifacts)
     monkeypatch.setattr(
@@ -512,8 +525,8 @@ def test_collect_persists_terminal_state_and_releases_only_completed_variant_gat
 
     verified = scale.collect("repeat")
 
-    saved_job = scale.read_json(report / "job-repeat.json")
-    ledger = scale.read_json(report / "campaign_budget.json")
+    saved_job = scale.read_json(report / "job-repeat-r3.json")
+    ledger = scale.read_json(report / "campaign_budget-r3.json")
     assert verified["training_status"] == "complete"
     assert saved_job["status"] == "collected"
     assert saved_job["terminal_status"] == "KernelWorkerStatus.COMPLETE"
@@ -527,15 +540,15 @@ def test_collect_is_idempotent_after_report_write_before_ledger_update(
 ) -> None:
     _job, report, _artifacts = _complete_collection_fixture(tmp_path, monkeypatch)
     result = scale.collect("repeat")
-    scale.save(report / "verified-repeat.json", result)
-    job = scale.read_json(report / "job-repeat.json")
+    scale.save(report / "verified-repeat-r3.json", result)
+    job = scale.read_json(report / "job-repeat-r3.json")
     job["status"] = "submitted"
-    scale.save(report / "job-repeat.json", job)
+    scale.save(report / "job-repeat-r3.json", job)
 
     repeated = scale.collect("repeat")
 
     assert repeated["reference"] == scale.KERNELS["repeat"]
-    assert scale.read_json(report / "job-repeat.json")["status"] == "collected"
+    assert scale.read_json(report / "job-repeat-r3.json")["status"] == "collected"
     assert scale._has_unresolved_job() is False
 
 
@@ -570,9 +583,9 @@ def test_uncertain_submission_remains_reserved_and_blocks_new_allocation(
     plans = {variant: scale.freeze(variant) for variant in scale.VARIANTS}
     ledger = scale._load_or_create_ledger(plans)
     ledger["variants"]["repeat"]["state"] = "submission_unknown"
-    scale.save(scale.REPORT / "campaign_budget.json", ledger)
+    scale.save(scale.REPORT / "campaign_budget-r3.json", ledger)
     scale.save(
-        scale.REPORT / "job-repeat.json",
+        scale.REPORT / "job-repeat-r3.json",
         {"reference": scale.KERNELS["repeat"], "status": "submission_unknown"},
     )
     assert scale._load_or_create_ledger(plans)["variants"]["repeat"]["state"] == (
@@ -586,7 +599,7 @@ def test_collect_rejects_checkpoint_identity_corruption(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
 ) -> None:
     _job, _report, artifacts = _complete_collection_fixture(tmp_path, monkeypatch)
-    training = artifacts / "output-repeat/q25_completion_scale_r1-repeat/training"
+    training = artifacts / "output-repeat-r3/q25_completion_scale_r1-repeat/training"
     if mutation == "marker_version":
         path = training / "resume-step-000512.pt.complete.json"
         value = scale.read_json(path)
@@ -620,7 +633,7 @@ def test_collect_uses_canonical_reference_recorded_by_submission(
     job, report, _artifacts = _complete_collection_fixture(tmp_path, monkeypatch)
     job["requested_reference"] = scale.KERNELS["repeat"]
     job["reference"] = scale.KERNELS["repeat"] + "-canonical"
-    scale.save(report / "job-repeat.json", job)
+    scale.save(report / "job-repeat-r3.json", job)
     result = scale.collect("repeat")
     assert result["reference"] == job["reference"]
     assert scale._has_unresolved_job() is False
@@ -638,7 +651,7 @@ def test_watch_process_restart_observes_existing_job_without_allocating(
 ) -> None:
     job, report, _artifacts = _complete_collection_fixture(tmp_path, monkeypatch)
     job["submitted_at"] = datetime.now(UTC).isoformat()
-    scale.save(report / "job-repeat.json", job)
+    scale.save(report / "job-repeat-r3.json", job)
     calls: list[tuple[str, ...]] = []
 
     def run(*args: str, **_kwargs: Any) -> str:
@@ -657,7 +670,7 @@ def test_watch_does_not_consume_renewed_quota_after_original_deadline(
 ) -> None:
     job, report, _artifacts = _complete_collection_fixture(tmp_path, monkeypatch)
     job["submitted_at"] = "2020-01-01T00:00:00+00:00"
-    scale.save(report / "job-repeat.json", job)
+    scale.save(report / "job-repeat-r3.json", job)
     with pytest.raises(TimeoutError, match="observer deadline"):
         scale.watch("repeat")
 
@@ -715,7 +728,7 @@ def test_freeze_validates_both_preparation_variant_records(
 
 
 @pytest.mark.parametrize("variant", ["repeat", "scaled"])
-def test_revision_two_bundle_preserves_historical_staging(
+def test_revision_three_bundle_preserves_historical_staging(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, variant: str
 ) -> None:
     _freeze_fixture(tmp_path, monkeypatch)
@@ -727,8 +740,110 @@ def test_revision_two_bundle_preserves_historical_staging(
 
     directory = scale.build_bundle(plan)
 
-    assert directory == scale.ARTIFACTS / f"input-bundle-{variant}-r2"
+    assert directory == scale.ARTIFACTS / f"input-bundle-{variant}-r3"
     assert historical.read_bytes() == historical_bytes
     assert scale.read_json(directory / "input-manifest.json")["plan_sha256"] == scale.digest(
         scale.TRAINING_PLANS[variant]
     )
+
+
+def test_revision_three_ledger_preserves_failure_charge_and_total_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _freeze_fixture(tmp_path, monkeypatch)
+    plans = {variant: scale.freeze(variant) for variant in scale.VARIANTS}
+    prior_ledger = scale.REPORT / "campaign_budget.json"
+    _write(prior_ledger, "historical acknowledged failure\n")
+    prior_bytes = prior_ledger.read_bytes()
+
+    ledger = scale._load_or_create_ledger(plans)
+
+    assert scale._report_record("campaign_budget").name == "campaign_budget-r3.json"
+    assert prior_ledger.read_bytes() == prior_bytes
+    prior_seconds = ledger["prior_failed_allocation"]["session_wall_seconds_upper_bound"]
+    repeat_seconds = ledger["variants"]["repeat"]["reserved_session_seconds"]
+    scaled_seconds = ledger["variants"]["scaled"]["reserved_session_seconds"]
+    assert (prior_seconds, repeat_seconds, scaled_seconds) == (120, 10680, 10800)
+    assert prior_seconds + repeat_seconds + scaled_seconds == scale.AGGREGATE_SESSION_SECONDS
+    assert (prior_seconds + repeat_seconds + scaled_seconds) / 3600 * 2 == 12
+    assert ledger["prior_failed_allocation"]["maximum_additional_repeat_allocations"] == 1
+    assert ledger["prior_failed_allocation"]["automatic_retry"] is False
+
+
+def _failed_prior_fixture(report: Path) -> None:
+    reference = "shlokbhakta/tc-q25-completion-scale-r1-repeat"
+    receipt = {
+        "schema": "q25-completion-scale-verified-output-v1",
+        "attempt": 1,
+        "reference": reference,
+        "training_status": "no_training_executed",
+        "checkpoint_verified": False,
+        "processed_input_tokens_conservative": 0,
+        "discarded_input_tokens_conservative": 0,
+        "plan_sha256": "a" * 64,
+        "input_manifest_sha256": "b" * 64,
+        "status": "KernelWorkerStatus.ERROR",
+        "observed_at": "2026-10-05T03:26:03.295129+00:00",
+    }
+    scale.save(report / "verified-repeat.json", receipt)
+    receipt_sha = scale.digest(report / "verified-repeat.json")
+    scale.save(
+        report / "job-repeat.json",
+        {
+            "attempt": 1,
+            "status": "collected",
+            "reference": reference,
+            "verified_output_sha256": receipt_sha,
+            "plan_sha256": receipt["plan_sha256"],
+            "input_manifest_sha256": receipt["input_manifest_sha256"],
+            "submitted_at": "2026-10-05T03:24:49.357085+00:00",
+        },
+    )
+    scale.save(
+        report / "campaign_budget.json",
+        {
+            "variants": {
+                "repeat": {
+                    "state": "collected",
+                    "verified_output_sha256": receipt_sha,
+                    "processed_input_tokens_conservative": 0,
+                },
+                "scaled": {"state": "reserved"},
+            }
+        },
+    )
+
+
+def test_prior_failure_charge_uses_conservative_elapsed_receipt_window(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(scale, "REPORT", tmp_path)
+    _failed_prior_fixture(tmp_path)
+    charge = scale._prior_failure_charge()
+    assert charge["session_wall_seconds_upper_bound"] == 74
+    assert charge["prior_scaled_allocation"] == "cancelled_before_allocation"
+    assert charge["processed_input_tokens_conservative"] == 0
+
+
+@pytest.mark.parametrize("failure", ["trained", "missing_timezone", "too_long", "scaled_started"])
+def test_retry_requires_zero_work_failure_with_remaining_bounded_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    monkeypatch.setattr(scale, "REPORT", tmp_path)
+    _failed_prior_fixture(tmp_path)
+    if failure == "scaled_started":
+        _write(tmp_path / "job-scaled.json", "an allocation exists")
+    else:
+        path = tmp_path / "job-repeat.json"
+        job = scale.read_json(path)
+        if failure == "trained":
+            path = tmp_path / "verified-repeat.json"
+            job = scale.read_json(path)
+            job["processed_input_tokens_conservative"] = 1
+        elif failure == "missing_timezone":
+            job["submitted_at"] = "2026-10-05T03:24:49"
+        else:
+            job["submitted_at"] = "2026-10-04T03:24:49+00:00"
+        scale.save(path, job)
+    with pytest.raises(ValueError):
+        scale._prior_failure_charge()

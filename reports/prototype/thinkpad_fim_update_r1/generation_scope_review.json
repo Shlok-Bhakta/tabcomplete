@@ -1,0 +1,11 @@
+{
+  "changed_paths": [
+    ".config/fontconfig/conf.d/10-hm-fonts.conf",
+    ".config/lazyvim/lua/plugins/tabcomplete-trajectory.lua",
+    ".config/systemd/user/default.target.wants/tabcomplete-engine.service",
+    ".config/systemd/user/tabcomplete-engine.service"
+  ],
+  "only_authorized_tabcomplete_changes_and_induced_fontconfig_path": true,
+  "candidate_generation": "/nix/store/85p7q1nazz43qqsahddicq2341whnbi6-home-manager-generation",
+  "baseline_generation": "/nix/store/21wajrcb2pqqkbbsqk0j1mh9jpr2amdl-home-manager-generation"
+}

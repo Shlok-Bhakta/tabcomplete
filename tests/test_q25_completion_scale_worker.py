@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -302,3 +303,45 @@ def test_scale_trainer_command_selects_variant_paths_without_changing_arm(tmp_pa
     assert command[command.index("--historical-development") + 1] == str(
         paths["development_previous.jsonl"]
     )
+
+
+def test_scale_checkout_accepts_actual_controller_source_map(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    controller_path = ROOT / "scripts/run_q25_completion_scale.py"
+    spec = importlib.util.spec_from_file_location(
+        "scale_controller_source_contract", controller_path
+    )
+    assert spec is not None and spec.loader is not None
+    controller = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(controller)
+    # Use the real producer rather than hand-constructing its wire shape.
+    actual_sources = controller._source_files()
+    assert actual_sources and all(isinstance(value, str) for value in actual_sources.values())
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    for relative in actual_sources:
+        destination = repo / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, destination)
+    monkeypatch.setattr(worker, "REPO", repo)
+    monkeypatch.setattr(worker, "WORK_ROOT", tmp_path / "output")
+    instance = worker.Worker(_session())
+    (instance.out / "logs").mkdir(parents=True)
+    (instance.out / "logs" / "verify-repository-commit.log").write_text(
+        _session()["commit"] + "\n"
+    )
+    monkeypatch.setattr(instance, "_setup_stage", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(instance, "_runtime_artifact_bytes", lambda: 2**30)
+    plan = {
+        "source_identity": {"commit": _session()["commit"], "files": actual_sources}
+    }
+    instance._checkout_repository(plan)
+    changed_path = repo / "kaggle/q25_code_cpt_r2/run_fim.py"
+    changed_path.write_bytes(changed_path.read_bytes() + b"\n# changed fixture\n")
+    with pytest.raises(worker.WorkerError, match="scale_repository_source_hash_mismatch"):
+        instance._checkout_repository(plan)
+    changed_path.unlink()
+    changed_path.symlink_to(ROOT / "kaggle/q25_code_cpt_r2/run_fim.py")
+    with pytest.raises(worker.WorkerError, match="scale_repository_source_hash_mismatch"):
+        instance._checkout_repository(plan)

@@ -1,0 +1,6 @@
+{
+  "automatic_allocation": false,
+  "observed_at": "2026-10-05T03:25:59.999821+00:00",
+  "reference": "shlokbhakta/tc-q25-completion-scale-r1-repeat",
+  "status": "shlokbhakta/tc-q25-completion-scale-r1-repeat has status \"KernelWorkerStatus.ERROR\""
+}

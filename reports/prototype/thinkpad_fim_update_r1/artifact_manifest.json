@@ -1,0 +1,101 @@
+{
+  "schema": "thinkpad-fim-update-artifact-manifest-v1",
+  "model_weights_published": false,
+  "files": [
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/HANDOFF.md",
+      "bytes": 2954,
+      "sha256": "79e0ecf8fd7c23a19755c77733b864075dfd82e539edf4a2aad5c87769947b96"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/automatic_end_to_end.json",
+      "bytes": 522,
+      "sha256": "7289a9dab5a7838040da0a39d5482a6c57f0c868be10471720f132c82098f4df"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/collector_replay.log",
+      "bytes": 297,
+      "sha256": "f8e73dd2da2b53f81b2f21b40a400c029cbe0c28aa0ad734875e51605a40450d"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/deduplication_verification.json",
+      "bytes": 370,
+      "sha256": "ed5ae86d164a6e475acb41abce8eb35cc355080599e83ac61b80779267c6f07f"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/feedback_verification.json",
+      "bytes": 23074,
+      "sha256": "dc8d336b72f3bb2da284dfe3adb03d58255da3f279c144b1582396d9399e0356"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/full_lazyvim_startup.json",
+      "bytes": 574,
+      "sha256": "536437fdc5e2737189acc73869b6547a0106f0f18e489826f6d042159d50aa2a"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/generation_scope_review.json",
+      "bytes": 539,
+      "sha256": "3ce99ce04bc37f69e8d5010472c0dcc4374914cd39ee6119e11b39c553ec240d"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/hardware.json",
+      "bytes": 914,
+      "sha256": "ca610279503104367455f78fcd74742f0b00aa739d59cf6baabaa458b67f2064"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/installed_configuration.json",
+      "bytes": 5677,
+      "sha256": "ea1578707d35d45c25de9195999d3cd7c9d54c0acd9f65135afd09f442af3215"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/installed_editor_verification.json",
+      "bytes": 2426,
+      "sha256": "19631ed0d868a6a0f593cef802a11a1b78a5739ee5716d460d5874146442524e"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/nix_rust_tests.json",
+      "bytes": 232,
+      "sha256": "1e093480e4d824417c4967b74aecba7a7c0e67a8c598129b07fb886ad50762b3"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/normal_force_end_to_end.json",
+      "bytes": 460,
+      "sha256": "0fc80674db8247e97c182ffdae6008e01ad318204817a8db90ae0a6b428992eb"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/post_user_switch_health.json",
+      "bytes": 576,
+      "sha256": "83402a24a0c885af57d29840dcabbef9b6da0e6f346b17e99cf47ba64aa3ce79"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/runtime_baseline.json",
+      "bytes": 14399,
+      "sha256": "15653f7e368de9c9bcabd2253bc425a8d4748e3520cfe721001bf7f174efc3a2"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/runtime_fim_four_threads.json",
+      "bytes": 26399,
+      "sha256": "0ad5ad07b154c8a2354dde2fe87205251058c5908da1b2e67d6e0d999692c6f6"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/runtime_summary.json",
+      "bytes": 3453,
+      "sha256": "a8ff10ccee95bc6ca215db5b833d094e41197c2e03b77dba6cd04f9abda50b9c"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/source_identity.json",
+      "bytes": 140,
+      "sha256": "9dbc6948ccb362fbf5670437376fb1acc8a2528f122d5aae65ef4b3f62b07b6b"
+    },
+    {
+      "path": "reports/prototype/thinkpad_fim_update_r1/startup_failure.json",
+      "bytes": 382,
+      "sha256": "f0e72fb1ebea973f8fda279ac38561efc45fad06eb99ec4a5b55957754b2c14e"
+    }
+  ],
+  "report": {
+    "path": "reports/prototype/thinkpad_fim_update_r1.md",
+    "bytes": 9379,
+    "sha256": "99db3cf426bc9fe850af01129d823843cbb73e266fe51676d62bb70c56a0d329"
+  }
+}

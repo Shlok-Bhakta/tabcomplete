@@ -1,0 +1,81 @@
+{
+  "schema": "thinkpad-fim-update-runtime-summary-v1",
+  "condition": "normal workload; existing user applications retained; selected FIM replay ran after its Nix build completed; no competing-process trace proving a controlled interval was collected",
+  "repetitions": 2,
+  "states_per_repetition": 4,
+  "small_exploratory_slice": true,
+  "compared_settings_are_different_models_protocols_and_context_policies": true,
+  "not_a_pure_runtime_speedup_or_quality_evaluation": true,
+  "baseline": {
+    "changed_state_count": 6,
+    "changed_state_completed_median_ms": 700.5949029990006,
+    "changed_state_completed_p95_ms_nearest_rank": 703.5796760028461,
+    "resident_first_uncached_ms": 2672.0994410061394,
+    "same_prompt_repeat_ms": 434.9164099985501,
+    "actual_input_tokens": [
+      392,
+      393
+    ],
+    "cached_input_tokens": 2499,
+    "recomputed_input_tokens": 639,
+    "maximum_service_rss_bytes": 581107712,
+    "maximum_service_pss_bytes": 576949248,
+    "maximum_service_swap_bytes": 0,
+    "last_retained_process_bytes": {
+      "Rss": 581107712,
+      "Pss": 576949248,
+      "Pss_Anon": 86564864,
+      "Pss_File": 490384384,
+      "Anonymous": 86564864,
+      "Swap": 0,
+      "SwapPss": 0
+    },
+    "vmstat_window_deltas": {
+      "pswpin": 0,
+      "pswpout": 0,
+      "pgmajfault": 0
+    },
+    "memory_pressure_start": "some avg10=0.00 avg60=0.00 avg300=0.00 total=6572\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=6385",
+    "memory_pressure_end": "some avg10=0.00 avg60=0.00 avg300=0.00 total=6572\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=6385"
+  },
+  "selected_fim": {
+    "changed_state_count": 6,
+    "changed_state_completed_median_ms": 3719.931790004921,
+    "changed_state_completed_p95_ms_nearest_rank": 3823.96868300566,
+    "resident_first_uncached_ms": 3708.965484001965,
+    "same_prompt_repeat_ms": 79.59805199789116,
+    "actual_input_tokens": [
+      643
+    ],
+    "cached_input_tokens": 1926,
+    "recomputed_input_tokens": 3218,
+    "maximum_service_rss_bytes": 592429056,
+    "maximum_service_pss_bytes": 588277760,
+    "maximum_service_swap_bytes": 0,
+    "last_retained_process_bytes": {
+      "Rss": 592429056,
+      "Pss": 588277760,
+      "Pss_Anon": 97677312,
+      "Pss_File": 490600448,
+      "Anonymous": 97677312,
+      "Swap": 0,
+      "SwapPss": 0
+    },
+    "vmstat_window_deltas": {
+      "pswpin": 0,
+      "pswpout": 0,
+      "pgmajfault": 0
+    },
+    "memory_pressure_start": "some avg10=0.00 avg60=0.00 avg300=0.00 total=73575\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=67382",
+    "memory_pressure_end": "some avg10=0.00 avg60=0.00 avg300=0.00 total=73575\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=67382"
+  },
+  "bottleneck": "Sliding last-640-token prefix boundaries invalidate most active KV state on transitions changing input token count. Generation is ~21-52 ms; affected prefill is ~3650-3770 ms. Stable prefix transitions reuse 640 tokens and complete ~94-95 ms.",
+  "optional_thread_ablation": "Not performed while the user prepared a system switch; four physical-core threads retained.",
+  "cold_model_load_ms": 326.842745,
+  "predictor_memory_scope": "Resident model service RSS/PSS only; editor/plugin incremental allocation and curl helper peak were not separately measured.",
+  "unknown_stages": [
+    "editor last-key-to-display latency in this HTTP replay",
+    "editor callback latency",
+    "inter-session queue waiting under concurrent clients"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "aggregate_reserved_session_seconds": 21600,
+  "conservative_account_gpu_hours_reserved": 12,
+  "conservative_quota_multiplier": 2,
+  "maximum_campaign_input_tokens": 10000000,
+  "maximum_discarded_replay_input_tokens": 2000000,
+  "plan_sha256": {
+    "repeat": "0e571b371ab986a9f141275bd5338f91b666d9922f91af48f7b467bbb087ba4a",
+    "scaled": "720a6253e882a98d9f47cbb36840edfbadc3350c076cfc65fef0aff6ed787118"
+  },
+  "planned_variant_input_tokens": {
+    "repeat": 3553816,
+    "scaled": 3551513
+  },
+  "preparation_plan_sha256": "be920b0e4e598ae35ad5e5cca85f1a2bc220d0446e2a8f8ba170689230befa2d",
+  "schema": "q25-completion-scale-budget-v1",
+  "updated_at": "2026-10-05T03:26:03.297271+00:00",
+  "variants": {
+    "repeat": {
+      "plan_sha256": "0e571b371ab986a9f141275bd5338f91b666d9922f91af48f7b467bbb087ba4a",
+      "processed_input_tokens_conservative": 0,
+      "reference": "shlokbhakta/tc-q25-completion-scale-r1-repeat",
+      "reserved_input_tokens": 3553816,
+      "reserved_session_seconds": 10800,
+      "state": "collected",
+      "training_status": "no_training_executed",
+      "verified_output_sha256": "08d17bbe33dd43283c14b77a5115ce3c6ce4c506a51b0e4f892448b18c9f34b9"
+    },
+    "scaled": {
+      "processed_input_tokens_conservative": null,
+      "reference": "shlokbhakta/tc-q25-completion-scale-r1-scaled",
+      "reserved_input_tokens": 3551513,
+      "reserved_session_seconds": 10800,
+      "state": "reserved"
+    }
+  }
+}

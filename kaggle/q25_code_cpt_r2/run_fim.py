@@ -1481,22 +1481,30 @@ class Worker:
                 raise WorkerError("scale_repository_source_identity_invalid")
             for relative, record in source_files.items():
                 path = Path(relative) if isinstance(relative, str) else Path("..")
+                expected_sha = record.get("sha256") if isinstance(record, dict) else record
+                expected_bytes = record.get("bytes") if isinstance(record, dict) else None
                 if (
                     path.is_absolute()
                     or ".." in path.parts
                     or not path.parts
-                    or not isinstance(record, dict)
-                    or not _is_sha256(record.get("sha256"))
-                    or isinstance(record.get("bytes"), bool)
-                    or not isinstance(record.get("bytes"), int)
+                    or not _is_sha256(expected_sha)
+                    or (
+                        isinstance(record, dict)
+                        and (
+                            isinstance(expected_bytes, bool)
+                            or not isinstance(expected_bytes, int)
+                            or expected_bytes < 0
+                        )
+                    )
                 ):
                     raise WorkerError("scale_repository_source_identity_invalid")
                 source_path = REPO / path
                 if (
-                    source_path.is_symlink()
+                    any((REPO / Path(*path.parts[:index])).is_symlink()
+                        for index in range(1, len(path.parts) + 1))
                     or not source_path.is_file()
-                    or source_path.stat().st_size != record["bytes"]
-                    or sha256_file(source_path) != record["sha256"]
+                    or (expected_bytes is not None and source_path.stat().st_size != expected_bytes)
+                    or sha256_file(source_path) != expected_sha
                 ):
                     raise WorkerError("scale_repository_source_hash_mismatch")
         if self._runtime_artifact_bytes() < _runtime_regular_bytes(REPO):

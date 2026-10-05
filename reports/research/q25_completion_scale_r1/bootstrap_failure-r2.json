@@ -1,0 +1,19 @@
+{
+  "cause": "Controller source identity maps relative paths to SHA256 strings. The worker checkout validator required records with sha256 and bytes. Actual preflight covered plan/corpus validation but not checkout validation; mocks used a different shape.",
+  "failure_reason": "scale_repository_source_identity_invalid",
+  "fix_scope": "Accept explicitly declared SHA256 map in worker checkout; preserve version2 reports and zero-work charge. New version3 plans and input bundles will freeze both arms with the same fixed code and unchanged data/decoding/scoring.",
+  "job_submitted_at": "2026-10-05T03:24:49.357085+00:00",
+  "kernel": "shlokbhakta/tc-q25-completion-scale-r1-repeat",
+  "no_model_outputs": true,
+  "no_model_weight_updates": true,
+  "no_scaled_r2_allocation": true,
+  "observed_at": "2026-10-05T03:29:15.194743+00:00",
+  "safety": "Source verification failed closed before runtime installation and model loading; no checkpoint or training work existed.",
+  "schema": "q25-completion-scale-bootstrap-failure-v1",
+  "scientific_worker_status_sha256": "ebc790d6c113c6c53aa1072e8610bb0d625d00f2cd71683003ae7866beff1b4e",
+  "terminal_observed_at": "2026-10-05T03:26:03.295129+00:00",
+  "training_input_tokens": 0,
+  "training_started": false,
+  "verified_output_receipt_sha256": "08d17bbe33dd43283c14b77a5115ce3c6ce4c506a51b0e4f892448b18c9f34b9",
+  "worker_elapsed_seconds": 11.444441476999998
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "thinkpad-fim-startup-failure-v1",
+  "candidate_source_commit": "a86bd47889742cced2166a91a82581db7d30b4e0",
+  "failure": "unsupported context layout",
+  "evidence": "startup-failure-journal.txt",
+  "model_inference_completed": false,
+  "working_provider_restored": true,
+  "fix": "Launch-only CLI compatibility field; embedded FIM retains its fixed trained layout."
+}

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -30,8 +31,8 @@ CONFIG = ROOT / "configs/research/q25_completion_scale_r1.yaml"
 PREPARATION_PLAN = REPORT / "preparation_plan-r2.json"
 ANALYSIS_PLAN = REPORT / "analysis_plan-r2.json"
 TRAINING_PLANS = {
-    "repeat": REPORT / "training_plan_repeat-r2.json",
-    "scaled": REPORT / "training_plan_scaled-r2.json",
+    "repeat": REPORT / "training_plan_repeat-r3.json",
+    "scaled": REPORT / "training_plan_scaled-r3.json",
 }
 CORPUS = ARTIFACTS / "corpus-r3"
 BASE_REPORT = ROOT / "reports/research/q25_code_cpt_r2"
@@ -41,12 +42,12 @@ TRAIN_ARM = "untouched_q25_to_fim"
 VARIANTS = ("repeat", "scaled")
 ALLOCATION_ORDER = VARIANTS
 DATASETS = {
-    "repeat": "shlokbhakta/tabcomplete-q25-completion-scale-r1-repeat",
-    "scaled": "shlokbhakta/tabcomplete-q25-completion-scale-r1-scaled",
+    "repeat": "shlokbhakta/tabcomplete-q25-completion-scale-r1-repeat-r3",
+    "scaled": "shlokbhakta/tabcomplete-q25-completion-scale-r1-scaled-r3",
 }
 KERNELS = {
-    "repeat": "shlokbhakta/tc-q25-completion-scale-r1-repeat",
-    "scaled": "shlokbhakta/tc-q25-completion-scale-r1-scaled",
+    "repeat": "shlokbhakta/tc-q25-completion-scale-r1-repeat-r3",
+    "scaled": "shlokbhakta/tc-q25-completion-scale-r1-scaled-r3",
 }
 BASE_DATASET = "shlokbhakta/tabcomplete-one-line-instinct-pilot-r1-inputs"
 WORKER = ROOT / "kaggle/q25_code_cpt_r2/run_fim.py"
@@ -54,7 +55,7 @@ LINE_FIXTURE = Path(
     "/mnt/ssd/tabcomplete-preserved-research/model_data_r2/frozen-corpora/causal_line_v1-r3.jsonl"
 )
 PLAN_SCHEMA = "q25-completion-scale-training-plan-v1"
-PLAN_REVISION = 2
+PLAN_REVISION = 3
 CORPUS_SCHEMA = "q25-completion-scale-corpus-v1"
 INPUT_SCHEMA = "q25-completion-scale-input-v1"
 LEDGER_SCHEMA = "q25-completion-scale-budget-v1"
@@ -94,6 +95,72 @@ def read_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("campaign JSON must be an object")
     return value
+
+
+def _report_record(kind: str, variant: str | None = None) -> Path:
+    if variant is not None and variant not in VARIANTS:
+        raise ValueError("unknown completion-scale variant")
+    suffix = f"-{variant}" if variant is not None else ""
+    return REPORT / f"{kind}{suffix}-r{PLAN_REVISION}.json"
+
+
+def _prior_failure_charge() -> dict[str, Any]:
+    """Authorize one revised retry only from an acknowledged zero-work failure."""
+    job_path = REPORT / "job-repeat.json"
+    receipt_path = REPORT / "verified-repeat.json"
+    ledger_path = REPORT / "campaign_budget.json"
+    for path in (job_path, receipt_path, ledger_path):
+        _safe_regular_file(path)
+    job, receipt, ledger = map(read_json, (job_path, receipt_path, ledger_path))
+    prior_reference = "shlokbhakta/tc-q25-completion-scale-r1-repeat"
+    if (
+        job.get("status") != "collected"
+        or job.get("reference") != prior_reference
+        or receipt.get("reference") != prior_reference
+        or receipt.get("training_status") != "no_training_executed"
+        or receipt.get("schema") != "q25-completion-scale-verified-output-v1"
+        or job.get("attempt") != 1
+        or receipt.get("attempt") != 1
+        or receipt.get("checkpoint_verified") is not False
+        or receipt.get("processed_input_tokens_conservative") != 0
+        or receipt.get("discarded_input_tokens_conservative") != 0
+        or job.get("verified_output_sha256") != digest(receipt_path)
+        or receipt.get("plan_sha256") != job.get("plan_sha256")
+        or receipt.get("input_manifest_sha256") != job.get("input_manifest_sha256")
+        or "ERROR" not in receipt.get("status", "")
+        or ledger.get("variants", {}).get("repeat", {}).get("state") != "collected"
+        or ledger.get("variants", {}).get("repeat", {}).get("verified_output_sha256")
+        != digest(receipt_path)
+        or ledger.get("variants", {}).get("repeat", {}).get(
+            "processed_input_tokens_conservative"
+        ) != 0
+        or ledger.get("variants", {}).get("scaled", {}).get("state") != "reserved"
+        or (REPORT / "job-scaled.json").exists()
+    ):
+        raise ValueError("revision three requires a verified zero-work prior failure")
+    try:
+        submitted = datetime.fromisoformat(job["submitted_at"].replace("Z", "+00:00"))
+        observed = datetime.fromisoformat(receipt["observed_at"].replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("prior failure timestamps cannot bound its allocation") from None
+    if submitted.utcoffset() is None or observed.utcoffset() is None:
+        raise ValueError("prior failure timestamps require timezones")
+    seconds = math.ceil((observed - submitted).total_seconds())
+    if not 0 < seconds < SESSION_SECONDS - 2 * FINALIZATION_RESERVE_SECONDS:
+        raise ValueError("prior failed allocation exhausted the repeat session reservation")
+    return {
+        "revision": 2,
+        "reference": prior_reference,
+        "job_sha256": digest(job_path),
+        "receipt_sha256": digest(receipt_path),
+        "ledger_sha256": digest(ledger_path),
+        "session_wall_seconds_upper_bound": seconds,
+        "conservative_account_gpu_hours": seconds / 3600 * QUOTA_MULTIPLIER,
+        "processed_input_tokens_conservative": 0,
+        "prior_scaled_allocation": "cancelled_before_allocation",
+        "maximum_additional_repeat_allocations": 1,
+        "automatic_retry": False,
+    }
 
 
 def cli(*args: str, timeout: int = 120) -> str:
@@ -383,6 +450,12 @@ def freeze(variant: str) -> dict[str, Any]:
         "automatic_renewal_use": False,
         "conservative_quota_multiplier": QUOTA_MULTIPLIER,
         "quota_renewal": configuration["budget"]["quota_renewal"],
+        "prior_failed_allocation": _prior_failure_charge(),
+    }
+    budget["variant_session_seconds"] = {
+        "repeat": SESSION_SECONDS
+        - budget["prior_failed_allocation"]["session_wall_seconds_upper_bound"],
+        "scaled": SESSION_SECONDS,
     }
     source_files = _source_files()
     fixture_paths = {
@@ -507,6 +580,17 @@ def load_plan(variant: str) -> dict[str, Any]:
             raise ValueError("frozen completion-scale source code changed")
     if digest(RUNTIME_LOCK) != plan.get("runtime_lock_file_sha256"):
         raise ValueError("frozen completion-scale runtime lock changed")
+    prior = _prior_failure_charge()
+    budget = plan.get("configuration", {}).get("budget", {})
+    if (
+        budget.get("prior_failed_allocation") != prior
+        or budget.get("variant_session_seconds")
+        != {
+            "repeat": SESSION_SECONDS - prior["session_wall_seconds_upper_bound"],
+            "scaled": SESSION_SECONDS,
+        }
+    ):
+        raise ValueError("frozen revision three failure accounting changed")
     return plan
 
 
@@ -602,7 +686,7 @@ def upload_bundle(plan: dict[str, Any]) -> dict[str, Any]:
     variant = plan["scale_variant"]
     output = build_bundle(plan)
     manifest_path = output / "input-manifest.json"
-    marker = ARTIFACTS / f"dataset-submission-{variant}.json"
+    marker = ARTIFACTS / f"dataset-submission-{variant}-r{PLAN_REVISION}.json"
     expected = _remote_input_expected(output)
     pilot = _pilot_module()
     if marker.exists():
@@ -650,6 +734,17 @@ def _budget_ledger(plans: dict[str, dict[str, Any]]) -> dict[str, Any]:
     if sum(token_counts.values()) + DISCARDED_TOKEN_CAP > CAMPAIGN_TOKEN_CAP:
         raise RuntimeError("frozen variant exposure and replay reservations exceed campaign tokens")
     plan_hashes = {variant: digest(TRAINING_PLANS[variant]) for variant in VARIANTS}
+    prior = _prior_failure_charge()
+    sessions = {
+        "repeat": SESSION_SECONDS - prior["session_wall_seconds_upper_bound"],
+        "scaled": SESSION_SECONDS,
+    }
+    for plan in plans.values():
+        budget = plan["configuration"]["budget"]
+        if budget.get("prior_failed_allocation") != prior or budget.get(
+            "variant_session_seconds"
+        ) != sessions:
+            raise ValueError("revision three plans differ from prior allocation accounting")
     return {
         "schema": LEDGER_SCHEMA,
         "preparation_plan_sha256": digest(PREPARATION_PLAN),
@@ -660,9 +755,11 @@ def _budget_ledger(plans: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "maximum_campaign_input_tokens": CAMPAIGN_TOKEN_CAP,
         "maximum_discarded_replay_input_tokens": DISCARDED_TOKEN_CAP,
         "planned_variant_input_tokens": token_counts,
+        "prior_failed_allocation": prior,
+        "remaining_reserved_session_seconds": sum(sessions.values()),
         "variants": {
             variant: {
-                "reserved_session_seconds": SESSION_SECONDS,
+                "reserved_session_seconds": sessions[variant],
                 "reserved_input_tokens": token_counts[variant],
                 "state": "reserved",
                 "reference": KERNELS[variant],
@@ -675,7 +772,7 @@ def _budget_ledger(plans: dict[str, dict[str, Any]]) -> dict[str, Any]:
 
 
 def _load_or_create_ledger(plans: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    path = REPORT / "campaign_budget.json"
+    path = _report_record("campaign_budget")
     expected = _budget_ledger(plans)
     if not path.exists():
         save(path, expected)
@@ -691,6 +788,8 @@ def _load_or_create_ledger(plans: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "maximum_campaign_input_tokens",
         "maximum_discarded_replay_input_tokens",
         "planned_variant_input_tokens",
+        "prior_failed_allocation",
+        "remaining_reserved_session_seconds",
     ):
         if ledger.get(key) != expected.get(key):
             raise ValueError("completion-scale campaign budget ledger differs from frozen plans")
@@ -700,11 +799,12 @@ def _load_or_create_ledger(plans: dict[str, dict[str, Any]]) -> dict[str, Any]:
         record = ledger["variants"][variant]
         expected_reference = KERNELS[variant]
         if record.get("state") != "reserved":
-            job_path = REPORT / f"job-{variant}.json"
+            job_path = _report_record("job", variant)
             _safe_regular_file(job_path)
             expected_reference = _job_reference(read_json(job_path), variant)
         if (
-            record.get("reserved_session_seconds") != SESSION_SECONDS
+            record.get("reserved_session_seconds")
+            != expected["variants"][variant]["reserved_session_seconds"]
             or record.get("reserved_input_tokens")
             != expected["planned_variant_input_tokens"][variant]
             or record.get("reference") != expected_reference
@@ -762,10 +862,10 @@ def _mark_collected(job_path: Path, job: dict[str, Any], record: dict[str, Any])
     job.update(
         status="collected",
         terminal_status=record.get("status"),
-        verified_output_sha256=digest(REPORT / f"verified-{variant}.json"),
+        verified_output_sha256=digest(_report_record("verified", variant)),
     )
     save(job_path, job)
-    ledger_path = REPORT / "campaign_budget.json"
+    ledger_path = _report_record("campaign_budget")
     ledger = read_json(ledger_path)
     variant_record = ledger.get("variants", {}).get(variant)
     if not isinstance(variant_record, dict):
@@ -785,8 +885,17 @@ def _git_identity(plan: dict[str, Any]) -> tuple[str, str]:
     allowed_report_files = {
         "training_plan_repeat.json",
         "training_plan_scaled.json",
-        "training_plan_repeat-r2.json",
-        "training_plan_scaled-r2.json",
+        "training_plan_repeat-r3.json",
+        "training_plan_scaled-r3.json",
+        "campaign_budget-r3.json",
+        "quota-before-repeat-r3.json",
+        "quota-before-scaled-r3.json",
+        "job-repeat-r3.json",
+        "job-scaled-r3.json",
+        "watch-repeat-r3.json",
+        "watch-scaled-r3.json",
+        "verified-repeat-r3.json",
+        "verified-scaled-r3.json",
         "campaign_budget.json",
         "quota-before-repeat.json",
         "quota-before-scaled.json",
@@ -844,10 +953,11 @@ def submit(variant: str) -> dict[str, Any]:
     if _plan_common_fields(plans["repeat"]) != _plan_common_fields(plans["scaled"]):
         raise ValueError("paired completion-scale plans do not share a common frozen identity")
     plan = plans[variant]
-    ledger_path = REPORT / "campaign_budget.json"
+    ledger_path = _report_record("campaign_budget")
     ledger = _load_or_create_ledger(plans)
     variant_record = ledger["variants"][variant]
-    if variant_record["state"] != "reserved" or (REPORT / f"job-{variant}.json").exists():
+    session_seconds = variant_record["reserved_session_seconds"]
+    if variant_record["state"] != "reserved" or (_report_record("job", variant)).exists():
         raise ValueError("completion-scale variant was already submitted or reserved")
     preceding = [
         name
@@ -857,11 +967,11 @@ def submit(variant: str) -> dict[str, Any]:
     external_tokens = 0
     for earlier in preceding:
         previous_record = ledger["variants"][earlier]
-        verified_path = REPORT / f"verified-{earlier}.json"
+        verified_path = _report_record("verified", earlier)
         if previous_record["state"] != "collected" or not verified_path.exists():
             raise RuntimeError("collect the preceding paired allocation before starting this arm")
         verified = read_json(verified_path)
-        earlier_job = read_json(REPORT / f"job-{earlier}.json")
+        earlier_job = read_json(_report_record("job", earlier))
         if (
             verified.get("training_status")
             not in {"complete", "incomplete", "no_training_executed"}
@@ -878,9 +988,9 @@ def submit(variant: str) -> dict[str, Any]:
         raise RuntimeError("remaining campaign token reservation is insufficient")
     if variant_record["reference"] in _remote_history_refs():
         raise ValueError("completion-scale kernel reference already exists")
-    if not (ARTIFACTS / f"dataset-submission-{variant}.json").exists():
+    if not (ARTIFACTS / f"dataset-submission-{variant}-r{PLAN_REVISION}.json").exists():
         raise FileNotFoundError("verified completion-scale input upload is required")
-    submission = read_json(ARTIFACTS / f"dataset-submission-{variant}.json")
+    submission = read_json(ARTIFACTS / f"dataset-submission-{variant}-r{PLAN_REVISION}.json")
     manifest = _bundle_directory(variant) / "input-manifest.json"
     if (
         submission.get("state") != "verified"
@@ -891,9 +1001,9 @@ def submit(variant: str) -> dict[str, Any]:
     _git_identity(plan)
     observation = quota()
     check_quota(plan, observation)
-    minimum_remaining = (SESSION_SECONDS / 3600) * QUOTA_MULTIPLIER
+    minimum_remaining = (session_seconds / 3600) * QUOTA_MULTIPLIER
     pending_account_hours = sum(
-        SESSION_SECONDS / 3600 * QUOTA_MULTIPLIER
+        item["reserved_session_seconds"] / 3600 * QUOTA_MULTIPLIER
         for item in ledger["variants"].values()
         if item["state"] != "collected"
     )
@@ -907,7 +1017,7 @@ def submit(variant: str) -> dict[str, Any]:
     if _has_unresolved_job():
         raise RuntimeError("another completion-scale kernel may still be active or unresolved")
 
-    kernel = ARTIFACTS / f"kernel-{variant}"
+    kernel = ARTIFACTS / f"kernel-{variant}-r{PLAN_REVISION}"
     kernel.mkdir(parents=True, exist_ok=True)
     if any(
         path.name not in {"run.py", "kernel-metadata.json"} or path.is_symlink()
@@ -920,7 +1030,7 @@ def submit(variant: str) -> dict[str, Any]:
         "input_manifest_sha256": digest(manifest),
         "arm": TRAIN_ARM,
         "attempt": 1,
-        "session_seconds": SESSION_SECONDS,
+        "session_seconds": session_seconds,
         "resume_source": None,
         "external_campaign_tokens": external_tokens,
         "scale_variant": variant,
@@ -947,22 +1057,22 @@ def submit(variant: str) -> dict[str, Any]:
         },
     )
     _check_storage()
-    receipt_path = REPORT / f"job-{variant}.json"
+    receipt_path = _report_record("job", variant)
     job = {
         **session,
         "reference": KERNELS[variant],
         "dataset": DATASETS[variant],
         "quota_observation": _sanitize_quota(observation),
         "planned_variant_input_tokens": planned,
-        "conservative_reserved_session_seconds": SESSION_SECONDS,
-        "conservative_reserved_account_gpu_hours": SESSION_SECONDS / 3600 * QUOTA_MULTIPLIER,
+        "conservative_reserved_session_seconds": session_seconds,
+        "conservative_reserved_account_gpu_hours": session_seconds / 3600 * QUOTA_MULTIPLIER,
         "status": "submission_pending",
         "submitted_at": datetime.now(UTC).isoformat(),
     }
     variant_record.update(state="submission_pending", plan_sha256=session["plan_sha256"])
     ledger["updated_at"] = datetime.now(UTC).isoformat()
     save(ledger_path, ledger)
-    save(REPORT / f"quota-before-{variant}.json", _sanitize_quota(observation))
+    save(_report_record("quota-before", variant), _sanitize_quota(observation))
     save(receipt_path, job)
     try:
         response = cli(
@@ -972,7 +1082,7 @@ def submit(variant: str) -> dict[str, Any]:
             "-p",
             str(kernel),
             "--timeout",
-            str(SESSION_SECONDS),
+            str(session_seconds),
             "--accelerator",
             "NvidiaTeslaT4",
             timeout=240,
@@ -1032,10 +1142,10 @@ def collect(variant: str) -> dict[str, Any]:
     if variant not in VARIANTS:
         raise ValueError("unknown completion-scale variant")
     plan = load_plan(variant)
-    job_path = REPORT / f"job-{variant}.json"
+    job_path = _report_record("job", variant)
     job = read_json(job_path)
     reference = _job_reference(job, variant)
-    saved_verification = REPORT / f"verified-{variant}.json"
+    saved_verification = _report_record("verified", variant)
     if saved_verification.is_file():
         prior = read_json(saved_verification)
         if (
@@ -1066,7 +1176,7 @@ def collect(variant: str) -> dict[str, Any]:
     status = cli("kaggle", "kernels", "status", job["reference"], timeout=60)
     if not any(terminal in status for terminal in ("COMPLETE", "ERROR")):
         return {"status": status, "checkpoint_verified": False}
-    output = ARTIFACTS / f"output-{variant}"
+    output = ARTIFACTS / f"output-{variant}-r{PLAN_REVISION}"
     output.mkdir(parents=True, exist_ok=True)
     _check_storage(projected_bytes=MAX_OUTPUT_RESERVATION_BYTES)
     cli(
@@ -1288,11 +1398,11 @@ def collect(variant: str) -> dict[str, Any]:
         raise RuntimeError("completion-scale processed input token cap was exceeded")
     prior_discarded = 0
     for earlier in ALLOCATION_ORDER[: ALLOCATION_ORDER.index(variant)]:
-        earlier_receipt_path = REPORT / f"verified-{earlier}.json"
+        earlier_receipt_path = _report_record("verified", earlier)
         if not earlier_receipt_path.is_file():
             raise ValueError("completion-scale token carry lacks an earlier verified receipt")
         earlier_receipt = read_json(earlier_receipt_path)
-        earlier_job = read_json(REPORT / f"job-{earlier}.json")
+        earlier_job = read_json(_report_record("job", earlier))
         if earlier_receipt.get("reference") != _job_reference(earlier_job, earlier):
             raise ValueError("completion-scale earlier token receipt has a different reference")
         prior_discarded += int(earlier_receipt.get("discarded_input_tokens_conservative", 0))
@@ -1347,7 +1457,7 @@ def collect(variant: str) -> dict[str, Any]:
         "output_root": str(output),
         "observed_at": datetime.now(UTC).isoformat(),
     }
-    save(REPORT / f"verified-{variant}.json", record)
+    save(_report_record("verified", variant), record)
     _mark_collected(job_path, job, record)
     _check_storage()
     return record
@@ -1356,11 +1466,14 @@ def collect(variant: str) -> dict[str, Any]:
 def watch(variant: str, *, poll_seconds: float = 30) -> dict[str, Any]:
     if variant not in VARIANTS or not 1 <= poll_seconds <= 60:
         raise ValueError("completion-scale watch variant or interval is invalid")
-    job = read_json(REPORT / f"job-{variant}.json")
+    job = read_json(_report_record("job", variant))
     if job.get("plan_sha256") != digest(TRAINING_PLANS[variant]):
         raise ValueError("completion-scale observer plan identity differs")
     deadline = datetime.fromisoformat(job["submitted_at"].replace("Z", "+00:00")).timestamp()
-    deadline += SESSION_SECONDS + 900
+    session_seconds = job.get("session_seconds")
+    if type(session_seconds) is not int or not 0 < session_seconds <= SESSION_SECONDS:
+        raise ValueError("completion-scale observer lacks its bounded session deadline")
+    deadline += session_seconds + 900
     failures = 0
     while time.time() < deadline:
         observed = {
@@ -1375,14 +1488,14 @@ def watch(variant: str, *, poll_seconds: float = 30) -> dict[str, Any]:
         except (RuntimeError, subprocess.TimeoutExpired) as exc:
             failures += 1
             observed.update(error_class=type(exc).__name__, consecutive_failures=failures)
-            save(REPORT / f"watch-{variant}.json", observed)
+            save(_report_record("watch", variant), observed)
             if failures >= 3:
                 raise RuntimeError(
                     "completion-scale observer lost connection; no retry was launched"
                 ) from None
             time.sleep(poll_seconds)
             continue
-        save(REPORT / f"watch-{variant}.json", observed)
+        save(_report_record("watch", variant), observed)
         if any(value in status for value in ("COMPLETE", "ERROR")):
             return collect(variant)
         time.sleep(poll_seconds)
