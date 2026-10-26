@@ -1,0 +1,633 @@
+//! Prediction service: editor state in, edit proposals out.
+//!
+//! One worker thread owns the llama context. Requests increment a generation
+//! counter; the worker abandons any job whose generation is no longer the
+//! latest, so a burst of keystrokes costs one prediction, and the KV prefix
+//! evaluated by an abandoned job is kept for the next one.
+
+use crate::history::{DiffHunk, Tracker};
+use crate::index::{self, Registry};
+use crate::model::{Engine, GenRequest, GenStats, ModelConfig, Outcome, Tokenizer};
+use crate::retrieval::{self, RetrievalInput};
+use crate::sweep::{self, Block, Chunk, Diagnostic, Edit, PromptInput, PromptOptions};
+use anyhow::{Context as _, Result, anyhow};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
+
+pub const PROTOCOL: &str = "sweep-next-edit-v1";
+const DRAFT_MAX: usize = 16;
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Cursor {
+    /// 0-based line.
+    pub line: usize,
+    /// Byte column in the line.
+    pub col: usize,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct DiagnosticIn {
+    pub line: usize,
+    #[serde(default)]
+    pub col: usize,
+    #[serde(default)]
+    pub severity: String,
+    #[serde(default)]
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct PredictRequest {
+    #[serde(default)]
+    pub request_id: Option<String>,
+    pub path: String,
+    #[serde(default)]
+    pub root: Option<String>,
+    pub content: String,
+    pub cursor: Cursor,
+    #[serde(default)]
+    pub diagnostics: Vec<DiagnosticIn>,
+    #[serde(default)]
+    pub clipboard: Option<String>,
+    /// Allow a second, jump-to-edit prediction when the local window has none.
+    #[serde(default = "yes")]
+    pub jump: bool,
+    /// Replay-only synthetic timestamp in milliseconds.
+    #[serde(default)]
+    pub ts_ms: Option<u64>,
+}
+
+fn yes() -> bool {
+    true
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ObserveRequest {
+    pub path: String,
+    #[serde(default)]
+    pub root: Option<String>,
+    pub content: String,
+    #[serde(default)]
+    pub cursor: Option<Cursor>,
+    #[serde(default)]
+    pub saved: bool,
+    /// Prefill the stable prompt prefix for this file while idle.
+    #[serde(default)]
+    pub warm: bool,
+    /// Replay-only synthetic timestamp in milliseconds.
+    #[serde(default)]
+    pub ts_ms: Option<u64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct EditOut {
+    pub start_byte: usize,
+    pub end_byte: usize,
+    pub start_line: usize,
+    pub start_col: usize,
+    pub end_line: usize,
+    pub end_col: usize,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct ContextSummary {
+    pub root: String,
+    pub path: String,
+    pub prompt_chars: usize,
+    pub prompt_tokens: usize,
+    pub stable_prefix_chars: usize,
+    pub hunks: usize,
+    pub retrieval: Vec<ChunkSummary>,
+    pub file_chunks: Vec<ChunkSummary>,
+    pub initial_file_lines: usize,
+    pub block_start_line: usize,
+    pub block_lines: usize,
+    pub trimmed: Vec<&'static str>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ChunkSummary {
+    pub path: String,
+    pub start_line: usize,
+    pub end_line: usize,
+    pub source: &'static str,
+    pub score: f32,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct Timings {
+    pub total_ms: f64,
+    pub context_ms: f64,
+    pub stages: Vec<GenStats>,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PredictResponse {
+    pub request_id: Option<String>,
+    pub status: &'static str,
+    pub exit_reason: String,
+    pub kind: &'static str,
+    pub jump_reason: Option<&'static str>,
+    pub edits: Vec<EditOut>,
+    pub protocol: &'static str,
+    pub model: String,
+    pub model_sha256: String,
+    pub prompt: String,
+    pub completion: String,
+    pub prompt_sha256: String,
+    pub finish_reason: String,
+    pub context: ContextSummary,
+    pub timings: Timings,
+}
+
+pub struct Settings {
+    pub model_name: String,
+    pub model_sha256: String,
+    pub prompt: PromptOptions,
+    pub max_retrieval_chunks: usize,
+    pub file_chunk_lines: usize,
+    pub index_refresh_secs: u64,
+}
+
+enum Job {
+    Generate {
+        generation: u64,
+        prompt: Vec<llama_cpp_2::token::LlamaToken>,
+        draft_source: Vec<llama_cpp_2::token::LlamaToken>,
+        draft_seed: Vec<llama_cpp_2::token::LlamaToken>,
+        max_tokens: usize,
+        max_newlines: usize,
+        reply: mpsc::Sender<Result<Outcome>>,
+    },
+    Warm {
+        generation: u64,
+        prefix: Vec<llama_cpp_2::token::LlamaToken>,
+    },
+}
+
+pub struct Service {
+    pub settings: Settings,
+    tokenizer: Tokenizer,
+    n_ctx: usize,
+    jobs: Mutex<mpsc::Sender<Job>>,
+    latest: Arc<AtomicU64>,
+    tracker: Mutex<Tracker>,
+    pub registry: Arc<Registry>,
+    sticky: Mutex<HashMap<PathBuf, Vec<String>>>,
+    clock: Mutex<Option<(u64, Instant)>>,
+}
+
+fn sha256_hex(text: &str) -> String {
+    let mut h = Sha256::new();
+    h.update(text.as_bytes());
+    h.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+
+impl Service {
+    pub fn start(model_path: &Path, config: ModelConfig, settings: Settings) -> Result<Arc<Self>> {
+        let (tx, rx) = mpsc::channel::<Job>();
+        let (ready_tx, ready_rx) = mpsc::channel::<Result<(Tokenizer, usize)>>();
+        let latest = Arc::new(AtomicU64::new(0));
+        let worker_latest = Arc::clone(&latest);
+        let path = model_path.to_path_buf();
+        std::thread::Builder::new()
+            .name("nes-model".into())
+            .spawn(move || {
+                let mut engine = match Engine::load(&path, &config) {
+                    Ok(e) => {
+                        let _ = ready_tx.send(Ok((e.tokenizer(), e.n_ctx())));
+                        e
+                    }
+                    Err(e) => {
+                        let _ = ready_tx.send(Err(e));
+                        return;
+                    }
+                };
+                while let Ok(job) = rx.recv() {
+                    match job {
+                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, reply } => {
+                            if worker_latest.load(Ordering::SeqCst) != generation {
+                                let _ = reply.send(Ok(Outcome::Cancelled(GenStats::default())));
+                                continue;
+                            }
+                            let result = engine.generate(GenRequest {
+                                prompt: &prompt,
+                                draft_source: &draft_source,
+                                draft_seed: &draft_seed,
+                                max_tokens,
+                                max_newlines,
+                                draft_max: DRAFT_MAX,
+                                generation,
+                                latest: &worker_latest,
+                            });
+                            let _ = reply.send(result);
+                        }
+                        Job::Warm { generation, prefix } => {
+                            if worker_latest.load(Ordering::SeqCst) != generation {
+                                continue;
+                            }
+                            if let Err(e) = engine.warm(&prefix, generation, &worker_latest) {
+                                eprintln!("nes: warm failed: {e:#}");
+                            }
+                        }
+                    }
+                }
+            })?;
+        let (tokenizer, n_ctx) = ready_rx.recv().context("model worker exited")??;
+        Ok(Arc::new(Self {
+            settings,
+            tokenizer,
+            n_ctx,
+            jobs: Mutex::new(tx),
+            latest,
+            tracker: Mutex::new(Tracker::default()),
+            registry: Arc::new(Registry::default()),
+            sticky: Mutex::new(HashMap::new()),
+            clock: Mutex::new(None),
+        }))
+    }
+
+    pub fn n_ctx(&self) -> usize {
+        self.n_ctx
+    }
+
+    pub fn reset(&self) {
+        *self.tracker.lock().unwrap() = Tracker::default();
+        self.sticky.lock().unwrap().clear();
+        *self.clock.lock().unwrap() = None;
+    }
+
+    /// Map a replay timestamp onto the monotonic clock.
+    fn instant(&self, ts_ms: Option<u64>) -> Instant {
+        let Some(ts) = ts_ms else {
+            return Instant::now();
+        };
+        let mut clock = self.clock.lock().unwrap();
+        let (origin_ts, origin) = *clock.get_or_insert((ts, Instant::now()));
+        origin + std::time::Duration::from_millis(ts.saturating_sub(origin_ts))
+    }
+
+    fn resolve(&self, path: &str, root: Option<&str>) -> (PathBuf, PathBuf, String) {
+        let path = PathBuf::from(path);
+        let root = root
+            .map(PathBuf::from)
+            .filter(|r| path.starts_with(r))
+            .or_else(|| index::find_root(&path))
+            .unwrap_or_else(|| path.parent().map(Path::to_path_buf).unwrap_or_default());
+        let display = index::rel_path(&root, &path);
+        (path, root, display)
+    }
+
+    pub fn observe(&self, req: &ObserveRequest) {
+        let (path, root, display) = self.resolve(&req.path, req.root.as_deref());
+        let line = req.cursor.as_ref().map_or(0, |c| c.line);
+        let now = self.instant(req.ts_ms);
+        self.tracker.lock().unwrap().observe_at(&path, &display, &req.content, line, req.saved, now);
+        self.registry.ensure_fresh(&root, self.settings.index_refresh_secs);
+        self.registry.get(&root).lock().unwrap().update_buffer(&path, &req.content);
+        if req.warm {
+            let original = self.tracker.lock().unwrap().original(&path).map(str::to_string);
+            let original = original.unwrap_or_else(|| req.content.clone());
+            let cursor = req.cursor.as_ref().map_or(0, |c| byte_offset(&req.content, c.line, c.col));
+            let file_chunks = self.file_chunks(&path);
+            let mut prefix: String = file_chunks.iter().map(Chunk::render).collect();
+            prefix.push_str(&format!(
+                "<|file_sep|>{}\n{}",
+                display,
+                sweep::lines_around_cursor(&original, cursor.min(original.len()), &self.settings.prompt)
+            ));
+            let tokens = self.tokenizer.tokenize(&prefix);
+            // Warm jobs do not bump the generation; any prediction cancels them.
+            let generation = self.latest.load(Ordering::SeqCst);
+            let _ = self.jobs.lock().unwrap().send(Job::Warm { generation, prefix: tokens });
+        }
+    }
+
+    fn file_chunks(&self, path: &Path) -> Vec<Chunk> {
+        let tracker = self.tracker.lock().unwrap();
+        let n = self.settings.file_chunk_lines;
+        if n == 0 {
+            return Vec::new();
+        }
+        tracker
+            .recent_visits(path, 1)
+            .into_iter()
+            .filter_map(|v| {
+                let lines: Vec<&str> = v.content.lines().collect();
+                if lines.is_empty() {
+                    return None;
+                }
+                let start = v.cursor_line.saturating_sub(n / 3).min(lines.len() - 1);
+                let end = (start + n).min(lines.len());
+                Some(Chunk {
+                    path: v.display.clone(),
+                    start_line: start + 1,
+                    end_line: end,
+                    content: lines[start..end].join("\n"),
+                    source: "recent_file",
+                    score: 0.0,
+                })
+            })
+            .collect()
+    }
+
+    pub fn predict(&self, req: PredictRequest) -> Result<PredictResponse> {
+        let started = Instant::now();
+        let mut resp = PredictResponse {
+            request_id: req.request_id.clone(),
+            protocol: PROTOCOL,
+            model: self.settings.model_name.clone(),
+            model_sha256: self.settings.model_sha256.clone(),
+            kind: "local",
+            ..Default::default()
+        };
+        // Claim a generation first so older queued work is abandoned at once.
+        let generation = self.latest.fetch_add(1, Ordering::SeqCst) + 1;
+        let (path, root, display) = self.resolve(&req.path, req.root.as_deref());
+        resp.context.root = root.to_string_lossy().into_owned();
+        resp.context.path = display.clone();
+        let content = req.content.as_str();
+        let cursor = byte_offset(content, req.cursor.line, req.cursor.col);
+        if let Some(reason) = sweep::should_disable_file(content) {
+            resp.status = "disabled";
+            resp.exit_reason = reason.into();
+            return Ok(resp);
+        }
+        let (hunks, original) = {
+            let now = self.instant(req.ts_ms);
+            let mut t = self.tracker.lock().unwrap();
+            t.observe_at(&path, &display, content, req.cursor.line, false, now);
+            let h = t.recent_hunks_at(self.settings.prompt.max_hunks, now);
+            let o = t.original(&path).unwrap_or(content).to_string();
+            (h, o)
+        };
+        self.registry.ensure_fresh(&root, self.settings.index_refresh_secs);
+        let ws = self.registry.get(&root);
+        ws.lock().unwrap().update_buffer(&path, content);
+        let diagnostics: Vec<Diagnostic> = req
+            .diagnostics
+            .iter()
+            .map(|d| Diagnostic { line: d.line, col: d.col, severity: d.severity.clone(), message: d.message.clone() })
+            .collect();
+        let block = sweep::block_at_cursor(content, cursor, self.settings.prompt.lines_before, self.settings.prompt.lines_after);
+        if sweep::should_disable_for_block(&block.text) {
+            resp.status = "disabled";
+            resp.exit_reason = "long_lines_code_block".into();
+            return Ok(resp);
+        }
+        let file_chunks = self.file_chunks(&path);
+        let recent_files: Vec<PathBuf> = self.tracker.lock().unwrap().recent_visits(&path, 5).into_iter().map(|v| v.path).collect();
+        let visible = visible_range(&original, cursor.min(original.len()), &self.settings.prompt);
+        let previous = self.sticky.lock().unwrap().get(&path).cloned().unwrap_or_default();
+        let mut retrieval = {
+            let ws = ws.lock().unwrap();
+            retrieval::definition_chunks(
+                &ws,
+                &RetrievalInput {
+                    path: &path,
+                    content,
+                    cursor_line: req.cursor.line,
+                    visible,
+                    hunks: &hunks,
+                    recent_files: &recent_files,
+                    previous: &previous,
+                    max_chunks: self.settings.max_retrieval_chunks,
+                },
+            )
+        };
+        self.sticky
+            .lock()
+            .unwrap()
+            .insert(path.clone(), retrieval.iter().map(retrieval::chunk_key).collect());
+        // Best definition last; diagnostics and clipboard sit closest to the edit.
+        retrieval.reverse();
+        if let Some(c) = req.clipboard.as_deref().and_then(retrieval::clipboard_chunk) {
+            retrieval.push(c);
+        }
+        if let Some(c) = retrieval::diagnostics_chunk(&display, &diagnostics, req.cursor.line) {
+            retrieval.push(c);
+        }
+        resp.timings.context_ms = ms(started);
+
+        let stage = self.run_stage(
+            generation, &display, content, &original, cursor, &block, &hunks, &file_chunks, &retrieval, &mut resp,
+        )?;
+        let mut outcome = match stage {
+            None => {
+                resp.status = "cancelled";
+                resp.exit_reason = "superseded".into();
+                resp.timings.total_ms = ms(started);
+                return Ok(resp);
+            }
+            Some(p) => p,
+        };
+        let local_empty = outcome.edits.is_empty();
+        if local_empty && req.jump && !hunks.is_empty() {
+            if let Some(j) = sweep::find_jump_block(content, &hunks, &display, cursor, &diagnostics, self.settings.prompt.lines_before, self.settings.prompt.lines_after) {
+                if !sweep::should_disable_for_block(&j.block.text) && j.cursor >= j.block.start {
+                    let mut jump_retrieval = retrieval.clone();
+                    if let Some(msg) = &j.diagnostic {
+                        jump_retrieval.insert(0, Chunk { path: "diagnostics".into(), start_line: 1, end_line: 2, content: msg.clone(), source: "diagnostics", score: 0.0 });
+                    }
+                    let local_prompt = std::mem::take(&mut resp.prompt);
+                    let local_completion = std::mem::take(&mut resp.completion);
+                    match self.run_stage(
+                        generation, &display, content, &original, j.cursor, &j.block, &hunks, &file_chunks, &jump_retrieval, &mut resp,
+                    )? {
+                        Some(p) if !p.edits.is_empty() && p.edits[0].text.trim().len() + (p.edits[0].end - p.edits[0].start) > 0 => {
+                            resp.kind = "jump";
+                            resp.jump_reason = Some(j.reason);
+                            outcome = p;
+                        }
+                        Some(_) => {
+                            resp.prompt = local_prompt;
+                            resp.completion = local_completion;
+                        }
+                        None => {
+                            resp.status = "cancelled";
+                            resp.exit_reason = "superseded".into();
+                            resp.timings.total_ms = ms(started);
+                            return Ok(resp);
+                        }
+                    }
+                }
+            }
+        }
+        resp.exit_reason = outcome.exit_reason.to_string();
+        resp.edits = outcome.edits.iter().map(|e| edit_out(content, e)).collect();
+        resp.status = if resp.edits.is_empty() { "empty" } else { "ok" };
+        resp.prompt_sha256 = sha256_hex(&resp.prompt);
+        resp.timings.total_ms = ms(started);
+        Ok(resp)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn run_stage(
+        &self,
+        generation: u64,
+        display: &str,
+        content: &str,
+        original: &str,
+        cursor: usize,
+        block: &Block,
+        hunks: &[DiffHunk],
+        file_chunks: &[Chunk],
+        retrieval: &[Chunk],
+        resp: &mut PredictResponse,
+    ) -> Result<Option<sweep::Processed>> {
+        let block_tokens = self.tokenizer.tokenize_plain(&block.text);
+        let max_tokens = (block_tokens.len() * 2 + 160).min(sweep::OUTPUT_MAX_TOKENS);
+        let max_newlines = block.text.lines().count() + 20;
+        let budget = self.n_ctx.saturating_sub(max_tokens + DRAFT_MAX + 8);
+        let mut opts = self.settings.prompt.clone();
+        let mut fc: &[Chunk] = file_chunks;
+        let mut rc: &[Chunk] = retrieval;
+        let mut trimmed = Vec::new();
+        let (built, tokens) = loop {
+            let built = sweep::build_prompt(&PromptInput {
+                path: display,
+                content,
+                original,
+                cursor,
+                block,
+                hunks,
+                file_chunks: fc,
+                retrieval: rc,
+                opts: &opts,
+            });
+            let tokens = self.tokenizer.tokenize(&built.prompt);
+            if tokens.len() <= budget {
+                break (built, tokens);
+            }
+            if !fc.is_empty() {
+                fc = &[];
+                trimmed.push("file_chunks");
+            } else if !rc.is_empty() {
+                rc = &rc[rc.len() / 2 + rc.len() % 2..];
+                trimmed.push("retrieval");
+            } else if opts.whole_file_lines > 40 || opts.chunk_lines > 40 {
+                opts.whole_file_lines /= 2;
+                opts.chunk_lines = (opts.chunk_lines / 2).max(40);
+                trimmed.push("initial_file");
+            } else if opts.max_hunks > 1 {
+                opts.max_hunks /= 2;
+                trimmed.push("hunks");
+            } else {
+                return Err(anyhow!("prompt of {} tokens exceeds budget {budget}", tokens.len()));
+            }
+        };
+        resp.context.prompt_chars = built.prompt.len();
+        resp.context.prompt_tokens = tokens.len();
+        resp.context.stable_prefix_chars = built.stable_prefix;
+        resp.context.hunks = built.hunks_used;
+        resp.context.initial_file_lines = built.initial_file_lines;
+        resp.context.block_start_line = block.start_line;
+        resp.context.block_lines = block.text.lines().count();
+        resp.context.trimmed = trimmed;
+        resp.context.retrieval = rc[rc.len() - built.retrieval_used..].iter().map(summary).collect();
+        resp.context.file_chunks = fc.iter().map(summary).collect();
+        let draft_seed = self.tokenizer.tokenize_plain(&built.prefill);
+        let (reply_tx, reply_rx) = mpsc::channel();
+        self.jobs
+            .lock()
+            .unwrap()
+            .send(Job::Generate {
+                generation,
+                prompt: tokens,
+                draft_source: block_tokens,
+                draft_seed,
+                max_tokens,
+                max_newlines,
+                reply: reply_tx,
+            })
+            .map_err(|_| anyhow!("model worker stopped"))?;
+        let outcome = reply_rx.recv().map_err(|_| anyhow!("model worker dropped request"))??;
+        resp.prompt = built.prompt.clone();
+        match outcome {
+            Outcome::Cancelled(stats) => {
+                resp.timings.stages.push(stats);
+                Ok(None)
+            }
+            Outcome::Done(g) => {
+                resp.timings.stages.push(g.stats.clone());
+                resp.completion = g.text.clone();
+                resp.finish_reason = g.finish_reason.to_string();
+                Ok(Some(sweep::process_completion(&g.text, g.finish_reason, &built, block, content, cursor)))
+            }
+        }
+    }
+}
+
+fn summary(c: &Chunk) -> ChunkSummary {
+    ChunkSummary { path: c.path.clone(), start_line: c.start_line, end_line: c.end_line, source: c.source, score: c.score }
+}
+
+fn ms(started: Instant) -> f64 {
+    started.elapsed().as_secs_f64() * 1000.0
+}
+
+/// Byte offset for a 0-based line and byte column, clamped to the line.
+pub fn byte_offset(content: &str, line: usize, col: usize) -> usize {
+    let mut offset = 0;
+    for (i, l) in content.split_inclusive('\n').enumerate() {
+        if i == line {
+            let body = l.strip_suffix('\n').unwrap_or(l);
+            let mut c = col.min(body.len());
+            while !body.is_char_boundary(c) {
+                c -= 1;
+            }
+            return offset + c;
+        }
+        offset += l.len();
+    }
+    content.len()
+}
+
+fn position(content: &str, offset: usize) -> (usize, usize) {
+    let before = &content[..offset.min(content.len())];
+    let line = before.matches('\n').count();
+    let col = before.len() - before.rfind('\n').map_or(0, |i| i + 1);
+    (line, col)
+}
+
+fn edit_out(content: &str, e: &Edit) -> EditOut {
+    let (sl, sc) = position(content, e.start);
+    let (el, ec) = position(content, e.end);
+    EditOut { start_byte: e.start, end_byte: e.end, start_line: sl, start_col: sc, end_line: el, end_col: ec, text: e.text.clone() }
+}
+
+/// Lines (0-based, inclusive) of the current file shown as initial context.
+fn visible_range(original: &str, cursor: usize, opts: &PromptOptions) -> (usize, usize) {
+    let total = original.lines().count();
+    if total <= opts.whole_file_lines {
+        return (0, total);
+    }
+    let chunk = opts.chunk_lines.max(2);
+    let stride = chunk / 2;
+    let cursor_line = sweep::line_of_offset(original, cursor) as i64;
+    let ideal = cursor_line - (chunk / 2) as i64;
+    let index = ((ideal as f64) / stride as f64).round().max(0.0) as usize;
+    let start = (index * stride).min(total.saturating_sub(1));
+    (start, (start + chunk).min(total))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn offsets_round_trip() {
+        let s = "ab\ncdé\nf";
+        assert_eq!(byte_offset(s, 1, 2), 5);
+        assert_eq!(position(s, 5), (1, 2));
+        assert_eq!(byte_offset(s, 1, 3), 5); // inside é clamps back
+        assert_eq!(byte_offset(s, 9, 0), s.len());
+    }
+}
