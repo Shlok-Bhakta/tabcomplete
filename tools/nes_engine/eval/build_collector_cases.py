@@ -149,6 +149,13 @@ def main():
             if state.split() == target.split():
                 continue  # whitespace-only
             cursor = cur[-1][2] or {"row": 0, "col": 0}
+            # Where the user ended up shortly after: the next few burst ends
+            # within a minute, stopping at the next anchor.
+            future = []
+            for g in groups[k + 1 : k + 6]:
+                if g[0][3] == "anchor" or g[-1][0] - cur[-1][0] > 60_000:
+                    break
+                future.append(g[-1][1])
             # History: the last anchor before this burst, then each burst end.
             history = []
             start = max(i for i in range(k + 1) if groups[i][0][3] == "anchor") if any(
@@ -166,6 +173,7 @@ def main():
                     "content": state,
                     "cursor": {"line": cursor["row"], "col": cursor["col"]},
                     "target": target,
+                    "future": future,
                     "target_changed_lines": n,
                 }
             )

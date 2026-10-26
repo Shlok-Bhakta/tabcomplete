@@ -16,6 +16,8 @@ import urllib.request
 from pathlib import Path
 
 WORK = Path("/kaggle/working")
+# Build tree and model stay out of the output directory.
+SCRATCH = Path("/tmp/nes")
 DATA = Path("/kaggle/input")
 MODEL_URL = ("https://huggingface.co/sweepai/sweep-next-edit-0.5B/resolve/"
              "8175624004cec8bf0b550fba35d6ad92126e48ac/sweep-next-edit-0.5b.q8_0.gguf")
@@ -37,7 +39,8 @@ def find(name):
 def main():
     started = time.time()
     log = {}
-    src = WORK / "nes_engine"
+    SCRATCH.mkdir(parents=True, exist_ok=True)
+    src = SCRATCH / "nes_engine"
     if src.exists():
         shutil.rmtree(src)
     # Kaggle unpacks archives in datasets; accept either form.
@@ -46,7 +49,7 @@ def main():
         shutil.copytree(unpacked[0], src)
     else:
         with tarfile.open(find("nes_engine.tar.gz")) as t:
-            t.extractall(WORK)
+            t.extractall(SCRATCH)
     sh("nvidia-smi --query-gpu=name,memory.total --format=csv")
     sh("command -v cargo || (curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal)")
     sh("(command -v clang && ls /usr/lib/llvm-*/lib/libclang*.so*) >/dev/null 2>&1 || "
@@ -61,15 +64,23 @@ def main():
         "PATH": "/usr/local/cuda/bin:" + os.path.expanduser("~/.cargo/bin:") + os.environ["PATH"],
     }
     t0 = time.time()
-    sh(f"cd {src} && {cargo} build --release --features cuda 2>&1 | tail -5", env=env)
+    out = WORK / "results"
+    out.mkdir(exist_ok=True)
+    sh("cmake --version | head -1; nvcc --version | tail -1; gcc --version | head -1", env=env)
+    build = subprocess.run(f"cd {src} && {cargo} build --release --features cuda -vv",
+                           shell=True, env={**os.environ, **env}, capture_output=True, text=True)
+    (out / "build.log").write_text(build.stdout[-200000:] + "\n--- stderr ---\n" + build.stderr[-400000:])
     log["build_s"] = round(time.time() - t0)
-    model = WORK / "model.gguf"
+    if build.returncode != 0:
+        tail = build.stderr[-6000:]
+        print(tail, flush=True)
+        (out / "timing.json").write_text(json.dumps(log))
+        raise SystemExit("engine build failed")
+    model = SCRATCH / "model.gguf"
     if not model.exists():
         urllib.request.urlretrieve(MODEL_URL, model)
     engine = src / "target/release/tabcomplete-nes"
     variants = json.loads(find("variants.json").read_text())
-    out = WORK / "results"
-    out.mkdir(exist_ok=True)
     runner = src / "eval/run_eval.py"
     for v in variants:
         cases = find(v["cases"])
