@@ -54,3 +54,30 @@ right but early. `eval/kaggle/` runs the same sweep on a Kaggle GPU.
 Observed with the 0.5B Q8 model: the literal `<|cursor|>` marker is not a
 special token in this model and can flip predictions; Sweep's reference
 prompt with greedy decoding matches stock llama.cpp byte for byte.
+
+## Results so far (2026-10-26)
+
+Real trajectories (263 cases from the collector, Rustlings exercises),
+ThinkPad T480s CPU, scored with `rescore.py`:
+
+| prompt format | helpful | harmful | precision | typing saved |
+|---|---|---|---|---|
+| Sweep server format (default) | 46% | 24% | 64% | 33% |
+| server format without `<|cursor|>` | 37% | 18% | 67% | 26% |
+| model-card format, jump on | 40% | 27% | 58% | 28% |
+
+Exact match with the very next burst is about 10% for all three; exact match
+with a state the user reached within a minute is about 20%.
+
+Latency on the i7-8650U (4 decode / 6 prompt threads), warm cache: about
+2 s for a local suggestion (roughly 250 new prompt tokens at 190 tok/s plus
+0.6 s of decode with every draft accepted), about 3 s when the jump stage
+also runs. A cold file costs a few seconds more; opening a buffer warms its
+prefix. The workspace index of the Rustlings repository (188 files, 735
+definitions) builds in 25 ms.
+
+The minimum changed-token log-probability separates helpful from harmful
+suggestions only weakly (AUC 0.63), so the confidence gate is off by default.
+The Kaggle CUDA build works with one GPU but replays still hit a CUDA error
+whose message is hidden by `void_logs()`; enable llama.cpp logging before
+the next GPU attempt.
