@@ -50,8 +50,8 @@ struct Cli {
     whole_file_lines: usize,
     #[arg(long, default_value_t = 240)]
     chunk_lines: usize,
-    /// absolute | sweep-local | none
-    #[arg(long, default_value = "absolute")]
+    /// absolute | sweep-local | none (Sweep's reference server uses sweep-local)
+    #[arg(long, default_value = "sweep-local")]
     line_numbers: String,
     /// server | card
     #[arg(long, default_value = "server")]

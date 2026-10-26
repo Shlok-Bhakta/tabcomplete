@@ -18,6 +18,7 @@ rustPlatform.buildRustPackage {
         "target"
         "eval"
         "nvim"
+        "README.md"
       ]);
   };
   cargoLock.lockFile = ../../tools/nes_engine/Cargo.lock;

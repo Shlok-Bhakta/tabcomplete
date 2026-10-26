@@ -58,6 +58,8 @@ def main():
     llvm = sorted(Path("/usr/lib").glob("llvm-*/lib"))
     env = {
         "CMAKE_CUDA_ARCHITECTURES": "75",
+        # Flash-attention kernels dominate CUDA build time and are not needed.
+        "GGML_CUDA_FA": "OFF",
         "CMAKE_BUILD_PARALLEL_LEVEL": str(os.cpu_count() or 4),
         "LIBCLANG_PATH": str(llvm[-1]) if llvm else "",
         "LIBRARY_PATH": "/usr/local/cuda/lib64/stubs:" + os.environ.get("LIBRARY_PATH", ""),
@@ -80,6 +82,29 @@ def main():
     if not model.exists():
         urllib.request.urlretrieve(MODEL_URL, model)
     engine = src / "target/release/tabcomplete-nes"
+    bindir = WORK / "bin"
+    bindir.mkdir(exist_ok=True)
+    shutil.copy2(engine, bindir / "tabcomplete-nes")
+    # Pick the first runtime setup that completes a tiny prompt.
+    run_env, gpu_layers = None, "0"
+    attempts = [
+        ({"CUDA_VISIBLE_DEVICES": "0"}, "99"),
+        ({"CUDA_VISIBLE_DEVICES": "0", "GGML_CUDA_DISABLE_GRAPHS": "1"}, "99"),
+        ({"CUDA_VISIBLE_DEVICES": ""}, "0"),
+    ]
+    for extra, layers in attempts:
+        probe = subprocess.run([str(engine), "--model", str(model), "--gpu-layers", layers, "complete", "--max-tokens", "8"],
+                               input="<|file_sep|>a.py\ndef add(a, b):\n", capture_output=True, text=True,
+                               env={**os.environ, **extra}, timeout=600)
+        (out / f"probe-{len(log)}.log").write_text(json.dumps(extra) + "\n" + probe.stdout + "\n" + probe.stderr[-20000:])
+        if probe.returncode == 0:
+            run_env, gpu_layers = extra, layers
+            break
+    log["runtime"] = {"env": run_env, "gpu_layers": gpu_layers}
+    print("runtime", log["runtime"], flush=True)
+    if run_env is None:
+        (out / "timing.json").write_text(json.dumps(log))
+        raise SystemExit("no working runtime")
     variants = json.loads(find("variants.json").read_text())
     runner = src / "eval/run_eval.py"
     for v in variants:
@@ -91,8 +116,8 @@ def main():
                "--out", str(out / f"{name}.rows.jsonl")]
         if v.get("no_jump", True):
             cmd.append("--no-jump")
-        cmd += ["--", "--gpu-layers", "99", *v["flags"]]
-        res = subprocess.run(cmd, capture_output=True, text=True)
+        cmd += ["--", "--gpu-layers", gpu_layers, *v["flags"]]
+        res = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, **run_env})
         line = res.stdout.strip().splitlines()[-1] if res.stdout.strip() else ""
         if res.returncode != 0 or not line:
             line = json.dumps({"name": name, "error": res.stderr[-1500:]})
