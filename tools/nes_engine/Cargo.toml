@@ -9,6 +9,9 @@ description = "CPU next-edit engine for Sweep next-edit models with a fast works
 name = "tabcomplete-nes"
 path = "src/main.rs"
 
+[features]
+cuda = ["llama-cpp-2/cuda"]
+
 [dependencies]
 llama-cpp-2 = { version = "=0.1.160", default-features = false }
 axum = { version = "0.8", features = ["json"] }

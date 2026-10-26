@@ -29,6 +29,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 pub struct ModelConfig {
+    pub gpu_layers: u32,
     pub n_ctx: u32,
     pub n_batch: u32,
     pub threads: i32,
@@ -65,6 +66,10 @@ pub struct Generation {
     pub text: String,
     pub finish_reason: &'static str,
     pub stats: GenStats,
+    /// Natural-log probability of each emitted token under the model.
+    pub token_logprobs: Vec<f32>,
+    /// Byte offset in `text` where each emitted token starts.
+    pub token_offsets: Vec<usize>,
 }
 
 pub struct GenRequest<'a> {
@@ -81,6 +86,9 @@ pub struct GenRequest<'a> {
     /// Generation counter: the request is abandoned when `latest` moves past it.
     pub generation: u64,
     pub latest: &'a AtomicU64,
+    /// Called when a new line completes; returning text ends generation with
+    /// that text appended (used to splice the unchanged rest of the window).
+    pub early_stop: Option<&'a dyn Fn(&str) -> Option<String>>,
 }
 
 pub enum Outcome {
@@ -93,7 +101,11 @@ impl Engine {
         let mut backend = LlamaBackend::init().context("llama backend init")?;
         backend.void_logs();
         let backend: &'static LlamaBackend = Box::leak(Box::new(backend));
-        let model = LlamaModel::load_from_file(backend, path, &LlamaModelParams::default())
+        let model = LlamaModel::load_from_file(
+            backend,
+            path,
+            &LlamaModelParams::default().with_n_gpu_layers(config.gpu_layers),
+        )
             .with_context(|| format!("load model {}", path.display()))?;
         let model: &'static LlamaModel = Box::leak(Box::new(model));
         let params = LlamaContextParams::default()
@@ -232,19 +244,24 @@ impl Engine {
         let mut batch = LlamaBatch::new(req.draft_max + 1, 1);
         let mut draft_cursor: Option<usize> = None;
         let mut hist: Vec<LlamaToken> = req.draft_seed.to_vec();
+        let mut token_logprobs: Vec<f32> = Vec::new();
+        let mut token_offsets: Vec<usize> = Vec::new();
+        let mut checked_newlines = 0usize;
         let finish_reason;
         loop {
             if req.latest.load(Ordering::SeqCst) != req.generation {
                 stats.decode_ms = ms(decode_started);
                 return Ok(Outcome::Cancelled(stats));
             }
-            let next = self.argmax(logits_index);
+            let (next, next_lp) = self.argmax(logits_index);
             if self.stop_tokens.contains(&next) || self.model.vocab().is_eog(next) {
                 finish_reason = "stop";
                 break;
             }
             out_tokens.push(next);
             hist.push(next);
+            token_logprobs.push(next_lp);
+            token_offsets.push(text_bytes.len());
             let piece = self.piece(next);
             newlines += piece.iter().filter(|b| **b == b'\n').count();
             text_bytes.extend_from_slice(&piece);
@@ -278,7 +295,7 @@ impl Engine {
             let mut accepted = 0usize;
             let mut stopped = false;
             for (i, t) in draft.iter().enumerate() {
-                let predicted = self.argmax(i as i32);
+                let (predicted, predicted_lp) = self.argmax(i as i32);
                 if predicted != *t {
                     break;
                 }
@@ -289,6 +306,8 @@ impl Engine {
                 accepted += 1;
                 out_tokens.push(*t);
                 hist.push(*t);
+                token_logprobs.push(predicted_lp);
+                token_offsets.push(text_bytes.len());
                 let piece = self.piece(*t);
                 newlines += piece.iter().filter(|b| **b == b'\n').count();
                 text_bytes.extend_from_slice(&piece);
@@ -312,6 +331,17 @@ impl Engine {
                 finish_reason = "stop";
                 break;
             }
+            if let Some(check) = req.early_stop {
+                if newlines > checked_newlines {
+                    checked_newlines = newlines;
+                    let so_far = String::from_utf8_lossy(&text_bytes);
+                    if let Some(rest) = check(&so_far) {
+                        text_bytes.extend_from_slice(rest.as_bytes());
+                        finish_reason = "spliced";
+                        break;
+                    }
+                }
+            }
             if out_tokens.len() >= req.max_tokens {
                 finish_reason = "length";
                 break;
@@ -328,10 +358,13 @@ impl Engine {
             text: String::from_utf8_lossy(&text_bytes).into_owned(),
             finish_reason,
             stats,
+            token_logprobs,
+            token_offsets,
         }))
     }
 
-    fn argmax(&self, index: i32) -> LlamaToken {
+    /// Greedy token and its log-probability (log-softmax of the max logit).
+    fn argmax(&self, index: i32) -> (LlamaToken, f32) {
         let logits = self.ctx.get_logits_ith(index);
         let mut best = 0usize;
         let mut best_value = f32::NEG_INFINITY;
@@ -341,7 +374,8 @@ impl Engine {
                 best = i;
             }
         }
-        LlamaToken(best as i32)
+        let sum: f32 = logits.iter().map(|v| (v - best_value).exp()).sum();
+        (LlamaToken(best as i32), -sum.ln())
     }
 }
 

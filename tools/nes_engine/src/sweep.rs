@@ -714,6 +714,86 @@ pub struct Processed {
     pub completion: String,
 }
 
+/// Early stop for window rewrites: once the output has diverged from the
+/// window and its last two complete lines match two consecutive window lines
+/// after the divergence, the remainder of the window is assumed unchanged.
+/// Returns the window text to append. Only the first edit is ever shown, so
+/// later edits in the window are not lost in practice.
+pub fn splice_rest(prefill: &str, generated: &str, cleaned: &str) -> Option<String> {
+    let out = format!("{prefill}{generated}");
+    let complete = &out[..out.rfind('\n')? + 1];
+    let a = cleaned.as_bytes();
+    let b = complete.as_bytes();
+    let mut p = 0;
+    while p < a.len() && p < b.len() && a[p] == b[p] {
+        p += 1;
+    }
+    if p == b.len() {
+        return None; // no divergence yet
+    }
+    let out_lines: Vec<&str> = complete[p..].split_inclusive('\n').collect();
+    if out_lines.len() < 3 {
+        return None; // need the changed line plus two anchor lines
+    }
+    let tail = &out_lines[out_lines.len() - 2..];
+    if tail.iter().map(|l| l.trim().len()).sum::<usize>() < 8 {
+        return None; // braces and blank lines are ambiguous anchors
+    }
+    let div_line = cleaned[..p].matches('\n').count();
+    let block_lines: Vec<&str> = cleaned.split_inclusive('\n').collect();
+    let mut found = None;
+    for j in div_line..block_lines.len().saturating_sub(1) {
+        if block_lines[j] == tail[0] && block_lines[j + 1] == tail[1] {
+            if found.is_some() {
+                return None; // ambiguous anchor
+            }
+            found = Some(j + 2);
+        }
+    }
+    found.map(|k| block_lines[k..].concat())
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct Confidence {
+    /// Minimum token log-probability over tokens that change the window.
+    pub min_logprob: f32,
+    pub mean_logprob: f32,
+    pub changed_tokens: usize,
+}
+
+/// Confidence over the generated tokens that differ from the window.
+/// `generated` excludes the prefill; offsets index into `generated`.
+pub fn change_confidence(prefill: &str, generated: &str, cleaned: &str, logprobs: &[f32], offsets: &[usize]) -> Confidence {
+    let completion = format!("{prefill}{generated}");
+    let a = cleaned.as_bytes();
+    let b = completion.as_bytes();
+    let mut p = 0;
+    while p < a.len() && p < b.len() && a[p] == b[p] {
+        p += 1;
+    }
+    let mut s = 0;
+    while s < a.len() - p && s < b.len() - p && a[a.len() - 1 - s] == b[b.len() - 1 - s] {
+        s += 1;
+    }
+    let (lo, hi) = (p.saturating_sub(prefill.len()), (b.len() - s).saturating_sub(prefill.len()));
+    let mut picked: Vec<f32> = Vec::new();
+    for (i, off) in offsets.iter().enumerate() {
+        let end = offsets.get(i + 1).copied().unwrap_or(generated.len());
+        // Tokens overlapping the changed span, or the token at a pure deletion point.
+        if (end > lo && *off < hi.max(lo + 1)) || (lo == hi && *off <= lo && lo < end) {
+            picked.push(logprobs[i]);
+        }
+    }
+    if picked.is_empty() {
+        return Confidence { min_logprob: 0.0, mean_logprob: 0.0, changed_tokens: 0 };
+    }
+    Confidence {
+        min_logprob: picked.iter().copied().fold(f32::INFINITY, f32::min),
+        mean_logprob: picked.iter().sum::<f32>() / picked.len() as f32,
+        changed_tokens: picked.len(),
+    }
+}
+
 /// Post-processing after generation (Sweep `_fetch_next_edits_core` tail).
 pub fn process_completion(
     generated: &str,
@@ -767,6 +847,7 @@ pub fn process_completion(
     if finish_reason == "length" {
         return empty("hit_max_tokens", completion);
     }
+    let _ = finish_reason; // "spliced" completions are complete windows
     let edits = select_best_hunks(&completion, cleaned, block.start, file, cursor);
     if completion.trim_matches('\n') == cleaned.trim_matches('\n') {
         return Processed { edits, exit_reason: "no_changes_made", completion };
@@ -1107,6 +1188,23 @@ mod tests {
         let j = find_jump_block(&file, &hunks, "a.rs", 3, &[], 2, 5).unwrap();
         assert_eq!(j.reason, "identifier_match");
         assert!(j.block.text.contains("compute_old(3)"));
+    }
+
+    #[test]
+    fn splice_after_reconvergence() {
+        let cleaned = "fn a() {\n    let x = 1;\n    let y = 2;\n    let z = 3;\n    tail();\n}\n";
+        // Still copying: no splice.
+        assert_eq!(splice_rest("fn a() {\n", "    let x = 1;\n", cleaned), None);
+        // Changed line then two matching lines: splice the rest.
+        let rest = splice_rest("fn a() {\n", "    let x = 10;\n    let y = 2;\n    let z = 3;\n", cleaned);
+        assert_eq!(rest.as_deref(), Some("    tail();\n}\n"));
+    }
+
+    #[test]
+    fn confidence_covers_changed_tokens() {
+        let c = change_confidence("", "ab XY cd", "ab cd", &[-0.1, -0.2, -2.0, -0.1], &[0, 2, 3, 5]);
+        assert_eq!(c.changed_tokens, 2);
+        assert!((c.min_logprob + 2.0).abs() < 1e-6);
     }
 
     #[test]

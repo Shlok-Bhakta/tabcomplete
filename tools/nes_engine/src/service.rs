@@ -136,6 +136,8 @@ pub struct PredictResponse {
     pub kind: &'static str,
     pub jump_reason: Option<&'static str>,
     pub edits: Vec<EditOut>,
+    /// Edits withheld by the confidence gate (telemetry only).
+    pub withheld: Vec<EditOut>,
     pub protocol: &'static str,
     pub model: String,
     pub model_sha256: String,
@@ -143,6 +145,7 @@ pub struct PredictResponse {
     pub completion: String,
     pub prompt_sha256: String,
     pub finish_reason: String,
+    pub confidence: Option<sweep::Confidence>,
     pub context: ContextSummary,
     pub timings: Timings,
 }
@@ -154,6 +157,9 @@ pub struct Settings {
     pub max_retrieval_chunks: usize,
     pub file_chunk_lines: usize,
     pub index_refresh_secs: u64,
+    pub early_stop: bool,
+    /// Withhold edits whose weakest changed token is below this log-probability.
+    pub min_confidence: f32,
 }
 
 enum Job {
@@ -164,6 +170,8 @@ enum Job {
         draft_seed: Vec<llama_cpp_2::token::LlamaToken>,
         max_tokens: usize,
         max_newlines: usize,
+        /// (prefill, window) for splicing the unchanged rest of the window.
+        splice: Option<(String, String)>,
         reply: mpsc::Sender<Result<Outcome>>,
     },
     Warm {
@@ -212,11 +220,14 @@ impl Service {
                 };
                 while let Ok(job) = rx.recv() {
                     match job {
-                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, reply } => {
+                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, splice, reply } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
                                 let _ = reply.send(Ok(Outcome::Cancelled(GenStats::default())));
                                 continue;
                             }
+                            let splicer = splice.map(|(prefill, window)| {
+                                move |generated: &str| sweep::splice_rest(&prefill, generated, &window)
+                            });
                             let result = engine.generate(GenRequest {
                                 prompt: &prompt,
                                 draft_source: &draft_source,
@@ -226,6 +237,7 @@ impl Service {
                                 draft_max: DRAFT_MAX,
                                 generation,
                                 latest: &worker_latest,
+                                early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
                             });
                             let _ = reply.send(result);
                         }
@@ -462,6 +474,11 @@ impl Service {
         }
         resp.exit_reason = outcome.exit_reason.to_string();
         resp.edits = outcome.edits.iter().map(|e| edit_out(content, e)).collect();
+        let weak = resp.confidence.as_ref().is_some_and(|c| c.changed_tokens > 0 && c.min_logprob < self.settings.min_confidence);
+        if weak && !resp.edits.is_empty() {
+            resp.withheld = std::mem::take(&mut resp.edits);
+            resp.exit_reason = "low_confidence".into();
+        }
         resp.status = if resp.edits.is_empty() { "empty" } else { "ok" };
         resp.prompt_sha256 = sha256_hex(&resp.prompt);
         resp.timings.total_ms = ms(started);
@@ -534,6 +551,7 @@ impl Service {
         resp.context.retrieval = rc[rc.len() - built.retrieval_used..].iter().map(summary).collect();
         resp.context.file_chunks = fc.iter().map(summary).collect();
         let draft_seed = self.tokenizer.tokenize_plain(&built.prefill);
+        let early = self.settings.early_stop;
         let (reply_tx, reply_rx) = mpsc::channel();
         self.jobs
             .lock()
@@ -545,6 +563,7 @@ impl Service {
                 draft_seed,
                 max_tokens,
                 max_newlines,
+                splice: early.then(|| (built.prefill.clone(), block.text.clone())),
                 reply: reply_tx,
             })
             .map_err(|_| anyhow!("model worker stopped"))?;
@@ -559,6 +578,13 @@ impl Service {
                 resp.timings.stages.push(g.stats.clone());
                 resp.completion = g.text.clone();
                 resp.finish_reason = g.finish_reason.to_string();
+                resp.confidence = Some(sweep::change_confidence(
+                    &built.prefill,
+                    &g.text,
+                    &block.text,
+                    &g.token_logprobs,
+                    &g.token_offsets,
+                ));
                 Ok(Some(sweep::process_completion(&g.text, g.finish_reason, &built, block, content, cursor)))
             }
         }

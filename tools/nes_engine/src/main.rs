@@ -30,6 +30,9 @@ struct Cli {
     model_name: String,
     #[arg(long, default_value_t = 8192)]
     ctx_size: u32,
+    /// Layers offloaded to a GPU (CUDA builds only).
+    #[arg(long, default_value_t = 0)]
+    gpu_layers: u32,
     #[arg(long, default_value_t = 512)]
     batch_size: u32,
     /// Decode threads.
@@ -64,6 +67,12 @@ struct Cli {
     lines_after: usize,
     #[arg(long, default_value_t = 60)]
     index_refresh_secs: u64,
+    /// Stop decoding once the window rewrite rejoins the original text.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    early_stop: bool,
+    /// Minimum log-probability of the weakest changed token to show an edit.
+    #[arg(long, default_value_t = f32::NEG_INFINITY, allow_hyphen_values = true)]
+    min_confidence: f32,
     #[command(subcommand)]
     command: Command,
 }
@@ -131,8 +140,11 @@ fn main() -> Result<()> {
         max_retrieval_chunks: cli.retrieval_chunks,
         file_chunk_lines: cli.file_chunk_lines,
         index_refresh_secs: cli.index_refresh_secs,
+        early_stop: cli.early_stop,
+        min_confidence: cli.min_confidence,
     };
     let config = model::ModelConfig {
+        gpu_layers: cli.gpu_layers,
         n_ctx: cli.ctx_size,
         n_batch: cli.batch_size,
         threads: cli.threads,
@@ -165,6 +177,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         draft_max: 0,
         generation: 1,
         latest: &latest,
+        early_stop: None,
     })? {
         model::Outcome::Done(g) => {
             println!("{}", serde_json::to_string(&json!({"text": g.text, "finish": g.finish_reason, "stats": g.stats}))?);

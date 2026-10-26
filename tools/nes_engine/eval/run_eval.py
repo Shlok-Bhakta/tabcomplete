@@ -115,7 +115,9 @@ def main():
             kinds[r.get("kind", "local")] = kinds.get(r.get("kind", "local"), 0) + 1
         rows.append({"id": c["id"], "score": s, "kind": r.get("kind"), "exit": r.get("exit_reason"),
                      "edit": (r.get("edits") or [None])[0], "completion": r.get("completion"),
-                     "ms": r.get("timings", {}).get("total_ms")})
+                     "ms": r.get("timings", {}).get("total_ms"),
+                     "confidence": r.get("confidence"), "stages": r.get("timings", {}).get("stages"),
+                     "prompt_tokens": r.get("context", {}).get("prompt_tokens")})
     n = len(cases)
     shown = counts["exact"] + counts["correct"] + counts["wrong"]
     summary = {
