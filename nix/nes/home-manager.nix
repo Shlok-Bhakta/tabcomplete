@@ -29,6 +29,8 @@ let
       (lib.boolToString cfg.hideActiveEdit)
       "--min-confidence"
       cfg.minConfidence
+      "--multiline-min-confidence"
+      cfg.multilineMinConfidence
     ]
     ++ cfg.extraArgs
     ++ [
@@ -78,6 +80,11 @@ in
         With hideActiveEdit, -1.0 keeps replay quality near the unhidden
         prompt while staying 25% faster.
       '';
+    };
+    multilineMinConfidence = lib.mkOption {
+      type = lib.types.str;
+      default = "-0.5";
+      description = "Stricter gate for edits that rewrite more than one existing line (they are wrong more often).";
     };
     hideActiveEdit = lib.mkOption {
       type = lib.types.bool;

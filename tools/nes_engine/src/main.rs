@@ -66,12 +66,14 @@ struct Cli {
     hide_active_edit: bool,
     #[arg(long, default_value_t = 2)]
     lines_before: usize,
-    #[arg(long, default_value_t = 5)]
+    /// Lines below the cursor in the rewrite window (3 beat Sweep's 5 on
+    /// real edits: faster, and fewer wrong rewrites).
+    #[arg(long, default_value_t = 3)]
     lines_after: usize,
     #[arg(long, default_value_t = 60)]
     index_refresh_secs: u64,
     /// Matching lines after an edit before the rest of the window is spliced.
-    #[arg(long, default_value_t = 2)]
+    #[arg(long, default_value_t = 1)]
     splice_anchors: usize,
     /// Prompt tokens per prefill decode call (cancellation granularity).
     #[arg(long, default_value_t = 512)]
@@ -83,7 +85,7 @@ struct Cli {
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     draft_previous: bool,
     /// Largest speculative draft verified in one batch.
-    #[arg(long, default_value_t = 32)]
+    #[arg(long, default_value_t = 16)]
     draft_max: usize,
     /// Stop decoding once the window rewrite rejoins the original text.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
