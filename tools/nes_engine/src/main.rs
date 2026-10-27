@@ -61,6 +61,9 @@ struct Cli {
     prefill: String,
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     cursor_marker: bool,
+    /// Keep the in-progress edit (shown by the window) out of the history.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    hide_active_edit: bool,
     #[arg(long, default_value_t = 2)]
     lines_before: usize,
     #[arg(long, default_value_t = 5)]
@@ -131,6 +134,7 @@ fn main() -> Result<()> {
             diff_format,
             prefill,
             cursor_marker: cli.cursor_marker,
+            hide_active_edit: cli.hide_active_edit,
             lines_before: cli.lines_before,
             lines_after: cli.lines_after,
             whole_file_lines: cli.whole_file_lines,

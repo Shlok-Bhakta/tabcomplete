@@ -61,8 +61,12 @@ end
 function M.write_batch(batch, meta)
   M.ensure_dirs()
   local stamp = tostring(require("tabcomplete_trajectory.util").now_ms())
+  -- Batches written in the same millisecond (session end and its events)
+  -- must replay in write order; the zero-padded counter sorts before the
+  -- random suffix that keeps concurrent editors apart.
+  M._seq = (M._seq or 0) + 1
   local rnd = tostring(math.random(100000, 999999))
-  local path = M.spool_dir() .. "/batch-" .. stamp .. "-" .. rnd .. ".json"
+  local path = M.spool_dir() .. "/batch-" .. stamp .. "-" .. string.format("%06d", M._seq % 1000000) .. "-" .. rnd .. ".json"
   local payload = { version = 1, meta = meta or { kind = "events" }, events = batch }
   local ok, encoded = pcall(vim.json.encode, payload)
   if not ok then
@@ -83,6 +87,16 @@ function M.list()
   local entries = vim.fn.globpath(dir, "batch-*.json", false, true)
   table.sort(entries)
   return entries
+end
+
+--- Move a permanently rejected batch to spool/rejected/ (kept, not retried).
+function M.quarantine(path)
+  local dir = M.spool_dir() .. "/rejected"
+  vim.fn.mkdir(dir, "p")
+  local ok = os.rename(path, dir .. "/" .. vim.fn.fnamemodify(path, ":t"))
+  if not ok then
+    os.remove(path)
+  end
 end
 
 --- Read and decode one spool file. Returns nil + err on failure.

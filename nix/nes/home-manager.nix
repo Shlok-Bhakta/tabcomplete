@@ -12,9 +12,9 @@ let
   engineArgs = lib.escapeShellArgs (
     [
       "--model"
-      "${package}/share/tabcomplete/model.gguf"
+      "${package.models.${cfg.quantization}}"
       "--model-name"
-      package.modelName
+      "${package.modelName}-${cfg.quantization}"
       "--model-sha256"
       package.modelSha256
       "--threads"
@@ -25,6 +25,8 @@ let
       (toString cfg.contextSize)
       "--retrieval-chunks"
       (toString cfg.retrievalChunks)
+      "--hide-active-edit"
+      (lib.boolToString cfg.hideActiveEdit)
     ]
     ++ cfg.extraArgs
     ++ [
@@ -57,6 +59,19 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 19094;
+    };
+    quantization = lib.mkOption {
+      type = lib.types.enum [
+        "q4_0"
+        "q8_0"
+      ];
+      default = "q4_0";
+      description = "q4_0 is ~23% faster on the T480s; q8_0 shows slightly fewer wrong edits.";
+    };
+    hideActiveEdit = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Keep the in-progress edit out of the history section so the prompt cache survives typing.";
     };
     threads = lib.mkOption {
       type = lib.types.ints.between 1 16;

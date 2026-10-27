@@ -480,7 +480,8 @@ local function request(bufnr, trigger)
     cursor = { line = row, col = col },
     diagnostics = diagnostics(bufnr),
     clipboard = clipboard,
-    jump = M.config.jump,
+    -- The jump search costs a second model call; skip it while typing.
+    jump = M.config.jump and trigger ~= "insert",
   }, function(resp, err)
     if seq == state.seq then state.job = nil end
     local latency = now_ms() - started

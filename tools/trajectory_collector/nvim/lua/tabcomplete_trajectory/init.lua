@@ -214,17 +214,27 @@ function retry_spool(cb)
       events = decoded.events or {},
     }
     if decoded.meta and decoded.meta.kind == "session" then
-      body = decoded.body or body
+      -- write_batch stores session request bodies under meta.body.
+      body = decoded.meta.body or decoded.body or body
     end
-    post_to(post_path, body, function(ok)
+    post_to(post_path, body, function(ok, info)
       if ok then
         spool.remove(path)
         idx = idx + 1
         next()
-      else
-        if cb then
-          cb(false, "post failed for " .. path)
-        end
+        return
+      end
+      local code = type(info) == "table" and info.http_code or nil
+      if code and code >= 400 and code < 500 and code ~= 408 and code ~= 429 then
+        -- Permanently rejected (e.g. a session the server never saw): keep
+        -- it aside so it cannot block every later batch, and continue.
+        spool.quarantine(path)
+        idx = idx + 1
+        next()
+        return
+      end
+      if cb then
+        cb(false, "post failed for " .. path)
       end
     end)
   end

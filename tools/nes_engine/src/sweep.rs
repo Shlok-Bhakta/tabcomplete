@@ -55,6 +55,8 @@ pub struct PromptOptions {
     pub diff_format: DiffFormat,
     pub prefill: Prefill,
     pub cursor_marker: bool,
+    /// Leave edits shown by the window out of the edit-history section.
+    pub hide_active_edit: bool,
     pub lines_before: usize,
     pub lines_after: usize,
     /// Whole original file is used when it has at most this many lines.
@@ -72,6 +74,7 @@ impl Default for PromptOptions {
             diff_format: DiffFormat::Server,
             prefill: Prefill::FirstLine,
             cursor_marker: true,
+            hide_active_edit: false,
             lines_before: NUM_LINES_BEFORE,
             lines_after: NUM_LINES_AFTER,
             whole_file_lines: 240,
@@ -273,6 +276,7 @@ fn recent_changes_and_prev(
     cleaned_block: &str,
     max_hunks: usize,
     diff_format: DiffFormat,
+    hide_active: bool,
 ) -> (String, String, Vec<String>) {
     let mut prev = cleaned_block.to_string();
     let mut prev_sections = Vec::new();
@@ -292,9 +296,14 @@ fn recent_changes_and_prev(
             break;
         }
     }
+    // The newest hunks that were reverted above lie inside the window, whose
+    // original/current pair already shows them. Hiding them keeps this
+    // section (and the KV cache through the original window) unchanged while
+    // the user keeps typing in the same place.
+    let shown = if hide_active { &hunks[..hunks.len() - prev_sections.len()] } else { hunks };
     let mut result = String::new();
-    let skip = hunks.len().saturating_sub(max_hunks);
-    for h in &hunks[skip..] {
+    let skip = shown.len().saturating_sub(max_hunks);
+    for h in &shown[skip..] {
         let (old, new) = h.parts(1);
         if old.trim().is_empty() && new.trim().is_empty() {
             continue;
@@ -362,7 +371,14 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
     let marker = if input.opts.cursor_marker { CURSOR } else { "" };
     let mut code_block = format!("{}{}{}", &cleaned[..rel_cursor], marker, &cleaned[rel_cursor..]);
     let (recent, mut prev, prev_sections) =
-        recent_changes_and_prev(input.path, input.hunks, cleaned, input.opts.max_hunks, input.opts.diff_format);
+        recent_changes_and_prev(
+        input.path,
+        input.hunks,
+        cleaned,
+        input.opts.max_hunks,
+        input.opts.diff_format,
+        input.opts.hide_active_edit,
+    );
     let prefill = compute_prefill(cleaned, rel_cursor, input.opts.prefill);
     let retrieval = pack_from_end(input.retrieval, input.opts.max_retrieval_tokens);
     let retrieval_text: String = retrieval.iter().map(|c| format!("\n{}", c.render())).collect();
@@ -1148,10 +1164,20 @@ mod tests {
         let old = "fn f(a: i32) {\n    a\n}\n";
         let new = "fn f(a: i64) {\n    a\n}\n";
         let hunks = crate::history::diff_hunks(Path::new("/x/f.rs"), "f.rs", old, new);
-        let (recent, prev, sections) = recent_changes_and_prev("f.rs", &hunks, new, 6, DiffFormat::Server);
+        let (recent, prev, sections) = recent_changes_and_prev("f.rs", &hunks, new, 6, DiffFormat::Server, false);
         assert_eq!(prev, old);
         assert_eq!(sections.len(), 1);
         assert!(recent.starts_with("<|file_sep|>f.rs:1:2\noriginal:\nfn f(a: i32) {\n    a\nupdated:\nfn f(a: i64) {\n    a"));
+    }
+
+    #[test]
+    fn hide_active_edit_keeps_history_stable() {
+        let old = "fn f(a: i32) {\n    a\n}\n";
+        let new = "fn f(a: i64) {\n    a\n}\n";
+        let hunks = crate::history::diff_hunks(Path::new("/x/f.rs"), "f.rs", old, new);
+        let (recent, prev, _) = recent_changes_and_prev("f.rs", &hunks, new, 6, DiffFormat::Server, true);
+        assert_eq!(recent, "");
+        assert_eq!(prev, old);
     }
 
     #[test]

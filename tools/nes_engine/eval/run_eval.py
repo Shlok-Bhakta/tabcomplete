@@ -56,9 +56,18 @@ def score(case, resp):
     return "wrong"
 
 
-def replay_lines(case, jump=True):
-    yield {"reset": {}}
+def replay_lines(case, jump=True, warm=None):
+    """Replay one case. With `warm` (a dict carried across cases), state is
+    kept between consecutive cases of the same file and only newer history is
+    observed, so the KV cache behaves as in continuous editing."""
+    if warm is None or warm.get("path") != case["path"]:
+        yield {"reset": {}}
+        last_ts = -1
+    else:
+        last_ts = warm["ts"]
     for h in case["history"]:
+        if h["ts_ms"] <= last_ts:
+            continue
         cursor = h.get("cursor") or {"row": 0, "col": 0}
         yield {
             "observe": {
@@ -78,6 +87,8 @@ def replay_lines(case, jump=True):
             "jump": jump,
         }
     }
+    if warm is not None:
+        warm["path"], warm["ts"] = case["path"], case["ts_ms"]
 
 
 def main():
@@ -89,12 +100,14 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--out", default="")
     ap.add_argument("--no-jump", action="store_true")
+    ap.add_argument("--warm", action="store_true", help="keep editor state across consecutive cases of a file")
     ap.add_argument("flags", nargs="*")
     args = ap.parse_args()
     cases = [json.loads(l) for l in open(args.cases)]
     if args.limit:
         cases = cases[: args.limit]
-    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump))
+    warm = {} if args.warm else None
+    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm))
     cmd = [args.engine, "--model", args.model, *args.flags, "replay"]
     proc = subprocess.run(cmd, input=stdin, capture_output=True, text=True)
     if proc.returncode != 0:
