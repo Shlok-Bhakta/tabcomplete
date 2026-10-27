@@ -29,6 +29,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 pub struct ModelConfig {
+    /// Prompt tokens per decode call; smaller chunks let a newer request
+    /// cancel an in-flight prefill sooner.
+    pub prefill_chunk: usize,
     pub gpu_layers: u32,
     /// llama.cpp flash attention policy: -1 auto, 0 off, 1 on.
     pub flash_attn: i32,
@@ -46,6 +49,7 @@ pub struct Engine {
     cached: Vec<LlamaToken>,
     n_ctx: usize,
     n_batch: usize,
+    prefill_chunk: usize,
     stop_tokens: Vec<LlamaToken>,
     pub file_sep: LlamaToken,
 }
@@ -142,6 +146,7 @@ impl Engine {
             cached: Vec::new(),
             n_ctx: config.n_ctx as usize,
             n_batch: config.n_batch as usize,
+            prefill_chunk: config.prefill_chunk.clamp(16, config.n_batch as usize),
             stop_tokens,
             file_sep,
         })
@@ -207,7 +212,7 @@ impl Engine {
                 stats.prefill_ms = ms(started);
                 return Ok(false);
             }
-            let end = (pos + self.n_batch).min(prompt.len());
+            let end = (pos + self.prefill_chunk).min(prompt.len());
             batch.clear();
             for (i, token) in prompt[pos..end].iter().enumerate() {
                 let p = pos + i;

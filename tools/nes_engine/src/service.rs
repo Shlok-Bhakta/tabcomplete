@@ -164,6 +164,7 @@ pub struct Settings {
     pub draft_previous: bool,
     /// Withhold edits whose weakest changed token is below this log-probability.
     pub min_confidence: f32,
+    pub multiline_min_confidence: f32,
 }
 
 enum Job {
@@ -543,7 +544,18 @@ impl Service {
         }
         resp.exit_reason = outcome.exit_reason.to_string();
         resp.edits = outcome.edits.iter().map(|e| edit_out(content, e)).collect();
-        let weak = resp.confidence.as_ref().is_some_and(|c| c.changed_tokens > 0 && c.min_logprob < self.settings.min_confidence);
+        // Multi-line rewrites are wrong more often than single-line edits, so
+        // they need more confidence to be shown.
+        let multiline = outcome.edits.first().is_some_and(|e| {
+            let old = &content[e.start..e.end];
+            old.matches('\n').count() > 1 || (!old.is_empty() && e.text.matches('\n').count() > 1)
+        });
+        let threshold = if multiline {
+            self.settings.min_confidence.max(self.settings.multiline_min_confidence)
+        } else {
+            self.settings.min_confidence
+        };
+        let weak = resp.confidence.as_ref().is_some_and(|c| c.changed_tokens > 0 && c.min_logprob < threshold);
         if weak && !resp.edits.is_empty() {
             resp.withheld = std::mem::take(&mut resp.edits);
             resp.exit_reason = "low_confidence".into();

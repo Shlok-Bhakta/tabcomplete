@@ -73,6 +73,9 @@ struct Cli {
     /// Matching lines after an edit before the rest of the window is spliced.
     #[arg(long, default_value_t = 2)]
     splice_anchors: usize,
+    /// Prompt tokens per prefill decode call (cancellation granularity).
+    #[arg(long, default_value_t = 512)]
+    prefill_chunk: usize,
     /// Flash attention: -1 auto, 0 off, 1 on.
     #[arg(long, default_value_t = -1, allow_hyphen_values = true)]
     flash_attn: i32,
@@ -88,6 +91,9 @@ struct Cli {
     /// Minimum log-probability of the weakest changed token to show an edit.
     #[arg(long, default_value_t = f32::NEG_INFINITY, allow_hyphen_values = true)]
     min_confidence: f32,
+    /// Stricter gate for edits that rewrite more than one existing line.
+    #[arg(long, default_value_t = f32::NEG_INFINITY, allow_hyphen_values = true)]
+    multiline_min_confidence: f32,
     #[command(subcommand)]
     command: Command,
 }
@@ -161,10 +167,12 @@ fn main() -> Result<()> {
         splice_anchors: cli.splice_anchors,
         draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
+        multiline_min_confidence: cli.multiline_min_confidence,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
         flash_attn: cli.flash_attn,
+        prefill_chunk: cli.prefill_chunk,
         n_ctx: cli.ctx_size,
         n_batch: cli.batch_size,
         threads: cli.threads,

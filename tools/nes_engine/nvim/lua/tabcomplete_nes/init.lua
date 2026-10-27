@@ -286,10 +286,14 @@ local function dismiss(reason)
 end
 
 local prefetch_after_accept
+local target_line
 
 local function show(bufnr, s)
   s.replaced = range_text(bufnr, s.edits[s.idx])
   if s.replaced == nil then return end
+  local first_edit = s.edits[s.idx]
+  s.target = target_line(bufnr, first_edit)
+  s.target_row = first_edit.start_line
   s.far = M.config.jump and is_far(s.edits[s.idx])
   state.suggestion = s
   s.display = render(bufnr, s)
@@ -599,23 +603,54 @@ end
 
 -- If the user types exactly the next characters of a ghost suggestion, keep
 -- it (shortened) instead of discarding it.
+-- The line a single-line suggestion would produce, or nil for other edits.
+target_line = function(bufnr, e)
+  local line = vim.api.nvim_buf_get_lines(bufnr, e.start_line, e.start_line + 1, false)[1]
+  if not line then return nil end
+  if e.end_line == e.start_line and not e.text:find("\n") then
+    return line:sub(1, e.start_col) .. e.text .. line:sub(e.end_col + 1)
+  end
+  -- Whole-line replacement: [row, 0] .. [row + 1, 0] with one new line.
+  if e.start_col == 0 and e.end_line == e.start_line + 1 and e.end_col == 0 then
+    local body = e.text:match("^([^\n]*)\n$")
+    return body
+  end
+  return nil
+end
+
+-- Keep a suggestion alive while the user types toward it: if the current
+-- line still agrees with the suggested line before and after the cursor,
+-- the rest of the difference becomes ghost text at the cursor (no engine
+-- round trip).
 local function try_type_through(bufnr)
   local s = state.suggestion
-  if not s or s.bufnr ~= bufnr or s.display ~= "ghost" then return false end
-  local e = s.edits[s.idx]
+  if not s or s.bufnr ~= bufnr or not s.target then return false end
   local row, col = cursor_pos()
-  if row ~= e.start_line or col <= e.start_col then return false end
+  if row ~= s.target_row then return false end
   local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] or ""
-  local typed = line:sub(e.start_col + 1, col)
-  local first = split_text(e.text)[1]
-  if typed == "" or first:sub(1, #typed) ~= typed or #typed >= #first then return false end
-  e.text = e.text:sub(#typed + 1)
-  e.start_col = e.start_col + #typed
-  e.end_col = e.end_col + #typed
-  e.start_byte = e.start_byte + #typed
-  e.end_byte = e.end_byte + #typed
+  local target = s.target
+  local before, rest = line:sub(1, col), line:sub(col + 1)
+  if target:sub(1, #before) ~= before or #target < #line then return false end
+  if rest ~= "" and target:sub(-#rest) ~= rest then return false end
+  local ghost = target:sub(#before + 1, #target - #rest)
+  s.typed_through = (s.typed_through or 0) + 1
+  if ghost == "" then
+    -- The user typed the whole suggestion.
+    state.suggestion = nil
+    clear_marks(bufnr)
+    emit(bufnr, "prediction_partially_accepted", {
+      prediction_id = s.prediction_id,
+      request_id = s.request_id,
+      reason = "typed_through",
+      keystrokes = s.typed_through,
+      protocol = "sweep-next-edit-v1",
+    })
+    return true
+  end
+  s.edits[s.idx] = { start_line = row, start_col = col, end_line = row, end_col = col, text = ghost }
+  s.replaced = ""
   s.changedtick = vim.api.nvim_buf_get_changedtick(bufnr)
-  s.typed_through = (s.typed_through or 0) + #typed
+  s.content = nil -- offsets no longer match the request snapshot
   s.display = render(bufnr, s)
   return true
 end
@@ -813,6 +848,13 @@ function M.setup(opts)
   return M
 end
 
-M._test = { state = state, request = request, render = render, apply_edit = apply_edit }
+M._test = {
+  state = state,
+  request = request,
+  render = render,
+  apply_edit = apply_edit,
+  show_for_test = function(bufnr, s) show(bufnr, s) end,
+  try_type_through = function(bufnr) return try_type_through(bufnr) end,
+}
 
 return M
