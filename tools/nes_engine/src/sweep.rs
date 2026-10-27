@@ -736,6 +736,12 @@ pub struct Processed {
 /// Returns the window text to append. Only the first edit is ever shown, so
 /// later edits in the window are not lost in practice.
 pub fn splice_rest(prefill: &str, generated: &str, cleaned: &str) -> Option<String> {
+    splice_rest_n(prefill, generated, cleaned, 2)
+}
+
+/// `splice_rest` with a configurable number of matching anchor lines.
+pub fn splice_rest_n(prefill: &str, generated: &str, cleaned: &str, anchors: usize) -> Option<String> {
+    let anchors = anchors.max(1);
     let out = format!("{prefill}{generated}");
     let complete = &out[..out.rfind('\n')? + 1];
     let a = cleaned.as_bytes();
@@ -748,22 +754,22 @@ pub fn splice_rest(prefill: &str, generated: &str, cleaned: &str) -> Option<Stri
         return None; // no divergence yet
     }
     let out_lines: Vec<&str> = complete[p..].split_inclusive('\n').collect();
-    if out_lines.len() < 3 {
-        return None; // need the changed line plus two anchor lines
+    if out_lines.len() < anchors + 1 {
+        return None; // need the changed line plus the anchor lines
     }
-    let tail = &out_lines[out_lines.len() - 2..];
+    let tail = &out_lines[out_lines.len() - anchors..];
     if tail.iter().map(|l| l.trim().len()).sum::<usize>() < 8 {
         return None; // braces and blank lines are ambiguous anchors
     }
     let div_line = cleaned[..p].matches('\n').count();
     let block_lines: Vec<&str> = cleaned.split_inclusive('\n').collect();
     let mut found = None;
-    for j in div_line..block_lines.len().saturating_sub(1) {
-        if block_lines[j] == tail[0] && block_lines[j + 1] == tail[1] {
+    for j in div_line..block_lines.len().saturating_sub(anchors - 1) {
+        if (0..anchors).all(|k| block_lines[j + k] == tail[k]) {
             if found.is_some() {
                 return None; // ambiguous anchor
             }
-            found = Some(j + 2);
+            found = Some(j + anchors);
         }
     }
     found.map(|k| block_lines[k..].concat())

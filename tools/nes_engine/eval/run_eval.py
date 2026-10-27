@@ -56,7 +56,7 @@ def score(case, resp):
     return "wrong"
 
 
-def replay_lines(case, jump=True, warm=None):
+def replay_lines(case, jump=True, warm=None, keystrokes=False):
     """Replay one case. With `warm` (a dict carried across cases), state is
     kept between consecutive cases of the same file and only newer history is
     observed, so the KV cache behaves as in continuous editing."""
@@ -77,6 +77,20 @@ def replay_lines(case, jump=True, warm=None):
                 "ts_ms": h["ts_ms"],
             }
         }
+    if keystrokes:
+        # Predict at the last few keystrokes first, as typing would.
+        for k, st in enumerate(case.get("pre_states") or []):
+            cursor = st.get("cursor") or {"row": 0, "col": 0}
+            yield {
+                "predict": {
+                    "request_id": f"{case['id']}#k{k}",
+                    "path": case["path"],
+                    "content": st["content"],
+                    "cursor": {"line": cursor["row"], "col": cursor["col"]},
+                    "ts_ms": st["ts_ms"],
+                    "jump": False,
+                }
+            }
     yield {
         "predict": {
             "request_id": case["id"],
@@ -101,13 +115,14 @@ def main():
     ap.add_argument("--out", default="")
     ap.add_argument("--no-jump", action="store_true")
     ap.add_argument("--warm", action="store_true", help="keep editor state across consecutive cases of a file")
+    ap.add_argument("--keystrokes", action="store_true", help="predict at the burst's last keystrokes before the scored state")
     ap.add_argument("flags", nargs="*")
     args = ap.parse_args()
     cases = [json.loads(l) for l in open(args.cases)]
     if args.limit:
         cases = cases[: args.limit]
     warm = {} if args.warm else None
-    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm))
+    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm, args.keystrokes))
     cmd = [args.engine, "--model", args.model, *args.flags, "replay"]
     proc = subprocess.run(cmd, input=stdin, capture_output=True, text=True)
     if proc.returncode != 0:

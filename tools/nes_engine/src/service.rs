@@ -21,7 +21,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 pub const PROTOCOL: &str = "sweep-next-edit-v1";
-const DRAFT_MAX: usize = 16;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Cursor {
@@ -145,6 +144,8 @@ pub struct PredictResponse {
     pub completion: String,
     pub prompt_sha256: String,
     pub finish_reason: String,
+    /// Served from a prefetch computed before the request arrived.
+    pub prefetched: bool,
     pub confidence: Option<sweep::Confidence>,
     pub context: ContextSummary,
     pub timings: Timings,
@@ -158,6 +159,9 @@ pub struct Settings {
     pub file_chunk_lines: usize,
     pub index_refresh_secs: u64,
     pub early_stop: bool,
+    pub draft_max: usize,
+    pub splice_anchors: usize,
+    pub draft_previous: bool,
     /// Withhold edits whose weakest changed token is below this log-probability.
     pub min_confidence: f32,
 }
@@ -170,8 +174,10 @@ enum Job {
         draft_seed: Vec<llama_cpp_2::token::LlamaToken>,
         max_tokens: usize,
         max_newlines: usize,
-        /// (prefill, window) for splicing the unchanged rest of the window.
-        splice: Option<(String, String)>,
+        /// Tokens of the previous completion for this file (draft source).
+        previous: Vec<llama_cpp_2::token::LlamaToken>,
+        /// (prefill, window, anchor lines) for splicing the unchanged rest.
+        splice: Option<(String, String, usize)>,
         reply: mpsc::Sender<Result<Outcome>>,
     },
     Warm {
@@ -190,6 +196,10 @@ pub struct Service {
     pub registry: Arc<Registry>,
     sticky: Mutex<HashMap<PathBuf, Vec<String>>>,
     clock: Mutex<Option<(u64, Instant)>>,
+    /// Recent prefetched responses keyed by (path, content hash, cursor, jump).
+    prefetched: Mutex<Vec<(String, PredictResponse)>>,
+    /// Last completion (prefill + generated) per file, as draft tokens.
+    previous: Mutex<HashMap<String, Vec<llama_cpp_2::token::LlamaToken>>>,
 }
 
 fn sha256_hex(text: &str) -> String {
@@ -201,6 +211,7 @@ fn sha256_hex(text: &str) -> String {
 impl Service {
     pub fn start(model_path: &Path, config: ModelConfig, settings: Settings) -> Result<Arc<Self>> {
         let (tx, rx) = mpsc::channel::<Job>();
+        let draft_max = settings.draft_max;
         let (ready_tx, ready_rx) = mpsc::channel::<Result<(Tokenizer, usize)>>();
         let latest = Arc::new(AtomicU64::new(0));
         let worker_latest = Arc::clone(&latest);
@@ -220,13 +231,13 @@ impl Service {
                 };
                 while let Ok(job) = rx.recv() {
                     match job {
-                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, splice, reply } => {
+                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, previous, splice, reply } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
                                 let _ = reply.send(Ok(Outcome::Cancelled(GenStats::default())));
                                 continue;
                             }
-                            let splicer = splice.map(|(prefill, window)| {
-                                move |generated: &str| sweep::splice_rest(&prefill, generated, &window)
+                            let splicer = splice.map(|(prefill, window, anchors)| {
+                                move |generated: &str| sweep::splice_rest_n(&prefill, generated, &window, anchors)
                             });
                             let result = engine.generate(GenRequest {
                                 prompt: &prompt,
@@ -234,7 +245,9 @@ impl Service {
                                 draft_seed: &draft_seed,
                                 max_tokens,
                                 max_newlines,
-                                draft_max: DRAFT_MAX,
+                                draft_max,
+                                draft_fallback: &prompt[prompt.len().saturating_sub(1024)..],
+                                draft_previous: &previous,
                                 generation,
                                 latest: &worker_latest,
                                 early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
@@ -263,6 +276,8 @@ impl Service {
             registry: Arc::new(Registry::default()),
             sticky: Mutex::new(HashMap::new()),
             clock: Mutex::new(None),
+            prefetched: Mutex::new(Vec::new()),
+            previous: Mutex::new(HashMap::new()),
         }))
     }
 
@@ -350,7 +365,48 @@ impl Service {
             .collect()
     }
 
+    fn cache_key(req: &PredictRequest) -> String {
+        format!("{}\u{0}{}\u{0}{}:{}\u{0}{}", req.path, sha256_hex(&req.content), req.cursor.line, req.cursor.col, req.jump)
+    }
+
     pub fn predict(&self, req: PredictRequest) -> Result<PredictResponse> {
+        let key = Self::cache_key(&req);
+        let hit = {
+            let mut cache = self.prefetched.lock().unwrap();
+            cache.iter().position(|(k, _)| *k == key).map(|i| cache.remove(i).1)
+        };
+        if let Some(mut cached) = hit {
+            // Record the state as usual and cancel any background work.
+            self.latest.fetch_add(1, Ordering::SeqCst);
+            let (path, _root, display) = self.resolve(&req.path, req.root.as_deref());
+            let now = self.instant(req.ts_ms);
+            self.tracker.lock().unwrap().observe_at(&path, &display, &req.content, req.cursor.line, false, now);
+            cached.request_id = req.request_id.clone();
+            cached.prefetched = true;
+            cached.timings.total_ms = 0.0;
+            return Ok(cached);
+        }
+        self.predict_inner(req, false)
+    }
+
+    /// Compute a prediction for a likely next state (after the shown edit is
+    /// accepted) without touching the real edit history or cancelling work.
+    pub fn prefetch(&self, req: PredictRequest) -> Result<()> {
+        let key = Self::cache_key(&req);
+        if self.prefetched.lock().unwrap().iter().any(|(k, _)| *k == key) {
+            return Ok(());
+        }
+        let resp = self.predict_inner(req, true)?;
+        if resp.status == "ok" || resp.status == "empty" {
+            let mut cache = self.prefetched.lock().unwrap();
+            cache.push((key, resp));
+            let excess = cache.len().saturating_sub(4);
+            cache.drain(..excess);
+        }
+        Ok(())
+    }
+
+    fn predict_inner(&self, req: PredictRequest, speculative: bool) -> Result<PredictResponse> {
         let started = Instant::now();
         let mut resp = PredictResponse {
             request_id: req.request_id.clone(),
@@ -360,8 +416,14 @@ impl Service {
             kind: "local",
             ..Default::default()
         };
-        // Claim a generation first so older queued work is abandoned at once.
-        let generation = self.latest.fetch_add(1, Ordering::SeqCst) + 1;
+        // Real requests claim a generation first so older queued work is
+        // abandoned at once; speculative work runs at the current generation
+        // and is abandoned by the next real request.
+        let generation = if speculative {
+            self.latest.load(Ordering::SeqCst)
+        } else {
+            self.latest.fetch_add(1, Ordering::SeqCst) + 1
+        };
         let (path, root, display) = self.resolve(&req.path, req.root.as_deref());
         resp.context.root = root.to_string_lossy().into_owned();
         resp.context.path = display.clone();
@@ -374,7 +436,14 @@ impl Service {
         }
         let (hunks, original) = {
             let now = self.instant(req.ts_ms);
-            let mut t = self.tracker.lock().unwrap();
+            let mut real = self.tracker.lock().unwrap();
+            let mut copy;
+            let t: &mut Tracker = if speculative {
+                copy = real.clone();
+                &mut copy
+            } else {
+                &mut real
+            };
             t.observe_at(&path, &display, content, req.cursor.line, false, now);
             let h = t.recent_hunks_at(self.settings.prompt.max_hunks, now);
             let o = t.original(&path).unwrap_or(content).to_string();
@@ -502,7 +571,7 @@ impl Service {
         let block_tokens = self.tokenizer.tokenize_plain(&block.text);
         let max_tokens = (block_tokens.len() * 2 + 160).min(sweep::OUTPUT_MAX_TOKENS);
         let max_newlines = block.text.lines().count() + 20;
-        let budget = self.n_ctx.saturating_sub(max_tokens + DRAFT_MAX + 8);
+        let budget = self.n_ctx.saturating_sub(max_tokens + self.settings.draft_max + 8);
         let mut opts = self.settings.prompt.clone();
         let mut fc: &[Chunk] = file_chunks;
         let mut rc: &[Chunk] = retrieval;
@@ -563,7 +632,12 @@ impl Service {
                 draft_seed,
                 max_tokens,
                 max_newlines,
-                splice: early.then(|| (built.prefill.clone(), block.text.clone())),
+                previous: if self.settings.draft_previous {
+                    self.previous.lock().unwrap().get(display).cloned().unwrap_or_default()
+                } else {
+                    Vec::new()
+                },
+                splice: early.then(|| (built.prefill.clone(), block.text.clone(), self.settings.splice_anchors)),
                 reply: reply_tx,
             })
             .map_err(|_| anyhow!("model worker stopped"))?;
@@ -578,6 +652,8 @@ impl Service {
                 resp.timings.stages.push(g.stats.clone());
                 resp.completion = g.text.clone();
                 resp.finish_reason = g.finish_reason.to_string();
+                let tokens = self.tokenizer.tokenize_plain(&format!("{}{}", built.prefill, g.text));
+                self.previous.lock().unwrap().insert(display.to_string(), tokens);
                 resp.confidence = Some(sweep::change_confidence(
                     &built.prefill,
                     &g.text,

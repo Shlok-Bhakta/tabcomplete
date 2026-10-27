@@ -30,6 +30,8 @@ use std::time::Instant;
 
 pub struct ModelConfig {
     pub gpu_layers: u32,
+    /// llama.cpp flash attention policy: -1 auto, 0 off, 1 on.
+    pub flash_attn: i32,
     pub n_ctx: u32,
     pub n_batch: u32,
     pub threads: i32,
@@ -82,7 +84,16 @@ pub struct GenRequest<'a> {
     pub max_tokens: usize,
     /// Stop once the output holds more than this many newlines.
     pub max_newlines: usize,
+    /// Largest draft; drafts start here, double after full acceptance and
+    /// shrink to a few tokens after a miss (the model is writing new text).
     pub draft_max: usize,
+    /// Second draft source (the prompt tail): new identifiers usually appear
+    /// in the edit history or retrieved snippets, not in the window.
+    pub draft_fallback: &'a [LlamaToken],
+    /// Highest-priority draft source: the previous completion for this file.
+    /// Consecutive keystrokes usually produce nearly the same rewrite, so it
+    /// carries the new text that the window does not contain.
+    pub draft_previous: &'a [LlamaToken],
     /// Generation counter: the request is abandoned when `latest` moves past it.
     pub generation: u64,
     pub latest: &'a AtomicU64,
@@ -113,7 +124,8 @@ impl Engine {
             .with_n_batch(config.n_batch)
             .with_n_ubatch(config.n_batch)
             .with_n_threads(config.threads)
-            .with_n_threads_batch(config.threads_batch);
+            .with_n_threads_batch(config.threads_batch)
+            .with_flash_attention_policy(config.flash_attn as llama_cpp_sys_2::llama_flash_attn_type);
         let ctx = model
             .new_context(backend, params)
             .context("create llama context")?;
@@ -247,6 +259,7 @@ impl Engine {
         let mut token_logprobs: Vec<f32> = Vec::new();
         let mut token_offsets: Vec<usize> = Vec::new();
         let mut checked_newlines = 0usize;
+        let mut draft_len = req.draft_max;
         let finish_reason;
         loop {
             if req.latest.load(Ordering::SeqCst) != req.generation {
@@ -275,12 +288,19 @@ impl Engine {
             }
             // Draft continuation from the current window.
             let remaining = req.max_tokens - out_tokens.len();
-            let draft = find_draft(
-                req.draft_source,
-                &hist,
-                &mut draft_cursor,
-                req.draft_max.min(remaining),
-            );
+            let want = draft_len.min(remaining);
+            let mut draft = Vec::new();
+            if !req.draft_previous.is_empty() {
+                let mut prev_cursor = None;
+                draft = find_draft(req.draft_previous, &hist, &mut prev_cursor, want.max(8));
+            }
+            if draft.is_empty() {
+                draft = find_draft(req.draft_source, &hist, &mut draft_cursor, want);
+            }
+            if draft.is_empty() && !req.draft_fallback.is_empty() {
+                let mut none = None;
+                draft = find_draft(req.draft_fallback, &hist, &mut none, want.min(8));
+            }
             let base = self.cached.len();
             batch.clear();
             batch.add(next, base as i32, &[0], true)?;
@@ -326,6 +346,9 @@ impl Engine {
             }
             if accepted < draft.len() {
                 draft_cursor = None;
+                draft_len = 4.min(req.draft_max);
+            } else if !draft.is_empty() {
+                draft_len = (draft_len * 2).min(req.draft_max);
             }
             if stopped {
                 finish_reason = "stop";

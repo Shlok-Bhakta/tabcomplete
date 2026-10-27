@@ -89,6 +89,38 @@ function M.list()
   return entries
 end
 
+--- Content blobs whose upload failed, retried before event batches so the
+--- anchors that events reference are restorable after a collector outage.
+function M.blob_dir()
+  return M.spool_dir() .. "/blobs"
+end
+
+function M.write_blob(sha, content_base64)
+  if type(sha) ~= "string" or not sha:match("^%x+$") or #content_base64 > 4 * 1024 * 1024 then
+    return nil
+  end
+  vim.fn.mkdir(M.blob_dir(), "p")
+  local path = M.blob_dir() .. "/" .. sha .. ".json"
+  if vim.uv.fs_stat(path) then
+    return path
+  end
+  local ok, encoded = pcall(vim.json.encode, { sha256 = sha, content_base64 = content_base64 })
+  if not ok then
+    return nil
+  end
+  local f = io.open(path, "w")
+  if not f then
+    return nil
+  end
+  f:write(encoded)
+  f:close()
+  return path
+end
+
+function M.list_blobs()
+  return vim.fn.globpath(M.blob_dir(), "*.json", false, true)
+end
+
 --- Move a permanently rejected batch to spool/rejected/ (kept, not retried).
 function M.quarantine(path)
   local dir = M.spool_dir() .. "/rejected"

@@ -70,6 +70,18 @@ struct Cli {
     lines_after: usize,
     #[arg(long, default_value_t = 60)]
     index_refresh_secs: u64,
+    /// Matching lines after an edit before the rest of the window is spliced.
+    #[arg(long, default_value_t = 2)]
+    splice_anchors: usize,
+    /// Flash attention: -1 auto, 0 off, 1 on.
+    #[arg(long, default_value_t = -1, allow_hyphen_values = true)]
+    flash_attn: i32,
+    /// Draft from the previous completion for the same file first.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    draft_previous: bool,
+    /// Largest speculative draft verified in one batch.
+    #[arg(long, default_value_t = 32)]
+    draft_max: usize,
     /// Stop decoding once the window rewrite rejoins the original text.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     early_stop: bool,
@@ -145,10 +157,14 @@ fn main() -> Result<()> {
         file_chunk_lines: cli.file_chunk_lines,
         index_refresh_secs: cli.index_refresh_secs,
         early_stop: cli.early_stop,
+        draft_max: cli.draft_max,
+        splice_anchors: cli.splice_anchors,
+        draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
+        flash_attn: cli.flash_attn,
         n_ctx: cli.ctx_size,
         n_batch: cli.batch_size,
         threads: cli.threads,
@@ -179,6 +195,8 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         max_tokens,
         max_newlines: 200,
         draft_max: 0,
+        draft_fallback: &[],
+        draft_previous: &[],
         generation: 1,
         latest: &latest,
         early_stop: None,
@@ -219,6 +237,7 @@ fn serve(svc: Arc<Service>, host: &str, port: u16) -> Result<()> {
             .route("/health", get(health))
             .route("/v1/predict", post(predict))
             .route("/v1/observe", post(observe))
+            .route("/v1/prefetch", post(prefetch))
             .layer(DefaultBodyLimit::max(16 * 1024 * 1024))
             .with_state(svc);
         let listener = tokio::net::TcpListener::bind((host, port)).await?;
@@ -290,6 +309,15 @@ async fn predict(
             ))
         }
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "status": "error", "error": e.to_string() })))),
+    }
+}
+
+async fn prefetch(State(svc): State<Arc<Service>>, Json(req): Json<PredictRequest>) -> Json<Value> {
+    let result = tokio::task::spawn_blocking(move || svc.prefetch(req)).await;
+    match result {
+        Ok(Ok(())) => Json(json!({ "status": "ok" })),
+        Ok(Err(e)) => Json(json!({ "status": "error", "error": format!("{e:#}") })),
+        Err(e) => Json(json!({ "status": "error", "error": e.to_string() })),
     }
 }
 

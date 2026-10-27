@@ -27,6 +27,7 @@ transport._curl_runner = function(argv, body, _timeout, cb)
   end
 end
 
+spool.write_blob("ab12", "aGVsbG8=")
 spool.write_batch({}, { kind = "session", path = "/v1/session/start", body = { session_id = "s1", machine_id = "m" } })
 spool.write_batch({ { session_id = "poison", event_id = "e0" } }, { kind = "events", path = "/v1/events/batch", session_id = "poison" })
 spool.write_batch({ { session_id = "s1", event_id = "e1" } }, { kind = "events", path = "/v1/events/batch", session_id = "s1" })
@@ -42,8 +43,10 @@ local function check(cond, msg)
   end
 end
 check(result and result[1] == true, "retry finished: " .. vim.inspect(result))
-check(#posts == 3, "three posts, got " .. #posts)
-check(posts[1].url:match("/v1/session/start$") and posts[1].body.session_id == "s1", "session start sent with its stored body")
+check(#posts == 4, "four posts, got " .. #posts)
+check(posts[1].url:match("/v1/blobs/upload$") and posts[1].body.sha256 == "ab12", "spooled blob uploaded first")
+check(#spool.list_blobs() == 0, "blob spool drained")
+check(posts[2].url:match("/v1/session/start$") and posts[2].body.session_id == "s1", "session start sent with its stored body")
 check(#spool.list() == 0, "spool empty after retry")
 check(#vim.fn.globpath(spool.spool_dir() .. "/rejected", "batch-*.json", false, true) == 1, "poison batch quarantined")
 print("spool_retry: ok")

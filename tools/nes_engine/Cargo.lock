@@ -1032,6 +1032,7 @@ dependencies = [
  "clap",
  "ignore",
  "llama-cpp-2",
+ "llama-cpp-sys-2",
  "rayon",
  "serde",
  "serde_json",

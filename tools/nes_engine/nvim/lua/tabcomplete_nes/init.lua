@@ -28,6 +28,8 @@ M.config = {
   dismiss_key = "<M-BS>",
   predict_key = "<M-p>",
   capture_content = true,
+  -- Precompute the suggestion that would follow accepting the shown one.
+  prefetch = true,
   clipboard_window_ms = 120000,
   exclude_filetypes = {
     "TelescopePrompt", "snacks_picker_input", "snacks_input", "neo-tree", "lazy", "mason", "help",
@@ -283,6 +285,8 @@ local function dismiss(reason)
   })
 end
 
+local prefetch_after_accept
+
 local function show(bufnr, s)
   s.replaced = range_text(bufnr, s.edits[s.idx])
   if s.replaced == nil then return end
@@ -312,6 +316,37 @@ local function show(bufnr, s)
     synthetic = false,
   })
   s.shown_event_id = ev and ev.event_id or nil
+  prefetch_after_accept(bufnr, s)
+end
+
+-- Predict what accepting `s` will leave in the buffer (mirrors apply_edit
+-- and the cursor placement in accept) and ask the engine to compute the
+-- next suggestion for that state in the background.
+prefetch_after_accept = function(bufnr, s)
+  if not M.config.prefetch or not s.content then return end
+  local e = s.edits[s.idx]
+  if not e.start_byte or e.start_line >= vim.api.nvim_buf_line_count(bufnr) then return end
+  local after = s.content:sub(1, e.start_byte) .. e.text .. s.content:sub(e.end_byte + 1)
+  local lines = split_text(e.text)
+  local row = e.start_line + #lines - 1
+  local col = #lines == 1 and (e.start_col + #lines[1]) or #lines[#lines]
+  if #lines > 1 and lines[#lines] == "" then
+    row = row - 1
+    col = #lines[#lines - 1]
+  end
+  if not vim.api.nvim_get_mode().mode:match("^i") then
+    local line = vim.split(after, "\n", { plain = true })[row + 1] or ""
+    if col >= #line and #line > 0 then col = #line - 1 end
+  end
+  post("/v1/prefetch", {
+    path = s.path,
+    root = s.root,
+    content = after,
+    cursor = { line = row, col = col },
+    diagnostics = s.diagnostics,
+    clipboard = s.clipboard,
+    jump = M.config.jump,
+  }, nil)
 end
 
 local schedule_request
@@ -472,13 +507,15 @@ local function request(bufnr, trigger)
     requested_at_ms = now_ms(),
   })
   local started = now_ms()
+  local root = root_for(bufnr)
+  local diags = diagnostics(bufnr)
   state.job = post("/v1/predict", {
     request_id = request_id,
     path = path,
-    root = root_for(bufnr),
+    root = root,
     content = content,
     cursor = { line = row, col = col },
-    diagnostics = diagnostics(bufnr),
+    diagnostics = diags,
     clipboard = clipboard,
     -- The jump search costs a second model call; skip it while typing.
     jump = M.config.jump and trigger ~= "insert",
@@ -494,6 +531,9 @@ local function request(bufnr, trigger)
         })
       end
       return
+    end
+    if seq == state.seq then
+      state.last_response = { prefetched = resp.prefetched or false, latency_ms = latency, status = resp.status, trigger = trigger }
     end
     local prompt_hash = store_blob(resp.prompt)
     local completion_hash = store_blob(resp.completion)
@@ -515,6 +555,7 @@ local function request(bufnr, trigger)
       context = resp.context,
       context_blob_hash = prompt_hash,
       raw_response_hash = completion_hash,
+      prefetched = resp.prefetched or nil,
       prompt_sha256 = resp.prompt_sha256,
       model = resp.model,
       model_sha256 = resp.model_sha256,
@@ -536,6 +577,11 @@ local function request(bufnr, trigger)
       prediction_id = prediction_id,
       request_id = request_id,
       typed_through = 0,
+      content = content,
+      path = path,
+      root = root,
+      diagnostics = diags,
+      clipboard = clipboard,
     })
   end)
 end
@@ -737,6 +783,7 @@ function M.status()
     suggestion = state.suggestion and { kind = state.suggestion.kind, display = state.suggestion.display } or nil,
     collector = collector() ~= nil,
     stats = vim.deepcopy(state.stats),
+    last_response = state.last_response,
   }
 end
 

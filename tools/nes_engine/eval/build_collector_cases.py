@@ -100,6 +100,45 @@ def timeline(db, path):
     return out, stats
 
 
+def reverse_timeline(db, path, final_text):
+    """Rebuild a file's history backwards from its current content when the
+    anchor blobs were never uploaded. Each delta's inserted text must match
+    the buffer before it is undone; anchor SHA-256s confirm the result."""
+    import hashlib
+
+    events = file_events(db, path)
+    deltas = [e for e in events if e[3] == "edit_delta"]
+    lines, trailing = split(final_text)
+    states = []  # (ts, content, cursor) after each delta, newest first
+    for ts, _seq, _sess, _et, p in reversed(deltas):
+        n = p["new_end_row"] - p["start_row"]
+        ins = [""] * n if p["inserted_text"] == "" else p["inserted_text"].split("\n")
+        if len(ins) != n or lines[p["start_row"] : p["new_end_row"]] != ins:
+            break
+        states.append((ts, join(lines, trailing), p.get("cursor_after")))
+        m = p["old_end_row"] - p["start_row"]
+        dele = [""] * m if p["deleted_text"] == "" else p["deleted_text"].split("\n")
+        lines[p["start_row"] : p["new_end_row"]] = dele
+    states.reverse()
+    by_ts = {}
+    for ts, content, _ in states:
+        by_ts[ts] = content
+    checked = matched = 0
+    known = sorted(by_ts)
+    for ts, _seq, _sess, et, p in events:
+        if et not in ("buffer_open", "buffer_write") or not known:
+            continue
+        prior = [t for t in known if t <= ts]
+        if not prior:
+            continue
+        checked += 1
+        content = by_ts[prior[-1]]
+        if hashlib.sha256(content.encode("utf-8")).hexdigest() == p.get("content_hash"):
+            matched += 1
+    out = [(ts, content, cursor, "delta") for ts, content, cursor in states]
+    return out, {"deltas": len(deltas), "recovered": len(states), "anchors_checked": checked, "anchors_matched": matched}
+
+
 def bursts(tl):
     """Group consecutive deltas separated by less than PAUSE_MS."""
     groups, current = [], []
@@ -123,6 +162,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default="/mnt/ssd/collector-data/collector.sqlite")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--mirror", default="", help="local root holding current copies of edited files")
     args = ap.parse_args()
     db = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     paths = [
@@ -135,6 +175,20 @@ def main():
     cases = []
     for path in paths:
         tl, stats = timeline(db, path)
+        if stats["deltas"] == 0 and args.mirror:
+            local = args.mirror + path
+            try:
+                final_text = open(local, encoding="utf-8").read()
+            except OSError:
+                final_text = None
+            if final_text is not None:
+                tl, stats = reverse_timeline(db, path, final_text)
+                # Keep only histories that the anchors confirm.
+                if stats["anchors_checked"] == 0 or stats["anchors_matched"] * 2 < stats["anchors_checked"]:
+                    print(f"{path}: reverse rebuild not confirmed {stats}", file=sys.stderr)
+                    tl = []
+                elif tl:
+                    tl.insert(0, (tl[0][0] - 1, tl[0][1], None, "anchor"))
         groups = bursts(tl)
         for k in range(len(groups) - 1):
             cur, nxt = groups[k], groups[k + 1]
@@ -164,9 +218,16 @@ def main():
             for g in groups[start:k]:
                 last = g[-1]
                 history.append({"ts_ms": last[0], "content": last[1], "cursor": last[2]})
+            # The last keystrokes of this burst, for keystroke-level replay.
+            pre_states = [
+                {"ts_ms": item[0], "content": item[1], "cursor": item[2]}
+                for item in cur[-4:-1]
+                if item[3] == "delta"
+            ]
             cases.append(
                 {
                     "id": f"{path.rsplit('/', 1)[-1]}@{cur[-1][0]}",
+                    "pre_states": pre_states,
                     "path": path,
                     "history": history[-40:],
                     "ts_ms": cur[-1][0],

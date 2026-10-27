@@ -79,6 +79,7 @@ impl DiffHunk {
     }
 }
 
+#[derive(Clone)]
 struct FileState {
     content: String,
     original: String,
@@ -88,6 +89,7 @@ struct FileState {
     display: String,
 }
 
+#[derive(Clone)]
 struct Group {
     path: PathBuf,
     display: String,
@@ -99,7 +101,7 @@ struct Group {
     cached: Option<Vec<DiffHunk>>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Tracker {
     files: HashMap<PathBuf, FileState>,
     finalized: VecDeque<(Instant, DiffHunk)>,

@@ -30,7 +30,7 @@ M.augroup = nil
 M.last_key_event = nil
 
 -- Forward declarations for callbacks registered before definition.
-local flush_now, retry_spool, post_to, anchor_buffer
+local flush_now, retry_spool, retry_spool_events, post_to, anchor_buffer
 
 --- Absolute path of a buffer ("" for scratch/unnamed).
 local function buf_abspath(bufnr)
@@ -175,6 +175,38 @@ M.flush_now = flush_now
 
 --- Retry spooled batches oldest-first; stop at first failure to keep order.
 --- A spool file is deleted only after its POST is ACKed (HTTP 2xx).
+local function retry_blobs(done)
+  local blobs = spool.list_blobs()
+  local i = 1
+  local function step()
+    if i > #blobs then
+      return done(true)
+    end
+    local path = blobs[i]
+    local f = io.open(path, "r")
+    local ok_dec, blob = false, nil
+    if f then
+      ok_dec, blob = pcall(vim.json.decode, f:read("*a"))
+      f:close()
+    end
+    if not ok_dec or type(blob) ~= "table" then
+      os.remove(path)
+      i = i + 1
+      return step()
+    end
+    post_to("/v1/blobs/upload", blob, function(ok, info)
+      local code = type(info) == "table" and info.http_code or nil
+      if ok or (code and code >= 400 and code < 500 and code ~= 408 and code ~= 429) then
+        os.remove(path)
+        i = i + 1
+        return step()
+      end
+      done(false)
+    end)
+  end
+  step()
+end
+
 function retry_spool(cb)
   if not config.has_url() then
     if cb then
@@ -182,6 +214,18 @@ function retry_spool(cb)
     end
     return
   end
+  retry_blobs(function(blobs_ok)
+    if not blobs_ok then
+      if cb then
+        cb(false, "blob upload failed")
+      end
+      return
+    end
+    retry_spool_events(cb)
+  end)
+end
+
+function retry_spool_events(cb)
   local files = spool.list()
   if #files == 0 then
     if cb then
@@ -276,7 +320,12 @@ local function ensure_blob(content, cb)
       end
       return
     end
-    post_to("/v1/blobs/upload", { sha256 = sha, content_base64 = b64 }, function(ok2)
+    post_to("/v1/blobs/upload", { sha256 = sha, content_base64 = b64 }, function(ok2, info2)
+      local code = type(info2) == "table" and info2.http_code or nil
+      if not ok2 and not (code and code >= 400 and code < 500) then
+        -- Collector unreachable: keep the content so the anchor survives.
+        spool.write_blob(sha, b64)
+      end
       if cb then
         cb(ok2, sha)
       end
