@@ -81,3 +81,32 @@ suggestions only weakly (AUC 0.63), so the confidence gate is off by default.
 The Kaggle CUDA build works with one GPU but replays still hit a CUDA error
 whose message is hidden by `void_logs()`; enable llama.cpp logging before
 the next GPU attempt.
+
+## Speed work (2026-10-27, ThinkPad, Q4_0)
+
+Data: 714 real cases rebuilt from the collector (Rustlings and NNFS); quality
+on a 179-case subset, latency on a 90-case keystroke replay (predictions at
+the last keystrokes of each typing burst, timing the pause-point request).
+
+| change | effect |
+|---|---|
+| Q4_0 instead of Q8_0 | ~23% faster prefill/decode on AVX2 (repacked layout); Q4_K_M is slower than Q8 here |
+| hide the in-progress edit from the history section | KV cache survives typing; prompt tokens per keystroke 894 → 673 |
+| confidence gates (-1.0, multi-line -0.5) | wrong suggestions 28% → 13% on 179 cases |
+| 3-line rewrite window (Sweep uses 5) | faster and fewer wrong rewrites: harmful 28% → 19%, helpful 34% → 35% |
+| one splice anchor line | ~55 ms at equal quality |
+| previous completion as first draft source | keystroke p50 1.49 s → 1.13 s, draft acceptance 52% → 65% |
+| prefetch after showing an edit | the next suggestion after Tab is served from cache (~20 ms) |
+| retrieval off | 9% faster but harmful 19% → 25%; kept on |
+
+Shipped config, keystroke replay: p50 1.15 s (performance profile), 1.0 s
+(turbo-lite), 3.3 s (balanced: TLP disables turbo boost on that profile).
+
+Did not help: larger drafts (32/64 tokens; every verified position pays the
+151k-vocabulary output layer), forcing flash attention (auto already enables
+it), 64-token prefill chunks in sequential replay, prefilling through the
+cursor line, a 2-line window. The UHD 620 iGPU through Vulkan is 2-5x
+slower than the CPU (no int8 dot products or matrix units).
+
+Prefill and decode are ~99.8% of request time; the context engine, index,
+tokenizer and HTTP together take ~3.5 ms.
