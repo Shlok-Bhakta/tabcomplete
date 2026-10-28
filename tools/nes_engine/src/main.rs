@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 #[derive(Parser)]
-#[command(name = "tabcomplete-nes", about = "CPU next-edit engine for Sweep next-edit models")]
+#[command(name = "tabcomplete-nes", about = "CPU next-edit engine for Sweep next-edit models", args_override_self = true)]
 struct Cli {
     #[arg(long)]
     model: PathBuf,

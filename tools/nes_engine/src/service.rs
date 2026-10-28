@@ -204,7 +204,7 @@ pub struct Service {
     prefetched: Mutex<Vec<(String, PredictResponse)>>,
     sticky_file_chunks: Mutex<HashMap<PathBuf, (Instant, Vec<Chunk>)>>,
     /// Recent real answers keyed by (path, content, cursor line, jump).
-    answers: Mutex<Vec<(String, PredictResponse)>>,
+    answers: Mutex<Vec<(String, (bool, PredictResponse))>>,
     /// Last completion (prefill + generated) per file, as draft tokens.
     previous: Mutex<HashMap<String, Vec<llama_cpp_2::token::LlamaToken>>>,
 }
@@ -411,7 +411,15 @@ impl Service {
         let line_key = Self::line_key(&req);
         let hit = hit.or_else(|| {
             let cache = self.answers.lock().unwrap();
-            cache.iter().rev().find(|(k, _)| *k == line_key).map(|(_, r)| r.clone())
+            cache
+                .iter()
+                .rev()
+                .find(|(k, (jumped, r))| {
+                    // A stored edit answers either kind of request; an empty
+                    // answer without the jump stage cannot answer a jump request.
+                    *k == line_key && (!r.edits.is_empty() || *jumped || !req.jump)
+                })
+                .map(|(_, (_, r))| r.clone())
         });
         if let Some(mut cached) = hit {
             // Record the state as usual and cancel any background work.
@@ -424,11 +432,12 @@ impl Service {
             cached.timings.total_ms = 0.0;
             return Ok(cached);
         }
+        let jump = req.jump;
         let resp = self.predict_inner(req, false)?;
         if resp.status == "ok" || resp.status == "empty" {
             let mut cache = self.answers.lock().unwrap();
             cache.retain(|(k, _)| *k != line_key);
-            cache.push((line_key, resp.clone()));
+            cache.push((line_key, (jump, resp.clone())));
             let excess = cache.len().saturating_sub(16);
             cache.drain(..excess);
         }
@@ -436,7 +445,7 @@ impl Service {
     }
 
     fn line_key(req: &PredictRequest) -> String {
-        format!("{}\u{0}{}\u{0}{}\u{0}{}", req.path, sha256_hex(&req.content), req.cursor.line, req.jump)
+        format!("{}\u{0}{}\u{0}{}", req.path, sha256_hex(&req.content), req.cursor.line)
     }
 
     /// Compute a prediction for a likely next state (after the shown edit is
