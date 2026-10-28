@@ -243,6 +243,7 @@ impl Service {
                                 let _ = reply.send(Ok(Outcome::Cancelled(GenStats::default())));
                                 continue;
                             }
+                            let splice_text = splice.as_ref().map(|(p, w, _)| (p.clone(), w.clone()));
                             let splicer = splice.map(|(prefill, window, anchors)| {
                                 move |generated: &str| sweep::splice_rest_n(&prefill, generated, &window, anchors)
                             });
@@ -258,6 +259,7 @@ impl Service {
                                 generation,
                                 latest: &worker_latest,
                                 slot: &slot,
+                                novelty: splice_text.as_ref().map(|(p, w)| (p.as_str(), w.as_str())),
                                 early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
                             });
                             let _ = reply.send(result);

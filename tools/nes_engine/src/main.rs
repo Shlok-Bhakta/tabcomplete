@@ -45,8 +45,9 @@ struct Cli {
     threads_batch: i32,
     #[arg(long, default_value_t = 2)]
     retrieval_chunks: usize,
-    /// Recent edits shown in the prompt's history section.
-    #[arg(long, default_value_t = 6)]
+    /// Recent edits shown in the prompt's history section (3 was as fast as
+    /// 6 with small slot contexts and slightly more accurate on real edits).
+    #[arg(long, default_value_t = 3)]
     max_hunks: usize,
     /// Lines of the most recently visited other file (0 disables).
     #[arg(long, default_value_t = 30)]
@@ -250,6 +251,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         generation: 1,
         latest: &latest,
         slot: "complete",
+        novelty: None,
         early_stop: None,
     })? {
         model::Outcome::Done(g) => {

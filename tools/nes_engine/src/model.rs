@@ -126,6 +126,10 @@ pub struct GenStats {
     pub decode_batches: usize,
     pub draft_proposed: usize,
     pub draft_accepted: usize,
+    /// Milliseconds from the start of the request (prefill included) until
+    /// the first generated token that departs from the window: when a
+    /// streaming client could first show new text. None if no departure.
+    pub first_novel_ms: Option<f64>,
 }
 
 #[derive(Debug)]
@@ -164,6 +168,9 @@ pub struct GenRequest<'a> {
     pub latest: &'a AtomicU64,
     /// Cache slot (file) this request belongs to.
     pub slot: &'a str,
+    /// (prefill, window): used to time the first token that departs from
+    /// the window.
+    pub novelty: Option<(&'a str, &'a str)>,
     /// Called when a new line completes; returning text ends generation with
     /// that text appended (used to splice the unchanged rest of the window).
     pub early_stop: Option<&'a dyn Fn(&str) -> Option<String>>,
@@ -440,6 +447,7 @@ impl Engine {
             return Ok(Outcome::Cancelled(stats));
         }
         let decode_started = Instant::now();
+        let mut novel_seen = req.novelty.is_none();
         let mut out_tokens: Vec<LlamaToken> = Vec::new();
         let mut text_bytes: Vec<u8> = Vec::new();
         let mut newlines = 0usize;
@@ -472,6 +480,15 @@ impl Engine {
             let piece = self.piece(next);
             newlines += piece.iter().filter(|b| **b == b'\n').count();
             text_bytes.extend_from_slice(&piece);
+            if !novel_seen {
+                if let Some((prefill, window)) = req.novelty {
+                    let so_far = format!("{prefill}{}", String::from_utf8_lossy(&text_bytes));
+                    if !window.starts_with(&so_far) {
+                        novel_seen = true;
+                        stats.first_novel_ms = Some(stats.prefill_ms + ms(decode_started));
+                    }
+                }
+            }
             if out_tokens.len() >= req.max_tokens {
                 finish_reason = "length";
                 break;
@@ -531,6 +548,15 @@ impl Engine {
                 }
             }
             stats.draft_accepted += accepted;
+            if !novel_seen {
+                if let Some((prefill, window)) = req.novelty {
+                    let so_far = format!("{prefill}{}", String::from_utf8_lossy(&text_bytes));
+                    if !window.starts_with(&so_far) {
+                        novel_seen = true;
+                        stats.first_novel_ms = Some(stats.prefill_ms + ms(decode_started));
+                    }
+                }
+            }
             if !draft.is_empty() {
                 // Drop rejected draft entries from the cache.
                 let keep = self.cached.len() as u32;

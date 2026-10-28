@@ -15,6 +15,7 @@ def pct(values, q):
 for path in sys.argv[1:]:
     rows = [json.loads(l) for l in open(path)]
     total, pre, dec, ev, gen, batches, acc, prop = [], [], [], [], [], [], 0, 0
+    novel = []
     for r in rows:
         stages = r.get("stages") or []
         if not stages or not r.get("ms"):
@@ -27,6 +28,8 @@ for path in sys.argv[1:]:
         gen.append(sum(x["generated_tokens"] for x in stages))
         batches.append(sum(x["decode_batches"] for x in stages))
         acc += sum(x["draft_accepted"] for x in stages)
+        if s.get("first_novel_ms") is not None:
+            novel.append(s["first_novel_ms"])
         prop += sum(x["draft_proposed"] for x in stages)
     name = path.rsplit("/", 1)[-1].replace(".rows.jsonl", "")
     print(json.dumps({
@@ -37,4 +40,5 @@ for path in sys.argv[1:]:
         "batches_p50": round(st.median(batches)),
         "draft_accept": round(acc / max(1, prop), 3),
         "ms_per_gen_token": round(sum(dec) / max(1, sum(gen)), 1),
+        "first_novel_p50": round(st.median(novel)) if novel else None,
     }))
