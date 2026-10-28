@@ -49,6 +49,12 @@ struct Cli {
     /// 6 with small slot contexts and slightly more accurate on real edits).
     #[arg(long, default_value_t = 3)]
     max_hunks: usize,
+    /// sweep | volatile-late | retrieval-late: where retrieved context sits
+    /// relative to the edit history. volatile-late keeps diagnostics and the
+    /// clipboard (which change while typing) from invalidating the cached
+    /// history.
+    #[arg(long, default_value = "volatile-late")]
+    context_order: String,
     /// Lines of the most recently visited other file (0 disables).
     #[arg(long, default_value_t = 30)]
     file_chunk_lines: usize,
@@ -106,6 +112,12 @@ struct Cli {
     /// Largest speculative draft verified in one batch.
     #[arg(long, default_value_t = 16)]
     draft_max: usize,
+    /// Output-tail tokens that must match a draft source to start a new
+    /// draft. Weaker matches are rejected so often that verifying them costs
+    /// more than decoding one token at a time (keystroke replay: 16.0 -> 14.4
+    /// ms per generated token).
+    #[arg(long, default_value_t = 3)]
+    draft_min_match: usize,
     /// Stop decoding once the window rewrite rejoins the original text.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     early_stop: bool,
@@ -170,7 +182,14 @@ fn main() -> Result<()> {
         "none" => sweep::Prefill::None,
         "first-line" => sweep::Prefill::FirstLine,
         "before-cursor-line" => sweep::Prefill::BeforeCursorLine,
+        "through-cursor" => sweep::Prefill::ThroughCursor,
         other => anyhow::bail!("unknown --prefill {other}"),
+    };
+    let context_order = match cli.context_order.as_str() {
+        "sweep" => sweep::ContextOrder::Sweep,
+        "volatile-late" => sweep::ContextOrder::VolatileLate,
+        "retrieval-late" => sweep::ContextOrder::RetrievalLate,
+        other => anyhow::bail!("unknown --context-order {other}"),
     };
     let settings = Settings {
         model_name: cli.model_name.clone(),
@@ -185,6 +204,7 @@ fn main() -> Result<()> {
             lines_after: cli.lines_after,
             whole_file_lines: cli.whole_file_lines,
             max_hunks: cli.max_hunks,
+            context_order,
             chunk_lines: cli.chunk_lines,
             ..Default::default()
         },
@@ -193,6 +213,7 @@ fn main() -> Result<()> {
         index_refresh_secs: cli.index_refresh_secs,
         early_stop: cli.early_stop,
         draft_max: cli.draft_max,
+        draft_min_match: cli.draft_min_match,
         splice_anchors: cli.splice_anchors,
         draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
@@ -246,6 +267,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         max_tokens,
         max_newlines: 200,
         draft_max: 0,
+        draft_min_match: 3,
         draft_fallback: &[],
         draft_previous: &[],
         generation: 1,

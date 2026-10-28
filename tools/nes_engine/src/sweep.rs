@@ -47,6 +47,9 @@ pub enum Prefill {
     FirstLine,
     /// Every block line above the cursor line (cursortab.nvim's default).
     BeforeCursorLine,
+    /// Everything before the cursor, backed off to the start of the word
+    /// (and its leading spaces) so the prompt does not end mid-token.
+    ThroughCursor,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -65,6 +68,23 @@ pub struct PromptOptions {
     pub chunk_lines: usize,
     pub max_retrieval_tokens: usize,
     pub max_hunks: usize,
+    pub context_order: ContextOrder,
+}
+
+/// Where retrieved context sits relative to the edit history. Anything that
+/// changes between keystrokes invalidates the KV cache from its position on,
+/// so volatile context placed before the history forces the history to be
+/// re-evaluated as well.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ContextOrder {
+    /// Sweep's reference order: all retrieval before the history.
+    Sweep,
+    /// Definitions before the history; diagnostics and clipboard (which change
+    /// while typing) after it, next to the window.
+    VolatileLate,
+    /// All retrieval after the history.
+    RetrievalLate,
 }
 
 impl Default for PromptOptions {
@@ -81,6 +101,7 @@ impl Default for PromptOptions {
             chunk_lines: 240,
             max_retrieval_tokens: 2048,
             max_hunks: 6,
+            context_order: ContextOrder::Sweep,
         }
     }
 }
@@ -331,6 +352,11 @@ fn compute_prefill(cleaned: &str, rel_cursor: usize, mode: Prefill) -> String {
         Prefill::BeforeCursorLine => {
             return before.rfind('\n').map_or(String::new(), |i| before[..=i].to_string());
         }
+        Prefill::ThroughCursor => {
+            let word = before.trim_end_matches(|c: char| c.is_alphanumeric() || c == '_');
+            let cut = word.trim_end_matches([' ', '\t']);
+            return cut.to_string();
+        }
         Prefill::FirstLine => {}
     }
     let mut parts = before.split_inclusive('\n');
@@ -381,7 +407,13 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
     );
     let prefill = compute_prefill(cleaned, rel_cursor, input.opts.prefill);
     let retrieval = pack_from_end(input.retrieval, input.opts.max_retrieval_tokens);
-    let retrieval_text: String = retrieval.iter().map(|c| format!("\n{}", c.render())).collect();
+    let late = |c: &Chunk| match input.opts.context_order {
+        ContextOrder::Sweep => false,
+        ContextOrder::VolatileLate => matches!(c.source, "diagnostics" | "clipboard"),
+        ContextOrder::RetrievalLate => true,
+    };
+    let retrieval_text: String = retrieval.iter().filter(|c| !late(c)).map(|c| format!("\n{}", c.render())).collect();
+    let late_text: String = retrieval.iter().filter(|c| late(c)).map(|c| format!("\n{}", c.render())).collect();
     if code_block.ends_with('\n') && prev.ends_with('\n') {
         code_block.pop();
         prev.pop();
@@ -402,6 +434,7 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
     prompt.push_str(&retrieval_text);
     prompt.push('\n');
     prompt.push_str(&recent);
+    prompt.push_str(&late_text);
     prompt.push('\n');
     let fp = input.path;
     prompt.push_str(&format!(
@@ -1132,6 +1165,60 @@ mod tests {
         assert_eq!(b.text, "l2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n");
         assert_eq!(b.start_line, 2);
         assert_eq!(&content[b.start..b.start + 2], "l2");
+    }
+
+    #[test]
+    fn through_cursor_prefill_stops_at_word_start() {
+        let text = "fn f() {\n    let value = fo";
+        let p = compute_prefill(text, text.len(), Prefill::ThroughCursor);
+        assert_eq!(p, "fn f() {\n    let value =");
+        let text = "fn f() {\n    re";
+        assert_eq!(compute_prefill(text, text.len(), Prefill::ThroughCursor), "fn f() {\n");
+        let text = "call(a, ";
+        assert_eq!(compute_prefill(text, text.len(), Prefill::ThroughCursor), "call(a,");
+    }
+
+    #[test]
+    fn volatile_context_follows_history() {
+        let content = "fn main() {\n    let x = 1;\n}\n";
+        let cursor = content.find("let").unwrap();
+        let block = block_at_cursor(content, cursor, 2, 5);
+        let chunk = |path: &str, source: &'static str| Chunk {
+            path: path.into(),
+            start_line: 1,
+            end_line: 1,
+            content: "x".into(),
+            source,
+            score: 0.0,
+        };
+        let retrieval = [chunk("lib.rs", "definition"), chunk("diagnostics", "diagnostics")];
+        let hunks = [DiffHunk {
+            path: "other.rs".into(),
+            display: "other.rs".into(),
+            old_start: 0,
+            new_start: 0,
+            ctx_before: vec![],
+            old: vec!["let a = 1;".into()],
+            new: vec!["let a = 2;".into()],
+            ctx_after: vec![],
+        }];
+        let mut o = opts();
+        o.context_order = ContextOrder::VolatileLate;
+        let built = build_prompt(&PromptInput {
+            path: "src/main.rs",
+            content,
+            original: content,
+            cursor,
+            block: &block,
+            hunks: &hunks,
+            file_chunks: &[],
+            retrieval: &retrieval,
+            opts: &o,
+        });
+        let p = &built.prompt;
+        let (def, diag, window) = (p.find("lib.rs").unwrap(), p.find("<|file_sep|>diagnostics").unwrap(), p.find("original/").unwrap());
+        let history = p.find("original:").unwrap();
+        assert!(def < history && history < diag && diag < window, "{p}");
     }
 
     #[test]

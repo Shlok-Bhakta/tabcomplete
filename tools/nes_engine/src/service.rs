@@ -160,6 +160,7 @@ pub struct Settings {
     pub index_refresh_secs: u64,
     pub early_stop: bool,
     pub draft_max: usize,
+    pub draft_min_match: usize,
     pub splice_anchors: usize,
     pub draft_previous: bool,
     /// Withhold edits whose weakest changed token is below this log-probability.
@@ -219,6 +220,7 @@ impl Service {
     pub fn start(model_path: &Path, config: ModelConfig, settings: Settings) -> Result<Arc<Self>> {
         let (tx, rx) = mpsc::channel::<Job>();
         let draft_max = settings.draft_max;
+        let draft_min_match = settings.draft_min_match;
         let (ready_tx, ready_rx) = mpsc::channel::<Result<(Tokenizer, usize)>>();
         let latest = Arc::new(AtomicU64::new(0));
         let worker_latest = Arc::clone(&latest);
@@ -254,6 +256,7 @@ impl Service {
                                 max_tokens,
                                 max_newlines,
                                 draft_max,
+                                draft_min_match,
                                 draft_fallback: &prompt[prompt.len().saturating_sub(1024)..],
                                 draft_previous: &previous,
                                 generation,

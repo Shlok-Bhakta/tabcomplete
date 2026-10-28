@@ -73,6 +73,9 @@ pub struct Engine {
     prefill_chunk: usize,
     stop_tokens: Vec<LlamaToken>,
     pub file_sep: LlamaToken,
+    /// Logits that can be nonzero: a pruned model (`nes.output_vocab`) only
+    /// scores its first ids and pads the rest.
+    output_vocab: usize,
 }
 
 struct Slot {
@@ -130,6 +133,19 @@ pub struct GenStats {
     /// the first generated token that departs from the window: when a
     /// streaming client could first show new text. None if no departure.
     pub first_novel_ms: Option<f64>,
+    /// One entry per decode batch, for drafting-policy analysis.
+    pub batches: Vec<BatchLog>,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct BatchLog {
+    /// 0 no draft, 1 previous completion, 2 window, 3 prompt tail.
+    pub src: u8,
+    /// Output-tail tokens matched in the source (9: continued a draft).
+    pub matched: u8,
+    pub proposed: u16,
+    pub accepted: u16,
+    pub ms: f32,
 }
 
 #[derive(Debug)]
@@ -163,6 +179,8 @@ pub struct GenRequest<'a> {
     /// Consecutive keystrokes usually produce nearly the same rewrite, so it
     /// carries the new text that the window does not contain.
     pub draft_previous: &'a [LlamaToken],
+    /// Shortest output-tail match that may start a new draft (1-4).
+    pub draft_min_match: usize,
     /// Generation counter: the request is abandoned when `latest` moves past it.
     pub generation: u64,
     pub latest: &'a AtomicU64,
@@ -208,7 +226,13 @@ impl Engine {
         if let Ok(t) = single_token(model, "<|endoftext|>") {
             stop_tokens.push(t);
         }
+        let output_vocab = model
+            .meta_val_str("nes.output_vocab")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(usize::MAX);
         Ok(Self {
+            output_vocab,
             _backend: backend,
             model,
             ctx,
@@ -501,17 +525,25 @@ impl Engine {
             let remaining = req.max_tokens - out_tokens.len();
             let want = draft_len.min(remaining);
             let mut draft = Vec::new();
+            let (mut src, mut matched) = (0u8, 0usize);
             if !req.draft_previous.is_empty() {
                 let mut prev_cursor = None;
-                draft = find_draft(req.draft_previous, &hist, &mut prev_cursor, want.max(8));
+                draft = find_draft(req.draft_previous, &hist, &mut prev_cursor, want.max(8), req.draft_min_match, &mut matched);
+                src = 1;
             }
             if draft.is_empty() {
-                draft = find_draft(req.draft_source, &hist, &mut draft_cursor, want);
+                draft = find_draft(req.draft_source, &hist, &mut draft_cursor, want, req.draft_min_match, &mut matched);
+                src = 2;
             }
             if draft.is_empty() && !req.draft_fallback.is_empty() {
                 let mut none = None;
-                draft = find_draft(req.draft_fallback, &hist, &mut none, want.min(8));
+                draft = find_draft(req.draft_fallback, &hist, &mut none, want.min(8), req.draft_min_match, &mut matched);
+                src = 3;
             }
+            if draft.is_empty() {
+                src = 0;
+            }
+            let batch_started = Instant::now();
             let base = self.cached.len();
             batch.clear();
             batch.add(next, base as i32, &[self.seq], true)?;
@@ -548,6 +580,13 @@ impl Engine {
                 }
             }
             stats.draft_accepted += accepted;
+            stats.batches.push(BatchLog {
+                src,
+                matched: matched as u8,
+                proposed: draft.len() as u16,
+                accepted: accepted as u16,
+                ms: ms(batch_started) as f32,
+            });
             if !novel_seen {
                 if let Some((prefill, window)) = req.novelty {
                     let so_far = format!("{prefill}{}", String::from_utf8_lossy(&text_bytes));
@@ -681,16 +720,63 @@ impl Engine {
 
     fn argmax(&self, index: i32) -> (LlamaToken, f32) {
         let logits = self.ctx.get_logits_ith(index);
-        let mut best = 0usize;
-        let mut best_value = f32::NEG_INFINITY;
-        for (i, v) in logits.iter().enumerate() {
-            if *v > best_value {
-                best_value = *v;
-                best = i;
-            }
+        argmax_logprob(&logits[..self.output_vocab.min(logits.len())])
+    }
+}
+
+/// Greedy token and its log-probability. Runs once per verified position
+/// over 151k logits, so both passes are lane-parallel (vectorized) and the
+/// softmax sum uses a polynomial exp (relative error ~1e-5).
+fn argmax_logprob(logits: &[f32]) -> (LlamaToken, f32) {
+    const LANES: usize = 16;
+    let mut lanes = [f32::NEG_INFINITY; LANES];
+    let chunks = logits.chunks_exact(LANES);
+    let tail = chunks.remainder();
+    for chunk in chunks {
+        for (m, v) in lanes.iter_mut().zip(chunk) {
+            *m = if *v > *m { *v } else { *m };
         }
-        let sum: f32 = logits.iter().map(|v| (v - best_value).exp()).sum();
-        (LlamaToken(best as i32), -sum.ln())
+    }
+    let mut best_value = lanes.iter().chain(tail).fold(f32::NEG_INFINITY, |a, b| if *b > a { *b } else { a });
+    if !best_value.is_finite() {
+        best_value = 0.0;
+    }
+    let best = logits.iter().position(|v| *v == best_value).unwrap_or(0);
+    let mut sums = [0.0f32; LANES];
+    let chunks = logits.chunks_exact(LANES);
+    let tail = chunks.remainder();
+    for chunk in chunks {
+        for (s, v) in sums.iter_mut().zip(chunk) {
+            *s += exp_nonpositive(*v - best_value);
+        }
+    }
+    let sum = sums.iter().sum::<f32>() + tail.iter().map(|v| exp_nonpositive(*v - best_value)).sum::<f32>();
+    (LlamaToken(best as i32), -sum.max(1.0).ln())
+}
+
+/// e^x for x <= 0 via 2^floor * polynomial(fraction); vectorizes, unlike libm.
+#[inline(always)]
+fn exp_nonpositive(x: f32) -> f32 {
+    let t = x.max(-80.0) * std::f32::consts::LOG2_E;
+    let whole = t.floor();
+    let f = t - whole;
+    let p = 1.0 + f * (0.693_147_2 + f * (0.240_226_5 + f * (0.055_504_11 + f * (0.009_618_129 + f * 0.001_333_355))));
+    f32::from_bits(((whole as i32 + 127) << 23) as u32) * p
+}
+
+#[cfg(test)]
+mod argmax_tests {
+    use super::*;
+
+    #[test]
+    fn matches_full_softmax() {
+        let logits: Vec<f32> = (0..151_937).map(|i| ((i * 7919) % 1000) as f32 * 0.01 - 5.0).collect();
+        let (t, lp) = argmax_logprob(&logits);
+        let max = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        assert_eq!(logits[t.0 as usize], max);
+        assert_eq!(logits.iter().position(|v| *v == max).unwrap(), t.0 as usize);
+        let full: f64 = logits.iter().map(|v| ((v - max) as f64).exp()).sum();
+        assert!((lp as f64 + full.ln()).abs() < 1e-3, "{lp} vs {}", -full.ln());
     }
 }
 
@@ -743,7 +829,10 @@ pub fn find_draft(
     output: &[LlamaToken],
     cursor: &mut Option<usize>,
     max: usize,
+    min_match: usize,
+    matched: &mut usize,
 ) -> Vec<LlamaToken> {
+    *matched = 0;
     if max == 0 || source.is_empty() || output.is_empty() {
         return Vec::new();
     }
@@ -752,10 +841,11 @@ pub fn find_draft(
         if c < source.len() && c > 0 && source[c - 1] == *output.last().unwrap() {
             let end = (c + max).min(source.len());
             *cursor = Some(end);
+            *matched = 9;
             return source[c..end].to_vec();
         }
     }
-    for n in (1..=4usize).rev() {
+    for n in (min_match.clamp(1, 4)..=4usize).rev() {
         if output.len() < n {
             continue;
         }
@@ -783,6 +873,7 @@ pub fn find_draft(
             let limit = if n == 1 { max.min(4) } else { max };
             let end = (after + limit).min(source.len());
             *cursor = Some(end);
+            *matched = n;
             return source[after..end].to_vec();
         }
     }
@@ -802,9 +893,9 @@ mod tests {
     fn draft_continues_aligned_copy() {
         let source = t(&[1, 2, 3, 4, 5, 6, 7, 8]);
         let mut cursor = None;
-        let d = find_draft(&source, &t(&[1, 2, 3]), &mut cursor, 3);
+        let d = find_draft(&source, &t(&[1, 2, 3]), &mut cursor, 3, 1, &mut 0);
         assert_eq!(d, t(&[4, 5, 6]));
-        let d = find_draft(&source, &t(&[1, 2, 3, 4, 5, 6]), &mut cursor, 3);
+        let d = find_draft(&source, &t(&[1, 2, 3, 4, 5, 6]), &mut cursor, 3, 1, &mut 0);
         assert_eq!(d, t(&[7, 8]));
     }
 
@@ -813,13 +904,13 @@ mod tests {
         let source = t(&[10, 11, 12, 13, 14, 15]);
         let mut cursor = None;
         // Output diverged (99) then rejoined at 12, 13.
-        let d = find_draft(&source, &t(&[10, 99, 12, 13]), &mut cursor, 2);
+        let d = find_draft(&source, &t(&[10, 99, 12, 13]), &mut cursor, 2, 1, &mut 0);
         assert_eq!(d, t(&[14, 15]));
     }
 
     #[test]
     fn no_draft_without_match() {
         let mut cursor = None;
-        assert!(find_draft(&t(&[1, 2]), &t(&[7]), &mut cursor, 4).is_empty());
+        assert!(find_draft(&t(&[1, 2]), &t(&[7]), &mut cursor, 4, 1, &mut 0).is_empty());
     }
 }
