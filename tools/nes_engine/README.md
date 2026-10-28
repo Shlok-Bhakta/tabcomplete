@@ -137,3 +137,36 @@ churns the prefix, so more tokens per keystroke), one retrieval chunk
 Remaining large cost: attention over the cached context and full-vocabulary
 logits at every verified draft position. Scoring a token shortlist instead
 needs a llama.cpp patch (the graph always builds the full output projection).
+
+## Verification cost work (2026-10-28 night, ThinkPad, keystroke replay)
+
+A per-batch log (`stats.batches`: draft source, match length, proposed,
+accepted, ms) gave the cost model on this CPU: a decode batch costs about
+23 ms + 9.5 ms per extra token, so a draft only pays when it yields more
+than one token per ~23 ms. Drafts started from 1-2 token matches produced
+27-40 ms per token; 4-token matches 13 ms.
+
+| change | effect |
+|---|---|
+| drafts need a 3-token match (`--draft-min-match 3`) | 16.0 -> 14.4 ms per generated token, decode p50 496 -> 457 ms |
+| vectorized argmax / log-sum-exp (polynomial exp) | 0.69 -> 0.29 ms per verified position |
+| output layer limited to ASCII tokens (`vocab/`) | 14.9 -> 13.5 ms per token, identical suggestions on 90 cases |
+| diagnostics/clipboard after the history (`--context-order volatile-late`) | live LSP churn no longer re-evaluates the history (replay has no diagnostics) |
+
+The tied embedding/output matrix is 145 MB of the 346 MB Q4_0 file and
+every verified position pays a 151,936-row projection. Pruning it needs a
+small llama.cpp patch (`vocab/llama-short-output.patch`: the qwen2 loader
+accepts a shorter `output.weight`, the graph pads the logits) and a GGUF
+rewrite (`vocab/prune_output_vocab.py`) that moves kept tokens to the
+front of the vocabulary.
+
+Rejected: a 63k-token shortlist from a code corpus (12.6 ms per token but
+fewer helpful edits: the model copies window identifiers whose tokens the
+corpus never had), a Q4_0 token embedding (~12% faster decode, 3 points
+fewer helpful edits on 179 cases), Q5_0 embedding (no gain), prefilling
+the window through the cursor (helpful 26% -> 20%, and the cursor line
+appears twice in the prompt so suffix reuse fails), draft growth caps of
+32/48 (equal to 16), retrieval after the history (no clear gain).
+
+For suggestions that are shown, p50 is ~0.92 s; their prompts change more
+(a new history hunk at the typing pause), so prefill is about half of it.
