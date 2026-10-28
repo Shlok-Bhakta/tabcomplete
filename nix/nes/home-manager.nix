@@ -23,6 +23,8 @@ let
       (toString cfg.threadsBatch)
       "--ctx-size"
       (toString cfg.contextSize)
+      "--slots"
+      (toString cfg.slots)
       "--retrieval-chunks"
       (toString cfg.retrievalChunks)
       "--hide-active-edit"
@@ -103,7 +105,13 @@ in
     };
     contextSize = lib.mkOption {
       type = lib.types.ints.between 2048 16384;
-      default = 8192;
+      default = 12288;
+      description = "Total KV cells, shared by all file slots.";
+    };
+    slots = lib.mkOption {
+      type = lib.types.ints.between 1 8;
+      default = 4;
+      description = "Files whose prompt caches are kept, so switching back to a file skips its cold start.";
     };
     retrievalChunks = lib.mkOption {
       type = lib.types.ints.between 0 6;

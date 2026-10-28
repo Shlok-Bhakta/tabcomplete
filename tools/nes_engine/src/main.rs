@@ -46,9 +46,12 @@ struct Cli {
     /// Lines of the most recently visited other file (0 disables).
     #[arg(long, default_value_t = 30)]
     file_chunk_lines: usize,
-    #[arg(long, default_value_t = 240)]
+    /// Whole-file context up to this many lines, else a chunk around the
+    /// cursor. Every cached token is attended to on each keystroke, so this
+    /// bounds per-keystroke cost for large files (120 matched 240 on real edits).
+    #[arg(long, default_value_t = 120)]
     whole_file_lines: usize,
-    #[arg(long, default_value_t = 240)]
+    #[arg(long, default_value_t = 120)]
     chunk_lines: usize,
     /// absolute | sweep-local | none (Sweep's reference server uses sweep-local)
     #[arg(long, default_value = "sweep-local")]
