@@ -150,7 +150,7 @@ than one token per ~23 ms. Drafts started from 1-2 token matches produced
 |---|---|
 | drafts need a 3-token match (`--draft-min-match 3`) | 16.0 -> 14.4 ms per generated token, decode p50 496 -> 457 ms |
 | vectorized argmax / log-sum-exp (polynomial exp) | 0.69 -> 0.29 ms per verified position |
-| output layer limited to ASCII tokens (`vocab/`) | 14.9 -> 13.5 ms per token, identical suggestions on 90 cases |
+| output layer limited to ASCII tokens (`vocab/`) | 14.9 -> 13.5 ms per token; identical suggestions on 90 replay and 179 quality cases |
 | diagnostics/clipboard after the history (`--context-order volatile-late`) | live LSP churn no longer re-evaluates the history (replay has no diagnostics) |
 
 The tied embedding/output matrix is 145 MB of the 346 MB Q4_0 file and
@@ -170,3 +170,6 @@ appears twice in the prompt so suffix reuse fails), draft growth caps of
 
 For suggestions that are shown, p50 is ~0.92 s; their prompts change more
 (a new history hunk at the typing pause), so prefill is about half of it.
+
+Current defaults on the 179 quality cases: helpful 36%, harmful 15%,
+precision 68%, typing saved 27%.
