@@ -37,6 +37,13 @@ rustPlatform.buildRustPackage {
     GGML_METAL = "OFF";
   };
   dontUseCmakeConfigure = true;
+  # Lets the vendored llama.cpp load an output layer that covers only part of
+  # the vocabulary (tools/nes_engine/vocab/). Vendored crates carry no
+  # per-file checksums, so patching them in place is allowed.
+  postPatch = ''
+    patch -d "$cargoDepsCopy/llama-cpp-sys-2-0.1.160" -p1 \
+      < ${../../tools/nes_engine/vocab/llama-short-output.patch}
+  '';
   # Unit tests run in development (`cargo test`); they would rebuild llama.cpp
   # in a second profile here.
   doCheck = false;

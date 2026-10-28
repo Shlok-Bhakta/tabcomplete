@@ -17,9 +17,18 @@ let
   } ''
     llama-quantize --allow-requantize ${modelQ8} "$out" Q4_0 1
   '';
+  # The output layer scores only all-ASCII tokens (94.8k of 151.9k), which is
+  # exact for ASCII source: same suggestions in replay, ~6% less time per
+  # generated token. Requires the engine's llama.cpp patch.
+  modelQ4Ascii = pkgs.runCommand "sweep-next-edit-0.5b.q4_0-ascii.gguf" {
+    nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.gguf p.numpy ])) ];
+  } ''
+    python3 ${../../tools/nes_engine/vocab/prune_output_vocab.py} ${modelQ4} "$out" ascii
+  '';
   models = {
     q8_0 = modelQ8;
-    q4_0 = modelQ4;
+    q4_0 = modelQ4Ascii;
+    q4_0_full = modelQ4;
   };
   collector = lib.cleanSource ../../tools/trajectory_collector/nvim;
   client = lib.cleanSource ../../tools/nes_engine/nvim;

@@ -72,7 +72,11 @@ in
         "q8_0"
       ];
       default = "q4_0";
-      description = "q4_0 is ~23% faster on the T480s; q8_0 shows slightly fewer wrong edits.";
+      description = ''
+        q4_0 is ~23% faster on the T480s than q8_0 (which shows slightly fewer
+        wrong edits); its output layer is limited to ASCII tokens, which gives
+        the same suggestions for ASCII code at ~6% less time per token.
+      '';
     };
     minConfidence = lib.mkOption {
       type = lib.types.str;
