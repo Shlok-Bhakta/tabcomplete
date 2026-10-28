@@ -105,8 +105,8 @@ in
     };
     contextSize = lib.mkOption {
       type = lib.types.ints.between 2048 16384;
-      default = 12288;
-      description = "Total KV cells, shared by all file slots.";
+      default = 4096;
+      description = "Context size of each file slot. Each slot has its own small context; cache shifts and attention cost grow with context size.";
     };
     slots = lib.mkOption {
       type = lib.types.ints.between 1 8;

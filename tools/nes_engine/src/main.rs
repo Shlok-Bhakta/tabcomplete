@@ -28,7 +28,9 @@ struct Cli {
     model_sha256: String,
     #[arg(long, default_value = "sweep-next-edit-0.5b-q8_0")]
     model_name: String,
-    #[arg(long, default_value_t = 8192)]
+    /// Context size of each file slot (each slot has its own small context:
+    /// cache shifts and attention cost scale with context size).
+    #[arg(long, default_value_t = 4096)]
     ctx_size: u32,
     /// Layers offloaded to a GPU (CUDA builds only).
     #[arg(long, default_value_t = 0)]
@@ -43,6 +45,9 @@ struct Cli {
     threads_batch: i32,
     #[arg(long, default_value_t = 2)]
     retrieval_chunks: usize,
+    /// Recent edits shown in the prompt's history section.
+    #[arg(long, default_value_t = 6)]
+    max_hunks: usize,
     /// Lines of the most recently visited other file (0 disables).
     #[arg(long, default_value_t = 30)]
     file_chunk_lines: usize,
@@ -65,7 +70,7 @@ struct Cli {
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     cursor_marker: bool,
     /// Keep the in-progress edit (shown by the window) out of the history.
-    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     hide_active_edit: bool,
     #[arg(long, default_value_t = 2)]
     lines_before: usize,
@@ -104,10 +109,10 @@ struct Cli {
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     early_stop: bool,
     /// Minimum log-probability of the weakest changed token to show an edit.
-    #[arg(long, default_value_t = f32::NEG_INFINITY, allow_hyphen_values = true)]
+    #[arg(long, default_value_t = -1.0, allow_hyphen_values = true)]
     min_confidence: f32,
     /// Stricter gate for edits that rewrite more than one existing line.
-    #[arg(long, default_value_t = f32::NEG_INFINITY, allow_hyphen_values = true)]
+    #[arg(long, default_value_t = -0.5, allow_hyphen_values = true)]
     multiline_min_confidence: f32,
     #[command(subcommand)]
     command: Command,
@@ -124,6 +129,13 @@ enum Command {
     },
     /// Run JSON lines of {"observe": {...}} / {"predict": {...}} from stdin.
     Replay,
+    /// Time engine primitives on a prompt read from stdin.
+    Bench {
+        #[arg(long, default_value_t = 900)]
+        depth: usize,
+        #[arg(long, default_value_t = 10)]
+        reps: usize,
+    },
     /// Greedy completion of a raw prompt read from stdin (format experiments).
     Complete {
         #[arg(long, default_value_t = 256)]
@@ -171,6 +183,7 @@ fn main() -> Result<()> {
             lines_before: cli.lines_before,
             lines_after: cli.lines_after,
             whole_file_lines: cli.whole_file_lines,
+            max_hunks: cli.max_hunks,
             chunk_lines: cli.chunk_lines,
             ..Default::default()
         },
@@ -196,6 +209,17 @@ fn main() -> Result<()> {
         threads: cli.threads,
         threads_batch: cli.threads_batch,
     };
+    if let Command::Bench { depth, reps } = cli.command {
+        use std::io::Read;
+        let mut prompt = String::new();
+        std::io::stdin().read_to_string(&mut prompt)?;
+        let mut engine = model::Engine::load(&cli.model, &config)?;
+        let tokens = engine.tokenize(&prompt);
+        for (name, ms) in engine.bench(&tokens, depth, reps)? {
+            println!("{ms:9.2} ms  {name}");
+        }
+        return Ok(());
+    }
     if let Command::Complete { max_tokens } = cli.command {
         return complete(&cli.model, &config, max_tokens);
     }
@@ -203,7 +227,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Replay => replay(&svc),
         Command::Serve { host, port } => serve(svc, &host, port),
-        Command::Complete { .. } => unreachable!(),
+        Command::Complete { .. } | Command::Bench { .. } => unreachable!(),
     }
 }
 

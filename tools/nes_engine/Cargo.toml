@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [features]
 cuda = ["llama-cpp-2/cuda", "llama-cpp-2/cuda-no-vmm"]
+openmp = ["llama-cpp-2/openmp"]
 
 [dependencies]
 llama-cpp-2 = { version = "=0.1.160", default-features = false }
