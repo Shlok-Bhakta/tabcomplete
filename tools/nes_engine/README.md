@@ -110,3 +110,30 @@ slower than the CPU (no int8 dot products or matrix units).
 
 Prefill and decode are ~99.8% of request time; the context engine, index,
 tokenizer and HTTP together take ~3.5 ms.
+
+## Caching work (2026-10-28, ThinkPad, Q4_0, keystroke replay)
+
+Stage medians are the stable signal; whole-request p50 drifts ±10-15%
+between identical runs (thermals), so close calls were rerun interleaved.
+
+| change | effect |
+|---|---|
+| suffix KV reuse (scratch sequence + shift) | prefill 481 → 216 ms, p50 1.17 → 0.92 s, quality equal |
+| one 4096-cell context per file slot (4 slots) | prefill 246 → 158 ms vs a shared 12288-cell cache; returning to a file reuses 320-500 cached tokens (0.7-1.2 s instead of 2.4-3.4 s); ~90 MB per extra slot |
+| sticky recent-file snippet | file switches keep their cached prefix |
+| same-line answer reuse | leaving insert mode or moving along a line answers from cache |
+| 120-line file context (was 240) | equal quality on current files, bounds depth for large files |
+
+Primitive costs at 900 cached tokens (`tabcomplete-nes bench`): one-token
+decode 20-25 ms (14 ms with no context), a 17-token verify 164-200 ms, of
+which full-vocabulary logits are ~44 ms; llama.cpp's cache shift re-rotates
+every cell, ~50 ms at 4096 cells and ~120 ms at 12288.
+
+Rejected: q8_0 KV cache (slower), OpenMP thread pool (no gain), 6 decode
+threads (slower: decode is memory-bound), 3 history hunks (the oldest hunk
+churns the prefix, so more tokens per keystroke), one retrieval chunk
+(slightly less accurate), prefilling through the cursor line (equal).
+
+Remaining large cost: attention over the cached context and full-vocabulary
+logits at every verified draft position. Scoring a token shortlist instead
+needs a llama.cpp patch (the graph always builds the full output projection).

@@ -451,7 +451,9 @@ impl Engine {
         let mut token_logprobs: Vec<f32> = Vec::new();
         let mut token_offsets: Vec<usize> = Vec::new();
         let mut checked_newlines = 0usize;
-        let mut draft_len = req.draft_max;
+        // Start at 16 and only grow on full acceptance: long first drafts
+        // waste verification work when the edit starts early.
+        let mut draft_len = req.draft_max.min(16);
         let finish_reason;
         loop {
             if req.latest.load(Ordering::SeqCst) != req.generation {
