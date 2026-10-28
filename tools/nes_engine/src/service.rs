@@ -175,6 +175,8 @@ enum Job {
         draft_seed: Vec<llama_cpp_2::token::LlamaToken>,
         max_tokens: usize,
         max_newlines: usize,
+        /// Cache slot key (the file).
+        slot: String,
         /// Tokens of the previous completion for this file (draft source).
         previous: Vec<llama_cpp_2::token::LlamaToken>,
         /// (prefill, window, anchor lines) for splicing the unchanged rest.
@@ -183,6 +185,7 @@ enum Job {
     },
     Warm {
         generation: u64,
+        slot: String,
         prefix: Vec<llama_cpp_2::token::LlamaToken>,
     },
 }
@@ -199,6 +202,9 @@ pub struct Service {
     clock: Mutex<Option<(u64, Instant)>>,
     /// Recent prefetched responses keyed by (path, content hash, cursor, jump).
     prefetched: Mutex<Vec<(String, PredictResponse)>>,
+    sticky_file_chunks: Mutex<HashMap<PathBuf, (Instant, Vec<Chunk>)>>,
+    /// Recent real answers keyed by (path, content, cursor line, jump).
+    answers: Mutex<Vec<(String, PredictResponse)>>,
     /// Last completion (prefill + generated) per file, as draft tokens.
     previous: Mutex<HashMap<String, Vec<llama_cpp_2::token::LlamaToken>>>,
 }
@@ -232,7 +238,7 @@ impl Service {
                 };
                 while let Ok(job) = rx.recv() {
                     match job {
-                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, previous, splice, reply } => {
+                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, slot, previous, splice, reply } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
                                 let _ = reply.send(Ok(Outcome::Cancelled(GenStats::default())));
                                 continue;
@@ -251,15 +257,16 @@ impl Service {
                                 draft_previous: &previous,
                                 generation,
                                 latest: &worker_latest,
+                                slot: &slot,
                                 early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
                             });
                             let _ = reply.send(result);
                         }
-                        Job::Warm { generation, prefix } => {
+                        Job::Warm { generation, slot, prefix } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
                                 continue;
                             }
-                            if let Err(e) = engine.warm(&prefix, generation, &worker_latest) {
+                            if let Err(e) = engine.warm(&slot, &prefix, generation, &worker_latest) {
                                 eprintln!("nes: warm failed: {e:#}");
                             }
                         }
@@ -279,6 +286,8 @@ impl Service {
             clock: Mutex::new(None),
             prefetched: Mutex::new(Vec::new()),
             previous: Mutex::new(HashMap::new()),
+            sticky_file_chunks: Mutex::new(HashMap::new()),
+            answers: Mutex::new(Vec::new()),
         }))
     }
 
@@ -289,6 +298,9 @@ impl Service {
     pub fn reset(&self) {
         *self.tracker.lock().unwrap() = Tracker::default();
         self.sticky.lock().unwrap().clear();
+        self.sticky_file_chunks.lock().unwrap().clear();
+        self.answers.lock().unwrap().clear();
+        self.prefetched.lock().unwrap().clear();
         *self.clock.lock().unwrap() = None;
     }
 
@@ -334,11 +346,29 @@ impl Service {
             let tokens = self.tokenizer.tokenize(&prefix);
             // Warm jobs do not bump the generation; any prediction cancels them.
             let generation = self.latest.load(Ordering::SeqCst);
-            let _ = self.jobs.lock().unwrap().send(Job::Warm { generation, prefix: tokens });
+            let _ = self.jobs.lock().unwrap().send(Job::Warm { generation, slot: display.clone(), prefix: tokens });
         }
     }
 
+    /// The recent-file snippet opens the prompt, so a new one invalidates the
+    /// whole cached prefix. Each file keeps the snippet it was first given for
+    /// a while, so switching between files reuses their caches.
     fn file_chunks(&self, path: &Path) -> Vec<Chunk> {
+        const STICKY: std::time::Duration = std::time::Duration::from_secs(600);
+        if let Some((at, chunks)) = self.sticky_file_chunks.lock().unwrap().get(path) {
+            if at.elapsed() < STICKY {
+                return chunks.clone();
+            }
+        }
+        let chunks = self.fresh_file_chunks(path);
+        self.sticky_file_chunks
+            .lock()
+            .unwrap()
+            .insert(path.to_path_buf(), (Instant::now(), chunks.clone()));
+        chunks
+    }
+
+    fn fresh_file_chunks(&self, path: &Path) -> Vec<Chunk> {
         let tracker = self.tracker.lock().unwrap();
         let n = self.settings.file_chunk_lines;
         if n == 0 {
@@ -376,6 +406,13 @@ impl Service {
             let mut cache = self.prefetched.lock().unwrap();
             cache.iter().position(|(k, _)| *k == key).map(|i| cache.remove(i).1)
         };
+        // Same content and line as a recent answer (leaving insert mode,
+        // moving along the line): the window and edits are unchanged.
+        let line_key = Self::line_key(&req);
+        let hit = hit.or_else(|| {
+            let cache = self.answers.lock().unwrap();
+            cache.iter().rev().find(|(k, _)| *k == line_key).map(|(_, r)| r.clone())
+        });
         if let Some(mut cached) = hit {
             // Record the state as usual and cancel any background work.
             self.latest.fetch_add(1, Ordering::SeqCst);
@@ -387,7 +424,19 @@ impl Service {
             cached.timings.total_ms = 0.0;
             return Ok(cached);
         }
-        self.predict_inner(req, false)
+        let resp = self.predict_inner(req, false)?;
+        if resp.status == "ok" || resp.status == "empty" {
+            let mut cache = self.answers.lock().unwrap();
+            cache.retain(|(k, _)| *k != line_key);
+            cache.push((line_key, resp.clone()));
+            let excess = cache.len().saturating_sub(16);
+            cache.drain(..excess);
+        }
+        Ok(resp)
+    }
+
+    fn line_key(req: &PredictRequest) -> String {
+        format!("{}\u{0}{}\u{0}{}\u{0}{}", req.path, sha256_hex(&req.content), req.cursor.line, req.jump)
     }
 
     /// Compute a prediction for a likely next state (after the shown edit is
@@ -644,6 +693,7 @@ impl Service {
                 draft_seed,
                 max_tokens,
                 max_newlines,
+                slot: display.to_string(),
                 previous: if self.settings.draft_previous {
                     self.previous.lock().unwrap().get(display).cloned().unwrap_or_default()
                 } else {

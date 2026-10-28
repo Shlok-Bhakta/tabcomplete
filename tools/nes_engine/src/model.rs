@@ -29,6 +29,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 pub struct ModelConfig {
+    /// Files whose prompt cache is kept at once (llama.cpp sequences).
+    pub slots: u32,
+    /// KV cache element type: "f16" or "q8_0".
+    pub cache_type: String,
     /// Prompt tokens per decode call; smaller chunks let a newer request
     /// cancel an in-flight prefill sooner.
     pub prefill_chunk: usize,
@@ -47,6 +51,10 @@ pub struct Engine {
     ctx: LlamaContext<'static>,
     /// Tokens whose keys/values are currently in sequence 0, in order.
     cached: Vec<LlamaToken>,
+    /// Sequence id of the active file's cache.
+    seq: i32,
+    /// Parked caches: (file key, tokens in that sequence, last use).
+    slots: Vec<(Option<String>, Vec<LlamaToken>, Instant)>,
     n_ctx: usize,
     n_batch: usize,
     prefill_chunk: usize,
@@ -101,6 +109,8 @@ pub struct GenRequest<'a> {
     /// Generation counter: the request is abandoned when `latest` moves past it.
     pub generation: u64,
     pub latest: &'a AtomicU64,
+    /// Cache slot (file) this request belongs to.
+    pub slot: &'a str,
     /// Called when a new line completes; returning text ends generation with
     /// that text appended (used to splice the unchanged rest of the window).
     pub early_stop: Option<&'a dyn Fn(&str) -> Option<String>>,
@@ -129,7 +139,11 @@ impl Engine {
             .with_n_ubatch(config.n_batch)
             .with_n_threads(config.threads)
             .with_n_threads_batch(config.threads_batch)
-            .with_flash_attention_policy(config.flash_attn as llama_cpp_sys_2::llama_flash_attn_type);
+            .with_flash_attention_policy(config.flash_attn as llama_cpp_sys_2::llama_flash_attn_type)
+            .with_n_seq_max(config.slots.max(1))
+            .with_kv_unified(true)
+            .with_type_k(kv_type(&config.cache_type)?)
+            .with_type_v(kv_type(&config.cache_type)?);
         let ctx = model
             .new_context(backend, params)
             .context("create llama context")?;
@@ -144,6 +158,8 @@ impl Engine {
             model,
             ctx,
             cached: Vec::new(),
+            seq: 0,
+            slots: (0..config.slots.max(1)).map(|_| (None, Vec::new(), Instant::now())).collect(),
             n_ctx: config.n_ctx as usize,
             n_batch: config.n_batch as usize,
             prefill_chunk: config.prefill_chunk.clamp(16, config.n_batch as usize),
@@ -167,8 +183,9 @@ impl Engine {
         self.model.vocab().token_to_piece(token, true, None)
     }
 
+    /// Context budget per file slot (all slots share one KV pool).
     pub fn n_ctx(&self) -> usize {
-        self.n_ctx
+        self.n_ctx / self.slots.len()
     }
 
     pub fn tokenizer(&self) -> Tokenizer {
@@ -177,6 +194,35 @@ impl Engine {
 
     pub fn is_special(&self, text: &str) -> bool {
         single_token(self.model, text).is_ok()
+    }
+
+    /// Make `key`'s cache the active sequence, parking the current one and
+    /// evicting the least recently used file when every slot is taken.
+    pub fn select(&mut self, key: &str) -> Result<()> {
+        let active = self.seq as usize;
+        if self.slots[active].0.as_deref() == Some(key) {
+            self.slots[active].2 = Instant::now();
+            return Ok(());
+        }
+        let current = std::mem::take(&mut self.cached);
+        self.slots[active].1 = current;
+        let target = match self.slots.iter().position(|s| s.0.as_deref() == Some(key)) {
+            Some(i) => i,
+            None => {
+                let i = (0..self.slots.len())
+                    .min_by_key(|&i| (self.slots[i].0.is_some(), self.slots[i].2))
+                    .unwrap();
+                self.ctx
+                    .clear_kv_cache_seq(Some(i as u32), None, None)
+                    .context("evict slot")?;
+                self.slots[i] = (Some(key.to_string()), Vec::new(), Instant::now());
+                i
+            }
+        };
+        self.seq = target as i32;
+        self.cached = std::mem::take(&mut self.slots[target].1);
+        self.slots[target].2 = Instant::now();
+        Ok(())
     }
 
     /// Evaluate the prompt, reusing the cached prefix. Returns stats and the
@@ -200,7 +246,7 @@ impl Engine {
             common = prompt.len().saturating_sub(1);
         }
         self.ctx
-            .clear_kv_cache_seq(Some(0), Some(common as u32), None)
+            .clear_kv_cache_seq(Some(self.seq as u32), Some(common as u32), None)
             .context("trim kv cache")?;
         self.cached.truncate(common);
         stats.prompt_tokens = prompt.len();
@@ -216,7 +262,7 @@ impl Engine {
             batch.clear();
             for (i, token) in prompt[pos..end].iter().enumerate() {
                 let p = pos + i;
-                batch.add(*token, p as i32, &[0], p + 1 == prompt.len())?;
+                batch.add(*token, p as i32, &[self.seq], p + 1 == prompt.len())?;
             }
             self.ctx.decode(&mut batch).context("prefill decode")?;
             self.cached.extend_from_slice(&prompt[pos..end]);
@@ -228,7 +274,8 @@ impl Engine {
     }
 
     /// Fill the KV cache for a prompt prefix without generating.
-    pub fn warm(&mut self, prefix: &[LlamaToken], generation: u64, latest: &AtomicU64) -> Result<GenStats> {
+    pub fn warm(&mut self, slot: &str, prefix: &[LlamaToken], generation: u64, latest: &AtomicU64) -> Result<GenStats> {
+        self.select(slot)?;
         let mut stats = GenStats::default();
         if prefix.is_empty() || prefix.len() + 64 > self.n_ctx {
             return Ok(stats);
@@ -249,6 +296,7 @@ impl Engine {
                 self.n_ctx
             );
         }
+        self.select(req.slot)?;
         if !self.prefill(req.prompt, req.generation, req.latest, &mut stats)? {
             return Ok(Outcome::Cancelled(stats));
         }
@@ -308,9 +356,9 @@ impl Engine {
             }
             let base = self.cached.len();
             batch.clear();
-            batch.add(next, base as i32, &[0], true)?;
+            batch.add(next, base as i32, &[self.seq], true)?;
             for (i, t) in draft.iter().enumerate() {
-                batch.add(*t, (base + 1 + i) as i32, &[0], true)?;
+                batch.add(*t, (base + 1 + i) as i32, &[self.seq], true)?;
             }
             self.ctx.decode(&mut batch).context("decode")?;
             stats.decode_batches += 1;
@@ -346,7 +394,7 @@ impl Engine {
                 // Drop rejected draft entries from the cache.
                 let keep = self.cached.len() as u32;
                 self.ctx
-                    .clear_kv_cache_seq(Some(0), Some(keep), None)
+                    .clear_kv_cache_seq(Some(self.seq as u32), Some(keep), None)
                     .context("trim rejected draft")?;
             }
             if accepted < draft.len() {
@@ -425,6 +473,15 @@ impl Tokenizer {
     pub fn is_special(&self, text: &str) -> bool {
         single_token(self.model, text).is_ok()
     }
+}
+
+fn kv_type(name: &str) -> Result<llama_cpp_2::context::params::KvCacheType> {
+    use llama_cpp_2::context::params::KvCacheType;
+    Ok(match name {
+        "f16" => KvCacheType::F16,
+        "q8_0" => KvCacheType::Q8_0,
+        other => bail!("unsupported cache type {other}"),
+    })
 }
 
 fn single_token(model: &LlamaModel, text: &str) -> Result<LlamaToken> {

@@ -75,6 +75,12 @@ struct Cli {
     /// Matching lines after an edit before the rest of the window is spliced.
     #[arg(long, default_value_t = 1)]
     splice_anchors: usize,
+    /// Files whose prompt caches are kept at once (KV slots).
+    #[arg(long, default_value_t = 1)]
+    slots: u32,
+    /// KV cache type: f16 or q8_0.
+    #[arg(long, default_value = "f16")]
+    cache_type: String,
     /// Prompt tokens per prefill decode call (cancellation granularity).
     #[arg(long, default_value_t = 512)]
     prefill_chunk: usize,
@@ -175,6 +181,8 @@ fn main() -> Result<()> {
         gpu_layers: cli.gpu_layers,
         flash_attn: cli.flash_attn,
         prefill_chunk: cli.prefill_chunk,
+        slots: cli.slots,
+        cache_type: cli.cache_type.clone(),
         n_ctx: cli.ctx_size,
         n_batch: cli.batch_size,
         threads: cli.threads,
@@ -209,6 +217,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         draft_previous: &[],
         generation: 1,
         latest: &latest,
+        slot: "complete",
         early_stop: None,
     })? {
         model::Outcome::Done(g) => {
