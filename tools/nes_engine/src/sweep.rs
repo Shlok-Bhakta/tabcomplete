@@ -1169,24 +1169,50 @@ fn common_suffix(a: &str, b: &str) -> usize {
     a.chars().rev().zip(b.chars().rev()).take_while(|(x, y)| x == y).map(|(x, _)| x.len_utf8()).sum()
 }
 
-/// Whether replacing `old`, at byte `at` of the file, by `new` changes a
-/// byte of `typed`: the part between their common prefix and suffix
-/// overlaps a typed range. Adding text changes nothing.
-fn rewrites_typed(old: &str, new: &str, at: usize, typed: &[(usize, usize)]) -> bool {
+/// Whether replacing `old`, at byte `at` of the file, by `new` touches
+/// `typed`: the part between their common prefix and suffix overlaps a
+/// typed range. Adding text touches nothing.
+fn touches_typed(old: &str, new: &str, at: usize, typed: &[(usize, usize)]) -> bool {
     let p = common_prefix(old, new);
     let s = common_suffix(&old[p..], &new[p..]);
     let (lo, hi) = (at + p, at + old.len() - s);
     lo < hi && typed.iter().any(|&(a, b)| lo < b && hi > a)
 }
 
+/// Typed characters a line rewrite may delete or replace before it counts
+/// as rewriting typed text: small corrections (a stray slash, `-` for `_`)
+/// are often right, overwriting what was typed is not.
+const TYPED_CHANGE_CHARS: usize = 3;
+
+/// Whether rewriting the line `old`, at byte `at` of the file, as `new`
+/// deletes or replaces at least `TYPED_CHANGE_CHARS` typed characters (by a
+/// character diff). Text added between typed characters rewrites nothing.
+fn rewrites_typed_line(old: &str, new: &str, at: usize, typed: &[(usize, usize)]) -> bool {
+    if !touches_typed(old, new, at, typed) {
+        return false;
+    }
+    let pos: Vec<usize> = old.char_indices().map(|(i, _)| at + i).collect();
+    let a: Vec<char> = old.chars().collect();
+    let b: Vec<char> = new.chars().collect();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_millis(10);
+    let changed = similar::capture_diff_slices_deadline(similar::Algorithm::Myers, &a, &b, Some(deadline))
+        .into_iter()
+        .filter(|op| matches!(op, similar::DiffOp::Delete { .. } | similar::DiffOp::Replace { .. }))
+        .flat_map(|op| op.old_range())
+        .filter(|&i| typed.iter().any(|&(a, b)| a <= pos[i] && pos[i] < b))
+        .count();
+    changed >= TYPED_CHANGE_CHARS
+}
+
 /// Trim `edit` so it leaves text typed during the live edit (`typed`, byte
 /// ranges of `file`) as it is. Changed lines that would rewrite typed text
-/// stay unchanged, and lines the edit adds next to them stay as an
-/// insertion: a header the user just typed, rewritten with a new body
-/// below it, keeps the header and gets the body. None when nothing is left.
+/// (`rewrites_typed_line`) stay unchanged, deleted lines holding typed text
+/// stay, and lines the edit adds next to them stay as an insertion: a
+/// header the user just typed, rewritten with a new body below it, keeps
+/// the header and gets the body. None when nothing is left.
 pub fn protect_typed(file: &str, edit: &Edit, typed: &[(usize, usize)]) -> Option<Edit> {
     let old = &file[edit.start..edit.end];
-    if !rewrites_typed(old, &edit.text, edit.start, typed) {
+    if !touches_typed(old, &edit.text, edit.start, typed) {
         return Some(edit.clone());
     }
     let a: Vec<&str> = old.split_inclusive('\n').collect();
@@ -1213,14 +1239,14 @@ pub fn protect_typed(file: &str, edit: &Edit, typed: &[(usize, usize)]) -> Optio
             similar::DiffOp::Delete { old_index, old_len, .. } => (old_index, old_len, 0, 0),
             similar::DiffOp::Replace { old_index, old_len, new_index, new_len } => (old_index, old_len, new_index, new_len),
         };
-        if !rewrites_typed(&a[o..o + ol].concat(), &b[n..n + nl].concat(), offs[o], typed) {
+        if !touches_typed(&a[o..o + ol].concat(), &b[n..n + nl].concat(), offs[o], typed) {
             out.extend(&b[n..n + nl]);
             continue;
         }
         // Pair old and new lines from the head or the tail of the change,
         // whichever pairs more alike lines. A pair keeps the old line if the
         // new one rewrites typed text; unpaired new lines are inserted and
-        // unpaired old lines deleted unless typed.
+        // unpaired old lines deleted unless they hold typed text.
         let m = ol.min(nl);
         let head: usize = (0..m).map(|k| alike(a[o + k], b[n + k])).sum();
         let tail: usize = (0..m).map(|k| alike(a[o + ol - m + k], b[n + nl - m + k])).sum();
@@ -1228,11 +1254,11 @@ pub fn protect_typed(file: &str, edit: &Edit, typed: &[(usize, usize)]) -> Optio
         let pairs: Vec<&str> = (0..m)
             .map(|k| {
                 let (i, j) = (po + k, pn + k);
-                if rewrites_typed(a[i], b[j], offs[i], typed) { a[i] } else { b[j] }
+                if rewrites_typed_line(a[i], b[j], offs[i], typed) { a[i] } else { b[j] }
             })
             .collect();
         let mut extras: Vec<&str> = (o..o + ol)
-            .filter(|i| (*i < po || *i >= po + m) && rewrites_typed(a[*i], "", offs[*i], typed))
+            .filter(|i| (*i < po || *i >= po + m) && touches_typed(a[*i], "", offs[*i], typed))
             .map(|i| a[i])
             .collect();
         extras.extend((n..n + nl).filter(|j| *j < pn || *j >= pn + m).map(|j| b[j]));
@@ -2074,8 +2100,13 @@ mod tests {
         let trimmed = protect_typed(file, &clone, &typed).unwrap();
         assert_eq!(trimmed, Edit { start: file.len(), end: file.len(), text: "    cmd: x\n    deps: [db]\n".into() });
         // A rename of typed text leaves nothing.
-        let rename = Edit { start: at, end: file.len(), text: "  www:\n".into() };
+        let rename = Edit { start: at, end: file.len(), text: "  api:\n".into() };
         assert_eq!(protect_typed(file, &rename, &typed), None);
+        // Small corrections and text added between typed characters stay.
+        let fix = Edit { start: at, end: file.len(), text: "  wbe:\n".into() };
+        assert_eq!(protect_typed(file, &fix, &typed).as_ref(), Some(&fix));
+        let fill = Edit { start: at, end: file.len(), text: "  w(e)b: x\n".into() };
+        assert_eq!(protect_typed(file, &fill, &typed).as_ref(), Some(&fill));
         // Completing typed text and editing other lines are untouched.
         let append = Edit { start: at, end: file.len(), text: "  web: {}\n".into() };
         assert_eq!(protect_typed(file, &append, &typed).as_ref(), Some(&append));
