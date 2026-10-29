@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub const PROTOCOL: &str = "sweep-next-edit-v1";
 
@@ -166,6 +166,43 @@ pub struct Settings {
     /// Withhold edits whose weakest changed token is below this log-probability.
     pub min_confidence: f32,
     pub multiline_min_confidence: f32,
+    /// Warm requests prefill the whole local prompt, not only its stable head.
+    pub warm_full_prompt: bool,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Purpose {
+    /// A real request: records the state and updates sticky choices.
+    Predict,
+    /// Prefetch: works on a copy of the edit history.
+    Speculative,
+    /// Idle warm-up of a state the tracker has already observed.
+    Warm,
+}
+
+/// Everything a prompt is assembled from, for one buffer state.
+struct Gathered {
+    display: String,
+    cursor: usize,
+    hunks: Vec<DiffHunk>,
+    original: String,
+    block: Block,
+    file_chunks: Vec<Chunk>,
+    retrieval: Vec<Chunk>,
+    diagnostics: Vec<Diagnostic>,
+}
+
+/// A prompt that fits the context budget, and what it was built from.
+struct StagePrompt {
+    built: sweep::Built,
+    tokens: Vec<llama_cpp_2::token::LlamaToken>,
+    block_tokens: Vec<llama_cpp_2::token::LlamaToken>,
+    max_tokens: usize,
+    max_newlines: usize,
+    trimmed: Vec<&'static str>,
+    file_chunks_used: bool,
+    /// Index of the first retrieval chunk kept.
+    retrieval_from: usize,
 }
 
 enum Job {
@@ -189,6 +226,8 @@ enum Job {
         slot: String,
         prefix: Vec<llama_cpp_2::token::LlamaToken>,
     },
+    /// Answered once every earlier job has finished (replay idle time).
+    Ping(mpsc::Sender<()>),
 }
 
 pub struct Service {
@@ -275,12 +314,14 @@ impl Service {
                                 eprintln!("nes: warm failed: {e:#}");
                             }
                         }
+                        Job::Ping(reply) => {
+                            let _ = reply.send(());
+                        }
                     }
                 }
             })?;
         let (tokenizer, n_ctx) = ready_rx.recv().context("model worker exited")??;
         Ok(Arc::new(Self {
-            settings,
             tokenizer,
             n_ctx,
             jobs: Mutex::new(tx),
@@ -293,6 +334,7 @@ impl Service {
             previous: Mutex::new(HashMap::new()),
             sticky_file_chunks: Mutex::new(HashMap::new()),
             answers: Mutex::new(Vec::new()),
+            settings,
         }))
     }
 
@@ -337,22 +379,62 @@ impl Service {
         self.tracker.lock().unwrap().observe_at(&path, &display, &req.content, line, req.saved, now);
         self.registry.ensure_fresh(&root, self.settings.index_refresh_secs);
         self.registry.get(&root).lock().unwrap().update_buffer(&path, &req.content);
-        if req.warm {
-            let original = self.tracker.lock().unwrap().original(&path).map(str::to_string);
-            let original = original.unwrap_or_else(|| req.content.clone());
-            let cursor = req.cursor.as_ref().map_or(0, |c| byte_offset(&req.content, c.line, c.col));
-            let file_chunks = self.file_chunks(&path);
-            let mut prefix: String = file_chunks.iter().map(Chunk::render).collect();
-            prefix.push_str(&format!(
-                "<|file_sep|>{}\n{}",
-                display,
-                sweep::lines_around_cursor(&original, cursor.min(original.len()), &self.settings.prompt)
-            ));
-            let tokens = self.tokenizer.tokenize(&prefix);
-            // Warm jobs do not bump the generation; any prediction cancels them.
-            let generation = self.latest.load(Ordering::SeqCst);
-            let _ = self.jobs.lock().unwrap().send(Job::Warm { generation, slot: display.clone(), prefix: tokens });
+        if !req.warm {
+            return;
         }
+        if self.settings.warm_full_prompt {
+            let cursor = req.cursor.clone().unwrap_or(Cursor { line: 0, col: 0 });
+            let state = PredictRequest {
+                request_id: None,
+                path: req.path.clone(),
+                root: req.root.clone(),
+                content: req.content.clone(),
+                cursor,
+                diagnostics: Vec::new(),
+                clipboard: None,
+                jump: false,
+                ts_ms: req.ts_ms,
+            };
+            if let Some(tokens) = self.build_tokens(&state) {
+                self.warm(&display, tokens);
+            }
+            return;
+        }
+        let original = self.tracker.lock().unwrap().original(&path).map(str::to_string);
+        let original = original.unwrap_or_else(|| req.content.clone());
+        let cursor = req.cursor.as_ref().map_or(0, |c| byte_offset(&req.content, c.line, c.col));
+        let file_chunks = self.file_chunks(&path);
+        let mut prefix: String = file_chunks.iter().map(Chunk::render).collect();
+        prefix.push_str(&format!(
+            "<|file_sep|>{}\n{}",
+            display,
+            sweep::lines_around_cursor(&original, cursor.min(original.len()), &self.settings.prompt)
+        ));
+        self.warm(&display, self.tokenizer.tokenize(&prefix));
+    }
+
+    /// Prefill `tokens` into the file's cache in the background. Warm jobs
+    /// do not bump the generation; any prediction cancels them.
+    fn warm(&self, slot: &str, tokens: Vec<llama_cpp_2::token::LlamaToken>) {
+        let generation = self.latest.load(Ordering::SeqCst);
+        let _ = self.jobs.lock().unwrap().send(Job::Warm { generation, slot: slot.to_string(), prefix: tokens });
+    }
+
+    /// Wait until queued work (warms) has finished, at most `timeout`.
+    pub fn wait_idle(&self, timeout: Duration) {
+        let (tx, rx) = mpsc::channel();
+        if self.jobs.lock().unwrap().send(Job::Ping(tx)).is_ok() {
+            let _ = rx.recv_timeout(timeout);
+        }
+    }
+
+    /// Full local prompt for an observed buffer state, as a prediction
+    /// would build it.
+    fn build_tokens(&self, req: &PredictRequest) -> Option<Vec<llama_cpp_2::token::LlamaToken>> {
+        let resolved = self.resolve(&req.path, req.root.as_deref());
+        let g = self.gather(req, &resolved, Purpose::Warm).ok()?;
+        let p = self.stage_prompt(&g, &req.content, g.cursor, &g.block, &g.retrieval).ok()?;
+        Some(p.tokens)
     }
 
     /// The recent-file snippet opens the prompt, so a new one invalidates the
@@ -488,82 +570,23 @@ impl Service {
         } else {
             self.latest.fetch_add(1, Ordering::SeqCst) + 1
         };
-        let (path, root, display) = self.resolve(&req.path, req.root.as_deref());
-        resp.context.root = root.to_string_lossy().into_owned();
-        resp.context.path = display.clone();
+        let resolved = self.resolve(&req.path, req.root.as_deref());
+        resp.context.root = resolved.1.to_string_lossy().into_owned();
+        resp.context.path = resolved.2.clone();
+        let purpose = if speculative { Purpose::Speculative } else { Purpose::Predict };
+        let g = match self.gather(&req, &resolved, purpose) {
+            Ok(g) => g,
+            Err(reason) => {
+                resp.status = "disabled";
+                resp.exit_reason = reason.into();
+                return Ok(resp);
+            }
+        };
         let content = req.content.as_str();
-        let cursor = byte_offset(content, req.cursor.line, req.cursor.col);
-        if let Some(reason) = sweep::should_disable_file(content) {
-            resp.status = "disabled";
-            resp.exit_reason = reason.into();
-            return Ok(resp);
-        }
-        let (hunks, original) = {
-            let now = self.instant(req.ts_ms);
-            let mut real = self.tracker.lock().unwrap();
-            let mut copy;
-            let t: &mut Tracker = if speculative {
-                copy = real.clone();
-                &mut copy
-            } else {
-                &mut real
-            };
-            t.observe_at(&path, &display, content, req.cursor.line, false, now);
-            let h = t.recent_hunks_at(self.settings.prompt.max_hunks, now);
-            let o = t.original(&path).unwrap_or(content).to_string();
-            (h, o)
-        };
-        self.registry.ensure_fresh(&root, self.settings.index_refresh_secs);
-        let ws = self.registry.get(&root);
-        ws.lock().unwrap().update_buffer(&path, content);
-        let diagnostics: Vec<Diagnostic> = req
-            .diagnostics
-            .iter()
-            .map(|d| Diagnostic { line: d.line, col: d.col, severity: d.severity.clone(), message: d.message.clone() })
-            .collect();
-        let block = sweep::block_at_cursor(content, cursor, self.settings.prompt.lines_before, self.settings.prompt.lines_after);
-        if sweep::should_disable_for_block(&block.text) {
-            resp.status = "disabled";
-            resp.exit_reason = "long_lines_code_block".into();
-            return Ok(resp);
-        }
-        let file_chunks = self.file_chunks(&path);
-        let recent_files: Vec<PathBuf> = self.tracker.lock().unwrap().recent_visits(&path, 5).into_iter().map(|v| v.path).collect();
-        let visible = visible_range(&original, cursor.min(original.len()), &self.settings.prompt);
-        let previous = self.sticky.lock().unwrap().get(&path).cloned().unwrap_or_default();
-        let mut retrieval = {
-            let ws = ws.lock().unwrap();
-            retrieval::definition_chunks(
-                &ws,
-                &RetrievalInput {
-                    path: &path,
-                    content,
-                    cursor_line: req.cursor.line,
-                    visible,
-                    hunks: &hunks,
-                    recent_files: &recent_files,
-                    previous: &previous,
-                    max_chunks: self.settings.max_retrieval_chunks,
-                },
-            )
-        };
-        self.sticky
-            .lock()
-            .unwrap()
-            .insert(path.clone(), retrieval.iter().map(retrieval::chunk_key).collect());
-        // Best definition last; diagnostics and clipboard sit closest to the edit.
-        retrieval.reverse();
-        if let Some(c) = req.clipboard.as_deref().and_then(retrieval::clipboard_chunk) {
-            retrieval.push(c);
-        }
-        if let Some(c) = retrieval::diagnostics_chunk(&display, &diagnostics, req.cursor.line) {
-            retrieval.push(c);
-        }
+        let cursor = g.cursor;
         resp.timings.context_ms = ms(started);
 
-        let stage = self.run_stage(
-            generation, &display, content, &original, cursor, &block, &hunks, &file_chunks, &retrieval, &mut resp,
-        )?;
+        let (stage, local_tokens) = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp)?;
         let mut outcome = match stage {
             None => {
                 resp.status = "cancelled";
@@ -574,18 +597,17 @@ impl Service {
             Some(p) => p,
         };
         let local_empty = outcome.edits.is_empty();
-        if local_empty && req.jump && !hunks.is_empty() {
-            if let Some(j) = sweep::find_jump_block(content, &hunks, &display, cursor, &diagnostics, self.settings.prompt.lines_before, self.settings.prompt.lines_after) {
+        if local_empty && req.jump && !g.hunks.is_empty() {
+            if let Some(j) = sweep::find_jump_block(content, &g.hunks, &g.display, cursor, &g.diagnostics, self.settings.prompt.lines_before, self.settings.prompt.lines_after) {
                 if !sweep::should_disable_for_block(&j.block.text) && j.cursor >= j.block.start {
-                    let mut jump_retrieval = retrieval.clone();
+                    let mut jump_retrieval = g.retrieval.clone();
                     if let Some(msg) = &j.diagnostic {
                         jump_retrieval.insert(0, Chunk { path: "diagnostics".into(), start_line: 1, end_line: 2, content: msg.clone(), source: "diagnostics", score: 0.0 });
                     }
                     let local_prompt = std::mem::take(&mut resp.prompt);
                     let local_completion = std::mem::take(&mut resp.completion);
-                    match self.run_stage(
-                        generation, &display, content, &original, j.cursor, &j.block, &hunks, &file_chunks, &jump_retrieval, &mut resp,
-                    )? {
+                    let (jumped, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp)?;
+                    match jumped {
                         Some(p) if !p.edits.is_empty() && p.edits[0].text.trim().len() + (p.edits[0].end - p.edits[0].start) > 0 => {
                             resp.kind = "jump";
                             resp.jump_reason = Some(j.reason);
@@ -602,6 +624,10 @@ impl Service {
                             return Ok(resp);
                         }
                     }
+                    // The jump prompt shares the file's cache slot and
+                    // replaced the local prompt in it; restore that while
+                    // idle so the next keystroke here stays incremental.
+                    self.warm(&g.display, local_tokens);
                 }
             }
         }
@@ -629,43 +655,126 @@ impl Service {
         Ok(resp)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn run_stage(
-        &self,
-        generation: u64,
-        display: &str,
-        content: &str,
-        original: &str,
-        cursor: usize,
-        block: &Block,
-        hunks: &[DiffHunk],
-        file_chunks: &[Chunk],
-        retrieval: &[Chunk],
-        resp: &mut PredictResponse,
-    ) -> Result<Option<sweep::Processed>> {
+    /// Assemble prompt inputs for a buffer state: edit history, original
+    /// file, window and retrieval. Err holds the reason the file or window
+    /// is disabled.
+    fn gather(&self, req: &PredictRequest, resolved: &(PathBuf, PathBuf, String), purpose: Purpose) -> Result<Gathered, &'static str> {
+        let (path, root, display) = resolved;
+        let opts = &self.settings.prompt;
+        let content = req.content.as_str();
+        let cursor = byte_offset(content, req.cursor.line, req.cursor.col);
+        if let Some(reason) = sweep::should_disable_file(content) {
+            return Err(reason);
+        }
+        let (hunks, original) = {
+            let now = self.instant(req.ts_ms);
+            let mut real = self.tracker.lock().unwrap();
+            let mut copy;
+            let t: &mut Tracker = if purpose == Purpose::Speculative {
+                copy = real.clone();
+                &mut copy
+            } else {
+                &mut real
+            };
+            if purpose != Purpose::Warm {
+                t.observe_at(path, display, content, req.cursor.line, false, now);
+            }
+            let h = t.recent_hunks_at(opts.max_hunks, now);
+            let o = t.original(path).unwrap_or(content).to_string();
+            (h, o)
+        };
+        self.registry.ensure_fresh(root, self.settings.index_refresh_secs);
+        let ws = self.registry.get(root);
+        ws.lock().unwrap().update_buffer(path, content);
+        let diagnostics: Vec<Diagnostic> = req
+            .diagnostics
+            .iter()
+            .map(|d| Diagnostic { line: d.line, col: d.col, severity: d.severity.clone(), message: d.message.clone() })
+            .collect();
+        let block = sweep::block_at_cursor(content, cursor, opts.lines_before, opts.lines_after);
+        if sweep::should_disable_for_block(&block.text) {
+            return Err("long_lines_code_block");
+        }
+        let file_chunks = self.file_chunks(path);
+        let recent_files: Vec<PathBuf> = self.tracker.lock().unwrap().recent_visits(path, 5).into_iter().map(|v| v.path).collect();
+        let visible = visible_range(&original, cursor.min(original.len()), opts);
+        let previous = self.sticky.lock().unwrap().get(path).cloned().unwrap_or_default();
+        let mut retrieval = {
+            let ws = ws.lock().unwrap();
+            retrieval::definition_chunks(
+                &ws,
+                &RetrievalInput {
+                    path,
+                    content,
+                    cursor_line: req.cursor.line,
+                    visible,
+                    hunks: &hunks,
+                    recent_files: &recent_files,
+                    previous: &previous,
+                    max_chunks: self.settings.max_retrieval_chunks,
+                },
+            )
+        };
+        if purpose != Purpose::Warm {
+            self.sticky
+                .lock()
+                .unwrap()
+                .insert(path.clone(), retrieval.iter().map(retrieval::chunk_key).collect());
+        }
+        // Best definition last; diagnostics and clipboard sit closest to the edit.
+        retrieval.reverse();
+        if let Some(c) = req.clipboard.as_deref().and_then(retrieval::clipboard_chunk) {
+            retrieval.push(c);
+        }
+        if let Some(c) = retrieval::diagnostics_chunk(display, &diagnostics, req.cursor.line) {
+            retrieval.push(c);
+        }
+        Ok(Gathered {
+            display: display.clone(),
+            cursor,
+            hunks,
+            original,
+            block,
+            file_chunks,
+            retrieval,
+            diagnostics,
+        })
+    }
+
+    /// Build the prompt for a window, dropping context until it fits.
+    fn stage_prompt(&self, g: &Gathered, content: &str, cursor: usize, block: &Block, retrieval: &[Chunk]) -> Result<StagePrompt> {
         let block_tokens = self.tokenizer.tokenize_plain(&block.text);
         let max_tokens = (block_tokens.len() * 2 + 160).min(sweep::OUTPUT_MAX_TOKENS);
         let max_newlines = block.text.lines().count() + 20;
         let budget = self.n_ctx.saturating_sub(max_tokens + self.settings.draft_max + 8);
         let mut opts = self.settings.prompt.clone();
-        let mut fc: &[Chunk] = file_chunks;
+        let mut fc: &[Chunk] = &g.file_chunks;
         let mut rc: &[Chunk] = retrieval;
         let mut trimmed = Vec::new();
-        let (built, tokens) = loop {
+        loop {
             let built = sweep::build_prompt(&PromptInput {
-                path: display,
+                path: &g.display,
                 content,
-                original,
+                original: &g.original,
                 cursor,
                 block,
-                hunks,
+                hunks: &g.hunks,
                 file_chunks: fc,
                 retrieval: rc,
                 opts: &opts,
             });
             let tokens = self.tokenizer.tokenize(&built.prompt);
             if tokens.len() <= budget {
-                break (built, tokens);
+                return Ok(StagePrompt {
+                    built,
+                    tokens,
+                    block_tokens,
+                    max_tokens,
+                    max_newlines,
+                    trimmed,
+                    file_chunks_used: !fc.is_empty(),
+                    retrieval_from: retrieval.len() - rc.len(),
+                });
             }
             if !fc.is_empty() {
                 fc = &[];
@@ -683,7 +792,26 @@ impl Service {
             } else {
                 return Err(anyhow!("prompt of {} tokens exceeds budget {budget}", tokens.len()));
             }
-        };
+        }
+    }
+
+    /// Run one prediction stage. Returns the processed outcome (None when
+    /// superseded) and the prompt tokens.
+    #[allow(clippy::too_many_arguments)]
+    fn run_stage(
+        &self,
+        generation: u64,
+        g: &Gathered,
+        content: &str,
+        cursor: usize,
+        block: &Block,
+        retrieval: &[Chunk],
+        resp: &mut PredictResponse,
+    ) -> Result<(Option<sweep::Processed>, Vec<llama_cpp_2::token::LlamaToken>)> {
+        let StagePrompt { built, tokens, block_tokens, max_tokens, max_newlines, trimmed, file_chunks_used, retrieval_from } =
+            self.stage_prompt(g, content, cursor, block, retrieval)?;
+        let rc = &retrieval[retrieval_from..];
+        let display = g.display.as_str();
         resp.context.prompt_chars = built.prompt.len();
         resp.context.prompt_tokens = tokens.len();
         resp.context.stable_prefix_chars = built.stable_prefix;
@@ -693,7 +821,7 @@ impl Service {
         resp.context.block_lines = block.text.lines().count();
         resp.context.trimmed = trimmed;
         resp.context.retrieval = rc[rc.len() - built.retrieval_used..].iter().map(summary).collect();
-        resp.context.file_chunks = fc.iter().map(summary).collect();
+        resp.context.file_chunks = if file_chunks_used { g.file_chunks.iter().map(summary).collect() } else { Vec::new() };
         let draft_seed = self.tokenizer.tokenize_plain(&built.prefill);
         let early = self.settings.early_stop;
         let (reply_tx, reply_rx) = mpsc::channel();
@@ -702,7 +830,7 @@ impl Service {
             .unwrap()
             .send(Job::Generate {
                 generation,
-                prompt: tokens,
+                prompt: tokens.clone(),
                 draft_source: block_tokens,
                 draft_seed,
                 max_tokens,
@@ -722,22 +850,23 @@ impl Service {
         match outcome {
             Outcome::Cancelled(stats) => {
                 resp.timings.stages.push(stats);
-                Ok(None)
+                Ok((None, tokens))
             }
-            Outcome::Done(g) => {
-                resp.timings.stages.push(g.stats.clone());
-                resp.completion = g.text.clone();
-                resp.finish_reason = g.finish_reason.to_string();
-                let tokens = self.tokenizer.tokenize_plain(&format!("{}{}", built.prefill, g.text));
-                self.previous.lock().unwrap().insert(display.to_string(), tokens);
+            Outcome::Done(gen_out) => {
+                resp.timings.stages.push(gen_out.stats.clone());
+                resp.completion = gen_out.text.clone();
+                resp.finish_reason = gen_out.finish_reason.to_string();
+                let prev = self.tokenizer.tokenize_plain(&format!("{}{}", built.prefill, gen_out.text));
+                self.previous.lock().unwrap().insert(display.to_string(), prev);
                 resp.confidence = Some(sweep::change_confidence(
                     &built.prefill,
-                    &g.text,
+                    &gen_out.text,
                     &block.text,
-                    &g.token_logprobs,
-                    &g.token_offsets,
+                    &gen_out.token_logprobs,
+                    &gen_out.token_offsets,
                 ));
-                Ok(Some(sweep::process_completion(&g.text, g.finish_reason, &built, block, content, cursor)))
+                let processed = sweep::process_completion(&gen_out.text, gen_out.finish_reason, &built, block, content, cursor);
+                Ok((Some(processed), tokens))
             }
         }
     }

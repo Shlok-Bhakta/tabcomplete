@@ -127,6 +127,10 @@ struct Cli {
     /// Stricter gate for edits that rewrite more than one existing line.
     #[arg(long, default_value_t = -0.5, allow_hyphen_values = true)]
     multiline_min_confidence: f32,
+    /// Warm requests (observe with warm) prefill the full local prompt
+    /// rather than only the file context.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    warm_full_prompt: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -218,6 +222,7 @@ fn main() -> Result<()> {
         draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
         multiline_min_confidence: cli.multiline_min_confidence,
+        warm_full_prompt: cli.warm_full_prompt,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
@@ -284,14 +289,37 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
     Ok(())
 }
 
+/// Longest idle time given to a warm-up between replayed events.
+const REPLAY_MAX_IDLE: std::time::Duration = std::time::Duration::from_secs(10);
+
 fn replay(svc: &Arc<Service>) -> Result<()> {
+    let mut lines = Vec::new();
     for line in std::io::stdin().lock().lines() {
         let line = line?;
-        if line.trim().is_empty() {
-            continue;
+        if !line.trim().is_empty() {
+            lines.push(serde_json::from_str::<ReplayLine>(&line).context("replay line")?);
         }
-        match serde_json::from_str::<ReplayLine>(&line).context("replay line")? {
-            ReplayLine::Observe(o) => svc.observe(&o),
+    }
+    let stamps: Vec<Option<u64>> = lines
+        .iter()
+        .map(|l| match l {
+            ReplayLine::Observe(o) => o.ts_ms,
+            ReplayLine::Predict(p) => p.ts_ms,
+            ReplayLine::Reset {} => None,
+        })
+        .collect();
+    for (i, line) in lines.into_iter().enumerate() {
+        match line {
+            ReplayLine::Observe(o) => {
+                svc.observe(&o);
+                // Replay has no idle time of its own: give a warm-up the time
+                // the recording had before the next event.
+                let next = stamps[i + 1..].iter().flatten().next();
+                if let (true, Some(ts), Some(next)) = (o.warm, o.ts_ms, next) {
+                    let gap = std::time::Duration::from_millis(next.saturating_sub(ts));
+                    svc.wait_idle(gap.min(REPLAY_MAX_IDLE));
+                }
+            }
             ReplayLine::Reset {} => svc.reset(),
             ReplayLine::Predict(p) => {
                 let r = svc.predict(p)?;

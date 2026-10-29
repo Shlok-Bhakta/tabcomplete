@@ -56,7 +56,7 @@ def score(case, resp):
     return "wrong"
 
 
-def replay_lines(case, jump=True, warm=None, keystrokes=False):
+def replay_lines(case, jump=True, warm=None, keystrokes=False, observe_warm=False):
     """Replay one case. With `warm` (a dict carried across cases), state is
     kept between consecutive cases of the same file and only newer history is
     observed, so the KV cache behaves as in continuous editing."""
@@ -75,6 +75,7 @@ def replay_lines(case, jump=True, warm=None, keystrokes=False):
                 "content": h["content"],
                 "cursor": {"line": cursor["row"], "col": cursor["col"]},
                 "ts_ms": h["ts_ms"],
+                **({"warm": True} if observe_warm else {}),
             }
         }
     if keystrokes:
@@ -116,13 +117,14 @@ def main():
     ap.add_argument("--no-jump", action="store_true")
     ap.add_argument("--warm", action="store_true", help="keep editor state across consecutive cases of a file")
     ap.add_argument("--keystrokes", action="store_true", help="predict at the burst's last keystrokes before the scored state")
+    ap.add_argument("--observe-warm", action="store_true", help="history observes ask the engine to warm its cache while idle")
     ap.add_argument("flags", nargs="*")
     args = ap.parse_args()
     cases = [json.loads(l) for l in open(args.cases)]
     if args.limit:
         cases = cases[: args.limit]
     warm = {} if args.warm else None
-    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm, args.keystrokes))
+    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm, args.keystrokes, args.observe_warm))
     cmd = [args.engine, "--model", args.model, *args.flags, "replay"]
     proc = subprocess.run(cmd, input=stdin, capture_output=True, text=True)
     if proc.returncode != 0:

@@ -98,6 +98,11 @@ struct SlotConfig {
 
 /// Scratch sequence used by suffix reuse inside each slot context.
 const SCRATCH_SEQ: i32 = 1;
+/// Warm-up prefill runs in chunks this small so a prediction can cancel it
+/// almost at once.
+const WARM_CHUNK: usize = 32;
+/// Largest suffix-reuse middle a warm-up evaluates (in one uncancellable call).
+const WARM_MAX_MIDDLE: usize = 128;
 
 fn new_slot_context(
     model: &'static LlamaModel,
@@ -323,12 +328,17 @@ impl Engine {
 
     /// Evaluate the prompt, reusing the cached prefix. Returns stats and the
     /// batch index holding the final logits, or None when cancelled.
+    /// `chunk` tokens are evaluated per decode call, and suffix reuse is
+    /// skipped when its middle exceeds `max_middle` tokens.
+    #[allow(clippy::too_many_arguments)]
     fn prefill(
         &mut self,
         prompt: &[LlamaToken],
         generation: u64,
         latest: &AtomicU64,
         stats: &mut GenStats,
+        chunk: usize,
+        max_middle: usize,
     ) -> Result<bool> {
         let started = Instant::now();
         let mut common = self
@@ -341,7 +351,7 @@ impl Engine {
         if common == prompt.len() {
             common = prompt.len().saturating_sub(1);
         }
-        if self.reuse_suffix && self.try_reuse_suffix(prompt, common, stats)? {
+        if self.reuse_suffix && self.try_reuse_suffix(prompt, common, stats, max_middle)? {
             stats.prefill_ms = ms(started);
             return Ok(true);
         }
@@ -358,7 +368,7 @@ impl Engine {
                 stats.prefill_ms = ms(started);
                 return Ok(false);
             }
-            let end = (pos + self.prefill_chunk).min(prompt.len());
+            let end = (pos + chunk).min(prompt.len());
             batch.clear();
             for (i, token) in prompt[pos..end].iter().enumerate() {
                 let p = pos + i;
@@ -377,7 +387,7 @@ impl Engine {
     /// Keep the cached prefix, recompute only the changed middle and the
     /// final token, and shift the unchanged suffix of the previous prompt
     /// into place. Returns false when the shape does not allow it.
-    fn try_reuse_suffix(&mut self, prompt: &[LlamaToken], common: usize, stats: &mut GenStats) -> Result<bool> {
+    fn try_reuse_suffix(&mut self, prompt: &[LlamaToken], common: usize, stats: &mut GenStats, max_middle: usize) -> Result<bool> {
         let old_len = self.prompt_len.min(self.cached.len());
         if common >= old_len || common >= prompt.len() {
             return Ok(false);
@@ -394,7 +404,7 @@ impl Engine {
         }
         let new_len = prompt.len();
         let middle_end = new_len - s_full;
-        if middle_end - common + 1 > self.n_batch {
+        if middle_end - common + 1 > self.n_batch.min(max_middle) {
             return Ok(false);
         }
         // llama.cpp requires each sequence's new tokens to continue directly
@@ -443,14 +453,15 @@ impl Engine {
         Ok(true)
     }
 
-    /// Fill the KV cache for a prompt prefix without generating.
+    /// Fill the KV cache for a prompt (or its prefix) without generating, in
+    /// small chunks so a newer generation cancels it promptly.
     pub fn warm(&mut self, slot: &str, prefix: &[LlamaToken], generation: u64, latest: &AtomicU64) -> Result<GenStats> {
         self.select(slot)?;
         let mut stats = GenStats::default();
         if prefix.is_empty() || prefix.len() + 64 > self.n_ctx {
             return Ok(stats);
         }
-        self.prefill(prefix, generation, latest, &mut stats)?;
+        self.prefill(prefix, generation, latest, &mut stats, WARM_CHUNK, WARM_MAX_MIDDLE)?;
         Ok(stats)
     }
 
@@ -467,7 +478,7 @@ impl Engine {
             );
         }
         self.select(req.slot)?;
-        if !self.prefill(req.prompt, req.generation, req.latest, &mut stats)? {
+        if !self.prefill(req.prompt, req.generation, req.latest, &mut stats, self.prefill_chunk, self.n_batch)? {
             return Ok(Outcome::Cancelled(stats));
         }
         let decode_started = Instant::now();
@@ -659,7 +670,7 @@ impl Engine {
         self.ctx.clear_kv_cache_seq(Some(self.seq as u32), None, None)?;
         self.cached.clear();
         let mut stats = GenStats::default();
-        self.prefill(&prompt[..depth], 1, &latest, &mut stats)?;
+        self.prefill(&prompt[..depth], 1, &latest, &mut stats, self.prefill_chunk, self.n_batch)?;
         let seq = self.seq;
         let mut batch = LlamaBatch::new(self.n_batch, 1);
         let mut time = |name: &str, f: &mut dyn FnMut(&mut Self) -> Result<()>, me: &mut Self| -> Result<()> {
