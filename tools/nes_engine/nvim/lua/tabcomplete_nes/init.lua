@@ -5,6 +5,10 @@
 -- snapshots, renders the proposed edit, and reports the suggestion lifecycle
 -- to the trajectory collector when it is running.
 --
+-- With `stream`, the engine sends provisional ghost text while the cursor
+-- line is still being decoded; it is drawn at once and replaced (or cleared)
+-- by the final answer.
+--
 -- Keys: <Tab> jumps to a distant edit, then accepts (LazyVim's `ai_nes` hook in
 -- insert mode, a fallback-preserving mapping in normal mode). <M-l> accepts,
 -- <M-BS> dismisses, <M-p> requests a prediction explicitly.
@@ -30,6 +34,8 @@ M.config = {
   capture_content = true,
   -- Precompute the suggestion that would follow accepting the shown one.
   prefetch = true,
+  -- Stream predictions: show provisional ghost text before decoding ends.
+  stream = true,
   clipboard_window_ms = 120000,
   exclude_filetypes = {
     "TelescopePrompt", "snacks_picker_input", "snacks_input", "neo-tree", "lazy", "mason", "help",
@@ -139,6 +145,54 @@ local function post(path, body, cb)
         return
       end
       cb(decoded, nil)
+    end)
+  end)
+  return ok_sys and job or nil
+end
+
+-- POST with a newline-delimited JSON response: `on_event` gets each decoded
+-- line as it arrives, `on_done` the transport error (or nil) at the end.
+local function post_stream(path, body, on_event, on_done)
+  local ok, json = pcall(vim.json.encode, body)
+  if not ok then return nil end
+  local timeout = math.max(1, math.ceil(M.config.request_timeout_ms / 1000))
+  local pending = ""
+  local ok_sys, job = pcall(vim.system, {
+    "curl", "-sS", "-N", "-m", tostring(timeout), "-H", "Content-Type: application/json",
+    "--data-binary", "@-", M.config.url .. path .. "?stream=1",
+  }, {
+    stdin = json,
+    text = true,
+    stdout = function(_, data)
+      if not data then return end
+      pending = pending .. data
+      while true do
+        local nl = pending:find("\n", 1, true)
+        if not nl then break end
+        local line = pending:sub(1, nl - 1)
+        pending = pending:sub(nl + 1)
+        if line ~= "" then
+          vim.schedule(function()
+            local ok_dec, ev = pcall(vim.json.decode, line)
+            if ok_dec and type(ev) == "table" then on_event(ev) end
+          end)
+        end
+      end
+    end,
+  }, function(res)
+    -- Runs after stdout has closed, so every event was scheduled before it.
+    vim.schedule(function()
+      -- An engine without streaming answers with one unterminated JSON body.
+      if pending ~= "" then
+        local ok_dec, ev = pcall(vim.json.decode, pending)
+        pending = ""
+        if ok_dec and type(ev) == "table" then on_event(ev) end
+      end
+      if res.code ~= 0 then
+        on_done((res.stderr ~= "" and res.stderr) or ("curl exit " .. res.code))
+      else
+        on_done(nil)
+      end
     end)
   end)
   return ok_sys and job or nil
@@ -268,9 +322,13 @@ end
 
 -- Suggestion lifecycle ------------------------------------------------------
 
+local announce
+
 local function dismiss(reason)
   local s = state.suggestion
   if not s then return end
+  -- The user saw the provisional text: record it as shown before it goes.
+  if s.provisional then announce(s.bufnr, s) end
   state.suggestion = nil
   clear_marks(s.bufnr)
   state.stats.dismissed = state.stats.dismissed + 1
@@ -288,15 +346,32 @@ end
 local prefetch_after_accept
 local target_line
 
-local function show(bufnr, s)
+-- Draw `s` and make it the current suggestion. Returns false when its range
+-- no longer exists.
+local function draw(bufnr, s)
   s.replaced = range_text(bufnr, s.edits[s.idx])
-  if s.replaced == nil then return end
+  if s.replaced == nil then return false end
   local first_edit = s.edits[s.idx]
   s.target = target_line(bufnr, first_edit)
   s.target_row = first_edit.start_line
   s.far = M.config.jump and is_far(s.edits[s.idx])
   state.suggestion = s
+  s.drawn_at = s.drawn_at or now_ms()
   s.display = render(bufnr, s)
+  return true
+end
+
+local function show(bufnr, s)
+  if not draw(bufnr, s) then return end
+  announce(bufnr, s)
+  prefetch_after_accept(bufnr, s)
+end
+
+-- Record a drawn suggestion as shown. A provisional suggestion is announced
+-- only when the user acts on it (accept, type through, dismiss); a final
+-- answer that extends it is announced with the time it first appeared.
+announce = function(bufnr, s)
+  s.provisional = nil
   s.shown_at = now_ms()
   state.stats.shown = state.stats.shown + 1
   local e = s.edits[s.idx]
@@ -315,12 +390,13 @@ local function show(bufnr, s)
     proposed_text = M.config.capture_content and e.text or nil,
     replaced_text = M.config.capture_content and s.replaced or nil,
     shown_at_ms = s.shown_at,
+    first_drawn_at_ms = s.drawn_at,
+    provisional = s.partial or nil,
     file = vim.api.nvim_buf_get_name(bufnr),
     protocol = "sweep-next-edit-v1",
     synthetic = false,
   })
   s.shown_event_id = ev and ev.event_id or nil
-  prefetch_after_accept(bufnr, s)
 end
 
 -- Predict what accepting `s` will leave in the buffer (mirrors apply_edit
@@ -388,6 +464,7 @@ local function accept()
     dismiss("stale")
     return false
   end
+  if s.provisional then announce(bufnr, s) end
   state.suggestion = nil
   clear_marks(bufnr)
   local e = s.edits[s.idx]
@@ -490,6 +567,11 @@ local function request(bufnr, trigger)
   state.seq = state.seq + 1
   local seq = state.seq
   if state.job then pcall(state.job.kill, state.job, 15) end
+  -- A provisional suggestion belongs to the request just cancelled.
+  if state.suggestion and state.suggestion.provisional then
+    clear_marks(state.suggestion.bufnr)
+    state.suggestion = nil
+  end
   local row, col = cursor_pos()
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
   local prediction_id = uuid()
@@ -513,7 +595,7 @@ local function request(bufnr, trigger)
   local started = now_ms()
   local root = root_for(bufnr)
   local diags = diagnostics(bufnr)
-  state.job = post("/v1/predict", {
+  local body = {
     request_id = request_id,
     path = path,
     root = root,
@@ -523,8 +605,55 @@ local function request(bufnr, trigger)
     clipboard = clipboard,
     -- The jump search costs a second model call; skip it while typing.
     jump = M.config.jump and trigger ~= "insert",
-  }, function(resp, err)
+  }
+  -- The provisional suggestion drawn for this request, if any.
+  local early = nil
+  local function current()
+    return seq == state.seq and vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_get_current_buf() == bufnr
+      and vim.api.nvim_buf_get_changedtick(bufnr) == tick
+  end
+  local function on_provisional(ev)
+    local e = ev.edits and ev.edits[1]
+    if not e or not current() then return end
+    local r2, c2 = cursor_pos()
+    if r2 ~= row or c2 ~= col or e.start_line ~= row or e.start_col ~= col then return end
+    if early then
+      -- Still ours and untouched: grow it in place.
+      if state.suggestion ~= early or not early.provisional then return end
+      early.edits = { e }
+      draw(bufnr, early)
+      return
+    end
+    dismiss("superseded")
+    early = {
+      bufnr = bufnr,
+      changedtick = tick,
+      edits = { e },
+      idx = 1,
+      kind = "local",
+      prediction_id = prediction_id,
+      request_id = request_id,
+      typed_through = 0,
+      content = content,
+      path = path,
+      root = root,
+      diagnostics = diags,
+      clipboard = clipboard,
+      provisional = true,
+      partial = true,
+    }
+    draw(bufnr, early)
+  end
+  local function finish(resp, err)
     if seq == state.seq then state.job = nil end
+    -- The provisional text is only a preview of this answer: drop it unless
+    -- the answer extends it.
+    local drawn_at = nil
+    if early and state.suggestion == early and early.provisional then
+      drawn_at = early.drawn_at
+      state.suggestion = nil
+      clear_marks(bufnr)
+    end
     local latency = now_ms() - started
     if err or not resp then
       if seq == state.seq then
@@ -566,11 +695,16 @@ local function request(bufnr, trigger)
       protocol = resp.protocol,
     })
     if seq ~= state.seq or resp.status ~= "ok" or not resp.edits or #resp.edits == 0 then return end
-    if not vim.api.nvim_buf_is_valid(bufnr) or vim.api.nvim_get_current_buf() ~= bufnr then return end
-    if vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then return end
+    -- The user already accepted, typed through or dismissed the preview.
+    if early and not early.provisional then return end
+    if not current() then return end
     local r2, c2 = cursor_pos()
     if r2 ~= row or c2 ~= col then return end
     dismiss("superseded")
+    local final = resp.edits[1]
+    local p = early and early.edits[1]
+    local extends = p and final.start_byte == p.start_byte and final.end_byte == p.end_byte
+      and final.text:sub(1, #p.text) == p.text
     show(bufnr, {
       bufnr = bufnr,
       changedtick = tick,
@@ -586,8 +720,30 @@ local function request(bufnr, trigger)
       root = root,
       diagnostics = diags,
       clipboard = clipboard,
+      drawn_at = extends and drawn_at or nil,
     })
-  end)
+  end
+  if M.config.stream then
+    local finished = false
+    state.job = post_stream("/v1/predict", body, function(ev)
+      if finished then return end
+      if ev.event == "provisional" then
+        on_provisional(ev)
+      elseif ev.event == "final" or (ev.event == nil and ev.status) then
+        finished = true
+        finish(ev, nil)
+      elseif ev.event == "error" then
+        finished = true
+        finish(nil, ev.error or "engine error")
+      end
+    end, function(err)
+      if finished then return end
+      finished = true
+      finish(nil, err or "stream ended without a final event")
+    end)
+  else
+    state.job = post("/v1/predict", body, finish)
+  end
 end
 
 schedule_request = function(bufnr, trigger, delay)
@@ -633,6 +789,7 @@ local function try_type_through(bufnr)
   if target:sub(1, #before) ~= before or #target < #line then return false end
   if rest ~= "" and target:sub(-#rest) ~= rest then return false end
   local ghost = target:sub(#before + 1, #target - #rest)
+  if s.provisional then announce(bufnr, s) end
   s.typed_through = (s.typed_through or 0) + 1
   if ghost == "" then
     -- The user typed the whole suggestion.
@@ -854,6 +1011,7 @@ M._test = {
   render = render,
   apply_edit = apply_edit,
   show_for_test = function(bufnr, s) show(bufnr, s) end,
+  post_stream = post_stream,
   try_type_through = function(bufnr) return try_type_through(bufnr) end,
 }
 
