@@ -183,3 +183,31 @@ For suggestions that are shown, p50 is ~0.92 s; their prompts change more
 
 Current defaults on the 179 quality cases: helpful 36%, harmful 15%,
 precision 68%, typing saved 27%.
+
+## Cache stability, kernels and streaming (2026-10-29 night, ThinkPad, desktop stopped)
+
+Keystroke replay, 90 Rust cases, shown-suggestion latency (what the user waits for):
+
+| configuration | shown p50 | overall p50 |
+|---|---|---|
+| start of night (desktop running) | 869 ms | 869 ms |
+| same, desktop stopped | 804 ms | 760 ms |
+| + stable history/window, full-prompt warm, KV-shift range patch | 430 ms | 602 ms |
+| + flash attention off (default) | 343 ms | 482 ms |
+
+Python/YAML (46 cases): overall p50 490 -> 357 ms.
+
+| change | effect |
+|---|---|
+| `--stable-history` (hide before capping, live group skips filters, positional revert) | shown prefill 363 -> 103 ms; 761 cases: helpful 26.4% -> 27.5%, wrong 16.0% -> 15.0% |
+| `--stable-window` (line-based cursor mapping, chunk hysteresis) | accuracy-neutral; stops cache resets on files over 120 lines |
+| `--warm-full-prompt` (observes warm the whole local prompt, interruptible) | shown p50 557 -> 446 ms after observed-only edits |
+| KV shift rotates only shifted cells (`vocab/llama-kv-shift-range.patch`) | shift+copy 50 -> 22 ms, p50 -3%, outputs unchanged within replay noise |
+| flash attention off | 17-token verify 170 -> 124 ms (CPU FA is a scalar per-row loop below 64 rows); 761 cases: helpful equal, wrong +1 point |
+| splice at a line boundary | fixes garbled text after the first hunk (27/179 completions) |
+| streamed provisional ghost text (`/v1/predict?stream=1`, client `stream`) | 10% of shown suggestions appear earlier, by ~60-230 ms |
+| service without `Nice`/`CPUQuota` | ggml threads spin at per-op barriers; one preempted thread stalls all |
+
+No gain: persistent pinned threadpools (any poll), per-call small-batch thread counts, f32 KV cache, mmap off, context 2048, draft min-match 2/4 or 32-token drafts with FA off. The perf profile with FA on: Q4_0 GEMM 42%, FA kernel + f16 dot + expf 27%, thread sync 11%.
+
+Replays are mildly nondeterministic (some prompt pieces depend on wall-clock timing): two identical runs differ on 27 of 483 responses, so arm differences of 2-5 cases on 90-179 cases are noise. Decide accuracy questions on all 761 cases.
