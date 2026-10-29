@@ -177,6 +177,10 @@ struct Cli {
     /// while idle. Without it a file first seen empty stays empty there.
     #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
     refresh_original: bool,
+    /// Trim edits that would rewrite text typed in the live edit (keeping
+    /// lines they add next to it); withhold them when nothing is left.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    protect_live_edit: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -274,6 +278,7 @@ fn main() -> Result<()> {
         warm_full_prompt: cli.warm_full_prompt,
         retrieval_unindexed: cli.retrieval_unindexed,
         refresh_original: cli.refresh_original,
+        protect_live_edit: cli.protect_live_edit,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,

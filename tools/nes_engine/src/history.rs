@@ -338,6 +338,31 @@ impl Tracker {
         true
     }
 
+    /// Byte ranges of `content` (the current text of `path`) typed during the
+    /// live edit group: characters inserted or replaced since its base.
+    /// Empty when the live group is in another file or `content` is not its
+    /// latest text.
+    pub fn live_typed(&mut self, path: &Path, content: &str) -> Vec<(usize, usize)> {
+        if !self.group.as_ref().is_some_and(|g| g.path == path && g.latest == content) {
+            return Vec::new();
+        }
+        let starts: Vec<usize> = std::iter::once(0)
+            .chain(content.split_inclusive('\n').scan(0, |at, l| {
+                *at += l.len();
+                Some(*at)
+            }))
+            .collect();
+        let mut out = Vec::new();
+        for h in self.live_hunks() {
+            let first = h.new_start + h.ctx_before.len();
+            let Some(&base) = starts.get(first) else { continue };
+            let old = h.old.join("\n");
+            let new = h.new.join("\n");
+            out.extend(inserted_ranges(&old, &new).into_iter().map(|(a, b)| (base + a, base + b)));
+        }
+        out
+    }
+
     /// Most recently visited files other than `exclude`, newest first.
     pub fn recent_visits(&self, exclude: &Path, limit: usize) -> Vec<Visit> {
         let mut v: Vec<_> = self
@@ -429,6 +454,28 @@ fn original_is_stale(original: &str, candidate: &str, current: &str) -> bool {
     let drift = changed_lines(original, candidate);
     let (o, k, c) = (split_lines(original).len(), split_lines(candidate).len(), split_lines(current).len());
     drift > REFRESH_DRIFT_LINES || (o * 2 < c && k > o && drift >= REFRESH_MIN_LINES)
+}
+
+/// Byte ranges of `new` holding characters that are not in `old` (inserted
+/// or replacing old ones), by a character diff.
+fn inserted_ranges(old: &str, new: &str) -> Vec<(usize, usize)> {
+    let a: Vec<char> = old.chars().collect();
+    let b: Vec<char> = new.chars().collect();
+    let mut at: Vec<usize> = new.char_indices().map(|(i, _)| i).collect();
+    at.push(new.len());
+    let deadline = Instant::now() + Duration::from_millis(20);
+    let mut out: Vec<(usize, usize)> = Vec::new();
+    for op in capture_diff_slices_deadline(Algorithm::Myers, &a, &b, Some(deadline)) {
+        let r = op.new_range();
+        if matches!(op, DiffOp::Equal { .. }) || r.is_empty() {
+            continue;
+        }
+        match out.last_mut() {
+            Some(last) if last.1 == at[r.start] => last.1 = at[r.end],
+            _ => out.push((at[r.start], at[r.end])),
+        }
+    }
+    out
 }
 
 /// First and last changed line (0-based, in the new text).
@@ -714,6 +761,28 @@ mod tests {
         assert!(t.refresh_original_at(p, Some(h[0].group), now + Duration::from_secs(311)));
         let o = t.original(p).unwrap();
         assert!(o.contains("L48\n") && o.contains("l52\n") && !o.contains("L52\n"));
+    }
+
+    #[test]
+    fn live_typed_ranges_cover_the_live_group_only() {
+        let p = Path::new("/r/d.yaml");
+        let now = Instant::now();
+        let mut t = Tracker::default();
+        let base = "tasks:\n  db:\n    cmd: x\n";
+        t.observe_at(p, "d.yaml", base, 0, false, now);
+        let typed = format!("{base}  web:\n");
+        t.observe_at(p, "d.yaml", &typed, 3, false, now + Duration::from_millis(300));
+        let r = t.live_typed(p, &typed);
+        assert_eq!(r, vec![(base.len(), base.len() + "  web:".len())]);
+        // A replaced word inside a line.
+        let renamed = typed.replace("cmd: x", "cmd: yz");
+        t.observe_at(p, "d.yaml", &renamed, 2, false, now + Duration::from_millis(600));
+        let r = t.live_typed(p, &renamed);
+        // "x" became "yz", then the typed line follows.
+        let at = renamed.find("yz").unwrap();
+        assert_eq!(r, vec![(at, renamed.len() - 1)]);
+        assert!(t.live_typed(p, &typed).is_empty());
+        assert!(t.live_typed(Path::new("/r/g.rs"), &renamed).is_empty());
     }
 
     #[test]

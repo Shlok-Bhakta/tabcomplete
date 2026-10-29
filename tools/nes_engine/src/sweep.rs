@@ -1159,6 +1159,106 @@ pub fn process_completion(
     Processed { edits, exit_reason: "success", completion }
 }
 
+/// Bytes `a` and `b` share at the start, at a character boundary.
+fn common_prefix(a: &str, b: &str) -> usize {
+    a.chars().zip(b.chars()).take_while(|(x, y)| x == y).map(|(x, _)| x.len_utf8()).sum()
+}
+
+/// Bytes `a` and `b` share at the end, at a character boundary.
+fn common_suffix(a: &str, b: &str) -> usize {
+    a.chars().rev().zip(b.chars().rev()).take_while(|(x, y)| x == y).map(|(x, _)| x.len_utf8()).sum()
+}
+
+/// Whether replacing `old`, at byte `at` of the file, by `new` changes a
+/// byte of `typed`: the part between their common prefix and suffix
+/// overlaps a typed range. Adding text changes nothing.
+fn rewrites_typed(old: &str, new: &str, at: usize, typed: &[(usize, usize)]) -> bool {
+    let p = common_prefix(old, new);
+    let s = common_suffix(&old[p..], &new[p..]);
+    let (lo, hi) = (at + p, at + old.len() - s);
+    lo < hi && typed.iter().any(|&(a, b)| lo < b && hi > a)
+}
+
+/// Trim `edit` so it leaves text typed during the live edit (`typed`, byte
+/// ranges of `file`) as it is. Changed lines that would rewrite typed text
+/// stay unchanged, and lines the edit adds next to them stay as an
+/// insertion: a header the user just typed, rewritten with a new body
+/// below it, keeps the header and gets the body. None when nothing is left.
+pub fn protect_typed(file: &str, edit: &Edit, typed: &[(usize, usize)]) -> Option<Edit> {
+    let old = &file[edit.start..edit.end];
+    if !rewrites_typed(old, &edit.text, edit.start, typed) {
+        return Some(edit.clone());
+    }
+    let a: Vec<&str> = old.split_inclusive('\n').collect();
+    let b: Vec<&str> = edit.text.split_inclusive('\n').collect();
+    let mut offs = vec![edit.start];
+    for l in &a {
+        offs.push(offs.last().unwrap() + l.len());
+    }
+    let alike = |x: &str, y: &str| {
+        let p = common_prefix(x, y);
+        p + common_suffix(&x[p..], &y[p..])
+    };
+    let mut out: Vec<&str> = Vec::new();
+    for op in similar::capture_diff_slices(similar::Algorithm::Myers, &a, &b) {
+        let (o, ol, n, nl) = match op {
+            similar::DiffOp::Equal { old_index, len, .. } => {
+                out.extend(&a[old_index..old_index + len]);
+                continue;
+            }
+            similar::DiffOp::Insert { new_index, new_len, .. } => {
+                out.extend(&b[new_index..new_index + new_len]);
+                continue;
+            }
+            similar::DiffOp::Delete { old_index, old_len, .. } => (old_index, old_len, 0, 0),
+            similar::DiffOp::Replace { old_index, old_len, new_index, new_len } => (old_index, old_len, new_index, new_len),
+        };
+        if !rewrites_typed(&a[o..o + ol].concat(), &b[n..n + nl].concat(), offs[o], typed) {
+            out.extend(&b[n..n + nl]);
+            continue;
+        }
+        // Pair old and new lines from the head or the tail of the change,
+        // whichever pairs more alike lines. A pair keeps the old line if the
+        // new one rewrites typed text; unpaired new lines are inserted and
+        // unpaired old lines deleted unless typed.
+        let m = ol.min(nl);
+        let head: usize = (0..m).map(|k| alike(a[o + k], b[n + k])).sum();
+        let tail: usize = (0..m).map(|k| alike(a[o + ol - m + k], b[n + nl - m + k])).sum();
+        let (po, pn) = if tail > head { (o + ol - m, n + nl - m) } else { (o, n) };
+        let pairs: Vec<&str> = (0..m)
+            .map(|k| {
+                let (i, j) = (po + k, pn + k);
+                if rewrites_typed(a[i], b[j], offs[i], typed) { a[i] } else { b[j] }
+            })
+            .collect();
+        let mut extras: Vec<&str> = (o..o + ol)
+            .filter(|i| (*i < po || *i >= po + m) && rewrites_typed(a[*i], "", offs[*i], typed))
+            .map(|i| a[i])
+            .collect();
+        extras.extend((n..n + nl).filter(|j| *j < pn || *j >= pn + m).map(|j| b[j]));
+        if po == o && pn == n {
+            out.extend(pairs);
+            out.extend(extras);
+        } else {
+            out.extend(extras);
+            out.extend(pairs);
+        }
+    }
+    // The smallest whole-line edit with the same result.
+    let mut p = 0;
+    while p < a.len() && p < out.len() && a[p] == out[p] {
+        p += 1;
+    }
+    let mut s = 0;
+    while s < a.len() - p && s < out.len() - p && a[a.len() - 1 - s] == out[out.len() - 1 - s] {
+        s += 1;
+    }
+    if p == a.len() && p == out.len() {
+        return None;
+    }
+    Some(Edit { start: offs[p], end: offs[a.len() - s], text: out[p..out.len() - s].concat() })
+}
+
 /// What a partial completion says about the edit before decoding ends.
 #[derive(Debug, PartialEq)]
 pub enum Provisional {
@@ -1962,6 +2062,36 @@ mod tests {
         assert_eq!(build(text.find("L50").unwrap()), Some(hunks[1].group));
         // Away from every edit the history shows the newest two.
         assert_eq!(build(text.find("l10").unwrap()), Some(hunks[2].group));
+    }
+
+    #[test]
+    fn typed_header_keeps_its_text_and_gets_the_body() {
+        let file = "tasks:\n  api:\n    cmd: x\n    deps: [db]\n  web:\n";
+        let at = file.find("  web:").unwrap();
+        let typed = [(at, at + "  web:".len())];
+        // The model clones the previous block over the typed header.
+        let clone = Edit { start: at, end: file.len(), text: "  api:\n    cmd: x\n    deps: [db]\n".into() };
+        let trimmed = protect_typed(file, &clone, &typed).unwrap();
+        assert_eq!(trimmed, Edit { start: file.len(), end: file.len(), text: "    cmd: x\n    deps: [db]\n".into() });
+        // A rename of typed text leaves nothing.
+        let rename = Edit { start: at, end: file.len(), text: "  www:\n".into() };
+        assert_eq!(protect_typed(file, &rename, &typed), None);
+        // Completing typed text and editing other lines are untouched.
+        let append = Edit { start: at, end: file.len(), text: "  web: {}\n".into() };
+        assert_eq!(protect_typed(file, &append, &typed).as_ref(), Some(&append));
+        let other = Edit { start: 0, end: 7, text: "jobs:\n".into() };
+        assert_eq!(protect_typed(file, &other, &typed).as_ref(), Some(&other));
+        // New lines above the typed one, completing it: kept whole.
+        let file = "a: 1\n    \n";
+        let at = file.find("    ").unwrap();
+        let typed = [(at - 1, at + 4)];
+        let above = Edit { start: at, end: file.len(), text: "  b:\n    c: 2\n".into() };
+        assert_eq!(protect_typed(file, &above, &typed).as_ref(), Some(&above));
+        // Lines removed with typed text: the typed line stays, the rest goes.
+        let file = "x\ny\nz\n";
+        let typed = [(2, 3)];
+        let gone = Edit { start: 0, end: 6, text: "x\n".into() };
+        assert_eq!(protect_typed(file, &gone, &typed), Some(Edit { start: 4, end: 6, text: String::new() }));
     }
 
     #[test]

@@ -111,6 +111,8 @@ pub struct ContextSummary {
     pub trimmed: Vec<&'static str>,
     /// The original-file snapshot was advanced after this request.
     pub original_refreshed: bool,
+    /// The edit was trimmed to leave text typed in the live edit unchanged.
+    pub live_edit_trimmed: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -185,6 +187,8 @@ pub struct Settings {
     /// Advance a file's original snapshot past edits the history no longer
     /// shows, when it is clearly stale (`Tracker::refresh_original_at`).
     pub refresh_original: bool,
+    /// Trim edits that would rewrite text typed in the live edit group.
+    pub protect_live_edit: bool,
 }
 
 /// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
@@ -215,6 +219,8 @@ struct Gathered {
     file_chunks: Vec<Chunk>,
     retrieval: Vec<Chunk>,
     diagnostics: Vec<Diagnostic>,
+    /// Byte ranges typed in the live edit group (`protect_live_edit`).
+    typed: Vec<(usize, usize)>,
 }
 
 /// A prompt that fits the context budget, and what it was built from.
@@ -788,10 +794,25 @@ impl Service {
             }
         }
         resp.exit_reason = outcome.exit_reason.to_string();
-        resp.edits = outcome.edits.iter().map(|e| edit_out(content, e)).collect();
+        let mut edits = std::mem::take(&mut outcome.edits);
+        if self.settings.protect_live_edit && !g.typed.is_empty() && !edits.is_empty() {
+            match sweep::protect_typed(content, &edits[0], &g.typed) {
+                Some(first) => {
+                    let rest: Vec<Edit> = edits[1..].iter().filter_map(|e| sweep::protect_typed(content, e, &g.typed)).collect();
+                    resp.context.live_edit_trimmed = first != edits[0] || rest.len() + 1 != edits.len();
+                    edits = std::iter::once(first).chain(rest).collect();
+                }
+                None => {
+                    resp.withheld = edits.iter().map(|e| edit_out(content, e)).collect();
+                    resp.exit_reason = "live_edit_conflict".into();
+                    edits.clear();
+                }
+            }
+        }
+        resp.edits = edits.iter().map(|e| edit_out(content, e)).collect();
         // Multi-line rewrites are wrong more often than single-line edits, so
         // they need more confidence to be shown.
-        let multiline = outcome.edits.first().is_some_and(|e| {
+        let multiline = edits.first().is_some_and(|e| {
             let old = &content[e.start..e.end];
             old.matches('\n').count() > 1 || (!old.is_empty() && e.text.matches('\n').count() > 1)
         });
@@ -831,7 +852,7 @@ impl Service {
         if let Some(reason) = sweep::should_disable_file(content) {
             return Err(reason);
         }
-        let (hunks, live, session_base, original) = {
+        let (hunks, live, session_base, original, typed) = {
             let now = self.instant(req.ts_ms);
             let mut real = self.tracker.lock().unwrap();
             let mut copy;
@@ -851,7 +872,8 @@ impl Service {
             };
             let base = if opts.session_base { t.session_base(path).map(str::to_string) } else { None };
             let o = t.original(path).unwrap_or(content).to_string();
-            (h, live, base, o)
+            let typed = if self.settings.protect_live_edit && purpose != Purpose::Warm { t.live_typed(path, content) } else { Vec::new() };
+            (h, live, base, o, typed)
         };
         self.registry.ensure_fresh(root, self.settings.index_refresh_secs);
         let ws = self.registry.get(root);
@@ -923,6 +945,7 @@ impl Service {
             file_chunks,
             retrieval,
             diagnostics,
+            typed,
         })
     }
 
