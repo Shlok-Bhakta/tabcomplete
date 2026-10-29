@@ -97,9 +97,12 @@ struct Cli {
     /// Files whose prompt caches are kept at once (KV slots).
     #[arg(long, default_value_t = 4)]
     slots: u32,
-    /// KV cache type: f16 or q8_0.
+    /// KV cache type: f32, f16 or q8_0.
     #[arg(long, default_value = "f16")]
     cache_type: String,
+    /// Memory-map the model file (false reads it into memory).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    mmap: bool,
     /// Prompt tokens per prefill decode call (cancellation granularity).
     #[arg(long, default_value_t = 512)]
     prefill_chunk: usize,
@@ -226,6 +229,7 @@ fn main() -> Result<()> {
         slots: cli.slots,
         reuse_suffix: cli.reuse_suffix,
         cache_type: cli.cache_type.clone(),
+        use_mmap: cli.mmap,
         n_ctx: cli.ctx_size,
         n_batch: cli.batch_size,
         threads: cli.threads,
@@ -240,6 +244,7 @@ fn main() -> Result<()> {
         for (name, ms) in engine.bench(&tokens, depth, reps)? {
             println!("{ms:9.2} ms  {name}");
         }
+        println!("{}", engine.perf_report()?);
         return Ok(());
     }
     if let Command::Complete { max_tokens } = cli.command {

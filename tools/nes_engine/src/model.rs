@@ -35,8 +35,10 @@ pub struct ModelConfig {
     pub reuse_suffix: bool,
     /// Files whose prompt cache is kept at once (llama.cpp sequences).
     pub slots: u32,
-    /// KV cache element type: "f16" or "q8_0".
+    /// KV cache element type: "f32", "f16" or "q8_0".
     pub cache_type: String,
+    /// Memory-map the model file instead of reading it into memory.
+    pub use_mmap: bool,
     /// Prompt tokens per decode call; smaller chunks let a newer request
     /// cancel an in-flight prefill sooner.
     pub prefill_chunk: usize,
@@ -207,7 +209,7 @@ impl Engine {
         let model = LlamaModel::load_from_file(
             backend,
             path,
-            &LlamaModelParams::default().with_n_gpu_layers(config.gpu_layers),
+            &LlamaModelParams::default().with_n_gpu_layers(config.gpu_layers).with_use_mmap(config.use_mmap),
         )
             .with_context(|| format!("load model {}", path.display()))?;
         let model: &'static LlamaModel = Box::leak(Box::new(model));
@@ -657,6 +659,8 @@ impl Engine {
         self.cached.clear();
         let mut stats = GenStats::default();
         self.prefill(&prompt[..depth], 1, &latest, &mut stats)?;
+        // `perf_report` then covers the timed primitives only.
+        self.ctx.reset_timings();
         let seq = self.seq;
         let mut batch = LlamaBatch::new(self.n_batch, 1);
         let mut time = |name: &str, f: &mut dyn FnMut(&mut Self) -> Result<()>, me: &mut Self| -> Result<()> {
@@ -716,6 +720,16 @@ impl Engine {
             Ok(())
         }, self)?;
         Ok(out)
+    }
+
+    /// llama.cpp's own counters for the active context, including how often a
+    /// compute graph was reused instead of rebuilt.
+    pub fn perf_report(&self) -> Result<String> {
+        let d = unsafe { llama_cpp_sys_2::llama_perf_context(raw_ctx(&self.ctx)?) };
+        Ok(format!(
+            "llama perf: prompt {:.1} ms / {} tokens, eval {:.1} ms / {} runs, graphs reused {}",
+            d.t_p_eval_ms, d.n_p_eval, d.t_eval_ms, d.n_eval, d.n_reused
+        ))
     }
 
     fn argmax(&self, index: i32) -> (LlamaToken, f32) {
@@ -803,10 +817,30 @@ impl Tokenizer {
 fn kv_type(name: &str) -> Result<llama_cpp_2::context::params::KvCacheType> {
     use llama_cpp_2::context::params::KvCacheType;
     Ok(match name {
+        "f32" => KvCacheType::F32,
         "f16" => KvCacheType::F16,
         "q8_0" => KvCacheType::Q8_0,
         other => bail!("unsupported cache type {other}"),
     })
+}
+
+/// Raw `llama_context` pointer, for llama.cpp calls that llama-cpp-2 does not
+/// wrap. llama-cpp-2 keeps the pointer private; its Debug output prints it
+/// (`LlamaContext { context: 0x... }`), checked here against `llama_n_ctx`.
+fn raw_ctx(ctx: &LlamaContext) -> Result<*mut llama_cpp_sys_2::llama_context> {
+    let debug = format!("{ctx:?}");
+    let addr = debug_pointer(&debug).with_context(|| format!("no context pointer in {debug}"))?;
+    let raw = addr as *mut llama_cpp_sys_2::llama_context;
+    if unsafe { llama_cpp_sys_2::llama_n_ctx(raw) } != ctx.n_ctx() {
+        bail!("context pointer {debug} does not match the context");
+    }
+    Ok(raw)
+}
+
+fn debug_pointer(debug: &str) -> Option<usize> {
+    let hex = debug.split("0x").nth(1)?;
+    let end = hex.find(|c: char| !c.is_ascii_hexdigit()).unwrap_or(hex.len());
+    usize::from_str_radix(&hex[..end], 16).ok().filter(|a| *a != 0)
 }
 
 fn single_token(model: &LlamaModel, text: &str) -> Result<LlamaToken> {
@@ -906,6 +940,13 @@ mod tests {
         // Output diverged (99) then rejoined at 12, 13.
         let d = find_draft(&source, &t(&[10, 99, 12, 13]), &mut cursor, 2, 1, &mut 0);
         assert_eq!(d, t(&[14, 15]));
+    }
+
+    #[test]
+    fn parses_debug_pointer() {
+        assert_eq!(debug_pointer("LlamaContext { context: 0x55d0c0ffee10 }"), Some(0x55d0c0ffee10));
+        assert_eq!(debug_pointer("LlamaContext { context: 0x0 }"), None);
+        assert_eq!(debug_pointer("LlamaContext { }"), None);
     }
 
     #[test]
