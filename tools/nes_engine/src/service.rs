@@ -113,6 +113,23 @@ pub struct ContextSummary {
     pub original_refreshed: bool,
     /// The edit was trimmed to leave text typed in the live edit unchanged.
     pub live_edit_trimmed: bool,
+    /// The jump-stage candidate, when the jump search found one.
+    pub jump: Option<JumpSummary>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct JumpSummary {
+    pub reason: &'static str,
+    /// First line (0-based) of the jump window.
+    pub block_start_line: usize,
+    /// Lines between the cursor and the jump target.
+    pub distance: usize,
+    /// edit (the jump stage proposed one), none, skipped (`--jump-reasons`,
+    /// `--jump-max-distance`), disabled (long lines) or cancelled.
+    pub outcome: &'static str,
+    /// The local stage was not run again: a request for the same content and
+    /// line had just found nothing (`--jump-reuse-local`).
+    pub local_reused: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -194,6 +211,22 @@ pub struct Settings {
     pub refresh_original: bool,
     /// Trim edits that would rewrite text typed in the live edit group.
     pub protect_live_edit: bool,
+    /// Run the jump stage in the slot's scratch sequence, keeping the local
+    /// prompt's cache (no re-warm afterwards).
+    pub jump_scratch: bool,
+    /// The jump prompt repeats the local prompt's history and adds the hunks
+    /// the local window hid, sharing its cached prefix through the history.
+    pub jump_shared_history: bool,
+    /// Prefill chunk of the jump stage (0: `--prefill-chunk`); smaller
+    /// chunks let the next keystroke cancel it sooner.
+    pub jump_prefill_chunk: usize,
+    /// Jump reasons that may run the jump stage (empty: all).
+    pub jump_reasons: Vec<String>,
+    /// Skip jump targets farther than this many lines (0: no limit).
+    pub jump_max_distance: usize,
+    /// A jump request for the content and line of a just-answered local
+    /// request that found nothing runs only the jump stage.
+    pub jump_reuse_local: bool,
 }
 
 /// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
@@ -257,6 +290,9 @@ enum Job {
         splice: Option<(String, String, usize, usize)>,
         /// Send the output after every decode batch.
         progress: bool,
+        /// Evaluate in the scratch sequence, leaving the file cache intact.
+        scratch: bool,
+        prefill_chunk: usize,
         reply: mpsc::Sender<Reply>,
     },
     Warm {
@@ -377,7 +413,21 @@ impl Service {
                 };
                 while let Ok(job) = rx.recv() {
                     match job {
-                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, slot, previous, splice, progress, reply } => {
+                        Job::Generate {
+                            generation,
+                            prompt,
+                            draft_source,
+                            draft_seed,
+                            max_tokens,
+                            max_newlines,
+                            slot,
+                            previous,
+                            splice,
+                            progress,
+                            scratch,
+                            prefill_chunk,
+                            reply,
+                        } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
                                 let _ = reply.send(Reply::Done(Ok(Outcome::Cancelled(GenStats::default()))));
                                 continue;
@@ -412,6 +462,8 @@ impl Service {
                                 early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
                                 early_stop_every_batch: every_batch,
                                 progress: progress.then_some(&on_progress as &dyn Fn(&[u8], &[f32], &[usize])),
+                                scratch,
+                                prefill_chunk,
                             });
                             let _ = reply.send(Reply::Done(result));
                         }
@@ -549,7 +601,7 @@ impl Service {
     fn build_tokens(&self, req: &PredictRequest) -> Option<(Vec<llama_cpp_2::token::LlamaToken>, Option<u64>)> {
         let resolved = self.resolve(&req.path, req.root.as_deref());
         let g = self.gather(req, &resolved, Purpose::Warm).ok()?;
-        let p = self.stage_prompt(&g, &req.content, g.cursor, &g.block, &g.retrieval).ok()?;
+        let p = self.stage_prompt(&g, &req.content, g.cursor, &g.block, &g.retrieval, None).ok()?;
         Some((p.tokens, p.built.shown_from))
     }
 
@@ -673,8 +725,16 @@ impl Service {
             cached.timings.provisional_retracted = false;
             return Ok(cached);
         }
+        // Leaving insert mode asks again, with jumps, for the content and
+        // line the last keystroke was answered for.
+        let local_known_empty = req.jump && self.settings.jump_reuse_local && {
+            let cache = self.answers.lock().unwrap();
+            cache.iter().rev().find(|(k, _)| *k == line_key).is_some_and(|(_, (jumped, r))| {
+                !*jumped && r.kind == "local" && r.status == "empty" && r.edits.is_empty() && r.withheld.is_empty()
+            })
+        };
         let jump = req.jump;
-        let resp = self.predict_inner(req, false, sink)?;
+        let resp = self.predict_inner(req, false, sink, local_known_empty)?;
         if resp.status == "ok" || resp.status == "empty" {
             let mut cache = self.answers.lock().unwrap();
             cache.retain(|(k, _)| *k != line_key);
@@ -683,6 +743,11 @@ impl Service {
             cache.drain(..excess);
         }
         Ok(resp)
+    }
+
+    fn jump_allowed(&self, reason: &str, distance: usize) -> bool {
+        let s = &self.settings;
+        (s.jump_reasons.is_empty() || s.jump_reasons.iter().any(|r| r == reason)) && (s.jump_max_distance == 0 || distance <= s.jump_max_distance)
     }
 
     fn line_key(req: &PredictRequest) -> String {
@@ -696,7 +761,7 @@ impl Service {
         if self.prefetched.lock().unwrap().iter().any(|(k, _)| *k == key) {
             return Ok(());
         }
-        let resp = self.predict_inner(req, true, None)?;
+        let resp = self.predict_inner(req, true, None, false)?;
         if resp.status == "ok" || resp.status == "empty" {
             let mut cache = self.prefetched.lock().unwrap();
             cache.push((key, resp));
@@ -706,7 +771,15 @@ impl Service {
         Ok(())
     }
 
-    fn predict_inner(&self, req: PredictRequest, speculative: bool, sink: Option<&dyn Fn(&EditOut)>) -> Result<PredictResponse> {
+    /// `local_known_empty`: the local stage is known to find nothing for this
+    /// state (`jump_reuse_local`) and is skipped.
+    fn predict_inner(
+        &self,
+        req: PredictRequest,
+        speculative: bool,
+        sink: Option<&dyn Fn(&EditOut)>,
+        local_known_empty: bool,
+    ) -> Result<PredictResponse> {
         let started = Instant::now();
         let mut resp = PredictResponse {
             request_id: req.request_id.clone(),
@@ -751,7 +824,15 @@ impl Service {
             first_ms: None,
             done: false,
         });
-        let (stage, local_tokens, shown_from) = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut())?;
+        let (stage, local_tokens, shown_from) = if local_known_empty {
+            let p = self.stage_prompt(&g, content, cursor, &g.block, &g.retrieval, None)?;
+            self.describe_stage(&g, &g.block, &g.retrieval, &p, &mut resp);
+            resp.prompt = p.built.prompt.clone();
+            let empty = sweep::Processed { edits: Vec::new(), exit_reason: "local_reused", completion: String::new() };
+            (Some(empty), p.tokens, p.built.shown_from)
+        } else {
+            self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut(), None)?
+        };
         let mut outcome = match stage {
             None => {
                 resp.status = "cancelled";
@@ -767,38 +848,62 @@ impl Service {
         let local_empty = outcome.edits.is_empty();
         if local_empty && req.jump && !g.hunks.is_empty() {
             if let Some(j) = sweep::find_jump_block(content, &g.hunks, &g.display, cursor, &g.diagnostics, self.settings.prompt.lines_before, self.settings.prompt.lines_after) {
-                if !sweep::should_disable_for_block(&j.block.text) && j.cursor >= j.block.start {
+                let distance = sweep::line_of_offset(content, j.cursor).abs_diff(sweep::line_of_offset(content, cursor));
+                let mut summary = JumpSummary {
+                    reason: j.reason,
+                    block_start_line: j.block.start_line,
+                    distance,
+                    outcome: "none",
+                    local_reused: local_known_empty,
+                };
+                if sweep::should_disable_for_block(&j.block.text) || j.cursor < j.block.start {
+                    summary.outcome = "disabled";
+                } else if !self.jump_allowed(j.reason, distance) {
+                    summary.outcome = "skipped";
+                } else {
                     let mut jump_retrieval = g.retrieval.clone();
                     if let Some(msg) = &j.diagnostic {
                         jump_retrieval.insert(0, Chunk { path: "diagnostics".into(), start_line: 1, end_line: 2, content: msg.clone(), source: "diagnostics", score: 0.0 });
                     }
                     let local_prompt = std::mem::take(&mut resp.prompt);
                     let local_completion = std::mem::take(&mut resp.completion);
-                    let (jumped, _, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None)?;
+                    let local_context = resp.context.clone();
+                    let local_confidence = resp.confidence.take();
+                    let local_finish = std::mem::take(&mut resp.finish_reason);
+                    let (jumped, _, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None, Some(&g.block))?;
                     match jumped {
                         Some(p) if !p.edits.is_empty() && p.edits[0].text.trim().len() + (p.edits[0].end - p.edits[0].start) > 0 => {
                             resp.kind = "jump";
                             resp.jump_reason = Some(j.reason);
+                            summary.outcome = "edit";
                             outcome = p;
                         }
                         Some(_) => {
                             resp.prompt = local_prompt;
                             resp.completion = local_completion;
+                            resp.context = local_context;
+                            resp.confidence = local_confidence;
+                            resp.finish_reason = local_finish;
                         }
                         None => {
+                            summary.outcome = "cancelled";
+                            resp.context.jump = Some(summary);
                             resp.status = "cancelled";
                             resp.exit_reason = "superseded".into();
                             resp.timings.total_ms = ms(started);
                             return Ok(resp);
                         }
                     }
-                    // The jump prompt shares the file's cache slot and
-                    // replaced the local prompt in it; restore that while
-                    // idle so the next keystroke here stays incremental.
-                    if !refreshed {
+                    // Unless it ran in the scratch sequence, the jump prompt
+                    // replaced the local prompt in the file's cache slot;
+                    // restore that while idle so the next keystroke here
+                    // stays incremental.
+                    let scratch = resp.timings.stages.last().is_some_and(|s| s.scratch);
+                    if !refreshed && !scratch {
                         self.warm(&g.display, local_tokens);
                     }
                 }
+                resp.context.jump = Some(summary);
             }
         }
         resp.exit_reason = outcome.exit_reason.to_string();
@@ -957,7 +1062,17 @@ impl Service {
     }
 
     /// Build the prompt for a window, dropping context until it fits.
-    fn stage_prompt(&self, g: &Gathered, content: &str, cursor: usize, block: &Block, retrieval: &[Chunk]) -> Result<StagePrompt> {
+    /// `history_from`: the local window, for a jump prompt sharing the
+    /// local prompt's history (`PromptInput::history_from`).
+    fn stage_prompt(
+        &self,
+        g: &Gathered,
+        content: &str,
+        cursor: usize,
+        block: &Block,
+        retrieval: &[Chunk],
+        history_from: Option<&Block>,
+    ) -> Result<StagePrompt> {
         let block_tokens = self.tokenizer.tokenize_plain(&block.text);
         let max_tokens = (block_tokens.len() * 2 + 160).min(sweep::OUTPUT_MAX_TOKENS);
         let max_newlines = block.text.lines().count() + 20;
@@ -980,6 +1095,7 @@ impl Service {
                 live: g.live,
                 session_base: g.session_base.as_deref(),
                 initial_start: g.initial_start,
+                history_from,
             });
             let tokens = self.tokenizer.tokenize(&built.prompt);
             if tokens.len() <= budget {
@@ -1013,8 +1129,25 @@ impl Service {
         }
     }
 
+    /// Record what a stage prompt was built from in `resp.context`.
+    fn describe_stage(&self, g: &Gathered, block: &Block, retrieval: &[Chunk], p: &StagePrompt, resp: &mut PredictResponse) {
+        let rc = &retrieval[p.retrieval_from..];
+        let built = &p.built;
+        resp.context.prompt_chars = built.prompt.len();
+        resp.context.prompt_tokens = p.tokens.len();
+        resp.context.stable_prefix_chars = built.stable_prefix;
+        resp.context.hunks = built.hunks_used;
+        resp.context.initial_file_lines = built.initial_file_lines;
+        resp.context.block_start_line = block.start_line;
+        resp.context.block_lines = block.text.lines().count();
+        resp.context.trimmed = p.trimmed.clone();
+        resp.context.retrieval = rc[rc.len() - built.retrieval_used..].iter().map(summary).collect();
+        resp.context.file_chunks = if p.file_chunks_used { g.file_chunks.iter().map(summary).collect() } else { Vec::new() };
+    }
+
     /// Run one prediction stage. Returns the processed outcome (None when
     /// superseded), the prompt tokens and the oldest edit group shown.
+    /// `jump_from` is the local window when this is the jump stage.
     #[allow(clippy::too_many_arguments)]
     fn run_stage(
         &self,
@@ -1026,21 +1159,17 @@ impl Service {
         retrieval: &[Chunk],
         resp: &mut PredictResponse,
         mut early: Option<&mut Early<'_>>,
+        jump_from: Option<&Block>,
     ) -> Result<(Option<sweep::Processed>, Vec<llama_cpp_2::token::LlamaToken>, Option<u64>)> {
-        let StagePrompt { built, tokens, block_tokens, max_tokens, max_newlines, trimmed, file_chunks_used, retrieval_from } =
-            self.stage_prompt(g, content, cursor, block, retrieval)?;
-        let rc = &retrieval[retrieval_from..];
+        let s = &self.settings;
+        let history_from = jump_from.filter(|_| s.jump_shared_history);
+        let p = self.stage_prompt(g, content, cursor, block, retrieval, history_from)?;
+        self.describe_stage(g, block, retrieval, &p, resp);
+        let StagePrompt { built, tokens, block_tokens, max_tokens, max_newlines, .. } = p;
         let display = g.display.as_str();
-        resp.context.prompt_chars = built.prompt.len();
-        resp.context.prompt_tokens = tokens.len();
-        resp.context.stable_prefix_chars = built.stable_prefix;
-        resp.context.hunks = built.hunks_used;
-        resp.context.initial_file_lines = built.initial_file_lines;
-        resp.context.block_start_line = block.start_line;
-        resp.context.block_lines = block.text.lines().count();
-        resp.context.trimmed = trimmed;
-        resp.context.retrieval = rc[rc.len() - built.retrieval_used..].iter().map(summary).collect();
-        resp.context.file_chunks = if file_chunks_used { g.file_chunks.iter().map(summary).collect() } else { Vec::new() };
+        // The jump stage in the scratch sequence keeps the local stage's
+        // completion as the next keystroke's draft source.
+        let scratch = jump_from.is_some() && s.jump_scratch;
         let draft_seed = self.tokenizer.tokenize_plain(&built.prefill);
         let splice = self.settings.early_stop;
         let (reply_tx, reply_rx) = mpsc::channel();
@@ -1064,6 +1193,8 @@ impl Service {
                     (built.prefill.clone(), block.text.clone(), self.settings.splice_anchors, self.settings.splice_partial_chars)
                 }),
                 progress: early.is_some(),
+                scratch,
+                prefill_chunk: if jump_from.is_some() { s.jump_prefill_chunk } else { 0 },
                 reply: reply_tx,
             })
             .map_err(|_| anyhow!("model worker stopped"))?;
@@ -1088,8 +1219,10 @@ impl Service {
                 resp.timings.stages.push(gen_out.stats.clone());
                 resp.completion = gen_out.text.clone();
                 resp.finish_reason = gen_out.finish_reason.to_string();
-                let prev = self.tokenizer.tokenize_plain(&format!("{}{}", built.prefill, gen_out.text));
-                self.previous.lock().unwrap().insert(display.to_string(), prev);
+                if !scratch {
+                    let prev = self.tokenizer.tokenize_plain(&format!("{}{}", built.prefill, gen_out.text));
+                    self.previous.lock().unwrap().insert(display.to_string(), prev);
+                }
                 resp.confidence = Some(sweep::change_confidence(
                     &built.prefill,
                     &gen_out.text,

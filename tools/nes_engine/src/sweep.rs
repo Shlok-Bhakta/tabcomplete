@@ -324,6 +324,10 @@ pub struct PromptInput<'a> {
     /// First line of the original-file chunk; None maps the cursor's byte
     /// offset into the original (the old behaviour).
     pub initial_start: Option<usize>,
+    /// Jump stage: show the history of the local prompt for this window,
+    /// then the hunks that window hid (`stable_history` only), so the jump
+    /// prompt shares the local prompt's cached prefix through its history.
+    pub history_from: Option<&'a Block>,
 }
 
 #[derive(Debug)]
@@ -463,6 +467,57 @@ fn stable_changes_and_prev(
     diff_format: DiffFormat,
     hide_active: bool,
 ) -> (String, String, Vec<String>, usize, Option<u64>) {
+    let (prev, sections, hidden) = stable_reverts(path, hunks, content, block);
+    let shown = hunks.iter().zip(&hidden).filter(|(_, hide)| !(hide_active && **hide)).map(|(h, _)| h);
+    let (history, used, oldest) = render_history(shown, max_hunks, diff_format);
+    let in_window = hunks.iter().zip(&hidden).filter(|(_, hide)| **hide).map(|(h, _)| h.group).min();
+    (history, prev, sections, used, min_group(oldest, in_window))
+}
+
+fn min_group(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    }
+}
+
+/// `stable_changes_and_prev` for a jump window whose history is the one the
+/// local prompt for `local` shows, followed by the newest `max_hunks` of the
+/// hunks the local window hid. The prompt then shares the local prompt's KV
+/// through the local history; it shows every hunk the plain jump prompt
+/// shows, plus the older ones the local history kept in their place.
+#[allow(clippy::too_many_arguments)]
+fn shared_changes_and_prev(
+    path: &str,
+    hunks: &[DiffHunk],
+    content: &str,
+    block: &Block,
+    local: &Block,
+    max_hunks: usize,
+    diff_format: DiffFormat,
+    hide_active: bool,
+) -> (String, String, Vec<String>, usize, Option<u64>) {
+    let (prev, sections, hidden) = stable_reverts(path, hunks, content, block);
+    let (_, _, hidden_local) = stable_reverts(path, hunks, content, local);
+    let hide_local = |i: usize| hide_active && hidden_local[i];
+    let hide_own = |i: usize| hide_active && hidden[i];
+    let shared = hunks.iter().enumerate().filter(|(i, _)| !hide_local(*i)).map(|(_, h)| h);
+    let (history, used, oldest) = render_history(shared, max_hunks, diff_format);
+    let extra = hunks.iter().enumerate().filter(|(i, _)| hide_local(*i) && !hide_own(*i)).map(|(_, h)| h);
+    let (extra, extra_used, extra_oldest) = render_history(extra, max_hunks, diff_format);
+    let history = match (history.is_empty(), extra.is_empty()) {
+        (_, true) => history,
+        (true, false) => extra,
+        (false, false) => format!("{history}\n{extra}"),
+    };
+    let in_window = hunks.iter().zip(&hidden).filter(|(_, hide)| **hide).map(|(h, _)| h.group).min();
+    let oldest = min_group(min_group(oldest, extra_oldest), in_window);
+    (history, prev, sections, used + extra_used, oldest)
+}
+
+/// Positional reverts of the hunk groups that overlap a window, newest
+/// first: (window before them, revert steps, hunks reverted).
+fn stable_reverts(path: &str, hunks: &[DiffHunk], content: &str, block: &Block) -> (String, Vec<String>, Vec<bool>) {
     let mut file: Vec<String> = content.split('\n').map(str::to_string).collect();
     let (mut w0, mut w1) = window_lines(block);
     let mut hidden = vec![false; hunks.len()];
@@ -513,14 +568,7 @@ fn stable_changes_and_prev(
         end = start;
     }
     let prev = join_window(&file[w0..w1.min(file.len())], &block.text);
-    let shown = hunks.iter().zip(&hidden).filter(|(_, hide)| !(hide_active && **hide)).map(|(h, _)| h);
-    let (history, used, oldest) = render_history(shown, max_hunks, diff_format);
-    let in_window = hunks.iter().zip(&hidden).filter(|(_, hide)| **hide).map(|(h, _)| h.group).min();
-    let oldest = match (oldest, in_window) {
-        (Some(a), Some(b)) => Some(a.min(b)),
-        (a, b) => a.or(b),
-    };
-    (history, prev, sections, used, oldest)
+    (prev, sections, hidden)
 }
 
 /// The window's lines `[w0, w1)` of `content` with every region changed
@@ -608,7 +656,19 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
         let live = input.hunks[input.hunks.len() - input.live..].iter().map(|h| h.group).min();
         (history, prev, sections, used, oldest.or(live))
     } else if opts.stable_history {
-        stable_changes_and_prev(input.path, input.hunks, input.content, block, opts.max_hunks, opts.diff_format, opts.hide_active_edit)
+        match input.history_from {
+            Some(local) => shared_changes_and_prev(
+                input.path,
+                input.hunks,
+                input.content,
+                block,
+                local,
+                opts.max_hunks,
+                opts.diff_format,
+                opts.hide_active_edit,
+            ),
+            None => stable_changes_and_prev(input.path, input.hunks, input.content, block, opts.max_hunks, opts.diff_format, opts.hide_active_edit),
+        }
     } else {
         let (recent, prev, sections) = recent_changes_and_prev(
             input.path,
@@ -1723,6 +1783,7 @@ mod tests {
             live: 0,
             session_base: None,
             initial_start: None,
+            history_from: None,
         });
         let p = &built.prompt;
         let (def, diag, window) = (p.find("lib.rs").unwrap(), p.find("<|file_sep|>diagnostics").unwrap(), p.find("original/").unwrap());
@@ -1757,6 +1818,7 @@ mod tests {
             live: 0,
             session_base: None,
             initial_start: None,
+            history_from: None,
         });
         assert!(built.prompt.starts_with("<|file_sep|>src/main.rs\nfn main()"));
         assert!(built.prompt.contains("<|file_sep|>current/src/main.rs:1:4\nfn main() {\n    <|cursor|>let x"));
@@ -1874,6 +1936,7 @@ mod tests {
             live: 0,
             session_base: None,
             initial_start: None,
+            history_from: None,
         });
         let p = process_completion("x = 1\n", "stop", &built, &block, new, 0);
         assert_eq!(p.exit_reason, "revert_detected");
@@ -1899,6 +1962,7 @@ mod tests {
             live: 0,
             session_base: None,
             initial_start: None,
+            history_from: None,
         });
         (built, block, cursor)
     }
@@ -2041,6 +2105,7 @@ mod tests {
             live,
             session_base: None,
             initial_start: None,
+            history_from: None,
         });
         // The window edit is hidden and three older edits remain visible.
         assert_eq!(built.hunks_used, 3);
@@ -2136,6 +2201,7 @@ mod tests {
                 live,
                 session_base: None,
                 initial_start: None,
+                history_from: None,
             })
             .shown_from
         };
@@ -2143,6 +2209,65 @@ mod tests {
         assert_eq!(build(text.find("L50").unwrap()), Some(hunks[1].group));
         // Away from every edit the history shows the newest two.
         assert_eq!(build(text.find("l10").unwrap()), Some(hunks[2].group));
+    }
+
+    #[test]
+    fn shared_jump_history_extends_the_local_history() {
+        use crate::history::Tracker;
+        use std::time::{Duration, Instant};
+        let p = Path::new("/x/f.rs");
+        let mut t = Tracker::default();
+        let now = Instant::now();
+        let base = lines(0..60);
+        let mut text = base.clone();
+        t.observe_at(p, "f.rs", &text, 0, false, now);
+        for (k, line) in [1, 20, 40, 50].iter().enumerate() {
+            text = text.replace(&format!("l{line}\n"), &format!("L{line}\n"));
+            t.observe_at(p, "f.rs", &text, *line, false, now + Duration::from_secs(10 * (k as u64 + 1)));
+        }
+        let (hunks, live) = t.recent_split_at(3 + 4, now + Duration::from_secs(41));
+        let mut o = opts();
+        o.max_hunks = 3;
+        o.hide_active_edit = true;
+        o.stable_history = true;
+        let local_cursor = text.find("L50").unwrap();
+        let local = block_at_cursor(&text, local_cursor, 2, 3);
+        let jump_cursor = text.find("l10").unwrap();
+        let jump = block_at_cursor(&text, jump_cursor, 2, 3);
+        let build = |cursor: usize, block: &Block, history_from: Option<&Block>| {
+            build_prompt(&PromptInput {
+                path: "f.rs",
+                content: &text,
+                original: &base,
+                cursor,
+                block,
+                hunks: &hunks,
+                file_chunks: &[],
+                retrieval: &[],
+                opts: &o,
+                live,
+                session_base: None,
+                initial_start: None,
+                history_from,
+            })
+        };
+        let history = |b: &Built| b.prompt[..b.prompt.find("<|file_sep|>original/").unwrap()].to_string();
+        let local_built = build(local_cursor, &local, None);
+        let plain = build(jump_cursor, &jump, None);
+        let shared = build(jump_cursor, &jump, Some(&local));
+        // The plain jump prompt shows the newest three edits, the local one
+        // hides L50 (its window shows it) and keeps L1 instead.
+        assert!(!history(&plain).contains("L1\n") && history(&plain).contains("L50"));
+        assert!(history(&local_built).contains("L1\n") && !history(&local_built).contains("L50"));
+        // The shared jump prompt repeats the local history, then adds L50.
+        let local_history = history(&local_built);
+        assert!(shared.prompt.starts_with(&local_history));
+        let rest = &history(&shared)[local_history.len()..];
+        assert!(rest.contains("L50") && !rest.contains("L40"));
+        assert_eq!(shared.hunks_used, 4);
+        // The windows are the plain jump prompt's.
+        assert_eq!(&shared.prompt[shared.prompt.find("<|file_sep|>original/").unwrap()..], &plain.prompt[plain.prompt.find("<|file_sep|>original/").unwrap()..]);
+        assert_eq!(shared.shown_from, Some(hunks[0].group));
     }
 
     #[test]

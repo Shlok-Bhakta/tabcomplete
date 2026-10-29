@@ -276,6 +276,8 @@ pub struct GenStats {
     /// the first generated token that departs from the window: when a
     /// streaming client could first show new text. None if no departure.
     pub first_novel_ms: Option<f64>,
+    /// Ran in the scratch sequence; the file cache was left unchanged.
+    pub scratch: bool,
     /// One entry per decode batch, for drafting-policy analysis.
     pub batches: Vec<BatchLog>,
 }
@@ -341,6 +343,12 @@ pub struct GenRequest<'a> {
     /// Called after each decode batch with the output so far (bytes, token
     /// log-probabilities and token start offsets), for provisional edits.
     pub progress: Option<&'a dyn Fn(&[u8], &[f32], &[usize])>,
+    /// Evaluate in the slot's scratch sequence, branching from the file
+    /// cache's common prefix, and leave the file cache as it was (falls
+    /// back to the file cache when the slot lacks cells for both).
+    pub scratch: bool,
+    /// Prompt tokens per prefill decode call (0: the engine's default).
+    pub prefill_chunk: usize,
 }
 
 pub enum Outcome {
@@ -630,7 +638,55 @@ impl Engine {
             );
         }
         self.select(req.slot)?;
-        if !self.prefill(req.prompt, req.generation, req.latest, &mut stats, self.prefill_chunk, self.n_batch)? {
+        let parked = if req.scratch { self.enter_scratch(req.prompt, req.max_tokens + req.draft_max + 1)? } else { None };
+        stats.scratch = parked.is_some();
+        let result = self.generate_selected(&req, stats);
+        if let Some(parked) = parked {
+            self.leave_scratch(parked)?;
+        }
+        result
+    }
+
+    /// Switch to the scratch sequence holding the file cache's prefix shared
+    /// with `prompt`, when the slot's cells fit both sequences plus `extra`
+    /// generated tokens. Returns the parked file-cache state.
+    fn enter_scratch(&mut self, prompt: &[LlamaToken], extra: usize) -> Result<Option<(Vec<LlamaToken>, usize)>> {
+        let common = self.cached.iter().zip(prompt).take_while(|(a, b)| a == b).count().min(prompt.len() - 1);
+        // Copied cells are shared; only the cached tail and the new tokens
+        // need cells of their own.
+        if self.cached.len() + (prompt.len() - common) + extra > self.n_ctx {
+            return Ok(None);
+        }
+        self.ctx.clear_kv_cache_seq(Some(SCRATCH_SEQ as u32), None, None).context("clear scratch")?;
+        if common > 0 {
+            self.ctx
+                .copy_kv_cache_seq(self.seq, SCRATCH_SEQ, Some(0), Some(common as u32))
+                .context("copy prefix to scratch")?;
+        }
+        let cached = std::mem::replace(&mut self.cached, prompt[..common].to_vec());
+        let parked = (cached, self.prompt_len);
+        self.prompt_len = common;
+        self.seq = SCRATCH_SEQ;
+        Ok(Some(parked))
+    }
+
+    fn leave_scratch(&mut self, (cached, prompt_len): (Vec<LlamaToken>, usize)) -> Result<()> {
+        self.ctx.clear_kv_cache_seq(Some(SCRATCH_SEQ as u32), None, None).context("drop scratch")?;
+        self.seq = 0;
+        self.cached = cached;
+        self.prompt_len = prompt_len;
+        Ok(())
+    }
+
+    fn generate_selected(&mut self, req: &GenRequest<'_>, mut stats: GenStats) -> Result<Outcome> {
+        let chunk = if req.prefill_chunk > 0 { req.prefill_chunk.clamp(16, self.n_batch) } else { self.prefill_chunk };
+        // Suffix reuse computes its middle in the scratch sequence, so it is
+        // off while generating there.
+        let reuse_suffix = self.reuse_suffix;
+        self.reuse_suffix &= self.seq != SCRATCH_SEQ;
+        let prefilled = self.prefill(req.prompt, req.generation, req.latest, &mut stats, chunk, self.n_batch);
+        self.reuse_suffix = reuse_suffix;
+        if !prefilled? {
             return Ok(Outcome::Cancelled(stats));
         }
         let decode_started = Instant::now();
