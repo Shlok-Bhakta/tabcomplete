@@ -196,30 +196,37 @@ struct Cli {
     protect_live_edit: bool,
     /// Run the jump stage in the file slot's scratch sequence, branching
     /// from the cached local prompt, so the local prompt's cache survives
-    /// (no re-warm after a jump request).
-    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    /// and no re-warm follows a jump request (761 cases: local answers as
+    /// with jumps off; the next request evaluates 192 -> 107 tokens, p50).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     jump_scratch: bool,
     /// The jump prompt repeats the local prompt's edit history and appends
     /// the hunks the local window hid, so it shares the local prompt's KV
-    /// through the history and only its own windows are evaluated.
-    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    /// through the history (jump prefill tokens -16%, same jump edits
+    /// helpful/harmful on 761 cases).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     jump_shared_history: bool,
     /// Prompt tokens per prefill decode call in the jump stage (0: as
-    /// --prefill-chunk). The next keystroke can only cancel between calls.
-    #[arg(long, default_value_t = 0)]
+    /// --prefill-chunk). The next keystroke can only cancel between calls;
+    /// 64 costs no measurable prefill throughput.
+    #[arg(long, default_value_t = 64)]
     jump_prefill_chunk: usize,
     /// Comma-separated jump reasons that may run the jump stage
     /// (deleted_line_match, diagnostic, identifier_match,
-    /// block_after_cursor); empty allows all.
-    #[arg(long, default_value = "")]
+    /// block_after_cursor); empty allows all. On 761 cases
+    /// block_after_cursor (70 runs) and identifier_match (42) showed 0
+    /// helpful and 12 harmful jumps at ~2.1 s each; deleted_line_match
+    /// (27 runs) showed 2 helpful, 4 harmful. No case has diagnostics.
+    #[arg(long, default_value = "deleted_line_match,diagnostic")]
     jump_reasons: String,
     /// Skip jump targets more than this many lines from the cursor (0: no limit).
     #[arg(long, default_value_t = 0)]
     jump_max_distance: usize,
     /// When a jump request (leaving insert mode) has the content and cursor
     /// line of a just-answered local request that found nothing, skip the
-    /// local stage and run only the jump stage.
-    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    /// local stage and run only the jump stage (leave-insert replay: p50
+    /// 133 -> 2 ms, same answers).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     jump_reuse_local: bool,
     #[command(subcommand)]
     command: Command,

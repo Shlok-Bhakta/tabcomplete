@@ -247,3 +247,48 @@ helpful / 8 harmful, refresh 13 / 6, new defaults 13 / 5, + protect 13 / 4.
 Keystroke replay (`real_sub8k`, 90 cases, 241 requests): p50/p90 446/1399 ms
 before, 445/1414 ms with every flag on. Protecting the live edit trades
 helpful for harmful edits about one for one on the 761 cases, so it is off.
+
+## Jump stage (2026-10-29, ThinkPad, Q4_0)
+
+The jump stage runs when the local window has nothing and the request allows
+jumps. It cost ~2.1 s per run, of which ~1.8 s was prefill (~350 tokens at
+~5 ms each: the newest hunks and the jump windows) and ~0.3 s decode. 116
+of its 139 runs on the 761 cases found nothing. Per jump reason:
+
+| reason (761 cases, jump on) | runs | ms/run | shown | helpful | harmful |
+|---|---|---|---|---|---|
+| block_after_cursor | 70 | 2060 | 9 | 0 | 9 |
+| identifier_match | 42 | 2168 | 3 | 0 | 3 |
+| deleted_line_match | 27 | 1307 | 6 | 2 | 4 |
+
+New defaults: `--jump-reasons deleted_line_match,diagnostic` (no case has
+diagnostics), `--jump-scratch` (the jump prompt is evaluated in the scratch
+sequence, so the local cache survives and no re-warm follows), and
+`--jump-shared-history` (the jump prompt repeats the local history, then the
+hunks the local window hid: -16% jump prefill tokens). They also include
+`--jump-prefill-chunk 64` (cancellable sooner, same throughput) and
+`--jump-reuse-local` (leaving insert mode after a keystroke that found
+nothing runs only the jump stage).
+
+| arm | keystroke p50/p90 | leave-insert p50/p90 | 761 helpful / harmful |
+|---|---|---|---|
+| jump off | 369 / 1200 ms | | 29.4% / 17.0% |
+| jump on, old defaults | 449 / 2768 ms | 137 / 2374 ms | 30.7% / 18.5% |
+| jump on, new defaults | 364 / 1297 ms | 2 / 420 ms | 29.3% / 17.5% |
+
+Keystroke latency is for the scored request of each case (jump allowed).
+Leave-insert (`run_eval.py --leave`) puts a local request for the same
+state before it. Per case on the 761, the jump edits add 2 helpful and 16
+harmful with the old defaults, and 2 and 4 with the new ones. The other
+differences between the arms are in local answers. With the old defaults the
+jump prompt replaced the local cache, so later local answers came from a
+different cache state. With `--jump-scratch` and every reason allowed, the
+local answers matched jump off exactly. The 3-8
+local flips between gated arms happen before any jump ran in those replays:
+they are timing noise from the replay's idle warm-ups.
+
+Not done: delivering jump suggestions after the local answer. A jump runs
+only when the local answer is empty, and the client shows nothing for an
+empty answer, so a late event would change nothing the user sees. The
+engine-side cost of a jump is the time the next keystroke waits for it to
+cancel, which the 64-token jump prefill chunk bounds.
