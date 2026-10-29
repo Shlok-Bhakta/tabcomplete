@@ -1143,6 +1143,124 @@ pub fn process_completion(
     Processed { edits, exit_reason: "success", completion }
 }
 
+/// What a partial completion says about the edit before decoding ends.
+#[derive(Debug, PartialEq)]
+pub enum Provisional {
+    /// Nothing to show yet; check again after more tokens.
+    Pending,
+    /// Nothing can be shown early for this completion.
+    Never,
+    /// Ghost text at the cursor. While the cursor line is still being
+    /// written, the final edit's text starts with this one if the final is
+    /// an insertion at the cursor at all. `complete` once the line ended.
+    Ghost { edit: Edit, min_logprob: f32, complete: bool },
+}
+
+/// Ghost text at the cursor from a partial completion, gated like the final
+/// edit on the tokens decoded so far.
+///
+/// The early-stop splice ends generation as soon as the first changed region
+/// is closed by an anchor line, so the first hunk is never known before the
+/// final answer. What can be shown earlier is the cursor line while it is
+/// written: when everything before the cursor is unchanged, an insertion at
+/// the cursor only grows as tokens arrive. Text that may turn out to be the
+/// original rest of the cursor line is held back. The final answer can still
+/// differ (later tokens fail the confidence gate, the line does not end with
+/// the original rest, or a revert); the caller must reconcile.
+#[allow(clippy::too_many_arguments)]
+pub fn provisional_ghost(
+    generated: &str,
+    logprobs: &[f32],
+    offsets: &[usize],
+    built: &Built,
+    block: &Block,
+    file: &str,
+    cursor: usize,
+    min_confidence: f32,
+) -> Provisional {
+    let cleaned = block.text.as_str();
+    if cursor < block.start || cursor > block.start + cleaned.len() {
+        return Provisional::Never;
+    }
+    let rel = cursor - block.start;
+    let prefill = built.prefill.as_str();
+    if prefill.len() > rel || !cleaned.starts_with(prefill) {
+        return Provisional::Never;
+    }
+    let so_far = format!("{prefill}{generated}");
+    if so_far.len() <= rel {
+        return if cleaned.starts_with(&so_far) { Provisional::Pending } else { Provisional::Never };
+    }
+    if so_far.as_bytes()[..rel] != cleaned.as_bytes()[..rel] {
+        return Provisional::Never; // the rewrite changes text before the cursor
+    }
+    let line_end = cleaned[rel..].find('\n').map_or(cleaned.len(), |i| rel + i);
+    let rest = &cleaned[rel..line_end];
+    let tail = &so_far[rel..];
+    let (line, complete) = match tail.find('\n') {
+        Some(i) => (&tail[..i], true),
+        None => (tail, false),
+    };
+    if line.contains("<|") {
+        return Provisional::Never;
+    }
+    let ghost = if complete {
+        match line.strip_suffix(rest) {
+            Some(g) => g,
+            None => return Provisional::Never, // a replacement, not an insertion
+        }
+    } else {
+        let mut keep = line.len().saturating_sub(rest.len());
+        while !line.is_char_boundary(keep) {
+            keep -= 1;
+        }
+        &line[..keep]
+    };
+    if ghost.is_empty() {
+        return if complete { Provisional::Never } else { Provisional::Pending };
+    }
+    // An insertion starting with the original rest of the line is placed
+    // after it by the final hunk selection.
+    if rest.chars().next().is_some_and(|c| ghost.starts_with(c)) {
+        return Provisional::Never;
+    }
+    // Close the line with its original rest and rejoin the window, as the
+    // splice would, and require the final pipeline to agree.
+    let hyp = format!("{}{ghost}{}", &cleaned[..rel], &cleaned[rel..]);
+    let applied = normalize_newlines(&hyp);
+    let toward_revert = built.prev_sections.iter().any(|s| {
+        let s = normalize_newlines(s);
+        s != applied && s.starts_with(&normalize_newlines(&hyp[..rel + ghost.len()])) && s.ends_with(&normalize_newlines(&cleaned[rel..]))
+    });
+    if toward_revert {
+        // The line may be completing toward an earlier state of the window.
+        return if complete { Provisional::Never } else { Provisional::Pending };
+    }
+    let processed = process_completion(&hyp[prefill.len()..], "spliced", built, block, file, cursor);
+    let edit = Edit { start: cursor, end: cursor, text: ghost.to_string() };
+    if processed.edits.first() != Some(&edit) {
+        return if complete { Provisional::Never } else { Provisional::Pending };
+    }
+    // Every token touching the cursor line after the cursor, including
+    // held-back text: a superset of what the final gate sees for this line.
+    let (lo, hi) = (rel - prefill.len(), rel - prefill.len() + line.len());
+    let mut min_logprob = f32::INFINITY;
+    for (i, off) in offsets.iter().enumerate() {
+        let end = offsets.get(i + 1).copied().unwrap_or(generated.len());
+        if end > lo && *off < hi.max(lo + 1) {
+            min_logprob = min_logprob.min(logprobs[i]);
+        }
+    }
+    if !min_logprob.is_finite() {
+        return Provisional::Pending;
+    }
+    if min_logprob < min_confidence {
+        // The minimum only falls as tokens arrive: the final is withheld too.
+        return Provisional::Never;
+    }
+    Provisional::Ghost { edit, min_logprob, complete }
+}
+
 /// Result of Sweep's `find_best_matching_block` for jump-to-edit.
 #[derive(Debug, Clone)]
 pub struct JumpBlock {
@@ -1562,6 +1680,130 @@ mod tests {
         });
         let p = process_completion("x = 1\n", "stop", &built, &block, new, 0);
         assert_eq!(p.exit_reason, "revert_detected");
+    }
+
+    /// Prompt for `file` with the cursor at the end of `marker`, after an
+    /// edit from `old` when given.
+    fn staged(file: &str, marker: &str, old: Option<&str>) -> (Built, Block, usize) {
+        let cursor = file.find(marker).unwrap() + marker.len();
+        let block = block_at_cursor(file, cursor, 2, 5);
+        let hunks = old.map(|o| crate::history::diff_hunks(Path::new("/x/a.rs"), "a.rs", o, file)).unwrap_or_default();
+        let o = opts();
+        let built = build_prompt(&PromptInput {
+            path: "a.rs",
+            content: file,
+            original: old.unwrap_or(file),
+            cursor,
+            block: &block,
+            hunks: &hunks,
+            file_chunks: &[],
+            retrieval: &[],
+            opts: &o,
+            live: 0,
+            session_base: None,
+            initial_start: None,
+        });
+        (built, block, cursor)
+    }
+
+    /// One token per byte, all at `lp` except `low` at byte `low_at`.
+    fn early(generated: &str, s: &(Built, Block, usize), file: &str, low_at: Option<usize>) -> Provisional {
+        let offsets: Vec<usize> = (0..generated.len()).collect();
+        let logprobs: Vec<f32> = offsets.iter().map(|i| if Some(*i) == low_at { -3.0 } else { -0.1 }).collect();
+        provisional_ghost(generated, &logprobs, &offsets, &s.0, &s.1, file, s.2, -1.0)
+    }
+
+    fn ghost(p: &Provisional) -> Option<(&str, bool)> {
+        match p {
+            Provisional::Ghost { edit, complete, .. } => Some((edit.text.as_str(), *complete)),
+            _ => None,
+        }
+    }
+
+    const FILE: &str = "fn f() {\n    let v = 1;\n    let x = foo(\n    let y = 2;\n}\n";
+
+    #[test]
+    fn provisional_ghost_grows_with_the_cursor_line() {
+        let s = staged(FILE, "let x = foo(", None);
+        assert_eq!(s.0.prefill, "fn f() {\n");
+        // Still copying the window up to the cursor.
+        assert_eq!(early("    let v = 1;\n    let x = fo", &s, FILE, None), Provisional::Pending);
+        let p = early("    let v = 1;\n    let x = foo(ba", &s, FILE, None);
+        assert_eq!(ghost(&p), Some(("ba", false)));
+        if let Provisional::Ghost { edit, .. } = &p {
+            assert_eq!((edit.start, edit.end), (s.2, s.2));
+        }
+        let p = early("    let v = 1;\n    let x = foo(bar);\n    let", &s, FILE, None);
+        assert_eq!(ghost(&p), Some(("bar);", true)));
+        // The provisional text is what the final pipeline shows for the
+        // completed rewrite.
+        let done = process_completion("    let v = 1;\n    let x = foo(bar);\n    let y = 2;\n}\n", "spliced", &s.0, &s.1, FILE, s.2);
+        assert_eq!(done.edits[0], Edit { start: s.2, end: s.2, text: "bar);".into() });
+    }
+
+    #[test]
+    fn provisional_requires_unchanged_text_before_cursor() {
+        let s = staged(FILE, "let x = foo(", None);
+        assert_eq!(early("    let v = 2;\n", &s, FILE, None), Provisional::Never);
+        assert_eq!(early("    let v = 1;\n    let z", &s, FILE, None), Provisional::Never);
+        // The cursor line is closed without an insertion.
+        assert_eq!(early("    let v = 1;\n    let x = foo(\n", &s, FILE, None), Provisional::Never);
+    }
+
+    #[test]
+    fn provisional_gates_on_tokens_so_far() {
+        let s = staged(FILE, "let x = foo(", None);
+        let generated = "    let v = 1;\n    let x = foo(bar";
+        let at = generated.len() - 2;
+        assert_eq!(early(generated, &s, FILE, Some(at)), Provisional::Never);
+        // A weak token before the cursor does not count.
+        assert!(ghost(&early(generated, &s, FILE, Some(3))).is_some());
+    }
+
+    #[test]
+    fn provisional_holds_back_the_rest_of_the_line() {
+        let file = "fn f() {\n    let v = 1;\n    call()\n    let y = 2;\n}\n";
+        let s = staged(file, "call(", None);
+        // "a)" may be the whole insertion "a" plus the original ")".
+        assert_eq!(ghost(&early("    let v = 1;\n    call(a)", &s, file, None)), Some(("a", false)));
+        assert_eq!(ghost(&early("    let v = 1;\n    call(a, b", &s, file, None)), Some(("a, ", false)));
+        assert_eq!(ghost(&early("    let v = 1;\n    call(a, b)\n", &s, file, None)), Some(("a, b", true)));
+        // The line ends without the original rest: a replacement.
+        assert_eq!(early("    let v = 1;\n    call(a, b]\n", &s, file, None), Provisional::Never);
+        // An insertion starting with the rest is placed after it by the final.
+        assert_eq!(early("    let v = 1;\n    call())", &s, file, None), Provisional::Never);
+    }
+
+    #[test]
+    fn provisional_ghosts_are_prefixes_of_the_final_edit() {
+        let mid = "fn f() {\n    let v = 1;\n    call()\n    let y = 2;\n}\n";
+        for (file, marker, generated) in [
+            (FILE, "let x = foo(", "    let v = 1;\n    let x = foo(bar(1), \"é\");\n    let y = 2;\n}\n"),
+            (mid, "call(", "    let v = 1;\n    call(a(b), c)\n    let y = 2;\n}\n"),
+        ] {
+            let s = staged(file, marker, None);
+            let done = process_completion(generated, "spliced", &s.0, &s.1, file, s.2);
+            let last = done.edits[0].text.clone();
+            let mut seen = Vec::new();
+            for cut in (0..=generated.len()).filter(|i| generated.is_char_boundary(*i)) {
+                if let Some((g, _)) = ghost(&early(&generated[..cut], &s, file, None)) {
+                    assert!(last.starts_with(g), "{g:?} is not a prefix of {last:?}");
+                    seen.push(g.to_string());
+                }
+            }
+            assert_eq!(seen.last(), Some(&last));
+        }
+    }
+
+    #[test]
+    fn provisional_waits_on_a_possible_revert() {
+        let old = "fn f() {\n    let v = 1;\n    let x = foo(bar);\n    let y = 2;\n}\n";
+        let s = staged(FILE, "let x = foo(", Some(old));
+        assert!(!s.0.prev_sections.is_empty());
+        assert_eq!(early("    let v = 1;\n    let x = foo(ba", &s, FILE, None), Provisional::Pending);
+        assert_eq!(early("    let v = 1;\n    let x = foo(bar);\n", &s, FILE, None), Provisional::Never);
+        // A different insertion is shown.
+        assert_eq!(ghost(&early("    let v = 1;\n    let x = foo(baz", &s, FILE, None)), Some(("baz", false)));
     }
 
     fn lines(range: std::ops::Range<usize>) -> String {
