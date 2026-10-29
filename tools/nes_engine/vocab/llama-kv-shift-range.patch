@@ -1,0 +1,109 @@
+diff -ru a/llama.cpp/src/llama-kv-cache.cpp b/llama.cpp/src/llama-kv-cache.cpp
+--- a/llama.cpp/src/llama-kv-cache.cpp	2026-10-28 23:36:35.381041821 -0500
++++ b/llama.cpp/src/llama-kv-cache.cpp	2026-10-28 23:36:50.478528898 -0500
+@@ -1537,11 +1537,26 @@
+     }
+ }
+ 
+-void llama_kv_cache::set_input_k_shift(ggml_tensor * dst) const {
++void llama_kv_cache::set_input_k_shift(ggml_tensor * dst, uint32_t c0) const {
+     GGML_ASSERT(ggml_backend_buffer_is_host(dst->buffer));
+ 
+     int32_t * data = (int32_t *) dst->data;
+ 
++    if (n_stream == 1) {
++        const auto & cells = v_cells[0];
++        const int64_t n = ggml_nelements(dst);
++        GGML_ASSERT(c0 + n <= cells.size());
++
++        for (int64_t j = 0; j < n; ++j) {
++            const uint32_t i = c0 + j;
++            data[j] = cells.is_empty(i) ? 0 : cells.get_shift(i);
++        }
++
++        return;
++    }
++
++    GGML_ASSERT(c0 == 0);
++
+     for (uint32_t s = 0; s < n_stream; ++s) {
+         const auto & cells = v_cells[s];
+ 
+@@ -1996,7 +2011,10 @@
+ 
+     void set_input(const llama_ubatch * ubatch) override;
+ 
+-    ggml_tensor * k_shift; // I32 [kv_size*n_stream]
++    ggml_tensor * k_shift; // I32 [kv_size*n_stream], or [c1 - c0] with a single stream
++
++    // tabcomplete-nes: first cell covered by k_shift
++    uint32_t c0 = 0;
+ 
+     // note: assumes k_rot^2 == I
+     ggml_tensor * k_rot = nullptr;
+@@ -2008,7 +2026,7 @@
+     GGML_UNUSED(ubatch);
+ 
+     if (k_shift) {
+-        kv_self->set_input_k_shift(k_shift);
++        kv_self->set_input_k_shift(k_shift, c0);
+     }
+ 
+     if (k_rot && k_rot->buffer) {
+@@ -2025,7 +2043,29 @@
+ 
+     auto inp = std::make_unique<llm_graph_input_k_shift>(this);
+ 
+-    inp->k_shift = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, (int64_t) get_size()*n_stream);
++    // tabcomplete-nes: rotate only the cell range [c0, c1) that holds a nonzero
++    // shift instead of every cell of the cache. With a single stream the rest
++    // would be rotated by 0, which leaves them unchanged.
++    uint32_t c0 = 0;
++    uint32_t c1 = get_size()*n_stream;
++    if (n_stream == 1) {
++        const auto & cells = v_cells[0];
++        c0 = cells.size();
++        c1 = 0;
++        for (uint32_t i = 0; i < cells.size(); ++i) {
++            if (!cells.is_empty(i) && cells.get_shift(i) != 0) {
++                c0 = std::min(c0, i);
++                c1 = i + 1;
++            }
++        }
++        if (c1 <= c0) {
++            c0 = 0;
++            c1 = 1;
++        }
++    }
++
++    inp->c0 = c0;
++    inp->k_shift = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, (int64_t) (c1 - c0));
+     ggml_set_input(inp->k_shift);
+ 
+     inp->k_rot = build_input_k_rot(ctx);
+@@ -2053,10 +2093,10 @@
+ 
+         ggml_tensor * k =
+             ggml_view_3d(ctx, layer.k,
+-                n_rot, n_head_kv, get_size()*n_stream,
++                n_rot, n_head_kv, c1 - c0,
+                 ggml_row_size(layer.k->type, n_embd_head_k),
+                 ggml_row_size(layer.k->type, n_embd_k_gqa),
+-                ggml_row_size(layer.k->type, n_embd_nope));
++                ggml_row_size(layer.k->type, n_embd_nope) + (size_t) c0*ggml_row_size(layer.k->type, n_embd_k_gqa));
+ 
+         ggml_tensor * cur = build_rope_shift(cparams, ctx, k, inp->k_shift, inp->k_rot, rope_factors, freq_base_l, freq_scale_l, il);
+ 
+diff -ru a/llama.cpp/src/llama-kv-cache.h b/llama.cpp/src/llama-kv-cache.h
+--- a/llama.cpp/src/llama-kv-cache.h	2026-10-28 23:36:35.381253302 -0500
++++ b/llama.cpp/src/llama-kv-cache.h	2026-10-28 23:36:50.477900742 -0500
+@@ -231,7 +231,8 @@
+     void set_input_k_idxs(ggml_tensor * dst, const llama_ubatch * ubatch, const slot_info & sinfo) const;
+     void set_input_v_idxs(ggml_tensor * dst, const llama_ubatch * ubatch, const slot_info & sinfo) const;
+ 
+-    void set_input_k_shift(ggml_tensor * dst) const;
++    // tabcomplete-nes: dst may cover only the cells [c0, c0 + ggml_nelements(dst)) of a single stream
++    void set_input_k_shift(ggml_tensor * dst, uint32_t c0 = 0) const;
+ 
+     void set_input_kq_mask   (ggml_tensor * dst, const llama_ubatch * ubatch, bool causal_attn) const;
+     void set_input_pos_bucket(ggml_tensor * dst, const llama_ubatch * ubatch) const;
