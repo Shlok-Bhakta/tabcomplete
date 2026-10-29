@@ -147,12 +147,14 @@ struct Cli {
     /// Minimum log-probability of the weakest changed token to show an edit.
     #[arg(long, default_value_t = -1.0, allow_hyphen_values = true)]
     min_confidence: f32,
-    /// Stricter gate for edits that rewrite more than one existing line.
-    #[arg(long, default_value_t = -0.5, allow_hyphen_values = true)]
+    /// Stricter gate for edits that rewrite more than one existing line
+    /// (-0.4 vs -0.5 on 761 cases: helpful -1, harmful -9).
+    #[arg(long, default_value_t = -0.4, allow_hyphen_values = true)]
     multiline_min_confidence: f32,
     /// Looser gate for insertions and appends that keep the existing text
-    /// (only lowers --min-confidence).
-    #[arg(long, default_value_t = -1.0, allow_hyphen_values = true)]
+    /// (only lowers --min-confidence; -1.3 vs -1.0 on 761 cases: helpful
+    /// +14, harmful +7, typing saved +2.6).
+    #[arg(long, default_value_t = -1.3, allow_hyphen_values = true)]
     insert_min_confidence: f32,
     /// Keep the history section stable while typing: hide hunks the window
     /// shows before capping the history, keep the live edit group out of the
@@ -178,8 +180,10 @@ struct Cli {
     /// Advance a file's original snapshot (the prompt's file section) past
     /// edits the history no longer shows, once it is clearly stale (12 lines
     /// of drift, or under half the current lines), and warm the new prompt
-    /// while idle. Without it a file first seen empty stays empty there.
-    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    /// while idle. Without it a file first seen empty stays empty there
+    /// (dekit.yaml replay: helpful 7 -> 13, harmful 8 -> 6; 761 cases:
+    /// helpful +4, harmful -6; keystroke latency unchanged).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     refresh_original: bool,
     /// Trim edits that would rewrite text typed in the live edit (keeping
     /// lines they add next to it); withhold them when nothing is left.

@@ -90,7 +90,7 @@ in
     };
     multilineMinConfidence = lib.mkOption {
       type = lib.types.str;
-      default = "-0.5";
+      default = "-0.4";
       description = "Stricter gate for edits that rewrite more than one existing line (they are wrong more often).";
     };
     hideActiveEdit = lib.mkOption {

@@ -211,3 +211,39 @@ Python/YAML (46 cases): overall p50 490 -> 357 ms.
 No gain: persistent pinned threadpools (any poll), per-call small-batch thread counts, f32 KV cache, mmap off, context 2048, draft min-match 2/4 or 32-token drafts with FA off. The perf profile with FA on: Q4_0 GEMM 42%, FA kernel + f16 dot + expf 27%, thread sync 11%.
 
 Replays are mildly nondeterministic (some prompt pieces depend on wall-clock timing): two identical runs differ on 27 of 483 responses, so arm differences of 2-5 cases on 90-179 cases are noise. Decide accuracy questions on all 761 cases.
+
+## Accuracy fixes (2026-10-29, ThinkPad, all 761 cases)
+
+A live session in a new file (`dekit.yaml`) had an empty file section in
+every prompt: the original snapshot is taken when a file is first seen and
+only refreshed on a save after 15 minutes, so the model saw nothing but the
+last three history hunks. Three fixes, each behind a flag:
+
+- `--refresh-original` (default on): the tracker keeps the text before each
+  recent edit group, the prompt reports the oldest group it shows, and the
+  snapshot moves to the text just before that group once it is clearly stale
+  (12 lines of drift no shown hunk covers, or under half the current lines).
+  The file section opens the prompt, so this re-evaluates nearly all of it;
+  it happens rarely, and the new prompt is warmed while idle.
+- `--insert-min-confidence -1.3` (default): insertions and appends that keep
+  the existing text get a looser gate; `--multiline-min-confidence` is now -0.4.
+- `--protect-live-edit` (default off): edits that would delete or replace 3+
+  characters typed in the live edit group are trimmed to the lines they add,
+  or withheld; trimmed edits keep the gate of the untrimmed edit.
+
+| arm (761 cases) | shown | helpful | harmful | precision | saved |
+|---|---|---|---|---|---|
+| baseline (flags off) | 350 | 209 | 130 | 0.597 | 141.8 |
+| baseline rerun | 346 | 206 | 129 | 0.595 | 140.3 |
+| `--refresh-original` | 345 | 213 | 124 | 0.617 | 142.1 |
+| `--insert-min-confidence -1.3` | 371 | 223 | 137 | 0.601 | 144.4 |
+| `--multiline-min-confidence -0.4` | 339 | 208 | 121 | 0.614 | 140.7 |
+| `--protect-live-edit` | 319 | 194 | 114 | 0.608 | 132.6 |
+| refresh + insert -1.3 + multi-line -0.4 (new defaults) | 358 | 222 | 128 | 0.620 | 144.2 |
+| new defaults + protect | 329 | 209 | 112 | 0.635 | 136.1 |
+
+The `dekit.yaml` replay (36 cases, history from the empty file): baseline 7
+helpful / 8 harmful, refresh 13 / 6, new defaults 13 / 5, + protect 13 / 4.
+Keystroke replay (`real_sub8k`, 90 cases, 241 requests): p50/p90 446/1399 ms
+before, 445/1414 ms with every flag on. Protecting the live edit trades
+helpful for harmful edits about one for one on the 761 cases, so it is off.
