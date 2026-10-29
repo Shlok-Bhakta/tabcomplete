@@ -133,6 +133,10 @@ struct Cli {
     /// by line position (false: substring reverts, cap before hiding).
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     stable_history: bool,
+    /// Map the cursor into the original file by line (not byte offset) and
+    /// keep a long file's shown chunk while the cursor stays 10 lines inside it.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    stable_window: bool,
     /// Warm requests (observe with warm) prefill the full local prompt
     /// rather than only the file context.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
@@ -229,6 +233,7 @@ fn main() -> Result<()> {
         draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
         multiline_min_confidence: cli.multiline_min_confidence,
+        stable_window: cli.stable_window,
         warm_full_prompt: cli.warm_full_prompt,
     };
     let config = model::ModelConfig {

@@ -5,7 +5,7 @@
 //! latest, so a burst of keystrokes costs one prediction, and the KV prefix
 //! evaluated by an abandoned job is kept for the next one.
 
-use crate::history::{DiffHunk, Tracker};
+use crate::history::{self, DiffHunk, Tracker};
 use crate::index::{self, Registry};
 use crate::model::{Engine, GenRequest, GenStats, ModelConfig, Outcome, Tokenizer};
 use crate::retrieval::{self, RetrievalInput};
@@ -166,6 +166,9 @@ pub struct Settings {
     /// Withhold edits whose weakest changed token is below this log-probability.
     pub min_confidence: f32,
     pub multiline_min_confidence: f32,
+    /// Map the cursor into the original file by line and keep the shown
+    /// chunk of a long file while the cursor stays well inside it.
+    pub stable_window: bool,
     /// Warm requests prefill the whole local prompt, not only its stable head.
     pub warm_full_prompt: bool,
 }
@@ -192,6 +195,7 @@ struct Gathered {
     /// Trailing `hunks` from the live edit group.
     live: usize,
     original: String,
+    initial_start: Option<usize>,
     block: Block,
     file_chunks: Vec<Chunk>,
     retrieval: Vec<Chunk>,
@@ -253,6 +257,8 @@ pub struct Service {
     answers: Mutex<Vec<(String, (bool, PredictResponse))>>,
     /// Last completion (prefill + generated) per file, as draft tokens.
     previous: Mutex<HashMap<String, Vec<llama_cpp_2::token::LlamaToken>>>,
+    /// First line of the original-file chunk last shown per file.
+    chunk_starts: Mutex<HashMap<PathBuf, usize>>,
 }
 
 fn sha256_hex(text: &str) -> String {
@@ -340,6 +346,7 @@ impl Service {
             previous: Mutex::new(HashMap::new()),
             sticky_file_chunks: Mutex::new(HashMap::new()),
             answers: Mutex::new(Vec::new()),
+            chunk_starts: Mutex::new(HashMap::new()),
             settings,
         }))
     }
@@ -350,6 +357,7 @@ impl Service {
 
     pub fn reset(&self) {
         *self.tracker.lock().unwrap() = Tracker::default();
+        self.chunk_starts.lock().unwrap().clear();
         self.sticky.lock().unwrap().clear();
         self.sticky_file_chunks.lock().unwrap().clear();
         self.answers.lock().unwrap().clear();
@@ -411,11 +419,11 @@ impl Service {
         let cursor = req.cursor.as_ref().map_or(0, |c| byte_offset(&req.content, c.line, c.col));
         let file_chunks = self.file_chunks(&path);
         let mut prefix: String = file_chunks.iter().map(Chunk::render).collect();
-        prefix.push_str(&format!(
-            "<|file_sep|>{}\n{}",
-            display,
-            sweep::lines_around_cursor(&original, cursor.min(original.len()), &self.settings.prompt)
-        ));
+        let initial = match self.initial_start(&path, &req.content, &original, line, true) {
+            Some(start) => sweep::lines_from(&original, start, &self.settings.prompt),
+            None => sweep::lines_around_cursor(&original, cursor.min(original.len()), &self.settings.prompt),
+        };
+        prefix.push_str(&format!("<|file_sep|>{display}\n{initial}"));
         self.warm(&display, self.tokenizer.tokenize(&prefix));
     }
 
@@ -441,6 +449,27 @@ impl Service {
         let g = self.gather(req, &resolved, Purpose::Warm).ok()?;
         let p = self.stage_prompt(&g, &req.content, g.cursor, &g.block, &g.retrieval).ok()?;
         Some(p.tokens)
+    }
+
+    /// First line of the original-file chunk to show, or None for the old
+    /// byte-offset mapping. Long files keep their chunk while the cursor
+    /// stays inside it (`remember` records the choice).
+    fn initial_start(&self, path: &Path, content: &str, original: &str, line: usize, remember: bool) -> Option<usize> {
+        if !self.settings.stable_window {
+            return None;
+        }
+        let opts = &self.settings.prompt;
+        let total = original.lines().count();
+        if total <= opts.whole_file_lines {
+            return Some(0);
+        }
+        let mapped = history::map_line(content, original, line);
+        let mut starts = self.chunk_starts.lock().unwrap();
+        let start = sweep::chunk_start(total, mapped, opts, starts.get(path).copied());
+        if remember {
+            starts.insert(path.to_path_buf(), start);
+        }
+        Some(start)
     }
 
     /// The recent-file snippet opens the prompt, so a new one invalidates the
@@ -707,7 +736,14 @@ impl Service {
         }
         let file_chunks = self.file_chunks(path);
         let recent_files: Vec<PathBuf> = self.tracker.lock().unwrap().recent_visits(path, 5).into_iter().map(|v| v.path).collect();
-        let visible = visible_range(&original, cursor.min(original.len()), opts);
+        let initial_start = self.initial_start(path, content, &original, req.cursor.line, purpose != Purpose::Speculative);
+        let visible = match initial_start {
+            Some(start) => {
+                let total = original.lines().count();
+                if total <= opts.whole_file_lines { (0, total) } else { (start, (start + opts.chunk_lines.max(2)).min(total)) }
+            }
+            None => visible_range(&original, cursor.min(original.len()), opts),
+        };
         let previous = self.sticky.lock().unwrap().get(path).cloned().unwrap_or_default();
         let mut retrieval = {
             let ws = ws.lock().unwrap();
@@ -745,6 +781,7 @@ impl Service {
             hunks,
             live,
             original,
+            initial_start,
             block,
             file_chunks,
             retrieval,
@@ -774,6 +811,7 @@ impl Service {
                 retrieval: rc,
                 opts: &opts,
                 live: g.live,
+                initial_start: g.initial_start,
             });
             let tokens = self.tokenizer.tokenize(&built.prompt);
             if tokens.len() <= budget {

@@ -198,6 +198,40 @@ fn block_around_line(lines: &[&str], cursor_line: usize, before: usize, after: u
     }
 }
 
+/// A chunk start is kept while the cursor is at least this many lines inside.
+const CHUNK_MARGIN: usize = 10;
+
+/// First line of the stride-aligned chunk shown for a file of `total` lines
+/// with the cursor on `line`. The previous start is kept while the cursor
+/// stays `CHUNK_MARGIN` lines inside its chunk: a new start changes the
+/// whole file section, which opens the prompt.
+pub fn chunk_start(total: usize, line: usize, opts: &PromptOptions, previous: Option<usize>) -> usize {
+    let chunk = opts.chunk_lines.max(2);
+    let stride = chunk / 2;
+    if let Some(p) = previous.filter(|p| *p < total) {
+        let end = (p + chunk).min(total);
+        let lo = if p == 0 { 0 } else { p + CHUNK_MARGIN };
+        let hi = if end == total { usize::MAX } else { end.saturating_sub(CHUNK_MARGIN) };
+        if line >= lo && line < hi {
+            return p;
+        }
+    }
+    let ideal = line as i64 - (chunk / 2) as i64;
+    let index = ((ideal as f64) / stride as f64).round().max(0.0) as usize;
+    (index * stride).min(total.saturating_sub(1))
+}
+
+/// The whole file when it is short, else the chunk starting at `start`.
+pub fn lines_from(content: &str, start: usize, opts: &PromptOptions) -> String {
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.len() <= opts.whole_file_lines {
+        return content.to_string();
+    }
+    let start = start.min(lines.len().saturating_sub(1));
+    let end = (start + opts.chunk_lines.max(2)).min(lines.len());
+    lines[start..end].join("\n")
+}
+
 /// Sweep `get_lines_around_cursor` with configurable sizes.
 pub fn lines_around_cursor(content: &str, cursor: usize, opts: &PromptOptions) -> String {
     let lines: Vec<&str> = content.lines().collect();
@@ -280,6 +314,9 @@ pub struct PromptInput<'a> {
     pub opts: &'a PromptOptions,
     /// Trailing `hunks` from the live edit group (`stable_history`).
     pub live: usize,
+    /// First line of the original-file chunk; None maps the cursor's byte
+    /// offset into the original (the old behaviour).
+    pub initial_start: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -546,7 +583,10 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
         code_block.pop();
         prev.pop();
     }
-    let initial = lines_around_cursor(input.original, input.cursor.min(input.original.len()), input.opts);
+    let initial = match input.initial_start {
+        Some(start) => lines_from(input.original, start, input.opts),
+        None => lines_around_cursor(input.original, input.cursor.min(input.original.len()), input.opts),
+    };
     let block_lines = code_block.split('\n').count();
     let range = match input.opts.line_numbers {
         LineNumbers::Absolute => format!(":{}:{}", block.start_line + 1, block.start_line + block_lines),
@@ -1344,6 +1384,7 @@ mod tests {
             retrieval: &retrieval,
             opts: &o,
             live: 0,
+            initial_start: None,
         });
         let p = &built.prompt;
         let (def, diag, window) = (p.find("lib.rs").unwrap(), p.find("<|file_sep|>diagnostics").unwrap(), p.find("original/").unwrap());
@@ -1376,6 +1417,7 @@ mod tests {
             retrieval: &[],
             opts: &o,
             live: 0,
+            initial_start: None,
         });
         assert!(built.prompt.starts_with("<|file_sep|>src/main.rs\nfn main()"));
         assert!(built.prompt.contains("<|file_sep|>current/src/main.rs:1:4\nfn main() {\n    <|cursor|>let x"));
@@ -1475,6 +1517,7 @@ mod tests {
             retrieval: &[],
             opts: &o,
             live: 0,
+            initial_start: None,
         });
         let p = process_completion("x = 1\n", "stop", &built, &block, new, 0);
         assert_eq!(p.exit_reason, "revert_detected");
@@ -1516,6 +1559,7 @@ mod tests {
             retrieval: &[],
             opts: &o,
             live,
+            initial_start: None,
         });
         // The window edit is hidden and three older edits remain visible.
         assert_eq!(built.hunks_used, 3);
@@ -1565,5 +1609,20 @@ mod tests {
         let (history, _, _, used) = stable_changes_and_prev("f.rs", &hunks, &second, &block, 6, DiffFormat::Server, false);
         assert_eq!(used, 2);
         assert!(history.find("A1").unwrap() < history.find("\nB\n").unwrap());
+    }
+
+    #[test]
+    fn chunk_choice_has_hysteresis() {
+        let mut o = opts();
+        o.whole_file_lines = 120;
+        o.chunk_lines = 120;
+        assert_eq!(chunk_start(400, 150, &o, None), 120);
+        assert_eq!(chunk_start(400, 150, &o, Some(60)), 60);
+        assert_eq!(chunk_start(400, 175, &o, Some(60)), 120);
+        assert_eq!(chunk_start(400, 65, &o, Some(60)), 0);
+        assert_eq!(chunk_start(400, 395, &o, Some(300)), 300);
+        let file = lines(0..400);
+        assert_eq!(lines_from(&file, 60, &o).lines().next(), Some("l60"));
+        assert_eq!(lines_from(&file, 60, &o).lines().count(), 120);
     }
 }

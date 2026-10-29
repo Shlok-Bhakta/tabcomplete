@@ -6,7 +6,7 @@
 //! bar" rather than ten single-keystroke diffs. Hunks carry up to two context
 //! lines on each side; the prompt builder decides how many to show.
 
-use similar::{Algorithm, DiffOp, capture_diff_slices};
+use similar::{Algorithm, DiffOp, capture_diff_slices, capture_diff_slices_deadline};
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -311,6 +311,29 @@ impl Group {
     }
 }
 
+/// Line of `from` (0-based) mapped to the corresponding line of `to`:
+/// unchanged lines map exactly, changed lines map to the start of the
+/// region that replaced them.
+pub fn map_line(from: &str, to: &str, line: usize) -> usize {
+    if from == to {
+        return line;
+    }
+    let a = split_lines(from);
+    let b = split_lines(to);
+    let deadline = Instant::now() + Duration::from_millis(20);
+    for op in capture_diff_slices_deadline(Algorithm::Myers, &a, &b, Some(deadline)) {
+        let (old, new) = (op.old_range(), op.new_range());
+        if old.contains(&line) {
+            return match op {
+                DiffOp::Equal { .. } => new.start + (line - old.start),
+                _ => new.start,
+            };
+        }
+    }
+    // Past the last line of `from` (the empty line after a final newline).
+    b.len() + line.saturating_sub(a.len())
+}
+
 fn split_lines(text: &str) -> Vec<&str> {
     if text.is_empty() {
         return Vec::new();
@@ -524,5 +547,17 @@ mod tests {
         assert_eq!(live, 1);
         let new: Vec<String> = h.iter().map(|h| h.parts(0).1).collect();
         assert_eq!(new, ["L20", "L40", "L55"]);
+    }
+
+    #[test]
+    fn map_line_follows_edits() {
+        let original: String = (0..20).map(|i| format!("l{i}\n")).collect();
+        let content = format!("new0\nnew1\nnew2\n{}", original.replace("l9\n", "L9\nextra\n"));
+        assert_eq!(map_line(&content, &original, 1), 0);
+        assert_eq!(map_line(&content, &original, 5), 2);
+        assert_eq!(map_line(&content, &original, 12), 9);
+        assert_eq!(map_line(&content, &original, 13), 9);
+        assert_eq!(map_line(&content, &original, 15), 11);
+        assert_eq!(map_line(&original, &original, 7), 7);
     }
 }
