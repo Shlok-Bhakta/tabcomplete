@@ -20,8 +20,11 @@ local ns = vim.api.nvim_create_namespace("tabcomplete_nes")
 M.config = {
   url = "http://127.0.0.1:19094",
   enabled = true,
-  insert_debounce_ms = 90,
-  normal_debounce_ms = 200,
+  -- Short debounces: a new request kills the previous one and the engine
+  -- drops stale work at its next batch, so waiting only delays the
+  -- suggestion after the typing pause.
+  insert_debounce_ms = 25,
+  normal_debounce_ms = 60,
   normal_mode = true,
   jump = true,
   request_timeout_ms = 20000,
