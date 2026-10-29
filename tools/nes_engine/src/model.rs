@@ -888,12 +888,13 @@ impl Engine {
     }
 
     /// llama.cpp's own counters for the active context, including how often a
-    /// compute graph was reused instead of rebuilt.
+    /// compute graph was reused instead of rebuilt. Its times stay 0: contexts
+    /// are created with llama.cpp's default `no_perf`.
     pub fn perf_report(&self) -> Result<String> {
         let d = unsafe { llama_cpp_sys_2::llama_perf_context(raw_ctx(&self.ctx)?) };
         Ok(format!(
-            "llama perf: prompt {:.1} ms / {} tokens, eval {:.1} ms / {} runs, graphs reused {}",
-            d.t_p_eval_ms, d.n_p_eval, d.t_eval_ms, d.n_eval, d.n_reused
+            "llama perf: graphs reused {}, prompt tokens {}, single-token evals {}",
+            d.n_reused, d.n_p_eval, d.n_eval
         ))
     }
 
