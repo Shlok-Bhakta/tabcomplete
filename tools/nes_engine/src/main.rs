@@ -43,6 +43,18 @@ struct Cli {
     /// Prompt-processing threads.
     #[arg(long, default_value_t = 6)]
     threads_batch: i32,
+    /// Threads for decode calls of at most 9 tokens (draft verification);
+    /// 0 uses --threads-batch.
+    #[arg(long, default_value_t = 0)]
+    threads_small_batch: i32,
+    /// Persistent llama.cpp threadpools shared by all file slots: decode
+    /// threads pinned to physical cores, batch threads adding SMT siblings.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    threadpool: bool,
+    /// Threadpool polling level between graphs: 0 sleeps at once, 50
+    /// (llama.cpp's default) spins ~0.3 s. Pools are paused between requests.
+    #[arg(long, default_value_t = 1)]
+    threadpool_poll: u32,
     #[arg(long, default_value_t = 2)]
     retrieval_chunks: usize,
     /// Recent edits shown in the prompt's history section (3 was as fast as
@@ -97,9 +109,12 @@ struct Cli {
     /// Files whose prompt caches are kept at once (KV slots).
     #[arg(long, default_value_t = 4)]
     slots: u32,
-    /// KV cache type: f16 or q8_0.
+    /// KV cache type: f32, f16 or q8_0.
     #[arg(long, default_value = "f16")]
     cache_type: String,
+    /// Memory-map the model file (false reads it into memory).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    mmap: bool,
     /// Prompt tokens per prefill decode call (cancellation granularity).
     #[arg(long, default_value_t = 512)]
     prefill_chunk: usize,
@@ -252,10 +267,14 @@ fn main() -> Result<()> {
         slots: cli.slots,
         reuse_suffix: cli.reuse_suffix,
         cache_type: cli.cache_type.clone(),
+        use_mmap: cli.mmap,
         n_ctx: cli.ctx_size,
         n_batch: cli.batch_size,
         threads: cli.threads,
         threads_batch: cli.threads_batch,
+        threads_small_batch: cli.threads_small_batch,
+        threadpool: cli.threadpool,
+        threadpool_poll: cli.threadpool_poll,
     };
     if let Command::Bench { depth, reps } = cli.command {
         use std::io::Read;
@@ -266,6 +285,7 @@ fn main() -> Result<()> {
         for (name, ms) in engine.bench(&tokens, depth, reps)? {
             println!("{ms:9.2} ms  {name}");
         }
+        println!("{}", engine.perf_report()?);
         return Ok(());
     }
     if let Command::Complete { max_tokens } = cli.command {
