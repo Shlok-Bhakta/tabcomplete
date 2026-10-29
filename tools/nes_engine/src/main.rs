@@ -6,14 +6,16 @@ mod service;
 mod sweep;
 
 use anyhow::{Context as _, Result};
-use axum::extract::{DefaultBodyLimit, State};
-use axum::http::StatusCode;
+use axum::body::Body;
+use axum::extract::{DefaultBodyLimit, Query, State};
+use axum::http::{StatusCode, header};
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use service::{ObserveRequest, PredictRequest, Service, Settings};
+use service::{EditOut, ObserveRequest, PredictRequest, PredictResponse, Service, Settings};
 use std::io::BufRead;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -415,46 +417,97 @@ async fn health(State(svc): State<Arc<Service>>) -> Json<Value> {
     }))
 }
 
-async fn predict(
-    State(svc): State<Arc<Service>>,
-    Json(req): Json<PredictRequest>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+#[derive(Deserialize)]
+struct PredictQuery {
+    /// `stream=1`: newline-delimited JSON events, provisional edits first.
+    #[serde(default)]
+    stream: Option<String>,
+}
+
+async fn predict(State(svc): State<Arc<Service>>, Query(q): Query<PredictQuery>, Json(req): Json<PredictRequest>) -> Response {
+    if q.stream.as_deref().is_some_and(|v| v != "0" && v != "false") {
+        return predict_stream(svc, req);
+    }
     let request_id = req.request_id.clone();
     let result = tokio::task::spawn_blocking(move || svc.predict(req)).await;
     match result {
         Ok(Ok(r)) => {
-            let stages: Vec<String> = r
-                .timings
-                .stages
-                .iter()
-                .map(|s| {
-                    format!(
-                        "prompt={} cached={} prefill={:.0}ms decode={:.0}ms gen={} draft={}/{}",
-                        s.prompt_tokens, s.cached_tokens, s.prefill_ms, s.decode_ms, s.generated_tokens, s.draft_accepted, s.draft_proposed
-                    )
-                })
-                .collect();
-            eprintln!(
-                "nes: {} {} {} kind={} edits={} total={:.0}ms [{}]",
-                r.request_id.as_deref().unwrap_or("-"),
-                r.status,
-                r.exit_reason,
-                r.kind,
-                r.edits.len(),
-                r.timings.total_ms,
-                stages.join("; ")
-            );
-            Ok(Json(serde_json::to_value(r).unwrap()))
+            log_response(&r);
+            Json(serde_json::to_value(r).unwrap()).into_response()
         }
         Ok(Err(e)) => {
             eprintln!("nes: predict error: {e:#}");
-            Err((
+            (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "status": "error", "request_id": request_id, "error": format!("{e:#}") })),
-            ))
+            )
+                .into_response()
         }
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "status": "error", "error": e.to_string() })))),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "status": "error", "error": e.to_string() }))).into_response(),
     }
+}
+
+/// Streaming predict: `{"event":"provisional","edits":[...]}` lines while
+/// decoding, then one `{"event":"final", ...}` line with the normal response
+/// body (or `{"event":"error", ...}`).
+fn predict_stream(svc: Arc<Service>, req: PredictRequest) -> Response {
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    tokio::task::spawn_blocking(move || {
+        let started = std::time::Instant::now();
+        let request_id = req.request_id.clone();
+        let sink = |e: &EditOut| {
+            let ev = json!({
+                "event": "provisional",
+                "request_id": request_id,
+                "ms": started.elapsed().as_secs_f64() * 1000.0,
+                "edits": [e],
+            });
+            let _ = tx.send(format!("{ev}\n"));
+        };
+        let ev = match svc.predict_streaming(req, Some(&sink as &dyn Fn(&EditOut))) {
+            Ok(r) => {
+                log_response(&r);
+                let mut v = serde_json::to_value(r).unwrap();
+                v["event"] = json!("final");
+                v
+            }
+            Err(e) => {
+                eprintln!("nes: predict error: {e:#}");
+                json!({ "event": "error", "status": "error", "request_id": request_id, "error": format!("{e:#}") })
+            }
+        };
+        let _ = tx.send(format!("{ev}\n"));
+    });
+    let events = futures_util::stream::unfold(rx, |mut rx| async move {
+        rx.recv().await.map(|line| (Ok::<_, std::convert::Infallible>(line), rx))
+    });
+    ([(header::CONTENT_TYPE, "application/x-ndjson")], Body::from_stream(events)).into_response()
+}
+
+fn log_response(r: &PredictResponse) {
+    let stages: Vec<String> = r
+        .timings
+        .stages
+        .iter()
+        .map(|s| {
+            format!(
+                "prompt={} cached={} prefill={:.0}ms decode={:.0}ms gen={} draft={}/{}",
+                s.prompt_tokens, s.cached_tokens, s.prefill_ms, s.decode_ms, s.generated_tokens, s.draft_accepted, s.draft_proposed
+            )
+        })
+        .collect();
+    let first = r.timings.first_edit_ms.map_or("-".to_string(), |m| format!("{m:.0}ms"));
+    eprintln!(
+        "nes: {} {} {} kind={} edits={} first={} total={:.0}ms [{}]",
+        r.request_id.as_deref().unwrap_or("-"),
+        r.status,
+        r.exit_reason,
+        r.kind,
+        r.edits.len(),
+        first,
+        r.timings.total_ms,
+        stages.join("; ")
+    );
 }
 
 async fn prefetch(State(svc): State<Arc<Service>>, Json(req): Json<PredictRequest>) -> Json<Value> {
