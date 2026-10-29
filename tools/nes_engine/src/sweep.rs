@@ -1834,17 +1834,17 @@ mod tests {
     #[test]
     fn splice_on_partial_anchor_line() {
         let cleaned = "fn a() {\n    let x = 1;\n    let y = 2;\n    tail();\n}\n";
-        // The changed line is complete and "    let y" starts the next window line.
-        let rest = splice_rest_n("fn a() {\n", "    let x = 10;\n    let y", cleaned, 1, 6);
+        // The changed line is complete and "    let y =" starts the next window line.
+        let rest = splice_rest_n("fn a() {\n", "    let x = 10;\n    let y =", cleaned, 1, 6);
         assert_eq!(rest.as_deref(), Some("    let y = 2;\n    tail();\n}\n"));
         // Too short to anchor, or still inside the changed line: wait.
         assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    le", cleaned, 1, 6), None);
         assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10", cleaned, 1, 6), None);
         // Off by default.
-        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    let y", cleaned, 1, 0), None);
+        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    let y =", cleaned, 1, 0), None);
         // Ambiguous prefixes do not anchor.
         let twice = "fn a() {\n    let x = 1;\n    let y = 2;\n    let y = 3;\n}\n";
-        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    let y", twice, 1, 6), None);
+        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    let y =", twice, 1, 6), None);
     }
 
     #[test]
