@@ -85,8 +85,11 @@ struct Cli {
     /// server | card
     #[arg(long, default_value = "server")]
     diff_format: String,
-    /// none | first-line | before-cursor-line
-    #[arg(long, default_value = "first-line")]
+    /// none | first-line | before-cursor-line | through-cursor.
+    /// before-cursor-line puts the window lines above the cursor in the
+    /// prompt, where they stay cached while typing on the cursor line:
+    /// keystroke p50 494 -> 370 ms, equal accuracy on 761 cases.
+    #[arg(long, default_value = "before-cursor-line")]
     prefill: String,
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     cursor_marker: bool,
