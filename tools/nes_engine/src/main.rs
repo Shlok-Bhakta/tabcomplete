@@ -43,6 +43,10 @@ struct Cli {
     /// Prompt-processing threads.
     #[arg(long, default_value_t = 6)]
     threads_batch: i32,
+    /// Threads for decode calls of at most 9 tokens (draft verification);
+    /// 0 uses --threads-batch.
+    #[arg(long, default_value_t = 0)]
+    threads_small_batch: i32,
     #[arg(long, default_value_t = 2)]
     retrieval_chunks: usize,
     /// Recent edits shown in the prompt's history section (3 was as fast as
@@ -234,6 +238,7 @@ fn main() -> Result<()> {
         n_batch: cli.batch_size,
         threads: cli.threads,
         threads_batch: cli.threads_batch,
+        threads_small_batch: cli.threads_small_batch,
     };
     if let Command::Bench { depth, reps } = cli.command {
         use std::io::Read;

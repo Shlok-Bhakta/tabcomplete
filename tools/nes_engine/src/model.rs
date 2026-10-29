@@ -49,6 +49,9 @@ pub struct ModelConfig {
     pub n_batch: u32,
     pub threads: i32,
     pub threads_batch: i32,
+    /// Threads for decode calls of at most `SMALL_BATCH` tokens (draft
+    /// verification); 0 uses `threads_batch`.
+    pub threads_small_batch: i32,
 }
 
 pub struct Engine {
@@ -96,6 +99,7 @@ struct SlotConfig {
     threads_batch: i32,
     flash_attn: i32,
     cache_type: String,
+    threads_small_batch: i32,
 }
 
 /// Scratch sequence used by suffix reuse inside each slot context.
@@ -119,6 +123,9 @@ fn new_slot_context(
         .with_type_v(kv_type(&c.cache_type)?);
     model.new_context(backend, params).context("create llama context")
 }
+
+/// Largest decode call that `threads_small_batch` applies to.
+const SMALL_BATCH: i32 = 9;
 
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct GenStats {
@@ -220,6 +227,7 @@ impl Engine {
             threads_batch: config.threads_batch,
             flash_attn: config.flash_attn,
             cache_type: config.cache_type.clone(),
+            threads_small_batch: config.threads_small_batch,
         };
         let ctx = new_slot_context(model, backend, &slot_config)?;
         let vocab = model.vocab();
@@ -366,7 +374,7 @@ impl Engine {
                 let p = pos + i;
                 batch.add(*token, p as i32, &[self.seq], p + 1 == prompt.len())?;
             }
-            self.ctx.decode(&mut batch).context("prefill decode")?;
+            self.decode(&mut batch).context("prefill decode")?;
             self.cached.extend_from_slice(&prompt[pos..end]);
             stats.evaluated_prompt_tokens += end - pos;
             pos = end;
@@ -420,7 +428,7 @@ impl Engine {
             for (i, token) in prompt[common..middle_end].iter().enumerate() {
                 batch.add(*token, (common + i) as i32, &[tmp], false)?;
             }
-            self.ctx.decode(&mut batch).context("middle decode")?;
+            self.decode(&mut batch).context("middle decode")?;
         }
         let delta = middle_end as i32 - reused_start as i32;
         if delta != 0 {
@@ -433,7 +441,7 @@ impl Engine {
             .context("copy suffix")?;
         batch.clear();
         batch.add(prompt[new_len - 1], (new_len - 1) as i32, &[tmp], true)?;
-        self.ctx.decode(&mut batch).context("final token decode")?;
+        self.decode(&mut batch).context("final token decode")?;
         self.ctx.clear_kv_cache_seq(Some(main as u32), None, None).context("clear main")?;
         self.ctx.copy_kv_cache_seq(tmp, main, None, None).context("adopt scratch")?;
         self.ctx.clear_kv_cache_seq(Some(tmp as u32), None, None).context("drop scratch")?;
@@ -552,7 +560,7 @@ impl Engine {
             for (i, t) in draft.iter().enumerate() {
                 batch.add(*t, (base + 1 + i) as i32, &[self.seq], true)?;
             }
-            self.ctx.decode(&mut batch).context("decode")?;
+            self.decode(&mut batch).context("decode")?;
             stats.decode_batches += 1;
             stats.draft_proposed += draft.len();
             self.cached.push(next);
@@ -681,7 +689,7 @@ impl Engine {
                 for (i, t) in toks.iter().enumerate() {
                     batch.add(*t, (depth + i) as i32, &[seq], true)?;
                 }
-                me.ctx.decode(&mut batch)?;
+                me.decode(&mut batch)?;
                 me.ctx.clear_kv_cache_seq(Some(seq as u32), Some(depth as u32), None)?;
                 Ok(())
             }, self)?;
@@ -691,7 +699,7 @@ impl Engine {
                 for (i, t) in toks.iter().enumerate() {
                     batch.add(*t, (depth + i) as i32, &[seq], i + 1 == toks.len())?;
                 }
-                me.ctx.decode(&mut batch)?;
+                me.decode(&mut batch)?;
                 me.ctx.clear_kv_cache_seq(Some(seq as u32), Some(depth as u32), None)?;
                 Ok(())
             }, self)?;
@@ -699,7 +707,7 @@ impl Engine {
         // Argmax + log-softmax over the vocabulary for one position.
         batch.clear();
         batch.add(prompt[depth], depth as i32, &[seq], true)?;
-        self.ctx.decode(&mut batch)?;
+        self.decode(&mut batch)?;
         time("argmax+logsumexp one position", &mut |me: &mut Self| {
             let _ = me.argmax(0);
             Ok(())
@@ -714,12 +722,25 @@ impl Engine {
             me.ctx.kv_cache_seq_add(seq, Some((depth - 37) as u32), Some((depth + 3) as u32), -3)?;
             batch.clear();
             batch.add(prompt[depth], depth as i32, &[seq], true)?;
-            me.ctx.decode(&mut batch)?;
+            me.decode(&mut batch)?;
             me.ctx.clear_kv_cache_seq(Some(seq as u32), Some(depth as u32), None)?;
             me.ctx.clear_kv_cache_seq(Some(tmp as u32), None, None)?;
             Ok(())
         }, self)?;
         Ok(out)
+    }
+
+    /// `ctx.decode` with the threads chosen by batch size: up to `SMALL_BATCH`
+    /// tokens use `threads_small_batch`.
+    fn decode(&mut self, batch: &mut LlamaBatch) -> Result<()> {
+        let c = &self.config;
+        if c.threads_small_batch > 0 {
+            let small = batch.n_tokens() <= SMALL_BATCH;
+            let n_batch = if small { c.threads_small_batch } else { c.threads_batch };
+            unsafe { llama_cpp_sys_2::llama_set_n_threads(raw_ctx(&self.ctx)?, c.threads, n_batch) };
+        }
+        self.ctx.decode(batch)?;
+        Ok(())
     }
 
     /// llama.cpp's own counters for the active context, including how often a
