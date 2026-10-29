@@ -208,8 +208,8 @@ in
         TimeoutStopSec = 10;
         MemoryMax = "1500M";
         MemorySwapMax = "0";
-        CPUQuota = "${toString (100 * (lib.max cfg.threads cfg.threadsBatch))}%";
-        Nice = 10;
+        # No CPUQuota or Nice: llama.cpp threads spin at per-op barriers, so a
+        # throttled or preempted thread stalls the others for the whole request.
         NoNewPrivileges = true;
         PrivateTmp = true;
         ProtectSystem = "strict";
