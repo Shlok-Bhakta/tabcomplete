@@ -17,6 +17,7 @@ openmp = ["llama-cpp-2/openmp"]
 llama-cpp-2 = { version = "=0.1.160", default-features = false }
 llama-cpp-sys-2 = { version = "=0.1.160", default-features = false }
 axum = { version = "0.8", features = ["json"] }
+futures-util = { version = "0.3", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal"] }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"

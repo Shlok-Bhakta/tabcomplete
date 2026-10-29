@@ -1030,6 +1030,7 @@ dependencies = [
  "anyhow",
  "axum",
  "clap",
+ "futures-util",
  "ignore",
  "llama-cpp-2",
  "llama-cpp-sys-2",

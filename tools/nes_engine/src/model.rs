@@ -335,6 +335,9 @@ pub struct GenRequest<'a> {
     /// Called when a new line completes; returning text ends generation with
     /// that text appended (used to splice the unchanged rest of the window).
     pub early_stop: Option<&'a dyn Fn(&str) -> Option<String>>,
+    /// Called after each decode batch with the output so far (bytes, token
+    /// log-probabilities and token start offsets), for provisional edits.
+    pub progress: Option<&'a dyn Fn(&[u8], &[f32], &[usize])>,
 }
 
 pub enum Outcome {
@@ -791,6 +794,9 @@ impl Engine {
             if newlines > req.max_newlines {
                 finish_reason = "max_lines";
                 break;
+            }
+            if let Some(progress) = req.progress {
+                progress(&text_bytes, &token_logprobs, &token_offsets);
             }
             logits_index = accepted as i32;
         }
