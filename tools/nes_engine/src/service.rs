@@ -798,6 +798,7 @@ impl Service {
         }
         resp.exit_reason = outcome.exit_reason.to_string();
         let mut edits = std::mem::take(&mut outcome.edits);
+        let untrimmed = edits.first().cloned();
         if self.settings.protect_live_edit && !g.typed.is_empty() && !edits.is_empty() {
             match sweep::protect_typed(content, &edits[0], &g.typed) {
                 Some(first) => {
@@ -814,9 +815,14 @@ impl Service {
         }
         resp.edits = edits.iter().map(|e| edit_out(content, e)).collect();
         let s = &self.settings;
-        let threshold = edits.first().map_or(s.min_confidence, |e| {
-            edit_threshold(content, e, s.min_confidence, s.multiline_min_confidence, s.insert_min_confidence)
-        });
+        let gate = |e: &Edit| edit_threshold(content, e, s.min_confidence, s.multiline_min_confidence, s.insert_min_confidence);
+        // A trimmed edit keeps the gate of the edit the model wrote: the
+        // confidence covers the dropped part too.
+        let threshold = match (edits.first(), &untrimmed) {
+            (Some(e), Some(u)) => gate(e).max(gate(u)),
+            (Some(e), None) => gate(e),
+            (None, _) => s.min_confidence,
+        };
         let weak = resp.confidence.as_ref().is_some_and(|c| c.changed_tokens > 0 && c.min_logprob < threshold);
         if weak && !resp.edits.is_empty() {
             resp.withheld = std::mem::take(&mut resp.edits);
