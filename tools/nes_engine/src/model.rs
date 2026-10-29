@@ -618,6 +618,9 @@ impl Engine {
                     checked_newlines = newlines;
                     let so_far = String::from_utf8_lossy(&text_bytes);
                     if let Some(rest) = check(&so_far) {
+                        // `rest` follows the last complete line; drop any
+                        // partial line accepted after it.
+                        cut_after_last_newline(&mut text_bytes, &mut token_logprobs, &mut token_offsets);
                         text_bytes.extend_from_slice(rest.as_bytes());
                         finish_reason = "spliced";
                         break;
@@ -722,6 +725,16 @@ impl Engine {
         let logits = self.ctx.get_logits_ith(index);
         argmax_logprob(&logits[..self.output_vocab.min(logits.len())])
     }
+}
+
+/// Truncate generated text after its last newline, with the log-probabilities
+/// and offsets of the tokens that started after it.
+fn cut_after_last_newline(text: &mut Vec<u8>, logprobs: &mut Vec<f32>, offsets: &mut Vec<usize>) {
+    let keep = text.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    text.truncate(keep);
+    let tokens = offsets.iter().take_while(|o| **o < keep).count();
+    offsets.truncate(tokens);
+    logprobs.truncate(tokens);
 }
 
 /// Greedy token and its log-probability. Runs once per verified position
@@ -912,5 +925,21 @@ mod tests {
     fn no_draft_without_match() {
         let mut cursor = None;
         assert!(find_draft(&t(&[1, 2]), &t(&[7]), &mut cursor, 4, 1, &mut 0).is_empty());
+    }
+
+    #[test]
+    fn splice_replaces_partial_last_line() {
+        let window = "fn a() {\n    let x = 1;\n    let y = 2;\n    ready: { log: 1 },\n}\n";
+        let prefill = "fn a() {\n";
+        // The last verified draft ran into the next line before the check.
+        let generated = "    let x = 10;\n    let y = 2;\n    ready";
+        let rest = crate::sweep::splice_rest_n(prefill, generated, window, 1).unwrap();
+        let mut text = generated.as_bytes().to_vec();
+        let (mut logprobs, mut offsets) = (vec![-0.1, -0.2, -0.3], vec![0, 16, 31]);
+        cut_after_last_newline(&mut text, &mut logprobs, &mut offsets);
+        text.extend_from_slice(rest.as_bytes());
+        let out = format!("{prefill}{}", String::from_utf8(text).unwrap());
+        assert_eq!(out, "fn a() {\n    let x = 10;\n    let y = 2;\n    ready: { log: 1 },\n}\n");
+        assert_eq!((logprobs, offsets), (vec![-0.1, -0.2], vec![0, 16]));
     }
 }
