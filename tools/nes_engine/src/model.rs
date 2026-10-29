@@ -52,6 +52,11 @@ pub struct ModelConfig {
     /// Threads for decode calls of at most `SMALL_BATCH` tokens (draft
     /// verification); 0 uses `threads_batch`.
     pub threads_small_batch: i32,
+    /// Persistent llama.cpp threadpools pinned to cores, shared by all slot
+    /// contexts, instead of threads started for every graph.
+    pub threadpool: bool,
+    /// Threadpool polling level (0 sleeps at once, 50 is llama.cpp's default).
+    pub threadpool_poll: u32,
 }
 
 pub struct Engine {
@@ -100,6 +105,7 @@ struct SlotConfig {
     flash_attn: i32,
     cache_type: String,
     threads_small_batch: i32,
+    pools: Option<Pools>,
 }
 
 /// Scratch sequence used by suffix reuse inside each slot context.
@@ -121,11 +127,134 @@ fn new_slot_context(
         .with_kv_unified(true)
         .with_type_k(kv_type(&c.cache_type)?)
         .with_type_v(kv_type(&c.cache_type)?);
-    model.new_context(backend, params).context("create llama context")
+    let ctx = model.new_context(backend, params).context("create llama context")?;
+    if let Some(p) = c.pools {
+        unsafe { llama_cpp_sys_2::llama_attach_threadpool(raw_ctx(&ctx)?, p.decode, p.batch) };
+    }
+    Ok(ctx)
 }
 
 /// Largest decode call that `threads_small_batch` applies to.
 const SMALL_BATCH: i32 = 9;
+
+/// Persistent llama.cpp threadpools. llama.cpp runs single-token graphs (and
+/// KV shifts) on `decode` and larger batches on `batch`; small batches may be
+/// moved to `decode` too (see `Engine::decode`).
+#[derive(Clone, Copy)]
+struct Pools {
+    decode: llama_cpp_sys_2::ggml_threadpool_t,
+    batch: llama_cpp_sys_2::ggml_threadpool_t,
+    decode_threads: i32,
+}
+
+// The pools live for the whole process and are only used from the engine
+// thread.
+unsafe impl Send for Pools {}
+
+impl Pools {
+    fn new(threads: i32, threads_batch: i32, poll: u32) -> Result<Self> {
+        let plan = std::fs::read_dir("/sys/devices/system/cpu").ok().and_then(|dir| {
+            let cores = dir.filter_map(|e| {
+                let e = e.ok()?;
+                e.file_name().to_str()?.strip_prefix("cpu")?.parse::<usize>().ok()?;
+                parse_cpu_list(&std::fs::read_to_string(e.path().join("topology/thread_siblings_list")).ok()?)
+            });
+            plan_cpus(cores.collect(), threads as usize, threads_batch as usize)
+        });
+        if plan.is_none() {
+            eprintln!("nes: no CPU plan for {threads}/{threads_batch} threads; threadpools unpinned");
+        }
+        let (decode_cpus, batch_cpus) = plan.unwrap_or_default();
+        Ok(Self {
+            decode: new_pool(threads, &decode_cpus, poll)?,
+            batch: new_pool(threads_batch, &batch_cpus, poll)?,
+            decode_threads: threads,
+        })
+    }
+
+    fn pause(pool: llama_cpp_sys_2::ggml_threadpool_t) {
+        unsafe { llama_cpp_sys_2::ggml_threadpool_pause(pool) };
+    }
+}
+
+/// A paused pool pinned to `cpus` (unpinned when empty). Pools start paused:
+/// llama.cpp pins the calling thread to the pool's last CPU when it resumes
+/// a pool, which then happens on the engine thread.
+fn new_pool(threads: i32, cpus: &[usize], poll: u32) -> Result<llama_cpp_sys_2::ggml_threadpool_t> {
+    let mut params = unsafe { llama_cpp_sys_2::ggml_threadpool_params_default(threads) };
+    params.poll = poll;
+    params.paused = true;
+    if !cpus.is_empty() && cpus.iter().all(|c| *c < params.cpumask.len()) {
+        for c in cpus {
+            params.cpumask[*c] = true;
+        }
+        params.strict_cpu = true;
+    }
+    let pool = unsafe { llama_cpp_sys_2::ggml_threadpool_new(&mut params) };
+    if pool.is_null() {
+        bail!("create threadpool of {threads} threads");
+    }
+    Ok(pool)
+}
+
+/// Parse a sysfs CPU list such as "0,4" or "0-1".
+fn parse_cpu_list(text: &str) -> Option<Vec<usize>> {
+    let mut cpus = Vec::new();
+    for part in text.trim().split(',') {
+        match part.split_once('-') {
+            Some((a, b)) => cpus.extend(a.parse::<usize>().ok()?..=b.parse::<usize>().ok()?),
+            None => cpus.push(part.parse().ok()?),
+        }
+    }
+    cpus.sort_unstable();
+    (!cpus.is_empty()).then_some(cpus)
+}
+
+/// CPUs for the decode and batch pools, given each CPU's sibling list. The
+/// decode pool gets one CPU per physical core; the batch pool adds SMT
+/// siblings. Both sets end on the same CPU, the last core's highest sibling:
+/// llama.cpp pins the calling thread to a pool's last CPU, so the engine
+/// thread stays on one CPU that no other worker of either pool uses.
+/// With 4 cores numbered (n, n+4), 4/6 threads give {0,1,2,7} and
+/// {0,1,2,4,5,7}.
+fn plan_cpus(mut cores: Vec<Vec<usize>>, decode: usize, batch: usize) -> Option<(Vec<usize>, Vec<usize>)> {
+    cores.sort();
+    cores.dedup();
+    if decode == 0 || decode > cores.len() || batch == 0 {
+        return None;
+    }
+    let cores = &cores[..decode];
+    let last = *cores[decode - 1].last()?;
+    let mut decode_cpus: Vec<usize> = cores[..decode - 1].iter().map(|c| c[0]).collect();
+    decode_cpus.push(last);
+    let mut batch_cpus: Vec<usize> = decode_cpus[..batch.min(decode) - 1].to_vec();
+    for level in 1.. {
+        let extra: Vec<usize> = cores[..decode - 1].iter().filter_map(|c| c.get(level).copied()).collect();
+        if extra.is_empty() || batch_cpus.len() + 1 >= batch {
+            break;
+        }
+        batch_cpus.extend(extra.into_iter().take(batch - 1 - batch_cpus.len()));
+    }
+    batch_cpus.push(last);
+    if batch_cpus.len() != batch {
+        return None;
+    }
+    batch_cpus.sort_unstable();
+    Some((decode_cpus, batch_cpus))
+}
+
+/// Pauses the threadpools when a request ends, so idle workers sleep instead
+/// of polling for the next graph.
+struct PauseOnDrop(Option<Pools>);
+
+impl Drop for PauseOnDrop {
+    fn drop(&mut self) {
+        if let Some(p) = self.0 {
+            Pools::pause(p.decode);
+            Pools::pause(p.batch);
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct GenStats {
@@ -220,6 +349,10 @@ impl Engine {
         )
             .with_context(|| format!("load model {}", path.display()))?;
         let model: &'static LlamaModel = Box::leak(Box::new(model));
+        let pools = match config.threadpool {
+            true => Some(Pools::new(config.threads, config.threads_batch, config.threadpool_poll)?),
+            false => None,
+        };
         let slot_config = SlotConfig {
             n_ctx: config.n_ctx,
             n_batch: config.n_batch,
@@ -228,6 +361,7 @@ impl Engine {
             flash_attn: config.flash_attn,
             cache_type: config.cache_type.clone(),
             threads_small_batch: config.threads_small_batch,
+            pools,
         };
         let ctx = new_slot_context(model, backend, &slot_config)?;
         let vocab = model.vocab();
@@ -455,6 +589,7 @@ impl Engine {
 
     /// Fill the KV cache for a prompt prefix without generating.
     pub fn warm(&mut self, slot: &str, prefix: &[LlamaToken], generation: u64, latest: &AtomicU64) -> Result<GenStats> {
+        let _idle = PauseOnDrop(self.config.pools);
         self.select(slot)?;
         let mut stats = GenStats::default();
         if prefix.is_empty() || prefix.len() + 64 > self.n_ctx {
@@ -465,6 +600,7 @@ impl Engine {
     }
 
     pub fn generate(&mut self, req: GenRequest<'_>) -> Result<Outcome> {
+        let _idle = PauseOnDrop(self.config.pools);
         let mut stats = GenStats::default();
         if req.prompt.is_empty() {
             bail!("empty prompt");
@@ -731,13 +867,21 @@ impl Engine {
     }
 
     /// `ctx.decode` with the threads chosen by batch size: up to `SMALL_BATCH`
-    /// tokens use `threads_small_batch`.
+    /// tokens use `threads_small_batch` (on the decode pool when it fits). The
+    /// pool not used is paused so its polling workers free their CPUs.
     fn decode(&mut self, batch: &mut LlamaBatch) -> Result<()> {
         let c = &self.config;
-        if c.threads_small_batch > 0 {
-            let small = batch.n_tokens() <= SMALL_BATCH;
+        if c.threads_small_batch > 0 || c.pools.is_some() {
+            let small = c.threads_small_batch > 0 && batch.n_tokens() <= SMALL_BATCH;
             let n_batch = if small { c.threads_small_batch } else { c.threads_batch };
-            unsafe { llama_cpp_sys_2::llama_set_n_threads(raw_ctx(&self.ctx)?, c.threads, n_batch) };
+            let raw = raw_ctx(&self.ctx)?;
+            unsafe { llama_cpp_sys_2::llama_set_n_threads(raw, c.threads, n_batch) };
+            if let Some(p) = c.pools {
+                let small_on_decode = small && n_batch <= p.decode_threads;
+                Pools::pause(if batch.n_tokens() <= 1 || small_on_decode { p.batch } else { p.decode });
+                let batch_pool = if small_on_decode { p.decode } else { p.batch };
+                unsafe { llama_cpp_sys_2::llama_attach_threadpool(raw, p.decode, batch_pool) };
+            }
         }
         self.ctx.decode(batch)?;
         Ok(())
@@ -961,6 +1105,23 @@ mod tests {
         // Output diverged (99) then rejoined at 12, 13.
         let d = find_draft(&source, &t(&[10, 99, 12, 13]), &mut cursor, 2, 1, &mut 0);
         assert_eq!(d, t(&[14, 15]));
+    }
+
+    #[test]
+    fn plans_pinned_cpus() {
+        let siblings = |list: &[&str]| list.iter().map(|l| parse_cpu_list(l).unwrap()).collect::<Vec<_>>();
+        // i7-8650U: 4 cores, siblings n and n+4, listed once per CPU.
+        let smt = siblings(&["0,4", "1,5", "2,6", "3,7", "0,4", "1,5", "2,6", "3,7"]);
+        assert_eq!(plan_cpus(smt.clone(), 4, 6), Some((vec![0, 1, 2, 7], vec![0, 1, 2, 4, 5, 7])));
+        assert_eq!(plan_cpus(smt.clone(), 4, 4), Some((vec![0, 1, 2, 7], vec![0, 1, 2, 7])));
+        assert_eq!(plan_cpus(smt.clone(), 4, 7), Some((vec![0, 1, 2, 7], vec![0, 1, 2, 4, 5, 6, 7])));
+        assert_eq!(plan_cpus(smt.clone(), 2, 3), Some((vec![0, 5], vec![0, 4, 5])));
+        assert_eq!(plan_cpus(smt.clone(), 4, 8), None);
+        assert_eq!(plan_cpus(smt, 5, 6), None);
+        // Siblings numbered next to each other, and no SMT.
+        assert_eq!(plan_cpus(siblings(&["0-1", "2-3", "4-5", "6-7"]), 4, 6), Some((vec![0, 2, 4, 7], vec![0, 1, 2, 3, 4, 7])));
+        assert_eq!(plan_cpus(siblings(&["0", "1", "2", "3"]), 4, 6), None);
+        assert_eq!(plan_cpus(siblings(&["0", "1", "2", "3"]), 4, 4), Some((vec![0, 1, 2, 3], vec![0, 1, 2, 3])));
     }
 
     #[test]

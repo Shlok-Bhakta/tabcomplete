@@ -47,6 +47,14 @@ struct Cli {
     /// 0 uses --threads-batch.
     #[arg(long, default_value_t = 0)]
     threads_small_batch: i32,
+    /// Persistent llama.cpp threadpools shared by all file slots: decode
+    /// threads pinned to physical cores, batch threads adding SMT siblings.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    threadpool: bool,
+    /// Threadpool polling level between graphs: 0 sleeps at once, 50
+    /// (llama.cpp's default) spins ~0.3 s. Pools are paused between requests.
+    #[arg(long, default_value_t = 1)]
+    threadpool_poll: u32,
     #[arg(long, default_value_t = 2)]
     retrieval_chunks: usize,
     /// Recent edits shown in the prompt's history section (3 was as fast as
@@ -239,6 +247,8 @@ fn main() -> Result<()> {
         threads: cli.threads,
         threads_batch: cli.threads_batch,
         threads_small_batch: cli.threads_small_batch,
+        threadpool: cli.threadpool,
+        threadpool_poll: cli.threadpool_poll,
     };
     if let Command::Bench { depth, reps } = cli.command {
         use std::io::Read;
