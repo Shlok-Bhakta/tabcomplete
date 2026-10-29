@@ -145,7 +145,8 @@ def main():
                      "edit": (r.get("edits") or [None])[0], "completion": r.get("completion"),
                      "ms": r.get("timings", {}).get("total_ms"),
                      "confidence": r.get("confidence"), "stages": r.get("timings", {}).get("stages"),
-                     "prompt_tokens": r.get("context", {}).get("prompt_tokens")})
+                     "prompt_tokens": r.get("context", {}).get("prompt_tokens"),
+                     "context": r.get("context")})
     n = len(cases)
     shown = counts["exact"] + counts["correct"] + counts["wrong"]
     summary = {
