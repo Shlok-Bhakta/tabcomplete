@@ -120,8 +120,11 @@ struct Cli {
     /// Prompt tokens per prefill decode call (cancellation granularity).
     #[arg(long, default_value_t = 512)]
     prefill_chunk: usize,
-    /// Flash attention: -1 auto, 0 off, 1 on.
-    #[arg(long, default_value_t = -1, allow_hyphen_values = true)]
+    /// Flash attention: -1 auto, 0 off, 1 on. Off by default: for the 2-63
+    /// token batches of draft verification and short prefills, llama.cpp's
+    /// CPU flash-attention path is a scalar per-row loop, while the plain
+    /// path uses GEMMs (17-token verify 170 -> 124 ms on the i7-8650U).
+    #[arg(long, default_value_t = 0, allow_hyphen_values = true)]
     flash_attn: i32,
     /// Draft from the previous completion for the same file first.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
