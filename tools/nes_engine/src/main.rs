@@ -150,6 +150,10 @@ struct Cli {
     /// Stricter gate for edits that rewrite more than one existing line.
     #[arg(long, default_value_t = -0.5, allow_hyphen_values = true)]
     multiline_min_confidence: f32,
+    /// Looser gate for insertions and appends that keep the existing text
+    /// (only lowers --min-confidence).
+    #[arg(long, default_value_t = -1.0, allow_hyphen_values = true)]
+    insert_min_confidence: f32,
     /// Keep the history section stable while typing: hide hunks the window
     /// shows before capping the history, keep the live edit group out of the
     /// inverse/duplicate/whitespace filters, and revert hunks for `original/`
@@ -274,6 +278,7 @@ fn main() -> Result<()> {
         draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
         multiline_min_confidence: cli.multiline_min_confidence,
+        insert_min_confidence: cli.insert_min_confidence,
         stable_window: cli.stable_window,
         warm_full_prompt: cli.warm_full_prompt,
         retrieval_unindexed: cli.retrieval_unindexed,

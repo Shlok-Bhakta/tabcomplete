@@ -177,6 +177,8 @@ pub struct Settings {
     /// Withhold edits whose weakest changed token is below this log-probability.
     pub min_confidence: f32,
     pub multiline_min_confidence: f32,
+    /// Gate for insertions and appends that keep the existing text.
+    pub insert_min_confidence: f32,
     /// Map the cursor into the original file by line and keep the shown
     /// chunk of a long file while the cursor stays well inside it.
     pub stable_window: bool,
@@ -735,9 +737,10 @@ impl Service {
 
         // Provisional edits come from the local stage of real requests; they
         // are computed without a sink too, for the first-edit timing.
+        // Provisional edits are insertions at the cursor.
         let mut early = (!speculative).then(|| Early {
             started,
-            min_confidence: self.settings.min_confidence,
+            min_confidence: self.settings.min_confidence.min(self.settings.insert_min_confidence),
             sink,
             shown: None,
             first_ms: None,
@@ -810,17 +813,10 @@ impl Service {
             }
         }
         resp.edits = edits.iter().map(|e| edit_out(content, e)).collect();
-        // Multi-line rewrites are wrong more often than single-line edits, so
-        // they need more confidence to be shown.
-        let multiline = edits.first().is_some_and(|e| {
-            let old = &content[e.start..e.end];
-            old.matches('\n').count() > 1 || (!old.is_empty() && e.text.matches('\n').count() > 1)
+        let s = &self.settings;
+        let threshold = edits.first().map_or(s.min_confidence, |e| {
+            edit_threshold(content, e, s.min_confidence, s.multiline_min_confidence, s.insert_min_confidence)
         });
-        let threshold = if multiline {
-            self.settings.min_confidence.max(self.settings.multiline_min_confidence)
-        } else {
-            self.settings.min_confidence
-        };
         let weak = resp.confidence.as_ref().is_some_and(|c| c.changed_tokens > 0 && c.min_logprob < threshold);
         if weak && !resp.edits.is_empty() {
             resp.withheld = std::mem::take(&mut resp.edits);
@@ -1133,6 +1129,20 @@ fn edit_out(content: &str, e: &Edit) -> EditOut {
     EditOut { start_byte: e.start, end_byte: e.end, start_line: sl, start_col: sc, end_line: el, end_col: ec, text: e.text.clone() }
 }
 
+/// Confidence the weakest changed token of `e` needs for the edit to be
+/// shown. Multi-line rewrites are wrong more often than single-line edits,
+/// so they need more (`multiline` only raises `min`); insertions and appends
+/// that keep the existing text need less (`insert` only lowers it).
+fn edit_threshold(content: &str, e: &Edit, min: f32, multiline: f32, insert: f32) -> f32 {
+    let old = &content[e.start..e.end];
+    if old.matches('\n').count() > 1 || (!old.is_empty() && e.text.matches('\n').count() > 1) {
+        return min.max(multiline);
+    }
+    let line = old.strip_suffix('\n').unwrap_or(old);
+    let appended = e.text.starts_with(line) && e.text.ends_with('\n') == old.ends_with('\n');
+    if old.is_empty() || appended { min.min(insert) } else { min }
+}
+
 /// Lines (0-based, inclusive) of the current file shown as initial context.
 fn visible_range(original: &str, cursor: usize, opts: &PromptOptions) -> (usize, usize) {
     let total = original.lines().count();
@@ -1159,5 +1169,27 @@ mod tests {
         assert_eq!(position(s, 5), (1, 2));
         assert_eq!(byte_offset(s, 1, 3), 5); // inside é clamps back
         assert_eq!(byte_offset(s, 9, 0), s.len());
+    }
+
+    #[test]
+    fn gate_depends_on_the_kind_of_edit() {
+        let file = "a: 1\nb: 2\nc: 3\n";
+        let t = |start: usize, end: usize, text: &str| edit_threshold(file, &Edit { start, end, text: text.into() }, -1.0, -0.4, -1.3);
+        // Ghost text, a new line, a block of new lines, an append.
+        assert_eq!(t(4, 4, "0"), -1.3);
+        assert_eq!(t(5, 5, "x: 9\n"), -1.3);
+        assert_eq!(t(5, 5, "x: 9\ny: 8\n"), -1.3);
+        assert_eq!(t(5, 10, "b: 2, 3\n"), -1.3);
+        // Single-line rewrites keep the base gate.
+        assert_eq!(t(5, 10, "b: 4\n"), -1.0);
+        assert_eq!(t(5, 10, "b: 2"), -1.0);
+        // Rewrites of more than one line.
+        assert_eq!(t(0, 10, "a: 1\nb: 3\n"), -0.4);
+        assert_eq!(t(5, 10, "b: 2\nx\ny\n"), -0.4);
+        // The kind gates only move away from the base gate.
+        let e = Edit { start: 4, end: 4, text: "0".into() };
+        assert_eq!(edit_threshold(file, &e, -2.0, -0.4, -1.3), -2.0);
+        let e = Edit { start: 0, end: 10, text: "z\n".into() };
+        assert_eq!(edit_threshold(file, &e, -0.2, -0.4, -1.3), -0.2);
     }
 }
