@@ -30,6 +30,16 @@ tabcomplete-nes --model sweep-next-edit-0.5b.q8_0.gguf serve --port 19094
 clipboard), `POST /v1/observe` (snapshots, saves, idle warm-up). The Nix
 package and Home Manager module live in `nix/nes/`.
 
+`POST /v1/predict?stream=1` answers with newline-delimited JSON:
+`{"event":"provisional","edits":[...]}` lines while the cursor line is being
+decoded (ghost text at the cursor, each extending the previous one), then
+`{"event":"final", ...}` with the normal response body. Provisional text can
+still be retracted by the final answer (confidence gate on later tokens, a
+line that turns into a replacement); `timings.first_edit_ms` is when the
+shown edit was first known and `timings.provisional_retracted` flags the
+retractions. Client tests: `NES_CLIENT=tools/nes_engine/nvim nvim --headless
+--clean -l tools/nes_engine/nvim/tests/stream.lua` (and `type_through.lua`).
+
 Format flags (`--line-numbers`, `--diff-format`, `--prefill`,
 `--cursor-marker`, `--lines-before/after`, `--whole-file-lines`,
 `--chunk-lines`, `--retrieval-chunks`, `--early-stop`, `--min-confidence`)

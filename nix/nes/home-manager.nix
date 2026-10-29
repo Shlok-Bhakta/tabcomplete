@@ -47,6 +47,7 @@ let
     url = "http://127.0.0.1:${toString cfg.port}";
     jump = cfg.jump;
     normal_mode = cfg.normalMode;
+    stream = cfg.stream;
     capture_content = cfg.captureContent;
     accept_key = cfg.acceptKey;
     dismiss_key = cfg.dismissKey;
@@ -136,6 +137,15 @@ in
       type = lib.types.bool;
       default = true;
       description = "Also predict after normal-mode edits and leaving insert mode.";
+    };
+    stream = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Stream predictions: ghost text at the cursor is drawn while the
+        cursor line is still being decoded, then extended, replaced or
+        cleared by the final answer.
+      '';
     };
     captureContent = lib.mkOption {
       type = lib.types.bool;
