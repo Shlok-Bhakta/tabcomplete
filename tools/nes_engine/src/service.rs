@@ -170,6 +170,10 @@ pub struct Settings {
     pub warm_full_prompt: bool,
 }
 
+/// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
+/// the window do not shrink the visible history.
+const HIDDEN_HEADROOM: usize = 4;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Purpose {
     /// A real request: records the state and updates sticky choices.
@@ -185,6 +189,8 @@ struct Gathered {
     display: String,
     cursor: usize,
     hunks: Vec<DiffHunk>,
+    /// Trailing `hunks` from the live edit group.
+    live: usize,
     original: String,
     block: Block,
     file_chunks: Vec<Chunk>,
@@ -666,7 +672,7 @@ impl Service {
         if let Some(reason) = sweep::should_disable_file(content) {
             return Err(reason);
         }
-        let (hunks, original) = {
+        let (hunks, live, original) = {
             let now = self.instant(req.ts_ms);
             let mut real = self.tracker.lock().unwrap();
             let mut copy;
@@ -679,9 +685,13 @@ impl Service {
             if purpose != Purpose::Warm {
                 t.observe_at(path, display, content, req.cursor.line, false, now);
             }
-            let h = t.recent_hunks_at(opts.max_hunks, now);
+            let (h, live) = if opts.stable_history {
+                t.recent_split_at(opts.max_hunks + HIDDEN_HEADROOM, now)
+            } else {
+                (t.recent_hunks_at(opts.max_hunks, now), 0)
+            };
             let o = t.original(path).unwrap_or(content).to_string();
-            (h, o)
+            (h, live, o)
         };
         self.registry.ensure_fresh(root, self.settings.index_refresh_secs);
         let ws = self.registry.get(root);
@@ -733,6 +743,7 @@ impl Service {
             display: display.clone(),
             cursor,
             hunks,
+            live,
             original,
             block,
             file_chunks,
@@ -762,6 +773,7 @@ impl Service {
                 file_chunks: fc,
                 retrieval: rc,
                 opts: &opts,
+                live: g.live,
             });
             let tokens = self.tokenizer.tokenize(&built.prompt);
             if tokens.len() <= budget {

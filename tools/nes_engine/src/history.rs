@@ -32,6 +32,9 @@ pub struct DiffHunk {
     pub old: Vec<String>,
     pub new: Vec<String>,
     pub ctx_after: Vec<String>,
+    /// Edit group the hunk came from (hunks of one group share line
+    /// coordinates: old in the group's base, new in its latest text).
+    pub group: u64,
 }
 
 impl DiffHunk {
@@ -91,6 +94,7 @@ struct FileState {
 
 #[derive(Clone)]
 struct Group {
+    id: u64,
     path: PathBuf,
     display: String,
     base: String,
@@ -106,6 +110,7 @@ pub struct Tracker {
     files: HashMap<PathBuf, FileState>,
     finalized: VecDeque<(Instant, DiffHunk)>,
     group: Option<Group>,
+    next_group: u64,
 }
 
 pub struct Visit {
@@ -181,7 +186,9 @@ impl Tracker {
             g.cached = None;
         } else {
             self.finalize_group();
+            self.next_group += 1;
             self.group = Some(Group {
+                id: self.next_group,
                 path: path.to_path_buf(),
                 display: display.to_string(),
                 base: previous,
@@ -197,10 +204,7 @@ impl Tracker {
 
     fn finalize_group(&mut self) {
         if let Some(mut g) = self.group.take() {
-            let hunks = g
-                .cached
-                .take()
-                .unwrap_or_else(|| diff_hunks(&g.path, &g.display, &g.base, &g.latest));
+            let hunks = g.cached.take().unwrap_or_else(|| g.hunks());
             for h in hunks {
                 self.finalized.push_back((g.last_ts, h));
             }
@@ -223,17 +227,46 @@ impl Tracker {
             .filter(|(ts, _)| now.duration_since(*ts) <= MAX_AGE)
             .map(|(_, h)| h.clone())
             .collect();
-        if let Some(g) = self.group.as_mut() {
-            if g.cached.is_none() {
-                g.cached = Some(diff_hunks(&g.path, &g.display, &g.base, &g.latest));
-            }
-            out.extend(g.cached.clone().unwrap());
-        }
+        out.extend(self.live_hunks());
         let out = collapse_inverse(out);
         let mut out = dedupe(out);
         out.retain(|h| !h.is_whitespace_only());
         let skip = out.len().saturating_sub(limit);
         out.split_off(skip)
+    }
+
+    /// Up to `limit` finalized hunks (filtered as in `recent_hunks_at`)
+    /// followed by the live group's raw hunks, oldest first, and the number
+    /// of live hunks. The live group changes on every keystroke; filtering it
+    /// together with the finalized hunks made hunks vanish and reappear
+    /// while typing. The caller hides hunks shown by the window and caps the
+    /// rest, so `limit` should leave room for hidden ones.
+    pub fn recent_split_at(&mut self, limit: usize, now: Instant) -> (Vec<DiffHunk>, usize) {
+        let finalized: Vec<DiffHunk> = self
+            .finalized
+            .iter()
+            .filter(|(ts, _)| now.duration_since(*ts) <= MAX_AGE)
+            .map(|(_, h)| h.clone())
+            .collect();
+        let mut out = dedupe(collapse_inverse(finalized));
+        out.retain(|h| !h.is_whitespace_only());
+        let mut out = out.split_off(out.len().saturating_sub(limit));
+        let live = self.live_hunks();
+        let n = live.len();
+        out.extend(live);
+        (out, n)
+    }
+
+    fn live_hunks(&mut self) -> Vec<DiffHunk> {
+        match self.group.as_mut() {
+            Some(g) => {
+                if g.cached.is_none() {
+                    g.cached = Some(g.hunks());
+                }
+                g.cached.clone().unwrap()
+            }
+            None => Vec::new(),
+        }
     }
 
     pub fn original(&self, path: &Path) -> Option<&str> {
@@ -265,6 +298,16 @@ impl Tracker {
             .iter()
             .map(|(p, s)| (p.clone(), s.content.clone()))
             .collect()
+    }
+}
+
+impl Group {
+    fn hunks(&self) -> Vec<DiffHunk> {
+        let mut hunks = diff_hunks(&self.path, &self.display, &self.base, &self.latest);
+        for h in &mut hunks {
+            h.group = self.id;
+        }
+        hunks
     }
 }
 
@@ -338,6 +381,7 @@ pub fn diff_hunks(path: &Path, display: &str, old: &str, new: &str) -> Vec<DiffH
                 old: a[ol..oh].iter().map(|s| s.to_string()).collect(),
                 new: b[nl..nh].iter().map(|s| s.to_string()).collect(),
                 ctx_after: b[nh..nh + after].iter().map(|s| s.to_string()).collect(),
+                group: 0,
             }
         })
         .collect()
@@ -440,5 +484,45 @@ mod tests {
         let h = t.recent_hunks_at(6, now + Duration::from_millis(300));
         assert_eq!(h.len(), 2);
         assert_eq!(h[1].parts(0).1, "L30");
+    }
+
+    #[test]
+    fn live_group_skips_filters() {
+        let mut t = Tracker::default();
+        let p = Path::new("/r/f.rs");
+        let now = Instant::now();
+        t.observe_at(p, "f.rs", "x\ny\n", 0, false, now);
+        t.observe_at(p, "f.rs", "X\ny\n", 0, false, now + Duration::from_secs(1));
+        // Undoing the edit while still typing: the filters would collapse the
+        // pair and the hunks would reappear on the next keystroke.
+        t.observe_at(p, "f.rs", "x\ny\n", 0, false, now + Duration::from_secs(10));
+        assert!(t.recent_hunks_at(6, now + Duration::from_secs(11)).is_empty());
+        let (h, live) = t.recent_split_at(6, now + Duration::from_secs(11));
+        assert_eq!((h.len(), live), (2, 1));
+        assert_eq!(h[1].parts(0), ("X".into(), "x".into()));
+        assert_ne!(h[0].group, h[1].group);
+        // A blank line being typed is kept too.
+        t.observe_at(p, "f.rs", "x\n\ny\n", 1, false, now + Duration::from_secs(20));
+        let (h, live) = t.recent_split_at(6, now + Duration::from_secs(21));
+        assert_eq!(live, 1);
+        assert!(h.last().unwrap().is_whitespace_only());
+    }
+
+    #[test]
+    fn split_caps_finalized_only() {
+        let mut t = Tracker::default();
+        let p = Path::new("/r/f.rs");
+        let base: String = (0..60).map(|i| format!("l{i}\n")).collect();
+        let now = Instant::now();
+        t.observe_at(p, "f.rs", &base, 0, false, now);
+        let mut text = base.clone();
+        for (k, line) in [1, 20, 40, 55].iter().enumerate() {
+            text = text.replace(&format!("l{line}\n"), &format!("L{line}\n"));
+            t.observe_at(p, "f.rs", &text, *line, false, now + Duration::from_secs(10 * (k as u64 + 1)));
+        }
+        let (h, live) = t.recent_split_at(2, now + Duration::from_secs(41));
+        assert_eq!(live, 1);
+        let new: Vec<String> = h.iter().map(|h| h.parts(0).1).collect();
+        assert_eq!(new, ["L20", "L40", "L55"]);
     }
 }

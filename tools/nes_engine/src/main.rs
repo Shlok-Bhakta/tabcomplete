@@ -127,6 +127,12 @@ struct Cli {
     /// Stricter gate for edits that rewrite more than one existing line.
     #[arg(long, default_value_t = -0.5, allow_hyphen_values = true)]
     multiline_min_confidence: f32,
+    /// Keep the history section stable while typing: hide hunks the window
+    /// shows before capping the history, keep the live edit group out of the
+    /// inverse/duplicate/whitespace filters, and revert hunks for `original/`
+    /// by line position (false: substring reverts, cap before hiding).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    stable_history: bool,
     /// Warm requests (observe with warm) prefill the full local prompt
     /// rather than only the file context.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
@@ -210,6 +216,7 @@ fn main() -> Result<()> {
             max_hunks: cli.max_hunks,
             context_order,
             chunk_lines: cli.chunk_lines,
+            stable_history: cli.stable_history,
             ..Default::default()
         },
         max_retrieval_chunks: cli.retrieval_chunks,
