@@ -11,6 +11,13 @@ next:
   wrong    an edit was shown that the user did not make
   empty    nothing was shown
 
+Each row keeps the streaming timings (first_edit_ms, provisional_ms,
+provisional_retracted) and finish_reason. --all-out writes one line per
+engine response, keystroke pre-states included, with per-stage timings and
+the jump candidate. --leave precedes each scored jump request with a local
+request for the same state, as leaving insert mode follows the last
+keystroke in the editor.
+
 Usage:
     python3 -I run_eval.py --engine PATH --model GGUF --cases cases.jsonl \
         --name label [--limit N] -- [engine flags...]
@@ -56,7 +63,7 @@ def score(case, resp):
     return "wrong"
 
 
-def replay_lines(case, jump=True, warm=None, keystrokes=False, observe_warm=False):
+def replay_lines(case, jump=True, warm=None, keystrokes=False, observe_warm=False, leave=False):
     """Replay one case. With `warm` (a dict carried across cases), state is
     kept between consecutive cases of the same file and only newer history is
     observed, so the KV cache behaves as in continuous editing."""
@@ -92,6 +99,17 @@ def replay_lines(case, jump=True, warm=None, keystrokes=False, observe_warm=Fals
                     "jump": False,
                 }
             }
+    if leave and jump:
+        yield {
+            "predict": {
+                "request_id": f"{case['id']}#leave",
+                "path": case["path"],
+                "content": case["content"],
+                "cursor": case["cursor"],
+                "ts_ms": case["ts_ms"],
+                "jump": False,
+            }
+        }
     yield {
         "predict": {
             "request_id": case["id"],
@@ -114,17 +132,19 @@ def main():
     ap.add_argument("--name", required=True)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--out", default="")
+    ap.add_argument("--all-out", default="", help="timings of every response, keystroke pre-states included")
     ap.add_argument("--no-jump", action="store_true")
     ap.add_argument("--warm", action="store_true", help="keep editor state across consecutive cases of a file")
     ap.add_argument("--keystrokes", action="store_true", help="predict at the burst's last keystrokes before the scored state")
     ap.add_argument("--observe-warm", action="store_true", help="history observes ask the engine to warm its cache while idle")
+    ap.add_argument("--leave", action="store_true", help="a local request for the scored state precedes the jump request")
     ap.add_argument("flags", nargs="*")
     args = ap.parse_args()
     cases = [json.loads(l) for l in open(args.cases)]
     if args.limit:
         cases = cases[: args.limit]
     warm = {} if args.warm else None
-    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm, args.keystrokes, args.observe_warm))
+    stdin = "".join(json.dumps(line) + "\n" for c in cases for line in replay_lines(c, not args.no_jump, warm, args.keystrokes, args.observe_warm, args.leave))
     cmd = [args.engine, "--model", args.model, *args.flags, "replay"]
     proc = subprocess.run(cmd, input=stdin, capture_output=True, text=True)
     if proc.returncode != 0:
@@ -146,6 +166,10 @@ def main():
         rows.append({"id": c["id"], "score": s, "kind": r.get("kind"), "exit": r.get("exit_reason"),
                      "edit": (r.get("edits") or [None])[0], "completion": r.get("completion"),
                      "ms": r.get("timings", {}).get("total_ms"),
+                     "first_edit_ms": r.get("timings", {}).get("first_edit_ms"),
+                     "provisional_ms": r.get("timings", {}).get("provisional_ms"),
+                     "provisional_retracted": r.get("timings", {}).get("provisional_retracted"),
+                     "finish_reason": r.get("finish_reason"),
                      "confidence": r.get("confidence"), "stages": r.get("timings", {}).get("stages"),
                      "prompt_tokens": r.get("context", {}).get("prompt_tokens"),
                      "context": r.get("context")})
@@ -170,6 +194,18 @@ def main():
         with open(args.out, "w") as f:
             for row in rows:
                 f.write(json.dumps(row) + "\n")
+    if args.all_out:
+        with open(args.all_out, "w") as f:
+            for r in responses:
+                t = r.get("timings", {})
+                f.write(json.dumps({"id": r.get("request_id"), "status": r.get("status"), "exit": r.get("exit_reason"),
+                                    "edit": (r.get("edits") or [None])[0], "finish_reason": r.get("finish_reason"),
+                                    "prefetched": r.get("prefetched"), "ms": t.get("total_ms"),
+                                    "first_edit_ms": t.get("first_edit_ms"), "provisional_ms": t.get("provisional_ms"),
+                                    "provisional_retracted": t.get("provisional_retracted"),
+                                    "kind": r.get("kind"), "jump": (r.get("context") or {}).get("jump"),
+                                    "stages": [{k: s.get(k) for k in ("prompt_tokens", "cached_tokens", "evaluated_prompt_tokens", "prefill_ms", "decode_ms", "generated_tokens", "scratch")}
+                                               for s in t.get("stages") or []]}) + "\n")
 
 
 if __name__ == "__main__":
