@@ -9,6 +9,7 @@
 use similar::{Algorithm, DiffOp, capture_diff_slices, capture_diff_slices_deadline};
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// Edits closer than this many lines, without a longer pause, are one edit.
@@ -21,6 +22,12 @@ const CONTEXT_LINES: usize = 2;
 /// With session bases, a live group is not split by pauses, only by edits
 /// elsewhere, a file change, or this age.
 const SESSION_MAX_AGE: Duration = Duration::from_secs(60);
+/// The original snapshot is advanced past edits the history no longer shows
+/// once they change more than this many lines (`refresh_original_at`).
+const REFRESH_DRIFT_LINES: usize = 12;
+/// ... or once the snapshot has fewer than half the current lines and the
+/// advance adds at least this many.
+const REFRESH_MIN_LINES: usize = 3;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiffHunk {
@@ -100,7 +107,7 @@ struct Group {
     id: u64,
     path: PathBuf,
     display: String,
-    base: String,
+    base: Arc<str>,
     latest: String,
     started: Instant,
     last_ts: Instant,
@@ -114,6 +121,8 @@ pub struct Tracker {
     files: HashMap<PathBuf, FileState>,
     finalized: VecDeque<(Instant, DiffHunk)>,
     group: Option<Group>,
+    /// Text before each recent edit group, oldest first: (group, path, base).
+    bases: VecDeque<(u64, PathBuf, Arc<str>)>,
     next_group: u64,
     /// Group edits by place only (pauses do not split them), see
     /// `SESSION_MAX_AGE`.
@@ -203,11 +212,16 @@ impl Tracker {
         } else {
             self.finalize_group();
             self.next_group += 1;
+            let base: Arc<str> = Arc::from(previous);
+            self.bases.push_back((self.next_group, path.to_path_buf(), Arc::clone(&base)));
+            while self.bases.len() > MAX_FINALIZED + 1 {
+                self.bases.pop_front();
+            }
             self.group = Some(Group {
                 id: self.next_group,
                 path: path.to_path_buf(),
                 display: display.to_string(),
-                base: previous,
+                base,
                 latest: content.to_string(),
                 started: now,
                 last_ts: now,
@@ -288,11 +302,40 @@ impl Tracker {
 
     /// Text of `path` before its live edit group, when the group is in it.
     pub fn session_base(&self, path: &Path) -> Option<&str> {
-        self.group.as_ref().filter(|g| g.path == path).map(|g| g.base.as_str())
+        self.group.as_ref().filter(|g| g.path == path).map(|g| &*g.base)
     }
 
     pub fn original(&self, path: &Path) -> Option<&str> {
         self.files.get(path).map(|s| s.original.as_str())
+    }
+
+    /// Text of `path` just before edit group `from`, the oldest group a
+    /// prompt shows: every edit the prompt leaves out applied, none it shows.
+    /// The current text when `from` is None (nothing shown) or newer than
+    /// every group of the file.
+    pub fn state_before_group(&self, path: &Path, from: Option<u64>) -> Option<&str> {
+        let state = self.files.get(path)?;
+        let base = from.and_then(|from| self.bases.iter().find(|(id, p, _)| *id >= from && p == path));
+        Some(base.map_or(state.content.as_str(), |(_, _, b)| &**b))
+    }
+
+    /// Advance the original snapshot of `path` to `state_before_group` when
+    /// the snapshot is clearly stale: the edits between them change more
+    /// than `REFRESH_DRIFT_LINES` lines, or the snapshot has fewer than half
+    /// the current lines. The original opens the prompt, so a new one
+    /// re-evaluates nearly all of it; small drift is left alone. Returns
+    /// true when the snapshot changed.
+    pub fn refresh_original_at(&mut self, path: &Path, from: Option<u64>, now: Instant) -> bool {
+        let Some(candidate) = self.state_before_group(path, from).map(str::to_string) else {
+            return false;
+        };
+        let state = self.files.get_mut(path).unwrap();
+        if !original_is_stale(&state.original, &candidate, &state.content) {
+            return false;
+        }
+        state.original = candidate;
+        state.original_at = now;
+        true
     }
 
     /// Most recently visited files other than `exclude`, newest first.
@@ -365,6 +408,27 @@ fn split_lines(text: &str) -> Vec<&str> {
         v.pop();
     }
     v
+}
+
+/// Lines changed between `a` and `b` (per change, the larger side).
+fn changed_lines(a: &str, b: &str) -> usize {
+    let (a, b) = (split_lines(a), split_lines(b));
+    let deadline = Instant::now() + Duration::from_millis(20);
+    capture_diff_slices_deadline(Algorithm::Myers, &a, &b, Some(deadline))
+        .iter()
+        .filter(|op| !matches!(op, DiffOp::Equal { .. }))
+        .map(|op| op.old_range().len().max(op.new_range().len()))
+        .sum()
+}
+
+/// See `Tracker::refresh_original_at`.
+fn original_is_stale(original: &str, candidate: &str, current: &str) -> bool {
+    if original == candidate {
+        return false;
+    }
+    let drift = changed_lines(original, candidate);
+    let (o, k, c) = (split_lines(original).len(), split_lines(candidate).len(), split_lines(current).len());
+    drift > REFRESH_DRIFT_LINES || (o * 2 < c && k > o && drift >= REFRESH_MIN_LINES)
 }
 
 /// First and last changed line (0-based, in the new text).
@@ -585,6 +649,71 @@ mod tests {
         t.observe_at(p, "f.rs", "A\nBB\n", 1, false, now + Duration::from_secs(70));
         assert_eq!(t.session_base(p), Some("A\nB\n"));
         assert!(t.session_base(Path::new("/r/g.rs")).is_none());
+    }
+
+    #[test]
+    fn original_advances_past_hunks_no_longer_shown() {
+        let p = Path::new("/r/d.yaml");
+        let now = Instant::now();
+        let at = |s: u64| now + Duration::from_secs(s);
+        let mut t = Tracker::default();
+        // A new, empty file: the snapshot is taken before anything is typed.
+        t.observe_at(p, "d.yaml", "", 0, false, now);
+        let block = "tasks:\n  db:\n    cmd: [postgres]\n    ready: yes\n";
+        t.observe_at(p, "d.yaml", block, 3, false, at(1));
+        // Nothing has dropped out of the history yet: the paste is shown.
+        let (h, _) = t.recent_split_at(3, at(2));
+        assert_eq!(t.state_before_group(p, Some(h[0].group)), Some(""));
+        assert!(!t.refresh_original_at(p, Some(h[0].group), at(2)));
+        let mut text = block.to_string();
+        for (k, line) in ["  api:\n", "    cmd: [cargo]\n", "    deps: [db]\n"].iter().enumerate() {
+            text.push_str(line);
+            t.observe_at(p, "d.yaml", &text, 4 + k, false, at(10 * (k as u64 + 1)));
+        }
+        // Two finalized groups and the live one shown.
+        let (h, _) = t.recent_split_at(2, at(40));
+        assert_eq!(h.len(), 3);
+        // Only the three newest groups are shown: the snapshot moves to the
+        // text just before the oldest of them, the paste applied.
+        assert_eq!(t.state_before_group(p, Some(h[0].group)), Some(block));
+        assert!(t.refresh_original_at(p, Some(h[0].group), at(40)));
+        assert_eq!(t.original(p), Some(block));
+        // Small drift that no shown hunk covers is left alone (KV cache).
+        text.push_str("  web:\n");
+        t.observe_at(p, "d.yaml", &text, 7, false, at(50));
+        let (h, _) = t.recent_split_at(2, at(51));
+        assert!(!t.refresh_original_at(p, Some(h[0].group), at(51)));
+        assert_eq!(t.original(p), Some(block));
+        // Nothing shown at all: the current text.
+        assert_eq!(t.state_before_group(p, None), Some(text.as_str()));
+        assert!(t.state_before_group(Path::new("/r/other"), None).is_none());
+    }
+
+    #[test]
+    fn large_drift_refreshes_a_full_snapshot() {
+        let p = Path::new("/r/f.rs");
+        let now = Instant::now();
+        let base: String = (0..60).map(|i| format!("l{i}\n")).collect();
+        let mut t = Tracker::default();
+        t.observe_at(p, "f.rs", &base, 0, false, now);
+        // Fourteen separate one-line edits, far apart in time.
+        let mut text = base.clone();
+        for k in 0..14u64 {
+            text = text.replace(&format!("l{}\n", k * 4), &format!("L{}\n", k * 4));
+            t.observe_at(p, "f.rs", &text, k as usize * 4, false, now + Duration::from_secs(10 * (k + 1)));
+        }
+        let later = now + Duration::from_secs(200);
+        let (h, _) = t.recent_split_at(2, later);
+        // Eleven dropped edits is not enough drift; the original is full size.
+        assert!(!original_is_stale(&base, t.state_before_group(p, Some(h[0].group)).unwrap(), &text));
+        text = text.replace("l57\n", "L57\n");
+        t.observe_at(p, "f.rs", &text, 57, false, now + Duration::from_secs(300));
+        text = text.replace("l59\n", "L59\n");
+        t.observe_at(p, "f.rs", &text, 59, false, now + Duration::from_secs(310));
+        let (h, _) = t.recent_split_at(2, now + Duration::from_secs(311));
+        assert!(t.refresh_original_at(p, Some(h[0].group), now + Duration::from_secs(311)));
+        let o = t.original(p).unwrap();
+        assert!(o.contains("L48\n") && o.contains("l52\n") && !o.contains("L52\n"));
     }
 
     #[test]

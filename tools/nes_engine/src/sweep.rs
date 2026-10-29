@@ -337,6 +337,9 @@ pub struct Built {
     pub file_chunks_used: usize,
     pub hunks_used: usize,
     pub initial_file_lines: usize,
+    /// Oldest edit group the prompt shows, in the history or through the
+    /// window; None when it shows no edit.
+    pub shown_from: Option<u64>,
 }
 
 /// Sweep `format_recent_changes_and_prev_section`, restricted to hunks of the
@@ -413,17 +416,20 @@ fn render_hunk(h: &DiffHunk, diff_format: DiffFormat) -> Option<String> {
     ))
 }
 
-/// The last `max_hunks` renderable hunks, with the number used.
-fn render_history<'h>(hunks: impl DoubleEndedIterator<Item = &'h DiffHunk>, max_hunks: usize, diff_format: DiffFormat) -> (String, usize) {
-    let mut shown: Vec<String> = hunks
+/// The last `max_hunks` renderable hunks, with the number used and the
+/// group of the oldest one.
+fn render_history<'h>(hunks: impl DoubleEndedIterator<Item = &'h DiffHunk>, max_hunks: usize, diff_format: DiffFormat) -> (String, usize, Option<u64>) {
+    let mut shown: Vec<(u64, String)> = hunks
         .rev()
         .filter(|h| !h.is_whitespace_only())
-        .filter_map(|h| render_hunk(h, diff_format))
+        .filter_map(|h| render_hunk(h, diff_format).map(|r| (h.group, r)))
         .take(max_hunks)
         .collect();
     shown.reverse();
     let n = shown.len();
-    (shown.concat().trim_end_matches('\n').to_string(), n)
+    let oldest = shown.first().map(|(g, _)| *g);
+    let text: String = shown.into_iter().map(|(_, r)| r).collect();
+    (text.trim_end_matches('\n').to_string(), n, oldest)
 }
 
 /// Lines `[w0, w1)` of `lines` joined like the window text `like`.
@@ -447,7 +453,7 @@ fn window_lines(block: &Block) -> (usize, usize) {
 /// hunks are hidden from the history (the window pair shows them), and the
 /// history is capped after hiding so hidden hunks do not take its slots.
 /// Returns (history, window before the reverted edits, revert steps, hunks
-/// shown).
+/// shown, oldest group shown in either).
 fn stable_changes_and_prev(
     path: &str,
     hunks: &[DiffHunk],
@@ -456,7 +462,7 @@ fn stable_changes_and_prev(
     max_hunks: usize,
     diff_format: DiffFormat,
     hide_active: bool,
-) -> (String, String, Vec<String>, usize) {
+) -> (String, String, Vec<String>, usize, Option<u64>) {
     let mut file: Vec<String> = content.split('\n').map(str::to_string).collect();
     let (mut w0, mut w1) = window_lines(block);
     let mut hidden = vec![false; hunks.len()];
@@ -508,8 +514,13 @@ fn stable_changes_and_prev(
     }
     let prev = join_window(&file[w0..w1.min(file.len())], &block.text);
     let shown = hunks.iter().zip(&hidden).filter(|(_, hide)| !(hide_active && **hide)).map(|(h, _)| h);
-    let (history, used) = render_history(shown, max_hunks, diff_format);
-    (history, prev, sections, used)
+    let (history, used, oldest) = render_history(shown, max_hunks, diff_format);
+    let in_window = hunks.iter().zip(&hidden).filter(|(_, hide)| **hide).map(|(h, _)| h.group).min();
+    let oldest = match (oldest, in_window) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
+    (history, prev, sections, used, oldest)
 }
 
 /// The window's lines `[w0, w1)` of `content` with every region changed
@@ -585,16 +596,17 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
     let marker = if input.opts.cursor_marker { CURSOR } else { "" };
     let mut code_block = format!("{}{}{}", &cleaned[..rel_cursor], marker, &cleaned[rel_cursor..]);
     let opts = input.opts;
-    let (recent, mut prev, prev_sections, hunks_used) = if opts.session_base {
+    let (recent, mut prev, prev_sections, hunks_used, shown_from) = if opts.session_base {
         // Only finalized groups are history; the live one is in the window.
         let finalized = &input.hunks[..input.hunks.len() - input.live];
-        let (history, used) = render_history(finalized.iter(), opts.max_hunks, opts.diff_format);
+        let (history, used, oldest) = render_history(finalized.iter(), opts.max_hunks, opts.diff_format);
         let prev = match input.session_base {
             Some(base) => window_from_base(base, input.content, block),
             None => cleaned.to_string(),
         };
         let sections = if prev != cleaned { vec![prev.clone()] } else { Vec::new() };
-        (history, prev, sections, used)
+        let live = input.hunks[input.hunks.len() - input.live..].iter().map(|h| h.group).min();
+        (history, prev, sections, used, oldest.or(live))
     } else if opts.stable_history {
         stable_changes_and_prev(input.path, input.hunks, input.content, block, opts.max_hunks, opts.diff_format, opts.hide_active_edit)
     } else {
@@ -606,7 +618,10 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
             opts.diff_format,
             opts.hide_active_edit,
         );
-        (recent, prev, sections, input.hunks.len().min(opts.max_hunks))
+        let n = input.hunks.len();
+        let shown = n.saturating_sub(opts.max_hunks + if opts.hide_active_edit { sections.len() } else { 0 });
+        let oldest = input.hunks[shown..].iter().map(|h| h.group).min();
+        (recent, prev, sections, n.min(opts.max_hunks), oldest)
     };
     let prefill = compute_prefill(cleaned, rel_cursor, input.opts.prefill);
     let retrieval = pack_from_end(input.retrieval, input.opts.max_retrieval_tokens);
@@ -658,6 +673,7 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
         file_chunks_used: input.file_chunks.len(),
         hunks_used,
         initial_file_lines: initial.lines().count(),
+        shown_from,
     }
 }
 
@@ -1847,6 +1863,7 @@ mod tests {
         });
         // The window edit is hidden and three older edits remain visible.
         assert_eq!(built.hunks_used, 3);
+        assert_eq!(built.shown_from, Some(hunks[0].group));
         let history = &built.prompt[..built.prompt.find("original/").unwrap()];
         assert!(history.contains("L1") && history.contains("L20") && history.contains("L40"));
         assert!(!history.contains("L50"));
@@ -1862,7 +1879,7 @@ mod tests {
         let (_, prev, _) = recent_changes_and_prev("f.rs", &hunks, new, 6, DiffFormat::Server, true);
         assert_ne!(prev, old);
         let block = Block { text: new.into(), start: 0, start_line: 0 };
-        let (history, prev, sections, used) = stable_changes_and_prev("f.rs", &hunks, new, &block, 6, DiffFormat::Server, true);
+        let (history, prev, sections, used, _) = stable_changes_and_prev("f.rs", &hunks, new, &block, 6, DiffFormat::Server, true);
         assert_eq!(prev, old);
         assert_eq!((history.as_str(), sections.len(), used), ("", 1, 0));
     }
@@ -1886,11 +1903,11 @@ mod tests {
         let cursor = second.find("l7").unwrap();
         let block = block_at_cursor(&second, cursor, 2, 3);
         assert_eq!(block.text, "A3\nl6\nl7\nB\nl9\nl10\n");
-        let (history, prev, sections, used) = stable_changes_and_prev("f.rs", &hunks, &second, &block, 6, DiffFormat::Server, true);
+        let (history, prev, sections, used, _) = stable_changes_and_prev("f.rs", &hunks, &second, &block, 6, DiffFormat::Server, true);
         assert_eq!(prev, lines(5..11));
         assert_eq!((history.as_str(), sections.len(), used), ("", 2, 0));
         // Without hiding both stay in the history, oldest first.
-        let (history, _, _, used) = stable_changes_and_prev("f.rs", &hunks, &second, &block, 6, DiffFormat::Server, false);
+        let (history, _, _, used, _) = stable_changes_and_prev("f.rs", &hunks, &second, &block, 6, DiffFormat::Server, false);
         assert_eq!(used, 2);
         assert!(history.find("A1").unwrap() < history.find("\nB\n").unwrap());
     }
@@ -1902,6 +1919,49 @@ mod tests {
         let cursor = content.find('Y').unwrap();
         let block = block_at_cursor(&content, cursor, 2, 3);
         assert_eq!(window_from_base(&base, &content, &block), "l3\nl4\nl5\nl6\nl7\n");
+    }
+
+    #[test]
+    fn shown_from_is_the_oldest_history_or_window_group() {
+        use crate::history::Tracker;
+        use std::time::{Duration, Instant};
+        let p = Path::new("/x/f.rs");
+        let mut t = Tracker::default();
+        let now = Instant::now();
+        let base = lines(0..60);
+        let mut text = base.clone();
+        t.observe_at(p, "f.rs", &text, 0, false, now);
+        for (k, line) in [1, 20, 40, 50].iter().enumerate() {
+            text = text.replace(&format!("l{line}\n"), &format!("L{line}\n"));
+            t.observe_at(p, "f.rs", &text, *line, false, now + Duration::from_secs(10 * (k as u64 + 1)));
+        }
+        let (hunks, live) = t.recent_split_at(6, now + Duration::from_secs(41));
+        let mut o = opts();
+        o.max_hunks = 2;
+        o.hide_active_edit = true;
+        o.stable_history = true;
+        let build = |cursor: usize| {
+            let block = block_at_cursor(&text, cursor, 2, 3);
+            build_prompt(&PromptInput {
+                path: "f.rs",
+                content: &text,
+                original: &base,
+                cursor,
+                block: &block,
+                hunks: &hunks,
+                file_chunks: &[],
+                retrieval: &[],
+                opts: &o,
+                live,
+                session_base: None,
+                initial_start: None,
+            })
+            .shown_from
+        };
+        // The live edit is in the window; the history shows L20 and L40.
+        assert_eq!(build(text.find("L50").unwrap()), Some(hunks[1].group));
+        // Away from every edit the history shows the newest two.
+        assert_eq!(build(text.find("l10").unwrap()), Some(hunks[2].group));
     }
 
     #[test]

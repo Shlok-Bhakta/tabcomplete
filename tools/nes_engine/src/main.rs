@@ -171,6 +171,12 @@ struct Cli {
     /// Retrieve definitions for files the index cannot parse (YAML etc.).
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     retrieval_unindexed: bool,
+    /// Advance a file's original snapshot (the prompt's file section) past
+    /// edits the history no longer shows, once it is clearly stale (12 lines
+    /// of drift, or under half the current lines), and warm the new prompt
+    /// while idle. Without it a file first seen empty stays empty there.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    refresh_original: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -267,6 +273,7 @@ fn main() -> Result<()> {
         stable_window: cli.stable_window,
         warm_full_prompt: cli.warm_full_prompt,
         retrieval_unindexed: cli.retrieval_unindexed,
+        refresh_original: cli.refresh_original,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,

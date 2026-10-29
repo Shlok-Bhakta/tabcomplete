@@ -109,6 +109,8 @@ pub struct ContextSummary {
     pub block_start_line: usize,
     pub block_lines: usize,
     pub trimmed: Vec<&'static str>,
+    /// The original-file snapshot was advanced after this request.
+    pub original_refreshed: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -180,6 +182,9 @@ pub struct Settings {
     pub warm_full_prompt: bool,
     /// Retrieve definitions for files of languages the index does not parse.
     pub retrieval_unindexed: bool,
+    /// Advance a file's original snapshot past edits the history no longer
+    /// shows, when it is clearly stale (`Tracker::refresh_original_at`).
+    pub refresh_original: bool,
 }
 
 /// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
@@ -488,7 +493,12 @@ impl Service {
                 jump: false,
                 ts_ms: req.ts_ms,
             };
-            if let Some(tokens) = self.build_tokens(&state) {
+            if let Some((mut tokens, shown_from)) = self.build_tokens(&state) {
+                if self.refresh_original(&path, shown_from, now) {
+                    if let Some((fresh, _)) = self.build_tokens(&state) {
+                        tokens = fresh;
+                    }
+                }
                 self.warm(&display, tokens);
             }
             return;
@@ -522,12 +532,19 @@ impl Service {
     }
 
     /// Full local prompt for an observed buffer state, as a prediction
-    /// would build it.
-    fn build_tokens(&self, req: &PredictRequest) -> Option<Vec<llama_cpp_2::token::LlamaToken>> {
+    /// would build it, and the oldest edit group it shows.
+    fn build_tokens(&self, req: &PredictRequest) -> Option<(Vec<llama_cpp_2::token::LlamaToken>, Option<u64>)> {
         let resolved = self.resolve(&req.path, req.root.as_deref());
         let g = self.gather(req, &resolved, Purpose::Warm).ok()?;
         let p = self.stage_prompt(&g, &req.content, g.cursor, &g.block, &g.retrieval).ok()?;
-        Some(p.tokens)
+        Some((p.tokens, p.built.shown_from))
+    }
+
+    /// Advance the original snapshot of `path` when a prompt showing edit
+    /// groups from `shown_from` on leaves it clearly stale. Returns true when
+    /// it changed; the caller re-warms the prompt.
+    fn refresh_original(&self, path: &Path, shown_from: Option<u64>, now: Instant) -> bool {
+        self.settings.refresh_original && self.tracker.lock().unwrap().refresh_original_at(path, shown_from, now)
     }
 
     /// First line of the original-file chunk to show, or None for the old
@@ -720,7 +737,7 @@ impl Service {
             first_ms: None,
             done: false,
         });
-        let (stage, local_tokens) = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut())?;
+        let (stage, local_tokens, shown_from) = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut())?;
         let mut outcome = match stage {
             None => {
                 resp.status = "cancelled";
@@ -730,6 +747,9 @@ impl Service {
             }
             Some(p) => p,
         };
+        // A stale snapshot is advanced after the answer and the prompt built
+        // from it warmed while idle, so the next request finds it cached.
+        let refreshed = !speculative && self.refresh_original(&resolved.0, shown_from, self.instant(req.ts_ms));
         let local_empty = outcome.edits.is_empty();
         if local_empty && req.jump && !g.hunks.is_empty() {
             if let Some(j) = sweep::find_jump_block(content, &g.hunks, &g.display, cursor, &g.diagnostics, self.settings.prompt.lines_before, self.settings.prompt.lines_after) {
@@ -740,7 +760,7 @@ impl Service {
                     }
                     let local_prompt = std::mem::take(&mut resp.prompt);
                     let local_completion = std::mem::take(&mut resp.completion);
-                    let (jumped, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None)?;
+                    let (jumped, _, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None)?;
                     match jumped {
                         Some(p) if !p.edits.is_empty() && p.edits[0].text.trim().len() + (p.edits[0].end - p.edits[0].start) > 0 => {
                             resp.kind = "jump";
@@ -761,7 +781,9 @@ impl Service {
                     // The jump prompt shares the file's cache slot and
                     // replaced the local prompt in it; restore that while
                     // idle so the next keystroke here stays incremental.
-                    self.warm(&g.display, local_tokens);
+                    if !refreshed {
+                        self.warm(&g.display, local_tokens);
+                    }
                 }
             }
         }
@@ -785,6 +807,12 @@ impl Service {
         }
         resp.status = if resp.edits.is_empty() { "empty" } else { "ok" };
         resp.prompt_sha256 = sha256_hex(&resp.prompt);
+        resp.context.original_refreshed = refreshed;
+        if refreshed {
+            if let Some((tokens, _)) = self.build_tokens(&req) {
+                self.warm(&g.display, tokens);
+            }
+        }
         resp.timings.total_ms = ms(started);
         if let Some(e) = &early {
             e.settle(&mut resp);
@@ -956,7 +984,7 @@ impl Service {
     }
 
     /// Run one prediction stage. Returns the processed outcome (None when
-    /// superseded) and the prompt tokens.
+    /// superseded), the prompt tokens and the oldest edit group shown.
     #[allow(clippy::too_many_arguments)]
     fn run_stage(
         &self,
@@ -968,7 +996,7 @@ impl Service {
         retrieval: &[Chunk],
         resp: &mut PredictResponse,
         mut early: Option<&mut Early<'_>>,
-    ) -> Result<(Option<sweep::Processed>, Vec<llama_cpp_2::token::LlamaToken>)> {
+    ) -> Result<(Option<sweep::Processed>, Vec<llama_cpp_2::token::LlamaToken>, Option<u64>)> {
         let StagePrompt { built, tokens, block_tokens, max_tokens, max_newlines, trimmed, file_chunks_used, retrieval_from } =
             self.stage_prompt(g, content, cursor, block, retrieval)?;
         let rc = &retrieval[retrieval_from..];
@@ -1018,10 +1046,11 @@ impl Service {
             }
         };
         resp.prompt = built.prompt.clone();
+        let shown_from = built.shown_from;
         match outcome {
             Outcome::Cancelled(stats) => {
                 resp.timings.stages.push(stats);
-                Ok((None, tokens))
+                Ok((None, tokens, shown_from))
             }
             Outcome::Done(gen_out) => {
                 resp.timings.stages.push(gen_out.stats.clone());
@@ -1037,7 +1066,7 @@ impl Service {
                     &gen_out.token_offsets,
                 ));
                 let processed = sweep::process_completion(&gen_out.text, gen_out.finish_reason, &built, block, content, cursor);
-                Ok((Some(processed), tokens))
+                Ok((Some(processed), tokens, shown_from))
             }
         }
     }
