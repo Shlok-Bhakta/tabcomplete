@@ -141,6 +141,10 @@ struct Cli {
     /// rather than only the file context.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     warm_full_prompt: bool,
+    /// Do not split the live edit group on pauses (up to 60 s) and show it
+    /// only in the window, reverted to its base in `original/`.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    session_base: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -221,6 +225,7 @@ fn main() -> Result<()> {
             context_order,
             chunk_lines: cli.chunk_lines,
             stable_history: cli.stable_history,
+            session_base: cli.session_base,
             ..Default::default()
         },
         max_retrieval_chunks: cli.retrieval_chunks,

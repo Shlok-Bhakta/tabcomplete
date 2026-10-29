@@ -194,6 +194,7 @@ struct Gathered {
     hunks: Vec<DiffHunk>,
     /// Trailing `hunks` from the live edit group.
     live: usize,
+    session_base: Option<String>,
     original: String,
     initial_start: Option<usize>,
     block: Block,
@@ -338,7 +339,7 @@ impl Service {
             n_ctx,
             jobs: Mutex::new(tx),
             latest,
-            tracker: Mutex::new(Tracker::default()),
+            tracker: Mutex::new(Tracker::new(settings.prompt.session_base)),
             registry: Arc::new(Registry::default()),
             sticky: Mutex::new(HashMap::new()),
             clock: Mutex::new(None),
@@ -356,7 +357,7 @@ impl Service {
     }
 
     pub fn reset(&self) {
-        *self.tracker.lock().unwrap() = Tracker::default();
+        *self.tracker.lock().unwrap() = Tracker::new(self.settings.prompt.session_base);
         self.chunk_starts.lock().unwrap().clear();
         self.sticky.lock().unwrap().clear();
         self.sticky_file_chunks.lock().unwrap().clear();
@@ -701,7 +702,7 @@ impl Service {
         if let Some(reason) = sweep::should_disable_file(content) {
             return Err(reason);
         }
-        let (hunks, live, original) = {
+        let (hunks, live, session_base, original) = {
             let now = self.instant(req.ts_ms);
             let mut real = self.tracker.lock().unwrap();
             let mut copy;
@@ -714,13 +715,14 @@ impl Service {
             if purpose != Purpose::Warm {
                 t.observe_at(path, display, content, req.cursor.line, false, now);
             }
-            let (h, live) = if opts.stable_history {
+            let (h, live) = if opts.stable_history || opts.session_base {
                 t.recent_split_at(opts.max_hunks + HIDDEN_HEADROOM, now)
             } else {
                 (t.recent_hunks_at(opts.max_hunks, now), 0)
             };
+            let base = if opts.session_base { t.session_base(path).map(str::to_string) } else { None };
             let o = t.original(path).unwrap_or(content).to_string();
-            (h, live, o)
+            (h, live, base, o)
         };
         self.registry.ensure_fresh(root, self.settings.index_refresh_secs);
         let ws = self.registry.get(root);
@@ -780,6 +782,7 @@ impl Service {
             cursor,
             hunks,
             live,
+            session_base,
             original,
             initial_start,
             block,
@@ -811,6 +814,7 @@ impl Service {
                 retrieval: rc,
                 opts: &opts,
                 live: g.live,
+                session_base: g.session_base.as_deref(),
                 initial_start: g.initial_start,
             });
             let tokens = self.tokenizer.tokenize(&built.prompt);

@@ -18,6 +18,9 @@ const MAX_FINALIZED: usize = 24;
 const MAX_AGE: Duration = Duration::from_secs(15 * 60);
 const ORIGINAL_REFRESH_AGE: Duration = Duration::from_secs(15 * 60);
 const CONTEXT_LINES: usize = 2;
+/// With session bases, a live group is not split by pauses, only by edits
+/// elsewhere, a file change, or this age.
+const SESSION_MAX_AGE: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiffHunk {
@@ -99,6 +102,7 @@ struct Group {
     display: String,
     base: String,
     latest: String,
+    started: Instant,
     last_ts: Instant,
     lo: usize,
     hi: usize,
@@ -111,6 +115,9 @@ pub struct Tracker {
     finalized: VecDeque<(Instant, DiffHunk)>,
     group: Option<Group>,
     next_group: u64,
+    /// Group edits by place only (pauses do not split them), see
+    /// `SESSION_MAX_AGE`.
+    session_base: bool,
 }
 
 pub struct Visit {
@@ -121,6 +128,10 @@ pub struct Visit {
 }
 
 impl Tracker {
+    pub fn new(session_base: bool) -> Self {
+        Self { session_base, ..Default::default() }
+    }
+
     /// Record a snapshot. Returns true when the content changed.
     pub fn observe(
         &mut self,
@@ -170,8 +181,13 @@ impl Tracker {
         let previous = std::mem::replace(&mut state.content, content.to_string());
         let extend = match &self.group {
             Some(g) => {
+                let recent = if self.session_base {
+                    now.duration_since(g.started) < SESSION_MAX_AGE
+                } else {
+                    now.duration_since(g.last_ts) < PAUSE
+                };
                 g.path == path
-                    && now.duration_since(g.last_ts) < PAUSE
+                    && recent
                     && lo <= g.hi + PROXIMITY_LINES
                     && hi + PROXIMITY_LINES >= g.lo
             }
@@ -193,6 +209,7 @@ impl Tracker {
                 display: display.to_string(),
                 base: previous,
                 latest: content.to_string(),
+                started: now,
                 last_ts: now,
                 lo,
                 hi,
@@ -267,6 +284,11 @@ impl Tracker {
             }
             None => Vec::new(),
         }
+    }
+
+    /// Text of `path` before its live edit group, when the group is in it.
+    pub fn session_base(&self, path: &Path) -> Option<&str> {
+        self.group.as_ref().filter(|g| g.path == path).map(|g| g.base.as_str())
     }
 
     pub fn original(&self, path: &Path) -> Option<&str> {
@@ -547,6 +569,22 @@ mod tests {
         assert_eq!(live, 1);
         let new: Vec<String> = h.iter().map(|h| h.parts(0).1).collect();
         assert_eq!(new, ["L20", "L40", "L55"]);
+    }
+
+    #[test]
+    fn session_base_ignores_pauses() {
+        let p = Path::new("/r/f.rs");
+        let now = Instant::now();
+        let mut t = Tracker::new(true);
+        t.observe_at(p, "f.rs", "a\nb\n", 0, false, now);
+        t.observe_at(p, "f.rs", "A\nb\n", 0, false, now + Duration::from_secs(1));
+        t.observe_at(p, "f.rs", "A\nB\n", 1, false, now + Duration::from_secs(20));
+        assert_eq!(t.session_base(p), Some("a\nb\n"));
+        assert_eq!(t.recent_split_at(6, now + Duration::from_secs(21)).1, 1);
+        // The session is folded after its maximum age.
+        t.observe_at(p, "f.rs", "A\nBB\n", 1, false, now + Duration::from_secs(70));
+        assert_eq!(t.session_base(p), Some("A\nB\n"));
+        assert!(t.session_base(Path::new("/r/g.rs")).is_none());
     }
 
     #[test]

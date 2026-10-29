@@ -72,6 +72,9 @@ pub struct PromptOptions {
     /// Hide window edits before capping the history, keep the live edit
     /// group out of the history filters, and revert by line position.
     pub stable_history: bool,
+    /// Show the live edit group only through the window, reverted to the
+    /// text before the group (`original/`), never in the history.
+    pub session_base: bool,
 }
 
 /// Where retrieved context sits relative to the edit history. Anything that
@@ -106,6 +109,7 @@ impl Default for PromptOptions {
             max_hunks: 6,
             context_order: ContextOrder::Sweep,
             stable_history: false,
+            session_base: false,
         }
     }
 }
@@ -314,6 +318,9 @@ pub struct PromptInput<'a> {
     pub opts: &'a PromptOptions,
     /// Trailing `hunks` from the live edit group (`stable_history`).
     pub live: usize,
+    /// Text before the live edit group, when it is in this file
+    /// (`session_base`).
+    pub session_base: Option<&'a str>,
     /// First line of the original-file chunk; None maps the cursor's byte
     /// offset into the original (the old behaviour).
     pub initial_start: Option<usize>,
@@ -505,6 +512,27 @@ fn stable_changes_and_prev(
     (history, prev, sections, used)
 }
 
+/// The window's lines `[w0, w1)` of `content` with every region changed
+/// since `base` that touches the window replaced by its `base` lines.
+fn window_from_base(base: &str, content: &str, block: &Block) -> String {
+    let a: Vec<&str> = base.split('\n').collect();
+    let b: Vec<&str> = content.split('\n').collect();
+    let (w0, w1) = window_lines(block);
+    let mut out: Vec<String> = Vec::new();
+    for op in similar::capture_diff_slices(similar::Algorithm::Myers, &a, &b) {
+        let (old, new) = (op.old_range(), op.new_range());
+        if let similar::DiffOp::Equal { .. } = op {
+            let (lo, hi) = (new.start.max(w0), new.end.min(w1));
+            if lo < hi {
+                out.extend(b[lo..hi].iter().map(|l| l.to_string()));
+            }
+        } else if (new.start < w1 && new.end > w0) || (new.is_empty() && w0 < new.start && new.start < w1) {
+            out.extend(a[old].iter().map(|l| l.to_string()));
+        }
+    }
+    join_window(&out, &block.text)
+}
+
 fn compute_prefill(cleaned: &str, rel_cursor: usize, mode: Prefill) -> String {
     let before = &cleaned[..rel_cursor];
     match mode {
@@ -557,7 +585,17 @@ pub fn build_prompt(input: &PromptInput<'_>) -> Built {
     let marker = if input.opts.cursor_marker { CURSOR } else { "" };
     let mut code_block = format!("{}{}{}", &cleaned[..rel_cursor], marker, &cleaned[rel_cursor..]);
     let opts = input.opts;
-    let (recent, mut prev, prev_sections, hunks_used) = if opts.stable_history {
+    let (recent, mut prev, prev_sections, hunks_used) = if opts.session_base {
+        // Only finalized groups are history; the live one is in the window.
+        let finalized = &input.hunks[..input.hunks.len() - input.live];
+        let (history, used) = render_history(finalized.iter(), opts.max_hunks, opts.diff_format);
+        let prev = match input.session_base {
+            Some(base) => window_from_base(base, input.content, block),
+            None => cleaned.to_string(),
+        };
+        let sections = if prev != cleaned { vec![prev.clone()] } else { Vec::new() };
+        (history, prev, sections, used)
+    } else if opts.stable_history {
         stable_changes_and_prev(input.path, input.hunks, input.content, block, opts.max_hunks, opts.diff_format, opts.hide_active_edit)
     } else {
         let (recent, prev, sections) = recent_changes_and_prev(
@@ -1384,6 +1422,7 @@ mod tests {
             retrieval: &retrieval,
             opts: &o,
             live: 0,
+            session_base: None,
             initial_start: None,
         });
         let p = &built.prompt;
@@ -1417,6 +1456,7 @@ mod tests {
             retrieval: &[],
             opts: &o,
             live: 0,
+            session_base: None,
             initial_start: None,
         });
         assert!(built.prompt.starts_with("<|file_sep|>src/main.rs\nfn main()"));
@@ -1517,6 +1557,7 @@ mod tests {
             retrieval: &[],
             opts: &o,
             live: 0,
+            session_base: None,
             initial_start: None,
         });
         let p = process_completion("x = 1\n", "stop", &built, &block, new, 0);
@@ -1559,6 +1600,7 @@ mod tests {
             retrieval: &[],
             opts: &o,
             live,
+            session_base: None,
             initial_start: None,
         });
         // The window edit is hidden and three older edits remain visible.
@@ -1609,6 +1651,15 @@ mod tests {
         let (history, _, _, used) = stable_changes_and_prev("f.rs", &hunks, &second, &block, 6, DiffFormat::Server, false);
         assert_eq!(used, 2);
         assert!(history.find("A1").unwrap() < history.find("\nB\n").unwrap());
+    }
+
+    #[test]
+    fn session_window_reverts_to_base() {
+        let base = lines(0..10);
+        let content = base.replace("l4\n", "X\nY\n");
+        let cursor = content.find('Y').unwrap();
+        let block = block_at_cursor(&content, cursor, 2, 3);
+        assert_eq!(window_from_base(&base, &content, &block), "l3\nl4\nl5\nl6\nl7\n");
     }
 
     #[test]
