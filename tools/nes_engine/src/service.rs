@@ -6,7 +6,7 @@
 //! evaluated by an abandoned job is kept for the next one.
 
 use crate::history::{self, DiffHunk, Tracker};
-use crate::index::{self, Registry};
+use crate::index::{self, Lang, Registry};
 use crate::model::{Engine, GenRequest, GenStats, ModelConfig, Outcome, Tokenizer};
 use crate::retrieval::{self, RetrievalInput};
 use crate::sweep::{self, Block, Chunk, Diagnostic, Edit, PromptInput, PromptOptions};
@@ -171,6 +171,8 @@ pub struct Settings {
     pub stable_window: bool,
     /// Warm requests prefill the whole local prompt, not only its stable head.
     pub warm_full_prompt: bool,
+    /// Retrieve definitions for files of languages the index does not parse.
+    pub retrieval_unindexed: bool,
 }
 
 /// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
@@ -747,7 +749,10 @@ impl Service {
             None => visible_range(&original, cursor.min(original.len()), opts),
         };
         let previous = self.sticky.lock().unwrap().get(path).cloned().unwrap_or_default();
-        let mut retrieval = {
+        // Identifiers of a file the index cannot parse (YAML, Markdown...)
+        // only match unrelated definitions elsewhere.
+        let retrieve = self.settings.retrieval_unindexed || Lang::from_path(path).is_some();
+        let mut retrieval = if retrieve {
             let ws = ws.lock().unwrap();
             retrieval::definition_chunks(
                 &ws,
@@ -762,6 +767,8 @@ impl Service {
                     max_chunks: self.settings.max_retrieval_chunks,
                 },
             )
+        } else {
+            Vec::new()
         };
         if purpose != Purpose::Warm {
             self.sticky

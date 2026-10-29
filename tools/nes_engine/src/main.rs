@@ -145,6 +145,9 @@ struct Cli {
     /// only in the window, reverted to its base in `original/`.
     #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
     session_base: bool,
+    /// Retrieve definitions for files the index cannot parse (YAML etc.).
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    retrieval_unindexed: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -240,6 +243,7 @@ fn main() -> Result<()> {
         multiline_min_confidence: cli.multiline_min_confidence,
         stable_window: cli.stable_window,
         warm_full_prompt: cli.warm_full_prompt,
+        retrieval_unindexed: cli.retrieval_unindexed,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
