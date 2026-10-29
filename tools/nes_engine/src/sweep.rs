@@ -991,14 +991,25 @@ pub struct Processed {
 /// Returns the window text to append. Only the first edit is ever shown, so
 /// later edits in the window are not lost in practice.
 pub fn splice_rest(prefill: &str, generated: &str, cleaned: &str) -> Option<String> {
-    splice_rest_n(prefill, generated, cleaned, 2)
+    splice_rest_n(prefill, generated, cleaned, 2, 0)
 }
 
 /// `splice_rest` with a configurable number of matching anchor lines.
-pub fn splice_rest_n(prefill: &str, generated: &str, cleaned: &str, anchors: usize) -> Option<String> {
+///
+/// With `partial_chars > 0` the anchor may also be the start of the line
+/// being generated: once the change is complete and the partial next line
+/// (at least `partial_chars` non-blank characters) uniquely starts a window
+/// line below it, the rest is spliced from that line's beginning (the
+/// caller drops the partial line), saving the tokens of a full anchor line.
+pub fn splice_rest_n(prefill: &str, generated: &str, cleaned: &str, anchors: usize, partial_chars: usize) -> Option<String> {
     let anchors = anchors.max(1);
     let out = format!("{prefill}{generated}");
     let complete = &out[..out.rfind('\n')? + 1];
+    if partial_chars > 0 {
+        if let Some(rest) = splice_partial_anchor(complete, &out[complete.len()..], cleaned, partial_chars) {
+            return Some(rest);
+        }
+    }
     let a = cleaned.as_bytes();
     let b = complete.as_bytes();
     let mut p = 0;
@@ -1028,6 +1039,34 @@ pub fn splice_rest_n(prefill: &str, generated: &str, cleaned: &str, anchors: usi
         }
     }
     found.map(|k| block_lines[k..].concat())
+}
+
+fn splice_partial_anchor(complete: &str, partial: &str, cleaned: &str, min_chars: usize) -> Option<String> {
+    if partial.trim().len() < min_chars {
+        return None;
+    }
+    let (a, b) = (cleaned.as_bytes(), complete.as_bytes());
+    let mut p = 0;
+    while p < a.len() && p < b.len() && a[p] == b[p] {
+        p += 1;
+    }
+    if p == b.len() {
+        return None; // the change has not started (or not finished a line)
+    }
+    // Lines of the window at or below the changed line; the anchor must be
+    // below it and unique.
+    let div_line = cleaned[..p].matches('\n').count();
+    let block_lines: Vec<&str> = cleaned.split_inclusive('\n').collect();
+    let mut found = None;
+    for (j, line) in block_lines.iter().enumerate().skip(div_line + 1) {
+        if line.starts_with(partial) {
+            if found.is_some() {
+                return None;
+            }
+            found = Some(j);
+        }
+    }
+    found.map(|j| block_lines[j..].concat())
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -1790,6 +1829,22 @@ mod tests {
         // Changed line then two matching lines: splice the rest.
         let rest = splice_rest("fn a() {\n", "    let x = 10;\n    let y = 2;\n    let z = 3;\n", cleaned);
         assert_eq!(rest.as_deref(), Some("    tail();\n}\n"));
+    }
+
+    #[test]
+    fn splice_on_partial_anchor_line() {
+        let cleaned = "fn a() {\n    let x = 1;\n    let y = 2;\n    tail();\n}\n";
+        // The changed line is complete and "    let y" starts the next window line.
+        let rest = splice_rest_n("fn a() {\n", "    let x = 10;\n    let y", cleaned, 1, 6);
+        assert_eq!(rest.as_deref(), Some("    let y = 2;\n    tail();\n}\n"));
+        // Too short to anchor, or still inside the changed line: wait.
+        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    le", cleaned, 1, 6), None);
+        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10", cleaned, 1, 6), None);
+        // Off by default.
+        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    let y", cleaned, 1, 0), None);
+        // Ambiguous prefixes do not anchor.
+        let twice = "fn a() {\n    let x = 1;\n    let y = 2;\n    let y = 3;\n}\n";
+        assert_eq!(splice_rest_n("fn a() {\n", "    let x = 10;\n    let y", twice, 1, 6), None);
     }
 
     #[test]

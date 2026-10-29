@@ -107,6 +107,11 @@ struct Cli {
     /// Matching lines after an edit before the rest of the window is spliced.
     #[arg(long, default_value_t = 1)]
     splice_anchors: usize,
+    /// Splice once the start of the next line (this many non-blank
+    /// characters) uniquely matches a window line below the change, instead
+    /// of waiting for a complete anchor line. 0 disables.
+    #[arg(long, default_value_t = 0)]
+    splice_partial_chars: usize,
     /// Reuse the unchanged prompt suffix's KV (shifted) instead of recomputing.
     /// Keystroke replay: prefill 459 -> 153 ms, p50 1.41 -> 1.09 s, same quality.
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
@@ -279,6 +284,7 @@ fn main() -> Result<()> {
         draft_max: cli.draft_max,
         draft_min_match: cli.draft_min_match,
         splice_anchors: cli.splice_anchors,
+        splice_partial_chars: cli.splice_partial_chars,
         draft_previous: cli.draft_previous,
         min_confidence: cli.min_confidence,
         multiline_min_confidence: cli.multiline_min_confidence,
@@ -350,6 +356,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         slot: "complete",
         novelty: None,
         early_stop: None,
+        early_stop_every_batch: false,
         progress: None,
     })? {
         model::Outcome::Done(g) => {

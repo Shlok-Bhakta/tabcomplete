@@ -173,6 +173,9 @@ pub struct Settings {
     pub draft_max: usize,
     pub draft_min_match: usize,
     pub splice_anchors: usize,
+    /// Characters of a partially generated line that may serve as the
+    /// splice anchor (0: anchors are complete lines only).
+    pub splice_partial_chars: usize,
     pub draft_previous: bool,
     /// Withhold edits whose weakest changed token is below this log-probability.
     pub min_confidence: f32,
@@ -251,7 +254,7 @@ enum Job {
         /// Tokens of the previous completion for this file (draft source).
         previous: Vec<llama_cpp_2::token::LlamaToken>,
         /// (prefill, window, anchor lines) for splicing the unchanged rest.
-        splice: Option<(String, String, usize)>,
+        splice: Option<(String, String, usize, usize)>,
         /// Send the output after every decode batch.
         progress: bool,
         reply: mpsc::Sender<Reply>,
@@ -387,9 +390,10 @@ impl Service {
                                 };
                                 let _ = reply.send(Reply::Progress { text: valid.to_string(), logprobs: logprobs.to_vec(), offsets: offsets.to_vec() });
                             };
-                            let splice_text = splice.as_ref().map(|(p, w, _)| (p.clone(), w.clone()));
-                            let splicer = splice.map(|(prefill, window, anchors)| {
-                                move |generated: &str| sweep::splice_rest_n(&prefill, generated, &window, anchors)
+                            let splice_text = splice.as_ref().map(|(p, w, _, _)| (p.clone(), w.clone()));
+                            let every_batch = splice.as_ref().is_some_and(|s| s.3 > 0);
+                            let splicer = splice.map(|(prefill, window, anchors, partial)| {
+                                move |generated: &str| sweep::splice_rest_n(&prefill, generated, &window, anchors, partial)
                             });
                             let result = engine.generate(GenRequest {
                                 prompt: &prompt,
@@ -406,6 +410,7 @@ impl Service {
                                 slot: &slot,
                                 novelty: splice_text.as_ref().map(|(p, w)| (p.as_str(), w.as_str())),
                                 early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
+                                early_stop_every_batch: every_batch,
                                 progress: progress.then_some(&on_progress as &dyn Fn(&[u8], &[f32], &[usize])),
                             });
                             let _ = reply.send(Reply::Done(result));
@@ -1055,7 +1060,9 @@ impl Service {
                 } else {
                     Vec::new()
                 },
-                splice: splice.then(|| (built.prefill.clone(), block.text.clone(), self.settings.splice_anchors)),
+                splice: splice.then(|| {
+                    (built.prefill.clone(), block.text.clone(), self.settings.splice_anchors, self.settings.splice_partial_chars)
+                }),
                 progress: early.is_some(),
                 reply: reply_tx,
             })

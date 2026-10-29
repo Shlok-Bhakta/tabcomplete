@@ -335,6 +335,9 @@ pub struct GenRequest<'a> {
     /// Called when a new line completes; returning text ends generation with
     /// that text appended (used to splice the unchanged rest of the window).
     pub early_stop: Option<&'a dyn Fn(&str) -> Option<String>>,
+    /// Run `early_stop` after every batch, not only after a new line (for
+    /// anchors on a partially generated line).
+    pub early_stop_every_batch: bool,
     /// Called after each decode batch with the output so far (bytes, token
     /// log-probabilities and token start offsets), for provisional edits.
     pub progress: Option<&'a dyn Fn(&[u8], &[f32], &[usize])>,
@@ -774,7 +777,7 @@ impl Engine {
                 break;
             }
             if let Some(check) = req.early_stop {
-                if newlines > checked_newlines {
+                if newlines > checked_newlines || (req.early_stop_every_batch && newlines > 0) {
                     checked_newlines = newlines;
                     let so_far = String::from_utf8_lossy(&text_bytes);
                     if let Some(rest) = check(&so_far) {
@@ -1174,7 +1177,7 @@ mod tests {
         let prefill = "fn a() {\n";
         // The last verified draft ran into the next line before the check.
         let generated = "    let x = 10;\n    let y = 2;\n    ready";
-        let rest = crate::sweep::splice_rest_n(prefill, generated, window, 1).unwrap();
+        let rest = crate::sweep::splice_rest_n(prefill, generated, window, 1, 0).unwrap();
         let mut text = generated.as_bytes().to_vec();
         let (mut logprobs, mut offsets) = (vec![-0.1, -0.2, -0.3], vec![0, 16, 31]);
         cut_after_last_newline(&mut text, &mut logprobs, &mut offsets);
