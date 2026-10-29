@@ -9,7 +9,7 @@ use crate::history::{self, DiffHunk, Tracker};
 use crate::index::{self, Lang, Registry};
 use crate::model::{Engine, GenRequest, GenStats, ModelConfig, Outcome, Tokenizer};
 use crate::retrieval::{self, RetrievalInput};
-use crate::sweep::{self, Block, Chunk, Diagnostic, Edit, PromptInput, PromptOptions};
+use crate::sweep::{self, Block, Chunk, Diagnostic, Edit, PromptInput, PromptOptions, Provisional};
 use anyhow::{Context as _, Result, anyhow};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -124,6 +124,13 @@ pub struct ChunkSummary {
 pub struct Timings {
     pub total_ms: f64,
     pub context_ms: f64,
+    /// When the shown edit was first displayable: the first provisional
+    /// edit the final agrees with, else `total_ms`. None when nothing is shown.
+    pub first_edit_ms: Option<f64>,
+    /// First provisional edit, whether or not the final kept it.
+    pub provisional_ms: Option<f64>,
+    /// A provisional edit was emitted and the final edit does not extend it.
+    pub provisional_retracted: bool,
     pub stages: Vec<GenStats>,
 }
 
@@ -232,7 +239,9 @@ enum Job {
         previous: Vec<llama_cpp_2::token::LlamaToken>,
         /// (prefill, window, anchor lines) for splicing the unchanged rest.
         splice: Option<(String, String, usize)>,
-        reply: mpsc::Sender<Result<Outcome>>,
+        /// Send the output after every decode batch.
+        progress: bool,
+        reply: mpsc::Sender<Reply>,
     },
     Warm {
         generation: u64,
@@ -241,6 +250,64 @@ enum Job {
     },
     /// Answered once every earlier job has finished (replay idle time).
     Ping(mpsc::Sender<()>),
+}
+
+/// Messages from the model worker for one generation.
+enum Reply {
+    /// Output so far (longest valid UTF-8 prefix), token log-probabilities
+    /// and token start offsets.
+    Progress { text: String, logprobs: Vec<f32>, offsets: Vec<usize> },
+    Done(Result<Outcome>),
+}
+
+/// Provisional edits of one request: what was emitted and when.
+struct Early<'a> {
+    started: Instant,
+    min_confidence: f32,
+    sink: Option<&'a dyn Fn(&EditOut)>,
+    shown: Option<Edit>,
+    first_ms: Option<f64>,
+    done: bool,
+}
+
+impl Early<'_> {
+    #[allow(clippy::too_many_arguments)]
+    fn update(&mut self, generated: &str, logprobs: &[f32], offsets: &[usize], built: &sweep::Built, block: &Block, content: &str, cursor: usize) {
+        if self.done {
+            return;
+        }
+        match sweep::provisional_ghost(generated, logprobs, offsets, built, block, content, cursor, self.min_confidence) {
+            Provisional::Pending => {}
+            Provisional::Never => self.done = true,
+            Provisional::Ghost { edit, complete, .. } => {
+                if self.shown.as_ref() != Some(&edit) {
+                    self.first_ms.get_or_insert_with(|| ms(self.started));
+                    if let Some(sink) = self.sink {
+                        sink(&edit_out(content, &edit));
+                    }
+                    self.shown = Some(edit);
+                }
+                self.done = complete;
+            }
+        }
+    }
+
+    /// Fill the first-edit timings once the final edits are known.
+    fn settle(&self, resp: &mut PredictResponse) {
+        let kept = match (&self.shown, resp.edits.first()) {
+            (Some(p), Some(f)) => f.start_byte == p.start && f.end_byte == p.end && f.text.starts_with(&p.text),
+            _ => false,
+        };
+        resp.timings.provisional_ms = self.first_ms;
+        resp.timings.provisional_retracted = self.first_ms.is_some() && !kept;
+        resp.timings.first_edit_ms = if resp.edits.is_empty() {
+            None
+        } else if kept {
+            self.first_ms
+        } else {
+            Some(resp.timings.total_ms)
+        };
+    }
 }
 
 pub struct Service {
@@ -294,11 +361,19 @@ impl Service {
                 };
                 while let Ok(job) = rx.recv() {
                     match job {
-                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, slot, previous, splice, reply } => {
+                        Job::Generate { generation, prompt, draft_source, draft_seed, max_tokens, max_newlines, slot, previous, splice, progress, reply } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
-                                let _ = reply.send(Ok(Outcome::Cancelled(GenStats::default())));
+                                let _ = reply.send(Reply::Done(Ok(Outcome::Cancelled(GenStats::default()))));
                                 continue;
                             }
+                            let on_progress = |text: &[u8], logprobs: &[f32], offsets: &[usize]| {
+                                // A token may end inside a multi-byte character.
+                                let valid = match std::str::from_utf8(text) {
+                                    Ok(t) => t,
+                                    Err(e) => std::str::from_utf8(&text[..e.valid_up_to()]).unwrap_or(""),
+                                };
+                                let _ = reply.send(Reply::Progress { text: valid.to_string(), logprobs: logprobs.to_vec(), offsets: offsets.to_vec() });
+                            };
                             let splice_text = splice.as_ref().map(|(p, w, _)| (p.clone(), w.clone()));
                             let splicer = splice.map(|(prefill, window, anchors)| {
                                 move |generated: &str| sweep::splice_rest_n(&prefill, generated, &window, anchors)
@@ -318,8 +393,9 @@ impl Service {
                                 slot: &slot,
                                 novelty: splice_text.as_ref().map(|(p, w)| (p.as_str(), w.as_str())),
                                 early_stop: splicer.as_ref().map(|f| f as &dyn Fn(&str) -> Option<String>),
+                                progress: progress.then_some(&on_progress as &dyn Fn(&[u8], &[f32], &[usize])),
                             });
-                            let _ = reply.send(result);
+                            let _ = reply.send(Reply::Done(result));
                         }
                         Job::Warm { generation, slot, prefix } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
@@ -526,6 +602,13 @@ impl Service {
     }
 
     pub fn predict(&self, req: PredictRequest) -> Result<PredictResponse> {
+        self.predict_streaming(req, None)
+    }
+
+    /// `predict`, calling `sink` with each provisional edit (ghost text at
+    /// the cursor that grows as the cursor line is decoded) before the
+    /// final response is ready.
+    pub fn predict_streaming(&self, req: PredictRequest, sink: Option<&dyn Fn(&EditOut)>) -> Result<PredictResponse> {
         let key = Self::cache_key(&req);
         let hit = {
             let mut cache = self.prefetched.lock().unwrap();
@@ -555,10 +638,13 @@ impl Service {
             cached.request_id = req.request_id.clone();
             cached.prefetched = true;
             cached.timings.total_ms = 0.0;
+            cached.timings.first_edit_ms = (!cached.edits.is_empty()).then_some(0.0);
+            cached.timings.provisional_ms = None;
+            cached.timings.provisional_retracted = false;
             return Ok(cached);
         }
         let jump = req.jump;
-        let resp = self.predict_inner(req, false)?;
+        let resp = self.predict_inner(req, false, sink)?;
         if resp.status == "ok" || resp.status == "empty" {
             let mut cache = self.answers.lock().unwrap();
             cache.retain(|(k, _)| *k != line_key);
@@ -580,7 +666,7 @@ impl Service {
         if self.prefetched.lock().unwrap().iter().any(|(k, _)| *k == key) {
             return Ok(());
         }
-        let resp = self.predict_inner(req, true)?;
+        let resp = self.predict_inner(req, true, None)?;
         if resp.status == "ok" || resp.status == "empty" {
             let mut cache = self.prefetched.lock().unwrap();
             cache.push((key, resp));
@@ -590,7 +676,7 @@ impl Service {
         Ok(())
     }
 
-    fn predict_inner(&self, req: PredictRequest, speculative: bool) -> Result<PredictResponse> {
+    fn predict_inner(&self, req: PredictRequest, speculative: bool, sink: Option<&dyn Fn(&EditOut)>) -> Result<PredictResponse> {
         let started = Instant::now();
         let mut resp = PredictResponse {
             request_id: req.request_id.clone(),
@@ -624,7 +710,17 @@ impl Service {
         let cursor = g.cursor;
         resp.timings.context_ms = ms(started);
 
-        let (stage, local_tokens) = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp)?;
+        // Provisional edits come from the local stage of real requests; they
+        // are computed without a sink too, for the first-edit timing.
+        let mut early = (!speculative).then(|| Early {
+            started,
+            min_confidence: self.settings.min_confidence,
+            sink,
+            shown: None,
+            first_ms: None,
+            done: false,
+        });
+        let (stage, local_tokens) = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut())?;
         let mut outcome = match stage {
             None => {
                 resp.status = "cancelled";
@@ -644,7 +740,7 @@ impl Service {
                     }
                     let local_prompt = std::mem::take(&mut resp.prompt);
                     let local_completion = std::mem::take(&mut resp.completion);
-                    let (jumped, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp)?;
+                    let (jumped, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None)?;
                     match jumped {
                         Some(p) if !p.edits.is_empty() && p.edits[0].text.trim().len() + (p.edits[0].end - p.edits[0].start) > 0 => {
                             resp.kind = "jump";
@@ -690,6 +786,9 @@ impl Service {
         resp.status = if resp.edits.is_empty() { "empty" } else { "ok" };
         resp.prompt_sha256 = sha256_hex(&resp.prompt);
         resp.timings.total_ms = ms(started);
+        if let Some(e) = &early {
+            e.settle(&mut resp);
+        }
         Ok(resp)
     }
 
@@ -868,6 +967,7 @@ impl Service {
         block: &Block,
         retrieval: &[Chunk],
         resp: &mut PredictResponse,
+        mut early: Option<&mut Early<'_>>,
     ) -> Result<(Option<sweep::Processed>, Vec<llama_cpp_2::token::LlamaToken>)> {
         let StagePrompt { built, tokens, block_tokens, max_tokens, max_newlines, trimmed, file_chunks_used, retrieval_from } =
             self.stage_prompt(g, content, cursor, block, retrieval)?;
@@ -884,7 +984,7 @@ impl Service {
         resp.context.retrieval = rc[rc.len() - built.retrieval_used..].iter().map(summary).collect();
         resp.context.file_chunks = if file_chunks_used { g.file_chunks.iter().map(summary).collect() } else { Vec::new() };
         let draft_seed = self.tokenizer.tokenize_plain(&built.prefill);
-        let early = self.settings.early_stop;
+        let splice = self.settings.early_stop;
         let (reply_tx, reply_rx) = mpsc::channel();
         self.jobs
             .lock()
@@ -902,11 +1002,21 @@ impl Service {
                 } else {
                     Vec::new()
                 },
-                splice: early.then(|| (built.prefill.clone(), block.text.clone(), self.settings.splice_anchors)),
+                splice: splice.then(|| (built.prefill.clone(), block.text.clone(), self.settings.splice_anchors)),
+                progress: early.is_some(),
                 reply: reply_tx,
             })
             .map_err(|_| anyhow!("model worker stopped"))?;
-        let outcome = reply_rx.recv().map_err(|_| anyhow!("model worker dropped request"))??;
+        let outcome = loop {
+            match reply_rx.recv().map_err(|_| anyhow!("model worker dropped request"))? {
+                Reply::Progress { text, logprobs, offsets } => {
+                    if let Some(e) = early.as_deref_mut() {
+                        e.update(&text, &logprobs, &offsets, &built, block, content, cursor);
+                    }
+                }
+                Reply::Done(result) => break result?,
+            }
+        };
         resp.prompt = built.prompt.clone();
         match outcome {
             Outcome::Cancelled(stats) => {

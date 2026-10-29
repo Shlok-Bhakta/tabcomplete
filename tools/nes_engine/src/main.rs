@@ -321,6 +321,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         slot: "complete",
         novelty: None,
         early_stop: None,
+        progress: None,
     })? {
         model::Outcome::Done(g) => {
             println!("{}", serde_json::to_string(&json!({"text": g.text, "finish": g.finish_reason, "stats": g.stats}))?);
