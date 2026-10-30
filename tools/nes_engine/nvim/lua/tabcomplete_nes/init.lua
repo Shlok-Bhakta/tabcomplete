@@ -40,6 +40,11 @@ M.config = {
   -- Stream predictions: show provisional ghost text before decoding ends.
   stream = true,
   clipboard_window_ms = 120000,
+  -- Telemetry bounds: characters kept per withheld edit text, withheld
+  -- edits recorded per response, and the byte budget of one event payload.
+  telemetry_text_chars = 2000,
+  telemetry_withheld_edits = 2,
+  telemetry_max_payload_bytes = 32768,
   exclude_filetypes = {
     "TelescopePrompt", "snacks_picker_input", "snacks_input", "neo-tree", "lazy", "mason", "help",
     "gitcommit", "gitrebase", "oil", "minifiles", "noice", "notify", "qf", "trouble",
@@ -55,6 +60,13 @@ local state = {
   health = nil,
   expected_cursor = nil,
   applying = false,
+  -- When and why the next request was scheduled (debounce start).
+  trigger = nil,
+  -- Last blob hash recorded per kind (diagnostics, clipboard): unchanged
+  -- context is not uploaded again.
+  blob_hashes = {},
+  -- Engine settings hash whose command line was last recorded.
+  engine_args_logged = nil,
   stats = { requested = 0, shown = 0, accepted = 0, dismissed = 0, errors = 0 },
 }
 
@@ -86,13 +98,134 @@ local function emit(bufnr, kind, payload)
   return ok and ev or nil
 end
 
-local function store_blob(text)
+local function store_blob(text, kind)
   local c = collector()
   if not c or not M.config.capture_content or not text or text == "" then return nil end
   local ok, hash = pcall(vim.fn.sha256, text)
   if not ok then return nil end
+  if kind and state.blob_hashes[kind] == hash then return hash end
   pcall(c.store_prediction_blob, text, function() end)
+  if kind then state.blob_hashes[kind] = hash end
   return hash
+end
+
+-- Telemetry helpers ---------------------------------------------------------
+
+local function cap_text(text, n)
+  if type(text) ~= "string" then return nil, nil end
+  n = n or M.config.telemetry_text_chars
+  if #text <= n then return text, nil end
+  return text:sub(1, n), true
+end
+
+local function round1(x)
+  if type(x) ~= "number" then return nil end
+  return math.floor(x * 10 + 0.5) / 10
+end
+
+-- Flat latency summary of the engine timings (stages summed).
+local function latency_summary(t)
+  if type(t) ~= "table" then return nil end
+  local out = {
+    total_ms = round1(t.total_ms),
+    context_ms = round1(t.context_ms),
+    first_edit_ms = round1(t.first_edit_ms),
+    provisional_ms = round1(t.provisional_ms),
+    provisional_retracted = t.provisional_retracted,
+    stages = 0,
+  }
+  local sums = { prefill_ms = 0, decode_ms = 0, prompt_tokens = 0, cached_tokens = 0,
+    evaluated_prompt_tokens = 0, generated_tokens = 0, draft_proposed = 0, draft_accepted = 0 }
+  for _, st in ipairs(type(t.stages) == "table" and t.stages or {}) do
+    out.stages = out.stages + 1
+    for k in pairs(sums) do
+      if type(st[k]) == "number" then sums[k] = sums[k] + st[k] end
+    end
+  end
+  for k, v in pairs(sums) do out[k] = k:match("_ms$") and round1(v) or v end
+  return out
+end
+
+-- Engine timings with each stage's per-batch log capped.
+local MAX_BATCHES = 32
+local function bounded_timings(t)
+  if type(t) ~= "table" or type(t.stages) ~= "table" then return t end
+  local out = vim.tbl_extend("force", {}, t)
+  out.stages = {}
+  for i, st in ipairs(t.stages) do
+    local copy = vim.tbl_extend("force", {}, st)
+    if type(st.batches) == "table" and #st.batches > MAX_BATCHES then
+      copy.batches = vim.list_slice(st.batches, 1, MAX_BATCHES)
+      copy.batches_dropped = #st.batches - MAX_BATCHES
+    end
+    out.stages[i] = copy
+  end
+  return out
+end
+
+-- Drop optional fields, largest first, until the payload fits the budget.
+local function bounded(payload, droppable)
+  local limit = M.config.telemetry_max_payload_bytes
+  local ok, json = pcall(vim.json.encode, payload)
+  if ok and #json <= limit then return payload end
+  local dropped = {}
+  for _, key in ipairs(droppable) do
+    if payload[key] ~= nil then
+      payload[key] = nil
+      dropped[#dropped + 1] = key
+      ok, json = pcall(vim.json.encode, payload)
+      if ok and #json <= limit then break end
+    end
+  end
+  payload.dropped_fields = dropped
+  return payload
+end
+
+-- Withheld edits with the text they would have replaced (from the request
+-- snapshot), capped.
+local function withheld_edits(list, content)
+  local out = {}
+  for i, e in ipairs(type(list) == "table" and list or {}) do
+    if i > M.config.telemetry_withheld_edits then break end
+    local text, text_cut = cap_text(e.text)
+    local replaced, replaced_cut = nil, nil
+    if content and type(e.start_byte) == "number" and type(e.end_byte) == "number" then
+      replaced, replaced_cut = cap_text(content:sub(e.start_byte + 1, e.end_byte))
+    end
+    out[#out + 1] = {
+      start_line = e.start_line, start_col = e.start_col, end_line = e.end_line, end_col = e.end_col,
+      start_byte = e.start_byte, end_byte = e.end_byte,
+      text = text, text_chars = type(e.text) == "string" and #e.text or nil, text_truncated = text_cut,
+      replaced_text = replaced, replaced_truncated = replaced_cut,
+    }
+  end
+  return out
+end
+
+local function severity_counts(diags)
+  local counts = {}
+  for _, d in ipairs(diags) do counts[d.severity] = (counts[d.severity] or 0) + 1 end
+  return counts
+end
+
+-- Exact diagnostics and clipboard sent with a request: counts always, the
+-- content as a deduplicated blob when content capture is on.
+local function request_context(diags, clipboard, yank)
+  local out = {
+    diagnostics_count = #diags,
+    diagnostics_severity = #diags > 0 and severity_counts(diags) or nil,
+    clipboard_present = clipboard ~= nil,
+  }
+  if #diags > 0 then
+    local ok, json = pcall(vim.json.encode, diags)
+    if ok then out.diagnostics_hash = store_blob(json, "diagnostics") end
+  end
+  if clipboard then
+    out.clipboard_chars = #clipboard
+    out.clipboard_age_ms = yank and (now_ms() - yank.at) or nil
+    out.clipboard_hash = store_blob(clipboard, "clipboard")
+  end
+  return out
 end
 
 local function is_secret(path)
@@ -327,6 +460,45 @@ end
 
 local announce
 
+-- Terminal outcome of a dismissal reason (`outcome` in the payload; the
+-- reason itself stays in `reason`).
+local DISMISS_OUTCOME = {
+  explicit = "rejected_explicit",
+  superseded = "superseded",
+  buffer_left = "buffer_left",
+  editor_exit = "editor_exit",
+}
+
+-- Record the one terminal outcome of a shown suggestion. Later calls for the
+-- same suggestion are ignored, so every shown suggestion ends exactly once.
+local function close(s, event_type, outcome, reason, extra)
+  if s.closed or not s.shown_event_id then return end
+  s.closed = true
+  local e = s.edits[s.idx] or {}
+  local closed_at = now_ms()
+  local payload = {
+    prediction_id = s.prediction_id,
+    request_id = s.request_id,
+    shown_event_id = s.shown_event_id,
+    outcome = outcome,
+    outcome_source = "editor_observation",
+    reason = reason,
+    edit_index = s.idx,
+    display = s.display,
+    kind = s.kind,
+    closed_at_ms = closed_at,
+    visible_ms = s.shown_at and (closed_at - s.shown_at) or nil,
+    typed_through = s.typed_through,
+    jumped = s.jumped or false,
+    jumped_at_ms = s.jumped_at,
+    total_chars = s.total_chars,
+    remaining_chars = type(e.text) == "string" and #e.text or nil,
+    protocol = "sweep-next-edit-v1",
+  }
+  for k, v in pairs(extra or {}) do payload[k] = v end
+  emit(s.bufnr, event_type, payload)
+end
+
 local function dismiss(reason)
   local s = state.suggestion
   if not s then return end
@@ -335,15 +507,8 @@ local function dismiss(reason)
   state.suggestion = nil
   clear_marks(s.bufnr)
   state.stats.dismissed = state.stats.dismissed + 1
-  emit(s.bufnr, reason == "explicit" and "prediction_rejected" or "prediction_dismissed", {
-    prediction_id = s.prediction_id,
-    request_id = s.request_id,
-    reason = reason,
-    shown_event_id = s.shown_event_id,
-    visible_ms = s.shown_at and (now_ms() - s.shown_at) or nil,
-    typed_through = s.typed_through,
-    protocol = "sweep-next-edit-v1",
-  })
+  close(s, reason == "explicit" and "prediction_rejected" or "prediction_dismissed",
+    DISMISS_OUTCOME[reason] or "dismissed", reason)
 end
 
 local prefetch_after_accept
@@ -378,6 +543,8 @@ announce = function(bufnr, s)
   s.shown_at = now_ms()
   state.stats.shown = state.stats.shown + 1
   local e = s.edits[s.idx]
+  s.total_chars = s.total_chars or (type(e.text) == "string" and #e.text or nil)
+  local drawn = s.drawn_at or s.shown_at
   local ev = emit(bufnr, "prediction_shown", {
     prediction_id = s.prediction_id,
     request_id = s.request_id,
@@ -394,6 +561,11 @@ announce = function(bufnr, s)
     replaced_text = M.config.capture_content and s.replaced or nil,
     shown_at_ms = s.shown_at,
     first_drawn_at_ms = s.drawn_at,
+    -- Client latency: last keystroke (debounce start) and request start to
+    -- the moment the text first appeared.
+    trigger_at_ms = s.trigger_at,
+    keystroke_to_display_ms = s.trigger_at and (drawn - s.trigger_at) or nil,
+    request_to_display_ms = s.started_at and (drawn - s.started_at) or nil,
     provisional = s.partial or nil,
     file = vim.api.nvim_buf_get_name(bufnr),
     protocol = "sweep-next-edit-v1",
@@ -472,12 +644,16 @@ local function accept()
   clear_marks(bufnr)
   local e = s.edits[s.idx]
   vim.schedule(function()
-    if not vim.api.nvim_buf_is_valid(bufnr) or vim.api.nvim_buf_get_changedtick(bufnr) ~= s.changedtick then return end
+    if not vim.api.nvim_buf_is_valid(bufnr) or vim.api.nvim_buf_get_changedtick(bufnr) ~= s.changedtick then
+      close(s, "prediction_dismissed", "dismissed", "accept_stale")
+      return
+    end
     state.applying = true
     local ok, row, col = pcall(apply_edit, bufnr, e)
     state.applying = false
     if not ok then
       state.stats.errors = state.stats.errors + 1
+      close(s, "prediction_dismissed", "dismissed", "accept_failed", { error = tostring(row):sub(1, 200) })
       return
     end
     if vim.api.nvim_get_current_buf() == bufnr then
@@ -488,17 +664,13 @@ local function accept()
       pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, col })
     end
     state.stats.accepted = state.stats.accepted + 1
-    emit(bufnr, "prediction_accepted", {
-      prediction_id = s.prediction_id,
-      request_id = s.request_id,
-      edit_index = s.idx,
-      shown_event_id = s.shown_event_id,
+    local text = e.text or ""
+    local _, newlines = text:gsub("\n", "")
+    close(s, "prediction_accepted", "accepted", "explicit_accept", {
+      outcome_source = "explicit_acceptance",
       accepted_at_ms = now_ms(),
-      visible_ms = s.shown_at and (now_ms() - s.shown_at) or nil,
-      jumped = s.jumped or false,
-      display = s.display,
-      kind = s.kind,
-      protocol = "sweep-next-edit-v1",
+      accepted_chars = #text,
+      accepted_lines = newlines + 1,
     })
     -- Chain: ask for the next edit right away.
     schedule_request(bufnr, "after_accept", 0)
@@ -511,19 +683,16 @@ local function jump()
   if not s then return false end
   local e = s.edits[s.idx]
   s.jumped = true
+  s.jumped_at = now_ms()
   vim.schedule(function()
     if state.suggestion ~= s then return end
     local count = vim.api.nvim_buf_line_count(s.bufnr)
     local row = math.min(e.start_line, count - 1)
     state.expected_cursor = { row, e.start_col }
     pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, e.start_col })
+    -- The collector has no jump event type (it would reject the batch):
+    -- the jump is recorded on the terminal event (`jumped`, `jumped_at_ms`).
     s.display = render(s.bufnr, s)
-    emit(s.bufnr, "prediction_jumped", {
-      prediction_id = s.prediction_id,
-      request_id = s.request_id,
-      to = { row = row, col = e.start_col },
-      protocol = "sweep-next-edit-v1",
-    })
   end)
   return true
 end
@@ -583,21 +752,47 @@ local function request(bufnr, trigger)
   local clipboard = nil
   if state.yank and now_ms() - state.yank.at < M.config.clipboard_window_ms then clipboard = state.yank.text end
   state.stats.requested = state.stats.requested + 1
-  emit(bufnr, "prediction_requested", {
+  local started = now_ms()
+  -- The keystroke (or event) that scheduled this request, when it did.
+  local sched = state.trigger
+  state.trigger = nil
+  local trigger_at = (sched and sched.trigger == trigger and sched.at) or started
+  local root = root_for(bufnr)
+  local diags = diagnostics(bufnr)
+  local health = state.health
+  local engine = type(health) == "table" and health.engine or nil
+  local requested = {
     prediction_id = prediction_id,
     request_id = request_id,
     trigger = trigger,
     cursor = { row = row, col = col },
     changedtick = tick,
     file = path,
-    model = state.health and state.health.model or nil,
-    model_sha256 = state.health and state.health.model_sha256 or nil,
+    filetype = vim.bo[bufnr].filetype,
+    mode = vim.api.nvim_get_mode().mode,
+    line_count = vim.api.nvim_buf_line_count(bufnr),
+    content_bytes = #content,
+    -- Lets replays verify the buffer they rebuilt from edit deltas.
+    content_sha256 = #content <= 512 * 1024 and vim.fn.sha256(content) or nil,
+    model = health and health.model or nil,
+    model_sha256 = health and health.model_sha256 or nil,
+    engine = engine,
+    trigger_at_ms = trigger_at,
+    debounce_ms = sched and sched.delay or nil,
+    jump_requested = M.config.jump and trigger ~= "insert",
+    stream = M.config.stream,
     protocol = "sweep-next-edit-v1",
-    requested_at_ms = now_ms(),
-  })
-  local started = now_ms()
-  local root = root_for(bufnr)
-  local diags = diagnostics(bufnr)
+    requested_at_ms = started,
+  }
+  -- The engine command line, once per settings hash (resolves
+  -- `engine.settings_hash` without repeating it on every request).
+  if engine and engine.settings_hash and engine.settings_hash ~= state.engine_args_logged
+    and type(health.args) == "table" then
+    requested.engine_args = vim.list_slice(health.args, 1, 200)
+    state.engine_args_logged = engine.settings_hash
+  end
+  for k, v in pairs(request_context(diags, clipboard, state.yank)) do requested[k] = v end
+  emit(bufnr, "prediction_requested", bounded(requested, { "engine_args" }))
   local body = {
     request_id = request_id,
     path = path,
@@ -615,7 +810,9 @@ local function request(bufnr, trigger)
     return seq == state.seq and vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_get_current_buf() == bufnr
       and vim.api.nvim_buf_get_changedtick(bufnr) == tick
   end
+  local first_provisional_at = nil
   local function on_provisional(ev)
+    first_provisional_at = first_provisional_at or now_ms()
     local e = ev.edits and ev.edits[1]
     if not e or not current() then return end
     local r2, c2 = cursor_pos()
@@ -644,6 +841,8 @@ local function request(bufnr, trigger)
       clipboard = clipboard,
       provisional = true,
       partial = true,
+      trigger_at = trigger_at,
+      started_at = started,
     }
     draw(bufnr, early)
   end
@@ -657,13 +856,29 @@ local function request(bufnr, trigger)
       state.suggestion = nil
       clear_marks(bufnr)
     end
-    local latency = now_ms() - started
+    local received = now_ms()
+    local latency = received - started
+    local client_latency = {
+      trigger_to_request_ms = started - trigger_at,
+      request_ms = latency,
+      trigger_to_response_ms = received - trigger_at,
+      first_provisional_ms = first_provisional_at and (first_provisional_at - started) or nil,
+    }
     if err or not resp then
       if seq == state.seq then
         state.stats.errors = state.stats.errors + 1
         emit(bufnr, "prediction_generated", {
           prediction_id = prediction_id, request_id = request_id, status = "error",
-          error = tostring(err):sub(1, 200), latency_ms = latency, protocol = "sweep-next-edit-v1",
+          error = tostring(err):sub(1, 200), latency_ms = latency, client_latency = client_latency,
+          shown = false, not_shown_reason = "error", protocol = "sweep-next-edit-v1",
+        })
+      else
+        -- Killed by a newer request: close the request's record.
+        emit(bufnr, "prediction_generated", {
+          prediction_id = prediction_id, request_id = request_id, status = "cancelled",
+          exit_reason = "superseded", superseded = true, latency_ms = latency,
+          client_latency = client_latency, provisional_drawn = early ~= nil or nil,
+          shown = false, not_shown_reason = "superseded", protocol = "sweep-next-edit-v1",
         })
       end
       return
@@ -671,9 +886,37 @@ local function request(bufnr, trigger)
     if seq == state.seq then
       state.last_response = { prefetched = resp.prefetched or false, latency_ms = latency, status = resp.status, trigger = trigger }
     end
+    -- An engine whose settings changed since the last health check: fetch
+    -- its command line for the next request's record.
+    if type(resp.engine) == "table" and not (state.health and state.health.engine
+      and state.health.engine.settings_hash == resp.engine.settings_hash)
+      and received - (state.health_checked_at or 0) > 30000 then
+      state.health_checked_at = received
+      refresh_health()
+    end
+    -- Decide whether the final answer is drawn, and why not.
+    local not_shown = nil
+    if seq ~= state.seq then
+      not_shown = "superseded"
+    elseif resp.status ~= "ok" or not resp.edits or #resp.edits == 0 then
+      not_shown = resp.status == "ok" and "no_edits" or (resp.status or "no_status")
+    elseif early and not early.provisional then
+      -- The user already accepted, typed through or dismissed the preview.
+      not_shown = "preview_resolved"
+    elseif not current() then
+      not_shown = "buffer_changed"
+    else
+      local r2, c2 = cursor_pos()
+      if r2 ~= row or c2 ~= col then
+        not_shown = "cursor_moved"
+      elseif range_text(bufnr, resp.edits[1]) == nil then
+        not_shown = "range_gone"
+      end
+    end
     local prompt_hash = store_blob(resp.prompt)
     local completion_hash = store_blob(resp.completion)
-    emit(bufnr, "prediction_generated", {
+    local withheld = resp.withheld or {}
+    emit(bufnr, "prediction_generated", bounded({
       prediction_id = prediction_id,
       request_id = request_id,
       status = resp.status,
@@ -681,13 +924,23 @@ local function request(bufnr, trigger)
       kind = resp.kind,
       jump_reason = resp.jump_reason,
       edits = #(resp.edits or {}),
-      withheld = #(resp.withheld or {}),
-      withheld_edit = M.config.capture_content and (resp.withheld or {})[1] or nil,
+      withheld = #withheld,
+      withheld_edit = M.config.capture_content and withheld[1] or nil,
+      -- Withheld edits with what they would have replaced, for gate tuning
+      -- against what the user did next.
+      withheld_edits = M.config.capture_content and #withheld > 0 and withheld_edits(withheld, content) or nil,
+      withheld_reason = #withheld > 0 and resp.exit_reason or nil,
+      gate_threshold = type(resp.gate_threshold) == "number" and math.floor(resp.gate_threshold * 1000 + 0.5) / 1000 or nil,
       confidence = resp.confidence,
       finish_reason = resp.finish_reason,
       latency_ms = latency,
+      client_latency = client_latency,
+      latency = latency_summary(resp.timings),
       superseded = seq ~= state.seq or nil,
-      engine_timings = resp.timings,
+      shown = not_shown == nil,
+      not_shown_reason = not_shown,
+      engine = resp.engine,
+      engine_timings = bounded_timings(resp.timings),
       context = resp.context,
       context_blob_hash = prompt_hash,
       raw_response_hash = completion_hash,
@@ -696,13 +949,8 @@ local function request(bufnr, trigger)
       model = resp.model,
       model_sha256 = resp.model_sha256,
       protocol = resp.protocol,
-    })
-    if seq ~= state.seq or resp.status ~= "ok" or not resp.edits or #resp.edits == 0 then return end
-    -- The user already accepted, typed through or dismissed the preview.
-    if early and not early.provisional then return end
-    if not current() then return end
-    local r2, c2 = cursor_pos()
-    if r2 ~= row or c2 ~= col then return end
+    }, { "engine_timings", "withheld_edits", "withheld_edit", "context" }))
+    if not_shown then return end
     dismiss("superseded")
     local final = resp.edits[1]
     local p = early and early.edits[1]
@@ -724,6 +972,8 @@ local function request(bufnr, trigger)
       diagnostics = diags,
       clipboard = clipboard,
       drawn_at = extends and drawn_at or nil,
+      trigger_at = trigger_at,
+      started_at = started,
     })
   end
   if M.config.stream then
@@ -750,6 +1000,9 @@ local function request(bufnr, trigger)
 end
 
 schedule_request = function(bufnr, trigger, delay)
+  -- The latest keystroke restarts the debounce, so latency is measured
+  -- from it.
+  state.trigger = { trigger = trigger, at = now_ms(), delay = delay }
   if state.timer then
     state.timer:stop()
   else
@@ -798,12 +1051,11 @@ local function try_type_through(bufnr)
     -- The user typed the whole suggestion.
     state.suggestion = nil
     clear_marks(bufnr)
-    emit(bufnr, "prediction_partially_accepted", {
-      prediction_id = s.prediction_id,
-      request_id = s.request_id,
-      reason = "typed_through",
+    s.edits[s.idx] = { start_line = row, start_col = col, end_line = row, end_col = col, text = "" }
+    close(s, "prediction_partially_accepted", "partially_accepted", "typed_through", {
+      outcome_source = "explicit_partial_acceptance",
       keystrokes = s.typed_through,
-      protocol = "sweep-next-edit-v1",
+      accepted_chars = s.total_chars,
     })
     return true
   end
@@ -968,6 +1220,12 @@ local function autocmds()
     end,
   })
   vim.api.nvim_create_autocmd("ColorScheme", { group = group, callback = define_highlights })
+  -- Close a visible suggestion before the collector ends its session.
+  local ok, c = pcall(require, "tabcomplete_trajectory")
+  if ok and type(c) == "table" and c.on_shutdown and not state.shutdown_hooked then
+    state.shutdown_hooked = true
+    c.on_shutdown(function() dismiss("editor_exit") end)
+  end
 end
 
 function M.status()
@@ -1016,6 +1274,14 @@ M._test = {
   show_for_test = function(bufnr, s) show(bufnr, s) end,
   post_stream = post_stream,
   try_type_through = function(bufnr) return try_type_through(bufnr) end,
+  dismiss = function(reason) dismiss(reason) end,
+  schedule_request = function(...) return schedule_request(...) end,
+  now_ms = now_ms,
+  jump = function() return jump() end,
+  withheld_edits = withheld_edits,
+  latency_summary = latency_summary,
+  bounded_timings = bounded_timings,
+  bounded = bounded,
 }
 
 return M
