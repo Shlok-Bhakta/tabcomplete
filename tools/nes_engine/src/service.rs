@@ -237,6 +237,9 @@ pub struct Settings {
     /// request switches to it once that costs no more than the old prompt,
     /// or after `REFRESH_DEFER_MAX`.
     pub defer_refresh: bool,
+    /// Retrieval chunks kept from the last prompt stay first, in their old
+    /// order (new chunks follow), instead of all chunks best-last.
+    pub retrieval_stable_order: bool,
 }
 
 /// Longest a deferred snapshot refresh waits for its warm-up.
@@ -1137,14 +1140,21 @@ impl Service {
         } else {
             Vec::new()
         };
-        if purpose != Purpose::Warm {
-            self.sticky
-                .lock()
-                .unwrap()
-                .insert(path.clone(), retrieval.iter().map(retrieval::chunk_key).collect());
+        let mut keys: Vec<String> = retrieval.iter().map(retrieval::chunk_key).collect();
+        if self.settings.retrieval_stable_order {
+            // Chunks kept from the last prompt open the section in their old
+            // order, so a newly chosen chunk does not re-evaluate them; new
+            // chunks follow, best last. The prompt order is remembered.
+            let kept = keys.iter().take_while(|k| previous.contains(k)).count();
+            retrieval[kept..].reverse();
+            keys = retrieval.iter().map(retrieval::chunk_key).collect();
+        } else {
+            // Best definition last; diagnostics and clipboard sit closest to the edit.
+            retrieval.reverse();
         }
-        // Best definition last; diagnostics and clipboard sit closest to the edit.
-        retrieval.reverse();
+        if purpose != Purpose::Warm {
+            self.sticky.lock().unwrap().insert(path.clone(), keys);
+        }
         if let Some(c) = req.clipboard.as_deref().and_then(retrieval::clipboard_chunk) {
             retrieval.push(c);
         }

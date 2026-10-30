@@ -240,6 +240,11 @@ struct Cli {
     /// the next request.
     #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
     defer_refresh: bool,
+    /// Keep retrieval chunks that stay selected first in the prompt, in
+    /// their previous order, with newly selected chunks after them (best
+    /// last), so replacing one chunk does not re-evaluate the others.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    retrieval_stable_order: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -348,6 +353,7 @@ fn main() -> Result<()> {
         jump_reuse_local: cli.jump_reuse_local,
         stop_repetition: cli.stop_repetition,
         defer_refresh: cli.defer_refresh,
+        retrieval_stable_order: cli.retrieval_stable_order,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
