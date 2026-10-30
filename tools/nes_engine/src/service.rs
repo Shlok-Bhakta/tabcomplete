@@ -180,9 +180,29 @@ pub struct PredictResponse {
     pub confidence: Option<sweep::Confidence>,
     pub context: ContextSummary,
     pub timings: Timings,
+    /// Log-probability threshold the confidence gate applied to the model's
+    /// edit (None when the model proposed nothing).
+    pub gate_threshold: Option<f32>,
+    /// The engine build and settings that produced this answer.
+    pub engine: Option<Arc<EngineInfo>>,
+}
+
+/// Identifies the engine build and its effective settings in telemetry, so
+/// collected predictions can be sliced by engine version.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct EngineInfo {
+    pub version: &'static str,
+    /// `NES_GIT_REV` at build time, when the build set it.
+    pub git_rev: Option<&'static str>,
+    /// First 16 hex digits of the running executable's sha256.
+    pub build_id: String,
+    /// First 16 hex digits of the sha256 of the effective command-line
+    /// settings (defaults included).
+    pub settings_hash: String,
 }
 
 pub struct Settings {
+    pub engine: Arc<EngineInfo>,
     pub model_name: String,
     pub model_sha256: String,
     pub prompt: PromptOptions,
@@ -414,8 +434,12 @@ pub struct Service {
 }
 
 fn sha256_hex(text: &str) -> String {
+    sha256_bytes_hex(text.as_bytes())
+}
+
+pub fn sha256_bytes_hex(bytes: &[u8]) -> String {
     let mut h = Sha256::new();
-    h.update(text.as_bytes());
+    h.update(bytes);
     h.finalize().iter().map(|b| format!("{b:02x}")).collect()
 }
 
@@ -887,6 +911,7 @@ impl Service {
             model: self.settings.model_name.clone(),
             model_sha256: self.settings.model_sha256.clone(),
             kind: "local",
+            engine: Some(self.settings.engine.clone()),
             ..Default::default()
         };
         // Real requests claim a generation first so older queued work is
@@ -1040,6 +1065,9 @@ impl Service {
             (Some(e), None) => gate(e),
             (None, _) => s.min_confidence,
         };
+        if !edits.is_empty() {
+            resp.gate_threshold = Some(threshold);
+        }
         let weak = resp.confidence.as_ref().is_some_and(|c| c.changed_tokens > 0 && c.min_logprob < threshold);
         if weak && !resp.edits.is_empty() {
             resp.withheld = std::mem::take(&mut resp.edits);

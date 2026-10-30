@@ -20,7 +20,7 @@ use std::io::BufRead;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(name = "tabcomplete-nes", about = "CPU next-edit engine for Sweep next-edit models", args_override_self = true)]
 struct Cli {
     #[arg(long)]
@@ -249,7 +249,7 @@ struct Cli {
     command: Command,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum Command {
     /// Serve the HTTP API.
     Serve {
@@ -310,6 +310,7 @@ fn main() -> Result<()> {
         other => anyhow::bail!("unknown --context-order {other}"),
     };
     let settings = Settings {
+        engine: Arc::new(engine_info(&cli)),
         model_name: cli.model_name.clone(),
         model_sha256: cli.model_sha256.clone(),
         prompt: sweep::PromptOptions {
@@ -391,6 +392,22 @@ fn main() -> Result<()> {
         Command::Replay => replay(&svc),
         Command::Serve { host, port } => serve(svc, &host, port),
         Command::Complete { .. } | Command::Bench { .. } => unreachable!(),
+    }
+}
+
+/// Engine identity for telemetry: crate version, optional build-time git
+/// revision, a hash of the running executable and of the effective settings.
+fn engine_info(cli: &Cli) -> service::EngineInfo {
+    let build_id = std::env::current_exe()
+        .and_then(std::fs::read)
+        .map(|bytes| service::sha256_bytes_hex(&bytes)[..16].to_string())
+        .unwrap_or_default();
+    let settings_hash = service::sha256_bytes_hex(format!("{cli:?}").as_bytes())[..16].to_string();
+    service::EngineInfo {
+        version: env!("CARGO_PKG_VERSION"),
+        git_rev: option_env!("NES_GIT_REV"),
+        build_id,
+        settings_hash,
     }
 }
 
@@ -508,6 +525,9 @@ async fn health(State(svc): State<Arc<Service>>) -> Json<Value> {
         "protocol": service::PROTOCOL,
         "model": svc.settings.model_name,
         "model_sha256": svc.settings.model_sha256,
+        "engine": svc.settings.engine,
+        // The command line, for telemetry to resolve `engine.settings_hash`.
+        "args": std::env::args().skip(1).take(200).map(|a| a.chars().take(300).collect::<String>()).collect::<Vec<_>>(),
         "n_ctx": svc.n_ctx(),
         "prompt": svc.settings.prompt,
         "retrieval_chunks": svc.settings.max_retrieval_chunks,
