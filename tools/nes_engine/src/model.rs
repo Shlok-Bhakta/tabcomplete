@@ -278,6 +278,8 @@ pub struct GenStats {
     pub first_novel_ms: Option<f64>,
     /// Ran in the scratch sequence; the file cache was left unchanged.
     pub scratch: bool,
+    /// Stopped early in a repetition loop (`repetition_loop`).
+    pub repetition_stop: bool,
     /// One entry per decode batch, for drafting-policy analysis.
     pub batches: Vec<BatchLog>,
 }
@@ -349,6 +351,9 @@ pub struct GenRequest<'a> {
     pub scratch: bool,
     /// Prompt tokens per prefill decode call (0: the engine's default).
     pub prefill_chunk: usize,
+    /// Stop a generation stuck repeating lines (`repetition_loop`) once it
+    /// has more complete lines than this (the window's); 0: never.
+    pub repeat_after_lines: usize,
 }
 
 pub enum Outcome {
@@ -702,6 +707,7 @@ impl Engine {
         let mut token_logprobs: Vec<f32> = Vec::new();
         let mut token_offsets: Vec<usize> = Vec::new();
         let mut checked_newlines = 0usize;
+        let mut checked_repeat = 0usize;
         // Start at 16 and only grow on full acceptance: long first drafts
         // waste verification work when the edit starts early.
         let mut draft_len = req.draft_max.min(16);
@@ -844,6 +850,14 @@ impl Engine {
                         finish_reason = "spliced";
                         break;
                     }
+                }
+            }
+            if req.repeat_after_lines > 0 && newlines > checked_repeat {
+                checked_repeat = newlines;
+                if let Some((period, last)) = repetition_loop(&text_bytes, req.repeat_after_lines) {
+                    finish_reason = finish_loop(req, period, last, out_tokens.len(), &mut text_bytes, &mut token_logprobs, &mut token_offsets);
+                    stats.repetition_stop = true;
+                    break;
                 }
             }
             if out_tokens.len() >= req.max_tokens {
@@ -991,6 +1005,97 @@ fn cut_after_last_newline(text: &mut Vec<u8>, logprobs: &mut Vec<f32>, offsets: 
     let tokens = offsets.iter().take_while(|o| **o < keep).count();
     offsets.truncate(tokens);
     logprobs.truncate(tokens);
+}
+
+/// End a generation caught in a loop (`repetition_loop`) as it would have
+/// ended had the loop gone on: "length" (discarded) when the token limit
+/// comes first, else the last copy (`last`, a byte range of `text` ending
+/// at its last newline) is repeated past the line limit, ending
+/// "max_lines" like the full generation.
+fn finish_loop(
+    req: &GenRequest<'_>,
+    period: usize,
+    last: std::ops::Range<usize>,
+    generated: usize,
+    text: &mut Vec<u8>,
+    logprobs: &mut Vec<f32>,
+    offsets: &mut Vec<usize>,
+) -> &'static str {
+    let copy: Vec<(usize, f32)> = offsets
+        .iter()
+        .zip(logprobs.iter())
+        .filter(|(o, _)| last.contains(*o))
+        .map(|(o, lp)| (*o - last.start, *lp))
+        .collect();
+    let per_copy = copy.len().max(1);
+    let partial = offsets.iter().filter(|o| **o >= last.end).count();
+    let complete = text[..last.end].iter().filter(|b| **b == b'\n').count();
+    let copies = (req.max_newlines + 1).saturating_sub(complete).div_ceil(period);
+    if generated - partial + copies * per_copy >= req.max_tokens {
+        return "length";
+    }
+    let pattern = text[last.clone()].to_vec();
+    cut_after_last_newline(text, logprobs, offsets);
+    for _ in 0..copies {
+        let base = text.len();
+        text.extend_from_slice(&pattern);
+        for (o, lp) in &copy {
+            offsets.push(base + o);
+            logprobs.push(*lp);
+        }
+    }
+    "max_lines"
+}
+
+/// A generation stuck in a loop: past `min_lines` complete lines, the last
+/// complete lines are copies of one 1-3 line pattern (4 copies of one line,
+/// 3 of two or three), compared with digit runs masked so counters
+/// (`insert("pear", 9)`, `insert("pear", 10)`) match. The pattern needs a
+/// line with 3+ non-blank characters (closing braces, blank lines). Returns
+/// the period in lines and the byte range of its last copy.
+pub fn repetition_loop(text: &[u8], min_lines: usize) -> Option<(usize, std::ops::Range<usize>)> {
+    let end = text.iter().rposition(|b| *b == b'\n')? + 1;
+    let mut starts = vec![0];
+    starts.extend(text[..end].iter().enumerate().filter(|(_, b)| **b == b'\n').map(|(i, _)| i + 1));
+    // starts[i]..starts[i + 1] is line i (newline included); the last entry is `end`.
+    let lines = starts.len() - 1;
+    if lines <= min_lines {
+        return None;
+    }
+    let norm = |i: usize| -> Vec<u8> {
+        let mut line = &text[starts[i]..starts[i + 1]];
+        while let [rest @ .., last] = line {
+            if !last.is_ascii_whitespace() {
+                break;
+            }
+            line = rest;
+        }
+        let mut out = Vec::with_capacity(line.len());
+        for (k, b) in line.iter().enumerate() {
+            if !b.is_ascii_digit() {
+                out.push(*b);
+            } else if k == 0 || !line[k - 1].is_ascii_digit() {
+                out.push(b'0');
+            }
+        }
+        out
+    };
+    for period in 1..=3 {
+        let copies = if period == 1 { 4 } else { 3 };
+        let span = period * copies;
+        if span > lines {
+            break;
+        }
+        let first = lines - span;
+        let pattern: Vec<Vec<u8>> = (first..first + period).map(norm).collect();
+        if !pattern.iter().any(|l| l.iter().filter(|b| !b.is_ascii_whitespace()).count() >= 3) {
+            continue;
+        }
+        if (first + period..lines).all(|i| norm(i) == pattern[(i - first) % period]) {
+            return Some((period, starts[lines - period]..end));
+        }
+    }
+    None
 }
 
 /// Greedy token and its log-probability. Runs once per verified position
@@ -1186,6 +1291,67 @@ mod tests {
         assert_eq!(d, t(&[4, 5, 6]));
         let d = find_draft(&source, &t(&[1, 2, 3, 4, 5, 6]), &mut cursor, 3, 1, &mut 0);
         assert_eq!(d, t(&[7, 8]));
+    }
+
+    #[test]
+    fn finds_repetition_loops() {
+        let same = "a\nb\n    x = 1;\n    x = 1;\n    x = 1;\n    x = 1;\n";
+        assert_eq!(repetition_loop(same.as_bytes(), 2), Some((1, 37..48)));
+        // Not past the window's line count yet.
+        assert_eq!(repetition_loop(same.as_bytes(), 6), None);
+        // Counters match; three copies of one line are not enough.
+        let counter = "    m.insert(\"pear\", 8);\n    m.insert(\"pear\", 9);\n    m.insert(\"pear\", 10);\n";
+        assert_eq!(repetition_loop(counter.as_bytes(), 1), None);
+        let counter4 = format!("{counter}    m.insert(\"pear\", 11);\n");
+        assert_eq!(repetition_loop(counter4.as_bytes(), 1).map(|r| r.0), Some(1));
+        // Two alternating lines, the trailing partial line ignored.
+        let pair = "let a = 2;\n\nlet a = 2;\n\nlet a = 2;\n\nlet";
+        assert_eq!(repetition_loop(pair.as_bytes(), 1).map(|r| r.0), Some(2));
+        // Closing braces and blank lines are not a loop.
+        assert_eq!(repetition_loop("}\n}\n}\n}\n}\n".as_bytes(), 1), None);
+        assert_eq!(repetition_loop("x\n\n\n\n\n\n".as_bytes(), 1), None);
+    }
+
+    #[test]
+    fn loop_ends_like_the_full_generation() {
+        let latest = AtomicU64::new(1);
+        let req = |max_tokens: usize, max_newlines: usize| GenRequest {
+            prompt: &[],
+            draft_source: &[],
+            draft_seed: &[],
+            max_tokens,
+            max_newlines,
+            draft_max: 0,
+            draft_fallback: &[],
+            draft_previous: &[],
+            draft_min_match: 3,
+            generation: 1,
+            latest: &latest,
+            slot: "",
+            novelty: None,
+            early_stop: None,
+            early_stop_every_batch: false,
+            progress: None,
+            scratch: false,
+            prefill_chunk: 0,
+            repeat_after_lines: 1,
+        };
+        // Four copies of "ab;\n" (two tokens each) and a partial token.
+        let start = || {
+            let text = b"ab;\nab;\nab;\nab;\nx".to_vec();
+            let offsets = vec![0, 2, 4, 6, 8, 10, 12, 14, 16];
+            (text, vec![-0.5f32; 9], offsets)
+        };
+        let (mut text, mut lps, mut offs) = start();
+        let (period, last) = repetition_loop(&text, 1).unwrap();
+        // Six lines needed (max_newlines 5): 8 + 2 * 2 = 12 tokens fit 20.
+        assert_eq!(finish_loop(&req(20, 5), period, last.clone(), 9, &mut text, &mut lps, &mut offs), "max_lines");
+        assert_eq!(text, b"ab;\n".repeat(6));
+        assert_eq!(offs.len(), 12);
+        assert_eq!(offs[10..], [20, 22]);
+        // The token limit comes first.
+        let (mut text, mut lps, mut offs) = start();
+        assert_eq!(finish_loop(&req(12, 5), period, last, 9, &mut text, &mut lps, &mut offs), "length");
     }
 
     #[test]

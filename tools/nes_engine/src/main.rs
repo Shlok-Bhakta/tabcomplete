@@ -228,6 +228,11 @@ struct Cli {
     /// 133 -> 2 ms, same answers).
     #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     jump_reuse_local: bool,
+    /// Stop a generation that repeats the same 1-3 lines (digits masked)
+    /// past the window's line count, ending it as the full generation would
+    /// have ("length", discarded, or "max_lines" with the copies filled in).
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    stop_repetition: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -334,6 +339,7 @@ fn main() -> Result<()> {
         jump_reasons: cli.jump_reasons.split(',').map(str::trim).filter(|r| !r.is_empty()).map(str::to_string).collect(),
         jump_max_distance: cli.jump_max_distance,
         jump_reuse_local: cli.jump_reuse_local,
+        stop_repetition: cli.stop_repetition,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
@@ -400,6 +406,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
         progress: None,
         scratch: false,
         prefill_chunk: 0,
+        repeat_after_lines: 0,
     })? {
         model::Outcome::Done(g) => {
             println!("{}", serde_json::to_string(&json!({"text": g.text, "finish": g.finish_reason, "stats": g.stats}))?);

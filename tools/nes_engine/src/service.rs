@@ -227,6 +227,8 @@ pub struct Settings {
     /// A jump request for the content and line of a just-answered local
     /// request that found nothing runs only the jump stage.
     pub jump_reuse_local: bool,
+    /// Stop generations stuck repeating lines (`model::repetition_loop`).
+    pub stop_repetition: bool,
 }
 
 /// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
@@ -293,6 +295,8 @@ enum Job {
         /// Evaluate in the scratch sequence, leaving the file cache intact.
         scratch: bool,
         prefill_chunk: usize,
+        /// Window lines, for the repetition stop (0: off).
+        repeat_after_lines: usize,
         reply: mpsc::Sender<Reply>,
     },
     Warm {
@@ -426,6 +430,7 @@ impl Service {
                             progress,
                             scratch,
                             prefill_chunk,
+                            repeat_after_lines,
                             reply,
                         } => {
                             if worker_latest.load(Ordering::SeqCst) != generation {
@@ -464,6 +469,7 @@ impl Service {
                                 progress: progress.then_some(&on_progress as &dyn Fn(&[u8], &[f32], &[usize])),
                                 scratch,
                                 prefill_chunk,
+                                repeat_after_lines,
                             });
                             let _ = reply.send(Reply::Done(result));
                         }
@@ -1195,6 +1201,7 @@ impl Service {
                 progress: early.is_some(),
                 scratch,
                 prefill_chunk: if jump_from.is_some() { s.jump_prefill_chunk } else { 0 },
+                repeat_after_lines: if s.stop_repetition { block.text.lines().count().max(1) } else { 0 },
                 reply: reply_tx,
             })
             .map_err(|_| anyhow!("model worker stopped"))?;
