@@ -778,13 +778,28 @@ local function sync_post(path, body_table)
   return ok_run and res ~= nil and res.code == 0
 end
 
+--- Run `fn` at the start of shutdown, while events can still be emitted
+--- (clients close what they have open, e.g. a visible prediction).
+M.shutdown_hooks = M.shutdown_hooks or {}
+function M.on_shutdown(fn)
+  if type(fn) == "function" then
+    M.shutdown_hooks[#M.shutdown_hooks + 1] = fn
+  end
+end
+
 function M.shutdown()
   if not M.started then
     return
   end
+  for _, fn in ipairs(M.shutdown_hooks) do
+    pcall(fn)
+  end
   M.started = false
   flush_pending_cursor()
-  pcall(flush_now)
+  -- Queued events go out with session_end in the blocking exit batch: an
+  -- async flush started here would die with the editor.
+  local pending = M.queue
+  M.queue = {}
   local ended_at = util.now_ms()
   M.seq = M.seq + 1
   local env = events.make({
@@ -802,16 +817,17 @@ function M.shutdown()
     ended_at_ms = ended_at,
     protocol_version = events.PROTOCOL_VERSION,
   }
+  local final_events = vim.list_extend(pending, { env })
   if config.has_url() then
     local batch_ok = sync_post("/v1/events/batch", {
       protocol_version = events.PROTOCOL_VERSION,
       session_id = M.session_id,
       machine_id = M.machine_id,
-      events = { env },
+      events = final_events,
     })
     if not batch_ok then
       spool.ensure_dirs()
-      spool.write_batch({ env }, { kind = "events", path = "/v1/events/batch" })
+      spool.write_batch(final_events, { kind = "events", path = "/v1/events/batch" })
     end
     local end_ok = sync_post("/v1/session/end", end_body)
     if not end_ok then
@@ -820,6 +836,9 @@ function M.shutdown()
     end
   else
     spool.ensure_dirs()
+    if #pending > 0 then
+      spool.write_batch(pending, { kind = "events", path = "/v1/events/batch" })
+    end
     spool.write_batch({ env }, { kind = "session", path = "/v1/session/end", body = end_body })
   end
 end
