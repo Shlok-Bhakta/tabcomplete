@@ -231,13 +231,19 @@ struct Cli {
     /// Stop a generation that repeats the same 1-3 lines (digits masked)
     /// past the window's line count, ending it as the full generation would
     /// have ("length", discarded, or "max_lines" with the copies filled in).
-    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    /// All 12 runaway generations on 761 cases were such loops, 186-266
+    /// tokens at 2-5 s each; slowest 10% mean 2.78 -> 2.55 s, p90 1.88 ->
+    /// 1.84 s, helpful 29.2% -> 29.6%, harmful 16.8% both.
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     stop_repetition: bool,
     /// With --refresh-original, keep prompting from the old snapshot while
     /// the prompt with the new one is warmed in a second sequence of the
     /// file's cache slot, and switch once that costs no more than the old
     /// prompt (or after 30 s), instead of re-evaluating the whole prompt at
-    /// the next request.
+    /// the next request. Keystroke replay: slowest request 3.9 -> 2.4 s,
+    /// slowest 10% mean -11%; but on 761 cases (no idle time between
+    /// requests, so refreshes wait the full 30 s) helpful 29.6% -> 28.8%,
+    /// harmful 16.8% -> 17.3%, so it is off.
     #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
     defer_refresh: bool,
     /// Keep retrieval chunks that stay selected first in the prompt, in
