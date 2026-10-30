@@ -292,3 +292,25 @@ only when the local answer is empty, and the client shows nothing for an
 empty answer, so a late event would change nothing the user sees. The
 engine-side cost of a jump is the time the next keystroke waits for it to
 cancel, which the 64-token jump prefill chunk bounds.
+
+## Tail latency, context, telemetry (2026-10-30)
+
+| change | result |
+|---|---|
+| `--stop-repetition` (default on) | stops the model rewriting the same 1-3 lines until the length cap; on 761 cases it ended all 12 loops, changed 3 answers (nothing -> helpful), slowest-10% mean 2.78 -> 2.55 s |
+| `--defer-refresh` (off) | warms the refreshed-snapshot prompt in a third sequence; worst keystroke stall 3.9 -> 1.9 s but -0.8 helpful in replay (no idle time there); worth trying live |
+| `--retrieval-stable-order` (off) | within noise |
+| 2-3 recent files instead of 1 | accuracy unchanged, +50-90 ms; the replay data is almost all single-file work, so this is untested rather than disproven |
+| `target-cpu=native` vs `x86-64-v3` (Nix) | no difference |
+| richer telemetry | withheld edits with thresholds, client and engine latency (incl. cancelled requests), engine build/settings hash, request-time diagnostics/clipboard, exactly one terminal outcome per shown suggestion |
+
+Tail breakdown (slowest 20% of keystroke-replay requests): prefill ~47% (cursor
+moved to another line ~23%, edit group entering the history at a pause ~15%,
+snapshot refresh ~13%), repetition loops 12%, other decoding the rest. Moving
+p90 further needs a prompt layout where cursor moves and pauses rewrite less.
+
+Fine-tuning on the collected edits is not worth it yet: 761 bursts (84%
+Rustlings), ~380 usable for training after a time split, and expected gains
+are below replay noise. The bottleneck for both accuracy work and cross-file
+context is data from real multi-file projects; the telemetry above is meant
+to collect it.
