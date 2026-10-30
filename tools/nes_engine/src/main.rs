@@ -233,6 +233,13 @@ struct Cli {
     /// have ("length", discarded, or "max_lines" with the copies filled in).
     #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
     stop_repetition: bool,
+    /// With --refresh-original, keep prompting from the old snapshot while
+    /// the prompt with the new one is warmed in a second sequence of the
+    /// file's cache slot, and switch once that costs no more than the old
+    /// prompt (or after 30 s), instead of re-evaluating the whole prompt at
+    /// the next request.
+    #[arg(long, default_value_t = false, action = clap::ArgAction::Set)]
+    defer_refresh: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -340,6 +347,7 @@ fn main() -> Result<()> {
         jump_max_distance: cli.jump_max_distance,
         jump_reuse_local: cli.jump_reuse_local,
         stop_repetition: cli.stop_repetition,
+        defer_refresh: cli.defer_refresh,
     };
     let config = model::ModelConfig {
         gpu_layers: cli.gpu_layers,
@@ -389,6 +397,7 @@ fn complete(model_path: &std::path::Path, config: &model::ModelConfig, max_token
     let latest = std::sync::atomic::AtomicU64::new(1);
     match engine.generate(model::GenRequest {
         prompt: &tokens,
+        alt_prompt: &[],
         draft_source: &[],
         draft_seed: &[],
         max_tokens,

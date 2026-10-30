@@ -72,6 +72,8 @@ pub struct Engine {
     seq: i32,
     /// Length of the prompt part of `cached` (the rest is generated output).
     prompt_len: usize,
+    /// Tokens in the active slot's branch sequence (`warm_branch`).
+    branch: Vec<LlamaToken>,
     reuse_suffix: bool,
     /// Index of the active slot.
     active: usize,
@@ -93,6 +95,7 @@ struct Slot {
     ctx: Option<LlamaContext<'static>>,
     tokens: Vec<LlamaToken>,
     prompt_len: usize,
+    branch: Vec<LlamaToken>,
     used: Instant,
 }
 
@@ -110,6 +113,14 @@ struct SlotConfig {
 
 /// Scratch sequence used by suffix reuse inside each slot context.
 const SCRATCH_SEQ: i32 = 1;
+/// Sequence holding a second prompt warmed while idle (`warm_branch`).
+const BRANCH_SEQ: i32 = 2;
+/// Cells kept free beside the file cache and the branch: generated tokens,
+/// drafts and the suffix-reuse middle.
+const BRANCH_RESERVE: usize = 1024;
+/// Extra prompt tokens the alternative prompt may cost over the main one
+/// and still be chosen (`GenRequest::alt_prompt`).
+const ALT_SLACK: usize = 32;
 /// Warm-up prefill runs in chunks this small so a prediction can cancel it
 /// almost at once.
 const WARM_CHUNK: usize = 32;
@@ -128,7 +139,7 @@ fn new_slot_context(
         .with_n_threads(c.threads)
         .with_n_threads_batch(c.threads_batch)
         .with_flash_attention_policy(c.flash_attn as llama_cpp_sys_2::llama_flash_attn_type)
-        .with_n_seq_max(2)
+        .with_n_seq_max(3)
         .with_kv_unified(true)
         .with_type_k(kv_type(&c.cache_type)?)
         .with_type_v(kv_type(&c.cache_type)?);
@@ -280,6 +291,10 @@ pub struct GenStats {
     pub scratch: bool,
     /// Stopped early in a repetition loop (`repetition_loop`).
     pub repetition_stop: bool,
+    /// Generated from `GenRequest::alt_prompt`.
+    pub alt_used: bool,
+    /// The branch sequence (`warm_branch`) became the file cache.
+    pub branch_adopted: bool,
     /// One entry per decode batch, for drafting-policy analysis.
     pub batches: Vec<BatchLog>,
 }
@@ -306,8 +321,13 @@ pub struct Generation {
     pub token_offsets: Vec<usize>,
 }
 
+#[derive(Clone, Copy)]
 pub struct GenRequest<'a> {
     pub prompt: &'a [LlamaToken],
+    /// Another prompt for the same answer (a refreshed file snapshot), used
+    /// instead of `prompt` when it costs at most `ALT_SLACK` more tokens to
+    /// evaluate from the file cache or the branch (empty: none).
+    pub alt_prompt: &'a [LlamaToken],
     /// Token source for prompt-lookup drafts, usually the current window.
     pub draft_source: &'a [LlamaToken],
     /// Tokens already "emitted" before generation starts (the prefill), used
@@ -407,10 +427,11 @@ impl Engine {
             cached: Vec::new(),
             seq: 0,
             prompt_len: 0,
+            branch: Vec::new(),
             reuse_suffix: config.reuse_suffix,
             active: 0,
             slots: (0..config.slots.max(1))
-                .map(|_| Slot { key: None, ctx: None, tokens: Vec::new(), prompt_len: 0, used: Instant::now() })
+                .map(|_| Slot { key: None, ctx: None, tokens: Vec::new(), prompt_len: 0, branch: Vec::new(), used: Instant::now() })
                 .collect(),
             config: slot_config,
             n_ctx: config.n_ctx as usize,
@@ -468,6 +489,7 @@ impl Engine {
             // Park the active context and its token list, bring in the target's.
             self.slots[a].tokens = std::mem::take(&mut self.cached);
             self.slots[a].prompt_len = self.prompt_len;
+            self.slots[a].branch = std::mem::take(&mut self.branch);
             let incoming = match self.slots[target].ctx.take() {
                 Some(c) => c,
                 None => new_slot_context(self.model, self._backend, &self.config)?,
@@ -476,12 +498,14 @@ impl Engine {
             self.slots[a].ctx = Some(outgoing);
             self.cached = std::mem::take(&mut self.slots[target].tokens);
             self.prompt_len = self.slots[target].prompt_len;
+            self.branch = std::mem::take(&mut self.slots[target].branch);
             self.active = target;
         }
         if found.is_none() {
             // Evicted or fresh slot: start this file from an empty cache.
             self.ctx.clear_kv_cache_seq(None, None, None).context("evict slot")?;
             self.cached.clear();
+            self.branch.clear();
             self.prompt_len = 0;
             self.slots[target].key = Some(key.to_string());
         }
@@ -625,16 +649,108 @@ impl Engine {
         if prefix.is_empty() || prefix.len() + 64 > self.n_ctx {
             return Ok(stats);
         }
+        if !self.branch.is_empty() && prefix.len() + self.branch.len() + BRANCH_RESERVE > self.n_ctx {
+            self.ctx.clear_kv_cache_seq(Some(BRANCH_SEQ as u32), None, None).context("clear branch")?;
+            self.branch.clear();
+        }
         self.prefill(prefix, generation, latest, &mut stats, WARM_CHUNK, WARM_MAX_MIDDLE)?;
         Ok(stats)
     }
 
-    pub fn generate(&mut self, req: GenRequest<'_>) -> Result<Outcome> {
+    /// Prefill `prompt` into the slot's branch sequence while idle, leaving
+    /// the file cache as it is: a prompt that will replace the cached one
+    /// (a refreshed file snapshot opens the prompt, so it shares almost
+    /// nothing with it). The branch starts from the file cache's common
+    /// prefix and keeps what it has evaluated across cancellations; a
+    /// prediction whose prompt shares more with it adopts it
+    /// (`settle_branch`). Skipped when the slot lacks the cells for both.
+    pub fn warm_branch(&mut self, slot: &str, prompt: &[LlamaToken], generation: u64, latest: &AtomicU64) -> Result<GenStats> {
+        let _idle = PauseOnDrop(self.config.pools);
+        self.select(slot)?;
+        let mut stats = GenStats::default();
+        let main_common = common_prefix(&self.cached, prompt);
+        if prompt.is_empty() || self.cached.len() + prompt.len() - main_common + BRANCH_RESERVE > self.n_ctx {
+            return Ok(stats);
+        }
+        let started = Instant::now();
+        let mut common = common_prefix(&self.branch, prompt);
+        if common <= main_common {
+            // Start (again) from the file cache's prefix; copied cells are shared.
+            self.ctx.clear_kv_cache_seq(Some(BRANCH_SEQ as u32), None, None).context("clear branch")?;
+            if main_common > 0 {
+                self.ctx
+                    .copy_kv_cache_seq(0, BRANCH_SEQ, Some(0), Some(main_common as u32))
+                    .context("copy prefix to branch")?;
+            }
+            self.branch = prompt[..main_common].to_vec();
+            common = main_common;
+        } else {
+            self.ctx.clear_kv_cache_seq(Some(BRANCH_SEQ as u32), Some(common as u32), None).context("trim branch")?;
+            self.branch.truncate(common);
+        }
+        stats.prompt_tokens = prompt.len();
+        stats.cached_tokens = common;
+        let mut batch = LlamaBatch::new(self.n_batch, 1);
+        let mut pos = common;
+        while pos < prompt.len() {
+            if latest.load(Ordering::SeqCst) != generation {
+                break;
+            }
+            let end = (pos + WARM_CHUNK).min(prompt.len());
+            batch.clear();
+            for (i, token) in prompt[pos..end].iter().enumerate() {
+                let p = pos + i;
+                batch.add(*token, p as i32, &[BRANCH_SEQ], p + 1 == prompt.len())?;
+            }
+            self.decode(&mut batch).context("branch decode")?;
+            self.branch.extend_from_slice(&prompt[pos..end]);
+            stats.evaluated_prompt_tokens += end - pos;
+            pos = end;
+        }
+        stats.prefill_ms = ms(started);
+        Ok(stats)
+    }
+
+    /// Before evaluating `prompt` in the file cache: adopt the branch as the
+    /// file cache when it shares a longer prefix with `prompt`, and drop it
+    /// when the slot needs its cells. Returns true when adopted.
+    fn settle_branch(&mut self, prompt: &[LlamaToken], scratch: bool, extra: usize) -> Result<bool> {
+        if self.branch.is_empty() {
+            return Ok(false);
+        }
+        if !scratch && common_prefix(&self.branch, prompt) > common_prefix(&self.cached, prompt) {
+            self.ctx.clear_kv_cache_seq(Some(0), None, None).context("drop file cache")?;
+            self.ctx.copy_kv_cache_seq(BRANCH_SEQ, 0, None, None).context("adopt branch")?;
+            self.ctx.clear_kv_cache_seq(Some(BRANCH_SEQ as u32), None, None).context("clear branch")?;
+            self.cached = std::mem::take(&mut self.branch);
+            self.prompt_len = self.cached.len();
+            return Ok(true);
+        }
+        // The jump stage's scratch sequence and long prompts need the cells.
+        let cells = self.cached.len().max(prompt.len()) + self.branch.len() + extra + self.n_batch;
+        if scratch || cells > self.n_ctx {
+            self.ctx.clear_kv_cache_seq(Some(BRANCH_SEQ as u32), None, None).context("clear branch")?;
+            self.branch.clear();
+        }
+        Ok(false)
+    }
+
+    pub fn generate(&mut self, mut req: GenRequest<'_>) -> Result<Outcome> {
         let _idle = PauseOnDrop(self.config.pools);
         let mut stats = GenStats::default();
         if req.prompt.is_empty() {
             bail!("empty prompt");
         }
+        self.select(req.slot)?;
+        if !req.alt_prompt.is_empty() {
+            let main_cost = req.prompt.len() - common_prefix(&self.cached, req.prompt);
+            let alt_cached = common_prefix(&self.cached, req.alt_prompt).max(common_prefix(&self.branch, req.alt_prompt));
+            if req.alt_prompt.len() - alt_cached <= main_cost + ALT_SLACK {
+                req.prompt = req.alt_prompt;
+                stats.alt_used = true;
+            }
+        }
+        stats.branch_adopted = self.settle_branch(req.prompt, req.scratch, req.max_tokens + req.draft_max)?;
         if req.prompt.len() + req.max_tokens + req.draft_max + 1 > self.n_ctx {
             bail!(
                 "prompt of {} tokens does not fit context {}",
@@ -642,7 +758,6 @@ impl Engine {
                 self.n_ctx
             );
         }
-        self.select(req.slot)?;
         let parked = if req.scratch { self.enter_scratch(req.prompt, req.max_tokens + req.draft_max + 1)? } else { None };
         stats.scratch = parked.is_some();
         let result = self.generate_selected(&req, stats);
@@ -997,6 +1112,10 @@ impl Engine {
     }
 }
 
+fn common_prefix(a: &[LlamaToken], b: &[LlamaToken]) -> usize {
+    a.iter().zip(b).take_while(|(x, y)| x == y).count()
+}
+
 /// Truncate generated text after its last newline, with the log-probabilities
 /// and offsets of the tokens that started after it.
 fn cut_after_last_newline(text: &mut Vec<u8>, logprobs: &mut Vec<f32>, offsets: &mut Vec<usize>) {
@@ -1317,6 +1436,7 @@ mod tests {
         let latest = AtomicU64::new(1);
         let req = |max_tokens: usize, max_newlines: usize| GenRequest {
             prompt: &[],
+            alt_prompt: &[],
             draft_source: &[],
             draft_seed: &[],
             max_tokens,

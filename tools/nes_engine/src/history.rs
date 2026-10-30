@@ -326,14 +326,28 @@ impl Tracker {
     /// re-evaluates nearly all of it; small drift is left alone. Returns
     /// true when the snapshot changed.
     pub fn refresh_original_at(&mut self, path: &Path, from: Option<u64>, now: Instant) -> bool {
-        let Some(candidate) = self.state_before_group(path, from).map(str::to_string) else {
+        match self.refresh_candidate(path, from) {
+            Some(candidate) => self.set_original(path, candidate, now),
+            None => false,
+        }
+    }
+
+    /// The snapshot `refresh_original_at` would advance to, without applying it.
+    pub fn refresh_candidate(&self, path: &Path, from: Option<u64>) -> Option<String> {
+        let candidate = self.state_before_group(path, from)?;
+        let state = &self.files[path];
+        original_is_stale(&state.original, candidate, &state.content).then(|| candidate.to_string())
+    }
+
+    /// Replace the original snapshot of `path`. Returns true when it changed.
+    pub fn set_original(&mut self, path: &Path, original: String, now: Instant) -> bool {
+        let Some(state) = self.files.get_mut(path) else {
             return false;
         };
-        let state = self.files.get_mut(path).unwrap();
-        if !original_is_stale(&state.original, &candidate, &state.content) {
+        if state.original == original {
             return false;
         }
-        state.original = candidate;
+        state.original = original;
         state.original_at = now;
         true
     }

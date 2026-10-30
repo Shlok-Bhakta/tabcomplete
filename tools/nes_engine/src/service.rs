@@ -109,8 +109,11 @@ pub struct ContextSummary {
     pub block_start_line: usize,
     pub block_lines: usize,
     pub trimmed: Vec<&'static str>,
-    /// The original-file snapshot was advanced after this request.
+    /// The original-file snapshot was advanced after this request (or, with
+    /// `defer_refresh`, by this request).
     pub original_refreshed: bool,
+    /// A deferred snapshot refresh is waiting (`defer_refresh`).
+    pub refresh_pending: bool,
     /// The edit was trimmed to leave text typed in the live edit unchanged.
     pub live_edit_trimmed: bool,
     /// The jump-stage candidate, when the jump search found one.
@@ -229,7 +232,15 @@ pub struct Settings {
     pub jump_reuse_local: bool,
     /// Stop generations stuck repeating lines (`model::repetition_loop`).
     pub stop_repetition: bool,
+    /// A stale snapshot (`refresh_original`) waits as pending while the
+    /// prompt built from it is warmed in the slot's branch sequence; a
+    /// request switches to it once that costs no more than the old prompt,
+    /// or after `REFRESH_DEFER_MAX`.
+    pub defer_refresh: bool,
 }
+
+/// Longest a deferred snapshot refresh waits for its warm-up.
+const REFRESH_DEFER_MAX: Duration = Duration::from_secs(30);
 
 /// Extra finalized hunks fetched for `stable_history`, so hunks hidden by
 /// the window do not shrink the visible history.
@@ -246,6 +257,7 @@ enum Purpose {
 }
 
 /// Everything a prompt is assembled from, for one buffer state.
+#[derive(Clone)]
 struct Gathered {
     display: String,
     cursor: usize,
@@ -280,6 +292,8 @@ enum Job {
     Generate {
         generation: u64,
         prompt: Vec<llama_cpp_2::token::LlamaToken>,
+        /// The prompt with a pending snapshot refresh (empty: none).
+        alt_prompt: Vec<llama_cpp_2::token::LlamaToken>,
         draft_source: Vec<llama_cpp_2::token::LlamaToken>,
         draft_seed: Vec<llama_cpp_2::token::LlamaToken>,
         max_tokens: usize,
@@ -303,6 +317,12 @@ enum Job {
         generation: u64,
         slot: String,
         prefix: Vec<llama_cpp_2::token::LlamaToken>,
+    },
+    /// Warm a prompt in the slot's branch sequence (`Engine::warm_branch`).
+    WarmBranch {
+        generation: u64,
+        slot: String,
+        prompt: Vec<llama_cpp_2::token::LlamaToken>,
     },
     /// Answered once every earlier job has finished (replay idle time).
     Ping(mpsc::Sender<()>),
@@ -385,6 +405,9 @@ pub struct Service {
     previous: Mutex<HashMap<String, Vec<llama_cpp_2::token::LlamaToken>>>,
     /// First line of the original-file chunk last shown per file.
     chunk_starts: Mutex<HashMap<PathBuf, usize>>,
+    /// Deferred snapshot refreshes (`defer_refresh`): the new snapshot and
+    /// when it was found.
+    pending_refresh: Mutex<HashMap<PathBuf, (String, Instant)>>,
 }
 
 fn sha256_hex(text: &str) -> String {
@@ -420,6 +443,7 @@ impl Service {
                         Job::Generate {
                             generation,
                             prompt,
+                            alt_prompt,
                             draft_source,
                             draft_seed,
                             max_tokens,
@@ -452,6 +476,7 @@ impl Service {
                             });
                             let result = engine.generate(GenRequest {
                                 prompt: &prompt,
+                                alt_prompt: &alt_prompt,
                                 draft_source: &draft_source,
                                 draft_seed: &draft_seed,
                                 max_tokens,
@@ -481,6 +506,14 @@ impl Service {
                                 eprintln!("nes: warm failed: {e:#}");
                             }
                         }
+                        Job::WarmBranch { generation, slot, prompt } => {
+                            if worker_latest.load(Ordering::SeqCst) != generation {
+                                continue;
+                            }
+                            if let Err(e) = engine.warm_branch(&slot, &prompt, generation, &worker_latest) {
+                                eprintln!("nes: branch warm failed: {e:#}");
+                            }
+                        }
                         Job::Ping(reply) => {
                             let _ = reply.send(());
                         }
@@ -502,6 +535,7 @@ impl Service {
             sticky_file_chunks: Mutex::new(HashMap::new()),
             answers: Mutex::new(Vec::new()),
             chunk_starts: Mutex::new(HashMap::new()),
+            pending_refresh: Mutex::new(HashMap::new()),
             settings,
         }))
     }
@@ -513,6 +547,7 @@ impl Service {
     pub fn reset(&self) {
         *self.tracker.lock().unwrap() = Tracker::new(self.settings.prompt.session_base);
         self.chunk_starts.lock().unwrap().clear();
+        self.pending_refresh.lock().unwrap().clear();
         self.sticky.lock().unwrap().clear();
         self.sticky_file_chunks.lock().unwrap().clear();
         self.answers.lock().unwrap().clear();
@@ -571,6 +606,7 @@ impl Service {
                     }
                 }
                 self.warm(&display, tokens);
+                self.warm_pending(&state);
             }
             return;
         }
@@ -614,8 +650,63 @@ impl Service {
     /// Advance the original snapshot of `path` when a prompt showing edit
     /// groups from `shown_from` on leaves it clearly stale. Returns true when
     /// it changed; the caller re-warms the prompt.
+    /// With `defer_refresh` the new snapshot is only recorded as pending.
     fn refresh_original(&self, path: &Path, shown_from: Option<u64>, now: Instant) -> bool {
-        self.settings.refresh_original && self.tracker.lock().unwrap().refresh_original_at(path, shown_from, now)
+        if !self.settings.refresh_original {
+            return false;
+        }
+        let mut tracker = self.tracker.lock().unwrap();
+        if !self.settings.defer_refresh {
+            return tracker.refresh_original_at(path, shown_from, now);
+        }
+        let mut pending = self.pending_refresh.lock().unwrap();
+        if !pending.contains_key(path) {
+            if let Some(candidate) = tracker.refresh_candidate(path, shown_from) {
+                pending.insert(path.to_path_buf(), (candidate, now));
+            }
+        }
+        false
+    }
+
+    /// Apply the pending snapshot refresh of `path` (only once it has waited
+    /// `REFRESH_DEFER_MAX` when `due_only`). Returns true when the snapshot changed.
+    fn commit_pending(&self, path: &Path, now: Instant, due_only: bool) -> bool {
+        let mut tracker = self.tracker.lock().unwrap();
+        let mut pending = self.pending_refresh.lock().unwrap();
+        let due = pending
+            .get(path)
+            .is_some_and(|(_, since)| !due_only || now.saturating_duration_since(*since) >= REFRESH_DEFER_MAX);
+        match due.then(|| pending.remove(path)).flatten() {
+            Some((candidate, _)) => tracker.set_original(path, candidate, now),
+            None => false,
+        }
+    }
+
+    /// `g` with the pending snapshot of `path` as its original, if any.
+    fn pending_gathered(&self, g: &Gathered, path: &Path, content: &str, line: usize) -> Option<Gathered> {
+        let candidate = self.pending_refresh.lock().unwrap().get(path)?.0.clone();
+        let mut alt = g.clone();
+        alt.initial_start = self.initial_start(path, content, &candidate, line, false);
+        alt.original = candidate;
+        Some(alt)
+    }
+
+    /// Warm the local prompt for `req`'s state with the pending snapshot in
+    /// the file slot's branch sequence. Returns true when a refresh is pending.
+    fn warm_pending(&self, req: &PredictRequest) -> bool {
+        if !self.settings.defer_refresh {
+            return false;
+        }
+        let resolved = self.resolve(&req.path, req.root.as_deref());
+        if !self.pending_refresh.lock().unwrap().contains_key(&resolved.0) {
+            return false;
+        }
+        let Ok(g) = self.gather(req, &resolved, Purpose::Warm) else { return true };
+        let Some(alt) = self.pending_gathered(&g, &resolved.0, &req.content, req.cursor.line) else { return false };
+        let Ok(p) = self.stage_prompt(&alt, &req.content, alt.cursor, &alt.block, &alt.retrieval, None) else { return true };
+        let generation = self.latest.load(Ordering::SeqCst);
+        let _ = self.jobs.lock().unwrap().send(Job::WarmBranch { generation, slot: resolved.2, prompt: p.tokens });
+        true
     }
 
     /// First line of the original-file chunk to show, or None for the old
@@ -807,6 +898,8 @@ impl Service {
         resp.context.root = resolved.1.to_string_lossy().into_owned();
         resp.context.path = resolved.2.clone();
         let purpose = if speculative { Purpose::Speculative } else { Purpose::Predict };
+        let now = self.instant(req.ts_ms);
+        let mut committed = !speculative && self.commit_pending(&resolved.0, now, true);
         let g = match self.gather(&req, &resolved, purpose) {
             Ok(g) => g,
             Err(reason) => {
@@ -837,7 +930,12 @@ impl Service {
             let empty = sweep::Processed { edits: Vec::new(), exit_reason: "local_reused", completion: String::new() };
             (Some(empty), p.tokens, p.built.shown_from)
         } else {
-            self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut(), None)?
+            let alt = if speculative { None } else { self.pending_gathered(&g, &resolved.0, content, req.cursor.line) };
+            let out = self.run_stage(generation, &g, content, cursor, &g.block, &g.retrieval, &mut resp, early.as_mut(), None, alt.as_ref())?;
+            if resp.timings.stages.last().is_some_and(|s| s.alt_used) {
+                committed |= self.commit_pending(&resolved.0, now, false);
+            }
+            out
         };
         let mut outcome = match stage {
             None => {
@@ -876,7 +974,7 @@ impl Service {
                     let local_context = resp.context.clone();
                     let local_confidence = resp.confidence.take();
                     let local_finish = std::mem::take(&mut resp.finish_reason);
-                    let (jumped, _, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None, Some(&g.block))?;
+                    let (jumped, _, _) = self.run_stage(generation, &g, content, j.cursor, &j.block, &jump_retrieval, &mut resp, None, Some(&g.block), None)?;
                     match jumped {
                         Some(p) if !p.edits.is_empty() && p.edits[0].text.trim().len() + (p.edits[0].end - p.edits[0].start) > 0 => {
                             resp.kind = "jump";
@@ -946,11 +1044,13 @@ impl Service {
         }
         resp.status = if resp.edits.is_empty() { "empty" } else { "ok" };
         resp.prompt_sha256 = sha256_hex(&resp.prompt);
-        resp.context.original_refreshed = refreshed;
+        resp.context.original_refreshed = refreshed || committed;
         if refreshed {
             if let Some((tokens, _)) = self.build_tokens(&req) {
                 self.warm(&g.display, tokens);
             }
+        } else if !speculative {
+            resp.context.refresh_pending = self.warm_pending(&req);
         }
         resp.timings.total_ms = ms(started);
         if let Some(e) = &early {
@@ -1166,11 +1266,19 @@ impl Service {
         resp: &mut PredictResponse,
         mut early: Option<&mut Early<'_>>,
         jump_from: Option<&Block>,
+        alt: Option<&Gathered>,
     ) -> Result<(Option<sweep::Processed>, Vec<llama_cpp_2::token::LlamaToken>, Option<u64>)> {
         let s = &self.settings;
         let history_from = jump_from.filter(|_| s.jump_shared_history);
         let p = self.stage_prompt(g, content, cursor, block, retrieval, history_from)?;
         self.describe_stage(g, block, retrieval, &p, resp);
+        // The same request with a pending snapshot refresh: only the file
+        // section differs; the engine picks the cheaper prompt.
+        let alt = match alt {
+            Some(a) => Some((a, self.stage_prompt(a, content, cursor, block, retrieval, history_from)?)),
+            None => None,
+        };
+        let alt_prompt = alt.as_ref().map(|(_, p)| p.tokens.clone()).unwrap_or_default();
         let StagePrompt { built, tokens, block_tokens, max_tokens, max_newlines, .. } = p;
         let display = g.display.as_str();
         // The jump stage in the scratch sequence keeps the local stage's
@@ -1185,6 +1293,7 @@ impl Service {
             .send(Job::Generate {
                 generation,
                 prompt: tokens.clone(),
+                alt_prompt,
                 draft_source: block_tokens,
                 draft_seed,
                 max_tokens,
@@ -1216,7 +1325,18 @@ impl Service {
             }
         };
         resp.prompt = built.prompt.clone();
-        let shown_from = built.shown_from;
+        let mut shown_from = built.shown_from;
+        let mut tokens = tokens;
+        let stats = match &outcome {
+            Outcome::Cancelled(stats) => stats,
+            Outcome::Done(gen_out) => &gen_out.stats,
+        };
+        if let (true, Some((a, p))) = (stats.alt_used, &alt) {
+            self.describe_stage(a, block, retrieval, p, resp);
+            resp.prompt = p.built.prompt.clone();
+            shown_from = p.built.shown_from;
+            tokens = p.tokens.clone();
+        }
         match outcome {
             Outcome::Cancelled(stats) => {
                 resp.timings.stages.push(stats);
