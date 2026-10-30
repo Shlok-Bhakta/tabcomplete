@@ -1591,6 +1591,36 @@ dofile(tests_dir .. "/predict_fim_v1.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/predict_fim_identity_bootstrap.lua")(ok, assert_eq, assert_true)
 dofile(tests_dir .. "/feedback_review.lua")
 
+-- Shutdown: hooks run while events can still be emitted, and queued events
+-- leave with session_end (spooled here: no server URL).
+ok("shutdown-hooks-and-queued-events", function()
+  test_reset()
+  config.options.server_url = ""
+  wipe_spool()
+  local hooks = collector.shutdown_hooks
+  collector.shutdown_hooks = {}
+  local b = mkbuf({ "x" }, scratch .. "/shutdown.lua")
+  collector.emit(b, "prediction_shown", { prediction_id = "p1" })
+  collector.on_shutdown(function()
+    collector.emit(b, "prediction_dismissed", { prediction_id = "p1", outcome = "editor_exit", reason = "editor_exit" })
+  end)
+  collector.on_shutdown(function() error("a failing hook is ignored") end)
+  collector.shutdown()
+  collector.shutdown_hooks = hooks
+  assert_eq(#collector.queue, 0, "queue handed to the exit batch")
+  local types = {}
+  for _, path in ipairs(spool.list()) do
+    local decoded = spool.read(path)
+    if decoded.meta and decoded.meta.kind == "events" then
+      for _, ev in ipairs(decoded.events or {}) do types[#types + 1] = ev.event_type end
+    end
+  end
+  assert_eq(table.concat(types, ","), "prediction_shown,prediction_dismissed,session_end")
+  wipe_spool()
+  vim.api.nvim_buf_delete(b, { force = true })
+  test_reset()
+end)
+
 print(("--\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
   print("FAILURES:")
